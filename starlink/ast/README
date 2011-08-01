@@ -1,5 +1,5 @@
 starlink.Ast is a Python extension that provides an interface to Starlink
-AST library. To install first run the make_etc script to build some
+AST library. To install first run the make_exceptions.py script to build some
 required files. Then ensure the environment variable STARLINK_DIR is
 defined and do:
 

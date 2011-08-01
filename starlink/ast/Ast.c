@@ -1259,7 +1259,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 
 /* Create singleton instances of the AST Exception classes. The
    RegisterErrors function is defined within file exceptions.c (generated
-   automatically by the make_etc script on the basis of the ast_err.msg
+   automatically by the make_exceptions.py script on the basis of the ast_err.msg
    file). */
    if( !RegisterErrors( m ) ) return NULL;
 

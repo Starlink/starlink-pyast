@@ -1,41 +1,33 @@
-#!/bin/tcsh
-#+
-#  Name:
-#    make_etc
+#!python3
 
-#  Purpose:
-#    Genarates additional files needed to build the Pythion Ast module.
+"""
+Generates the file exceptions.c which encapsulates Python/AST
+exception handling.
 
-#  Description:
-#    This script should be run prior to compiling the C source code
-#    within the Ast module. It generates the following files needed
-#    to build the Ast module:
-#
-#       exceptions.c: Converts AST error reports into Python exceptions.
+The environment variable AST_SOURCE should be set to point to
+the folder containing the source distribution for the AST
+library.
+"""
 
-#  Notes:
-#    - The environment variable AST_SOURCE should be set to point to the
-#    folder containing the source distribution for the AST library
+import os
+import os.path
 
-#  History:
-#     26-JUL-2011 (DSB):
-#        Original version.
+if 'AST_SOURCE' not in os.environ:
+    print("Please set AST_SOURCE environment variable to point to the AST source code directory")
+    exit(1)
 
-#-
+# ensure that we have the error codes file
+msgfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.msg")
+if not os.path.exists(msgfile):
+    print("Could not find the ast_err.msg file in directory "+os.environ['AST_SOURCE'])
+    exit(1)
 
+# Open an output C file
+cfilename = "exceptions.c"
+cfile = open(cfilename, "w", encoding="ascii")
 
-# Get the path to the directory holding the AST source code
-if( $?AST_SOURCE == 1 ) then
-   set src = "$AST_SOURCE"
-else
-   set src = "$MYGIT/libraries/ast"
-endif
-
-
-
-#  Create the exceptions.c file.
-cat << FOO >! exceptions.c
-/*
+# Need a C header
+print(r"""/*
 *  Name:
 *     exceptions.c
 
@@ -50,8 +42,8 @@ cat << FOO >! exceptions.c
 *     Python exception whenever AST reports an error.
 
 *  Notes:
-*     - This file is generated automatically my the "make_etc" script, and
-*     should not be edited.
+*     - This file is generated automatically by the "make_exceptions.py"
+*       script, and should not be edited.
 
 */
 
@@ -63,16 +55,27 @@ static int RegisterErrors( PyObject *m );
 static PyObject *AstError_err;
 
 /* For each AST error code, declare a static variable to hold an instance
-   of the corresponding Python Exception. */
-FOO
+   of the corresponding Python Exception. */""", file=cfile)
 
-set errors = `grep "^[A-Z]" $src/ast_err.msg | awk '{print $1}'`
-foreach name ($errors)
-   echo "static PyObject *${name}_err;" >> exceptions.c
-end
+# Now read the MSG file and create extract all the error codes
+# Note that AST__3DFSET is not currently supported because a
+# variable can not start with a number
+errcodes = []
+for line in open(msgfile,"r", encoding="ascii"):
+    words = line.split()
+    if words and words[0].isalnum() and words[0].isupper() and not words[0][0].isdigit():
+        errcodes.append( words[0] )
 
-cat << FOO >> exceptions.c
+if not errcodes:
+    print("Could not find any error codes. Aborting")
+    cfile.close()
+    os.path.unlink(cfilename)
+    exit(1)
 
+for code in errcodes:
+    print( "static PyObject *{0}_err;".format(code), file=cfile )
+
+print(r"""
 /* Defines a function that creates a Python Exception object
    for each AST error code, and uses them to initialises the
    above static variables. It reurns 1 if successful, and zero
@@ -87,17 +90,14 @@ static int RegisterErrors( PyObject *m ){
    if( !( AstError_err = PyErr_NewException("Ast.AstError", NULL, NULL))) return 0;
    PyDict_SetItemString( dict, "AstError", AstError_err );
 
-/* Now create an instance of each derived AST exception class. */
-FOO
+/* Now create an instance of each derived AST exception class. */""", file=cfile)
 
-foreach name ($errors)
-   echo '   if( !('${name}'_err = PyErr_NewException("Ast.'${name}'", AstError_err, NULL))) return 0;' >> exceptions.c
-   echo '   PyDict_SetItemString( dict, "'${name}'", '${name}'_err );' >> exceptions.c
-   echo ' ' >> exceptions.c
-end
+for code in errcodes:
+    print("   if( !({0}_err = PyErr_NewException(\"Ast.{0}\", AstError_err, NULL))) return 0;".format(code), file=cfile)
+    print("   PyDict_SetItemString( dict, \"{0}\", {0}_err );".format(code), file=cfile)
+    print(" ", file=cfile)
 
-cat << FOO >> exceptions.c
-   return 1;
+print(r"""   return 1;
 }
 
 
@@ -151,31 +151,22 @@ void astPutErr_( int status_value, const char *message ) {
       return;
    }
 
-/* If no exception has already occurred, raise an appropriate AST exception now. */
-FOO
+/* If no exception has already occurred, raise an appropriate AST exception now. */""", file=cfile)
 
-set first = 1
-foreach name ($errors)
-   if( $first == 1 ) then
-      echo '   if( status_value == AST__'${name}' ) {' >> exceptions.c
-      set first = 0
-   else
-      echo '   } else if( status_value == AST__'${name}' ) {' >> exceptions.c
-   endif
+first = True
+for code in errcodes:
+    if first:
+        print("   if( status_value == AST__{0} ) {{".format(code), file=cfile)
+        first = False
+    else:
+        print("   }} else if( status_value == AST__{0} ) {{".format(code), file=cfile)
+    print("      PyErr_SetString( {0}_err, message );".format(code), file=cfile)
 
-   echo '      PyErr_SetString( '${name}'_err, message );' >> exceptions.c
-end
-
-cat << FOO >> exceptions.c
-   } else {
+print("""   } else {
       PyErr_SetString( AstError_err, message );
    }
 
 /* restore the original AST status value. */
    astSetStatus( lstat );
 }
-
-FOO
-
-
-
+""", file=cfile)
