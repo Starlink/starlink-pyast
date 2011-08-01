@@ -11,7 +11,7 @@
 #include <Python.h>
 #include <string.h>
 #include "numpy/arrayobject.h"
-#include "ast.h"
+#include "pyast.h"
 
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
