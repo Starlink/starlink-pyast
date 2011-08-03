@@ -11,7 +11,7 @@
 #include <Python.h>
 #include <string.h>
 #include "numpy/arrayobject.h"
-#include "pyast.h"
+#include "ast.h"
 
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
@@ -30,7 +30,7 @@ static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
        const char *fun );
 
 /* Macros used in this file */
-#include "Ast.h"
+#include "pyast.h"
 
 /* Include code that intercepts error reports issued by AST and raises
    appropriate Python exceptions instead. */
@@ -1171,12 +1171,15 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    int ncoord;
    int result = -1;
 
+   fprintf(stderr,"Enter ZoomMap_init\n");
    if( PyArg_ParseTuple(args, "id|s:" CLASS, &ncoord, &zoom, &options ) ) {
       AstZoomMap *this = astZoomMap( ncoord, zoom, options );
+      fprintf(stderr,"Got zoommap\n");
       result = SetProxy( (AstObject *) this, (Object *) self );
+      astShow(this);
       this = astAnnul( this );
    }
-
+   fprintf(stderr, "Inside zoommap\n");
    TIDY;
    return result;
 }
