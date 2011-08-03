@@ -12,22 +12,24 @@ library.
 import os
 import os.path
 
-if 'AST_SOURCE' not in os.environ:
-    print("Please set AST_SOURCE environment variable to point to the AST source code directory")
-    exit(1)
+def make_exceptions():
 
-# ensure that we have the error codes file
-msgfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.msg")
-if not os.path.exists(msgfile):
-    print("Could not find the ast_err.msg file in directory "+os.environ['AST_SOURCE'])
-    exit(1)
+    if 'AST_SOURCE' not in os.environ:
+        print("Please set AST_SOURCE environment variable to point to the AST source code directory")
+        exit(1)
 
-# Open an output C file
-cfilename = "exceptions.c"
-cfile = open(cfilename, "w", encoding="ascii")
+    # ensure that we have the error codes file
+    msgfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.msg")
+    if not os.path.exists(msgfile):
+        print("Could not find the ast_err.msg file in directory "+os.environ['AST_SOURCE'])
+        exit(1)
 
-# Need a C header
-print(r"""/*
+    # Open an output C file
+    cfilename = "exceptions.c"
+    cfile = open(cfilename, "w", encoding="ascii")
+
+    # Need a C header
+    print(r"""/*
 *  Name:
 *     exceptions.c
 
@@ -57,25 +59,25 @@ static PyObject *AstError_err;
 /* For each AST error code, declare a static variable to hold an instance
    of the corresponding Python Exception. */""", file=cfile)
 
-# Now read the MSG file and create extract all the error codes
-# Note that AST__3DFSET is not currently supported because a
-# variable can not start with a number
-errcodes = []
-for line in open(msgfile,"r", encoding="ascii"):
-    words = line.split()
-    if words and words[0].isalnum() and words[0].isupper() and not words[0][0].isdigit():
-        errcodes.append( words[0] )
+    # Now read the MSG file and create extract all the error codes
+    # Note that AST__3DFSET is not currently supported because a
+    # variable can not start with a number
+    errcodes = []
+    for line in open(msgfile,"r", encoding="ascii"):
+        words = line.split()
+        if words and words[0].isalnum() and words[0].isupper() and not words[0][0].isdigit():
+            errcodes.append( words[0] )
 
-if not errcodes:
-    print("Could not find any error codes. Aborting")
-    cfile.close()
-    os.path.unlink(cfilename)
-    exit(1)
+    if not errcodes:
+        print("Could not find any error codes. Aborting")
+        cfile.close()
+        os.path.unlink(cfilename)
+        exit(1)
 
-for code in errcodes:
-    print( "static PyObject *{0}_err;".format(code), file=cfile )
+    for code in errcodes:
+        print( "static PyObject *{0}_err;".format(code), file=cfile )
 
-print(r"""
+    print(r"""
 /* Defines a function that creates a Python Exception object
    for each AST error code, and uses them to initialises the
    above static variables. It reurns 1 if successful, and zero
@@ -92,12 +94,12 @@ static int RegisterErrors( PyObject *m ){
 
 /* Now create an instance of each derived AST exception class. */""", file=cfile)
 
-for code in errcodes:
-    print("   if( !({0}_err = PyErr_NewException(\"Ast.{0}\", AstError_err, NULL))) return 0;".format(code), file=cfile)
-    print("   PyDict_SetItemString( dict, \"{0}\", {0}_err );".format(code), file=cfile)
-    print(" ", file=cfile)
+    for code in errcodes:
+        print("   if( !({0}_err = PyErr_NewException(\"Ast.{0}\", AstError_err, NULL))) return 0;".format(code), file=cfile)
+        print("   PyDict_SetItemString( dict, \"{0}\", {0}_err );".format(code), file=cfile)
+        print(" ", file=cfile)
 
-print(r"""   return 1;
+    print(r"""   return 1;
 }
 
 
@@ -153,16 +155,16 @@ void astPutErr_( int status_value, const char *message ) {
 
 /* If no exception has already occurred, raise an appropriate AST exception now. */""", file=cfile)
 
-first = True
-for code in errcodes:
-    if first:
-        print("   if( status_value == AST__{0} ) {{".format(code), file=cfile)
-        first = False
-    else:
-        print("   }} else if( status_value == AST__{0} ) {{".format(code), file=cfile)
-    print("      PyErr_SetString( {0}_err, message );".format(code), file=cfile)
+    first = True
+    for code in errcodes:
+        if first:
+            print("   if( status_value == AST__{0} ) {{".format(code), file=cfile)
+            first = False
+        else:
+            print("   }} else if( status_value == AST__{0} ) {{".format(code), file=cfile)
+        print("      PyErr_SetString( {0}_err, message );".format(code), file=cfile)
 
-print("""   } else {
+    print("""   } else {
       PyErr_SetString( AstError_err, message );
    }
 
@@ -170,3 +172,6 @@ print("""   } else {
    astSetStatus( lstat );
 }
 """, file=cfile)
+
+if __name__ == "__main__":
+    make_exceptions()
