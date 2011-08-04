@@ -100,6 +100,8 @@ class TestAst(unittest.TestCase):
       self.assertEqual( angle, math.atan2(3,4) )
       angle = frame.axangle( [0,0], [4,3], 1 )
       self.assertEqual( angle, -math.atan2(3,4) )
+      distance = frame.axdistance( 1, 0, 4 )
+      self.assertEqual( distance, 4 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):
