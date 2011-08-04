@@ -1198,6 +1198,7 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds );
 static PyObject *Frame_angle( Frame *self, PyObject *args );
 static PyObject *Frame_axangle( Frame *self, PyObject *args );
 static PyObject *Frame_axdistance( Frame *self, PyObject *args );
+static PyObject *Frame_axoffset( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1208,6 +1209,7 @@ static PyMethodDef Frame_methods[] = {
   {"angle", (PyCFunction)Frame_angle, METH_VARARGS, "Calculate the angle subtended by two points at a this point"},
   {"axangle", (PyCFunction)Frame_axangle, METH_VARARGS, "Returns the angle from an axis, to a line through two points"},
   {"axdistance", (PyCFunction)Frame_axdistance, METH_VARARGS, "Find the distance between two axis values"},
+  {"axoffset", (PyCFunction)Frame_axoffset, METH_VARARGS, "Add an increment onto a supplied axis value"},
    {NULL}  /* Sentinel */
 };
 
@@ -1388,6 +1390,23 @@ static PyObject *Frame_axdistance( Frame *self, PyObject *args ) {
   if ( PyArg_ParseTuple( args, "idd:" NAME, &axis, &v1, &v2 ) && astOK ) {
     double axdistance = astAxDistance( THIS, axis, v1, v2 );
     if (astOK) result = Py_BuildValue( "d", axdistance );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".axoffset"
+static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int axis;
+  double v1;
+  double dist;
+
+  if ( PyArg_ParseTuple( args, "idd:" NAME, &axis, &v1, &dist ) && astOK ) {
+    double axoffset = astAxOffset( THIS, axis, v1, dist );
+    if (astOK) result = Py_BuildValue( "d", axoffset );
   }
 
   TIDY;
