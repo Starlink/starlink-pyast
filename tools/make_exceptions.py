@@ -175,6 +175,7 @@ void astPutErr_( int status_value, const char *message ) {
    astSetStatus( lstat );
 }
 """, file=cfile)
+    cfile.close()
 
 if __name__ == "__main__":
     make_exceptions()
