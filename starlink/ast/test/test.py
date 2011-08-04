@@ -85,6 +85,15 @@ class TestAst(unittest.TestCase):
 
       zoommap.lock(1)
 
+   def test_Frame(self):
+      frame = starlink.Ast.Frame( 2 )
+      self.assertEqual( str(type(frame)), "<class 'starlink.Ast.Frame'>")
+      self.assertEqual( frame.Nin, 2 )
+      self.assertEqual( frame.Nout, 2 )
+      testtitle = "Test Frame"
+      frame.Title = testtitle
+      self.assertEqual( frame.Title, testtitle)
+      self.assertEqual( frame.get("Title"), testtitle)
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

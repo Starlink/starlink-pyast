@@ -1181,7 +1181,133 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Frame */
+/* ======= */
 
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Frame"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} Frame;
+
+/* Prototypes for class functions */
+static int Frame_init( Frame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(Frame)
+
+/* Describe the methods of the class */
+static PyMethodDef Frame_methods[] = {
+  DEF_ISA(Frame,frame),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETC(Frame,AlignSystem)
+// Bottom(axis)
+// Digits(axis)
+// Direction(axis)
+MAKE_GETSETC(Frame,Domain)
+MAKE_GETSETD(Frame,Dut1)
+MAKE_GETSETD(Frame,Epoch)
+// Format(axis)
+// Label(axis)
+MAKE_GETSETL(Frame,MatchEnd)
+MAKE_GETSETI(Frame,MaxAxes)
+MAKE_GETSETI(Frame,MinAxes)
+MAKE_GETROI(Frame,Naxes)
+// NormUnits(axis)
+MAKE_GETSETD(Frame,ObsAlt)
+MAKE_GETSETD(Frame,ObsLat)
+MAKE_GETSETD(Frame,ObsLon)
+MAKE_GETSETL(Frame,Permute)
+MAKE_GETSETL(Frame,PreserveAxes)
+// Symbol(axis)
+MAKE_GETSETC(Frame,System)
+MAKE_GETSETC(Frame,Title)
+// Top(axis)
+// Unit(axis)
+
+static PyGetSetDef Frame_getseters[] = {
+   DEFATT(AlignSystem,"Coordinate system used to align Frames"),
+   DEFATT(Domain, "Coordinate system domain"),
+   DEFATT(Dut1, "Difference between the UT1 and UTC timescale"),
+   DEFATT(Epoch, "Epoch of observation"),
+   DEFATT(MatchEnd, "Match trailing axes?"),
+   DEFATT(MaxAxes, "Maximum number of Frame axes to match"),
+   DEFATT(MinAxes, "Minimum number of Frame axes to match"),
+   DEFATT(Naxes, "Number of Frame axes"),
+   DEFATT(ObsAlt, "Geodetic altitude of observer"),
+   DEFATT(ObsLat, "Geodetic latitude of observer"),
+   DEFATT(ObsLon, "Geodetic longitude of observer"),
+   DEFATT(Permute, "Permute axis order?"),
+   DEFATT(PreserveAxes, "Preserve axes?"),
+   DEFATT(System, "Coordinate system used to describe the domain"),
+   DEFATT(Title, "Frame title"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject FrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Frame),             /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST Frame",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Frame_methods,             /* tp_methods */
+   0,                         /* tp_members */
+   Frame_getseters,           /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Frame_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+   int naxes;
+
+   if( PyArg_ParseTuple(args, "i|s:" CLASS, &naxes, &options ) ) {
+      AstFrame *this = astFrame( naxes, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -1278,6 +1404,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&ZoomMapType) < 0) return NULL;
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
+
+   FrameType.tp_new = PyType_GenericNew;
+   FrameType.tp_base = &MappingType;
+   if( PyType_Ready(&FrameType) < 0) return NULL;
+   Py_INCREF(&FrameType);
+   PyModule_AddObject( m, "Frame", (PyObject *)&FrameType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -1443,6 +1575,8 @@ static PyTypeObject *GetType( AstObject *this ) {
    if( class ) {
       if( !strcmp( class, "ZoomMap" ) ) {
          result = (PyTypeObject *) &ZoomMapType;
+      } else if( !strcmp( class, "Frame" ) ) {
+         result = (PyTypeObject *) &FrameType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "
