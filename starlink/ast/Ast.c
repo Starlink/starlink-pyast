@@ -1171,15 +1171,12 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    int ncoord;
    int result = -1;
 
-   fprintf(stderr,"Enter ZoomMap_init\n");
    if( PyArg_ParseTuple(args, "id|s:" CLASS, &ncoord, &zoom, &options ) ) {
       AstZoomMap *this = astZoomMap( ncoord, zoom, options );
-      fprintf(stderr,"Got zoommap\n");
       result = SetProxy( (AstObject *) this, (Object *) self );
-      astShow(this);
       this = astAnnul( this );
    }
-   fprintf(stderr, "Inside zoommap\n");
+
    TIDY;
    return result;
 }
