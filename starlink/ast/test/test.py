@@ -2,6 +2,7 @@ import unittest
 import starlink.Ast
 import copy
 import numpy
+import math
 
 class TestAst(unittest.TestCase):
 
@@ -94,6 +95,9 @@ class TestAst(unittest.TestCase):
       frame.Title = testtitle
       self.assertEqual( frame.Title, testtitle)
       self.assertEqual( frame.get("Title"), testtitle)
+      # Some methods
+      angle = frame.angle( [4,3], [0,0], [4,0] )
+      self.assertEqual( angle, math.atan2(3,4) )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):
