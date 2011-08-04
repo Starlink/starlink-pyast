@@ -1201,6 +1201,7 @@ static PyObject *Frame_axdistance( Frame *self, PyObject *args );
 static PyObject *Frame_axoffset( Frame *self, PyObject *args );
 static PyObject *Frame_distance( Frame *self, PyObject *args );
 static PyObject *Frame_format( Frame *self, PyObject *args );
+static PyObject *Frame_intersect( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1216,6 +1217,8 @@ static PyMethodDef Frame_methods[] = {
   {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
   // astFindFrame needs FrameSet
   {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
+  // astGetActiveUnit should be implemented as an attribute getter
+  {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
    {NULL}  /* Sentinel */
 };
 
@@ -1457,6 +1460,49 @@ static PyObject *Frame_format( Frame *self, PyObject *args ) {
   if ( PyArg_ParseTuple( args, "id:" NAME, &axis, &value ) && astOK ) {
     const char * format = astFormat( THIS, axis, value );
     if (astOK) result = Py_BuildValue( "s", format );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".intersect"
+static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *a1 = NULL;
+  PyArrayObject *a2 = NULL;
+  PyArrayObject *b1 = NULL;
+  PyArrayObject *b2 = NULL;
+  PyArrayObject *out = NULL;
+  PyObject *a1_object = NULL;
+  PyObject *a2_object = NULL;
+  PyObject *b1_object = NULL;
+  PyObject *b2_object = NULL;
+  int naxes;
+  npy_intp dims[1];
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "OOOO:" NAME, &a1_object,
+                         &a2_object, &b1_object, &b2_object ) && astOK ) {
+    a1 = GetArray1D( a1_object, &naxes, "a1", NAME );
+    a2 = GetArray1D( a2_object, &naxes, "a2", NAME );
+    b1 = GetArray1D( b1_object, &naxes, "b1", NAME );
+    b2 = GetArray1D( b2_object, &naxes, "b2", NAME );
+    dims[0] = naxes;
+    out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    if (a1 && a2 && b1 && b2 && out ) {
+      astIntersect( THIS, (const double *)a1->data,
+                    (const double *)a2->data,
+                    (const double *)b1->data,
+                    (const double *)b2->data, (double *)out->data );
+      if (astOK) result = Py_BuildValue("O", PyArray_Return(out));
+    }
+    Py_XDECREF( a1 );
+    Py_XDECREF( a2 );
+    Py_XDECREF( b2 );
+    Py_XDECREF( b2 );
+    Py_XDECREF( out );
   }
 
   TIDY;
