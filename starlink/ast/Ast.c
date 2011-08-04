@@ -1199,6 +1199,7 @@ static PyObject *Frame_angle( Frame *self, PyObject *args );
 static PyObject *Frame_axangle( Frame *self, PyObject *args );
 static PyObject *Frame_axdistance( Frame *self, PyObject *args );
 static PyObject *Frame_axoffset( Frame *self, PyObject *args );
+static PyObject *Frame_distance( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1210,6 +1211,8 @@ static PyMethodDef Frame_methods[] = {
   {"axangle", (PyCFunction)Frame_axangle, METH_VARARGS, "Returns the angle from an axis, to a line through two points"},
   {"axdistance", (PyCFunction)Frame_axdistance, METH_VARARGS, "Find the distance between two axis values"},
   {"axoffset", (PyCFunction)Frame_axoffset, METH_VARARGS, "Add an increment onto a supplied axis value"},
+  // astConvert needs FrameSet to be implemented
+  {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
    {NULL}  /* Sentinel */
 };
 
@@ -1412,6 +1415,35 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
   TIDY;
   return result;
 }
+
+#undef NAME
+#define NAME CLASS ".distance"
+static PyObject *Frame_distance( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *point1 = NULL;
+  PyArrayObject *point2 = NULL;
+  PyObject *point1_object = NULL;
+  PyObject *point2_object = NULL;
+  int naxes;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "OO:" NAME, &point1_object,
+                          &point2_object ) && astOK ) {
+    point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+    point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
+    if (point1 && point2 ) {
+      double distance = astDistance( THIS, (const double *)point1->data,
+                                   (const double *)point2->data );
+      if (astOK) result = Py_BuildValue( "d", distance );
+    }
+    Py_XDECREF( point1 );
+    Py_XDECREF( point2 );
+  }
+
+  TIDY;
+  return result;
+}
+
 
 /* Now describe the whole AST module */
 /* ================================= */
