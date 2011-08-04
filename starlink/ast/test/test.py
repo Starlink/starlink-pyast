@@ -106,6 +106,8 @@ class TestAst(unittest.TestCase):
       self.assertEqual( axoffset, 5 )
       distance = frame.distance( [0,0],[4,3] )
       self.assertEqual( distance, 5 )
+      format = frame.format( 1, 55.270)
+      self.assertEqual( format, "55.27" )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

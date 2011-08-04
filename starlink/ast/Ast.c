@@ -1200,6 +1200,7 @@ static PyObject *Frame_axangle( Frame *self, PyObject *args );
 static PyObject *Frame_axdistance( Frame *self, PyObject *args );
 static PyObject *Frame_axoffset( Frame *self, PyObject *args );
 static PyObject *Frame_distance( Frame *self, PyObject *args );
+static PyObject *Frame_format( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1213,6 +1214,8 @@ static PyMethodDef Frame_methods[] = {
   {"axoffset", (PyCFunction)Frame_axoffset, METH_VARARGS, "Add an increment onto a supplied axis value"},
   // astConvert needs FrameSet to be implemented
   {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
+  // astFindFrame needs FrameSet
+  {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
    {NULL}  /* Sentinel */
 };
 
@@ -1444,6 +1447,21 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
   return result;
 }
 
+#undef NAME
+#define NAME CLASS ".format"
+static PyObject *Frame_format( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int axis;
+  double value;
+
+  if ( PyArg_ParseTuple( args, "id:" NAME, &axis, &value ) && astOK ) {
+    const char * format = astFormat( THIS, axis, value );
+    if (astOK) result = Py_BuildValue( "s", format );
+  }
+
+  TIDY;
+  return result;
+}
 
 /* Now describe the whole AST module */
 /* ================================= */
