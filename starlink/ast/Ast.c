@@ -1363,7 +1363,7 @@ static PyObject *NewObject( AstObject *this ) {
 *     If there is already an existing starlink.Ast.Object object acting as
 *     a proxy for the supplied AST Object, then a pointer to it is
 *     returned (the reference count for the existing starlink.Ast.Object
-*     is left unchanged). If the AST Object has no existing proxy, then a new
+*     is incremented). If the AST Object has no existing proxy, then a new
 *     starlink.Ast.Object is created and recorded as the proxy for the AST
 *     Object.
 
@@ -1385,6 +1385,7 @@ static PyObject *NewObject( AstObject *this ) {
       self = astGetProxy( this );
       if( self ) {
          result = (PyObject *) self;
+         Py_INCREF( result );
 
 /* If the supplied AST object does not have an associated proxy object,
    create a new starlink.Ast.object (of the same type as the AST object),
