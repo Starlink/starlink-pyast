@@ -1196,6 +1196,7 @@ typedef struct {
 /* Prototypes for class functions */
 static int Frame_init( Frame *self, PyObject *args, PyObject *kwds );
 static PyObject *Frame_angle( Frame *self, PyObject *args );
+static PyObject *Frame_axangle( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1204,6 +1205,7 @@ MAKE_ISA(Frame)
 static PyMethodDef Frame_methods[] = {
   DEF_ISA(Frame,frame),
   {"angle", (PyCFunction)Frame_angle, METH_VARARGS, "Calculate the angle subtended by two points at a this point"},
+  {"axangle", (PyCFunction)Frame_axangle, METH_VARARGS, "Returns the angle from an axis, to a line through two points"},
    {NULL}  /* Sentinel */
 };
 
@@ -1338,6 +1340,35 @@ static PyObject *Frame_angle( Frame *self, PyObject *args ) {
     Py_XDECREF( a );
     Py_XDECREF( b );
     Py_XDECREF( c );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".axangle"
+static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *a = NULL;
+  PyArrayObject *b = NULL;
+  PyObject *a_object = NULL;
+  PyObject *b_object = NULL;
+  int axis;
+  int naxes;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "OOi:" NAME, &a_object, &b_object,
+                         &axis ) && astOK ) {
+    a = GetArray1D( a_object, &naxes, "a", NAME );
+    b = GetArray1D( b_object, &naxes, "b", NAME );
+    if (a && b ) {
+      double axangle = astAxAngle( THIS, (const double *)a->data,
+                                   (const double *)b->data, axis );
+      if (astOK) result = Py_BuildValue( "d", axangle );
+    }
+    Py_XDECREF( a );
+    Py_XDECREF( b );
   }
 
   TIDY;
