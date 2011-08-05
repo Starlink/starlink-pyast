@@ -132,6 +132,9 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( mapping, starlink.Ast.PermMap )
       self.assertEqual( mapping.Nin, 2 )
       self.assertEqual( mapping.Nout, 1 )
+      point4,d1,d2 = frame.resolve( [0,0], [3,3], [0,4] )
+      self.assertAlmostEqual( d2, 0.0 )
+      self.assertAlmostEqual( d1, math.sqrt(18) )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

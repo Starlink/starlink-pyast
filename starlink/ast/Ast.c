@@ -1324,6 +1324,7 @@ static PyObject *Frame_offset( Frame *self, PyObject *args );
 static PyObject *Frame_offset2( Frame *self, PyObject *args );
 static PyObject *Frame_permaxes( Frame *self, PyObject *args );
 static PyObject *Frame_pickaxes( Frame *self, PyObject *args );
+static PyObject *Frame_resolve( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1347,6 +1348,7 @@ static PyMethodDef Frame_methods[] = {
   {"offset2", (PyCFunction)Frame_offset2, METH_VARARGS, "Calculate an offset along a geodesic curve in a 2D Frame"},
   {"permaxes", (PyCFunction)Frame_permaxes, METH_VARARGS, "Permute the axis order in a Frame"},
   {"pickaxes", (PyCFunction)Frame_pickaxes, METH_VARARGS, "Crate a new Frame by picking axes from an existing one"},
+  {"resolve", (PyCFunction)Frame_resolve, METH_VARARGS, "Resolve a vector into two orthogonal components"},
    {NULL}  /* Sentinel */
 };
 
@@ -1812,6 +1814,48 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
       if (frame) frame=astAnnul( frame );
     }
     Py_XDECREF( axes );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".resolve"
+static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *point1 = NULL;
+  PyArrayObject *point2 = NULL;
+  PyArrayObject *point3 = NULL;
+  PyArrayObject *point4 = NULL;
+  PyObject *point1_object = NULL;
+  PyObject *point2_object = NULL;
+  PyObject *point3_object = NULL;
+  int naxes;
+  npy_intp dims[1];
+  double offset;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "OOO:" NAME, &point1_object,
+                         &point2_object, &point3_object ) && astOK ) {
+    point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+    point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
+    point3 = GetArray1D( point2_object, &naxes, "point3", NAME );
+    dims[0] = naxes;
+    point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    if (point1 && point2 && point3 && point4) {
+      double d1;
+      double d2;
+      astResolve( THIS, (const double *)point1->data,
+                  (const double *)point2->data,
+                  (const double *)point3->data,
+                  (double *)point4->data, &d1, &d2);
+      if (astOK) result = Py_BuildValue("Odd", PyArray_Return(point4), d1, d2);
+    }
+    Py_XDECREF( point1 );
+    Py_XDECREF( point2 );
+    Py_XDECREF( point3 );
+    Py_XDECREF( point4 );
   }
 
   TIDY;
