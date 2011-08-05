@@ -125,6 +125,7 @@ class TestAst(unittest.TestCase):
       direction, point = frame.offset2( [0,0], math.atan2(4,3), 10 )
       self.assertAlmostEqual( point[0], 8 )
       self.assertAlmostEqual( point[1], 6 )
+      frame.permaxes( [2,1] )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

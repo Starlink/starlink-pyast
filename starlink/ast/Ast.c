@@ -1206,6 +1206,7 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
 static PyObject *Frame_norm( Frame *self, PyObject *args );
 static PyObject *Frame_offset( Frame *self, PyObject *args );
 static PyObject *Frame_offset2( Frame *self, PyObject *args );
+static PyObject *Frame_permaxes( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1227,6 +1228,7 @@ static PyMethodDef Frame_methods[] = {
   {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
   {"offset", (PyCFunction)Frame_offset, METH_VARARGS, "Calculate an offset along a geodesic curve"},
   {"offset2", (PyCFunction)Frame_offset2, METH_VARARGS, "Calculate an offset along a geodesic curve in a 2D Frame"},
+  {"permaxes", (PyCFunction)Frame_permaxes, METH_VARARGS, "Permute the axis order in a Frame"},
    {NULL}  /* Sentinel */
 };
 
@@ -1635,6 +1637,27 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
   return result;
 }
 
+#undef NAME
+#define NAME CLASS ".permaxes"
+static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *perm = NULL;
+  PyObject *perm_object = NULL;
+  int naxes;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "O:" NAME, &perm_object ) && astOK ) {
+    perm = GetArray1I( perm_object, &naxes, "perm", NAME );
+    if (perm) {
+      astPermAxes( THIS, (const int *)perm->data );
+      if (astOK) result = Py_None;
+    }
+    Py_XDECREF( perm );
+  }
+
+  TIDY;
+  return result;
+}
 
 /* Now describe the whole AST module */
 /* ================================= */
