@@ -139,6 +139,12 @@ class TestAst(unittest.TestCase):
       self.assertEqual( nchars, 5 )
       self.assertEqual( value, 56.4 )
 
+   def test_FrameSet(self):
+      frame = starlink.Ast.Frame( 2 )
+      frameset = starlink.Ast.FrameSet( frame )
+      self.assertIsInstance( frameset, starlink.Ast.FrameSet )
+      self.assertEqual( frameset.Nframe, 1 )
+
    def test_Mapping(self):
       with self.assertRaises(TypeError):
          mapping = starlink.Ast.Mapping()
