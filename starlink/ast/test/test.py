@@ -235,5 +235,11 @@ class TestAst(unittest.TestCase):
       self.assertEqual( d.sum(), 0.0 )
       self.assertEqual( nused, 12 )
 
+   def test_PermMap(self):
+      permmap = starlink.Ast.PermMap( [2,1,3],[1,2] )
+      self.assertIsInstance( permmap, starlink.Ast.PermMap )
+      self.assertEqual( permmap.Nin, 3 )
+      self.assertEqual( permmap.Nout, 2 )
+
 if __name__ == "__main__":
     unittest.main()

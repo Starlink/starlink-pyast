@@ -1183,6 +1183,120 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* PermMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".PermMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} PermMap;
+
+/* Prototypes for class functions */
+static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(PermMap)
+
+/* Describe the methods of the class */
+static PyMethodDef PermMap_methods[] = {
+   DEF_ISA(PermMap,permmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject PermMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(PermMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST PermMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   PermMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)PermMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   PyArrayObject * inperm = NULL;
+   PyArrayObject * outperm = NULL;
+   PyArrayObject * constant = NULL;
+   PyObject * inperm_object = NULL;
+   PyObject * outperm_object = NULL;
+   PyObject * constant_object = NULL;
+
+   int result = -1;
+
+   // We get nin and nou from the arrays themselves
+   if( PyArg_ParseTuple(args, "OO|Os:" CLASS, &inperm_object,
+                        &outperm_object, &constant_object, &options ) ) {
+      inperm = (PyArrayObject *) PyArray_ContiguousFromAny( inperm_object,
+                                                            PyArray_INT, 0, 100);
+      outperm = (PyArrayObject *) PyArray_ContiguousFromAny( outperm_object,
+                                                             PyArray_INT, 0, 100);
+      if (constant_object) {
+        constant = (PyArrayObject *) PyArray_ContiguousFromAny( constant_object,
+                                                                PyArray_DOUBLE, 0, 100);
+      }
+      if (inperm && outperm) {
+         AstPermMap * this = NULL;
+
+         /* May want to sanity check the "constant" array since we know how
+            big it is and we can search through inperm and outperm for negative
+            values */
+         this = astPermMap( PyArray_Size( (PyObject*)inperm),
+                            (const int *)inperm->data,
+                            PyArray_Size( (PyObject*)outperm),
+                            (const int *)outperm->data,
+                            (constant ? (const double*)constant->data : NULL),
+                            options);
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( inperm );
+      Py_XDECREF( outperm );
+      Py_XDECREF( constant );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Frame */
 /* ======= */
 
@@ -1757,6 +1871,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
 
+   PermMapType.tp_new = PyType_GenericNew;
+   PermMapType.tp_base = &MappingType;
+   if( PyType_Ready(&PermMapType) < 0) return NULL;
+   Py_INCREF(&PermMapType);
+   PyModule_AddObject( m, "PermMap", (PyObject *)&PermMapType);
+
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
    if( PyType_Ready(&FrameType) < 0) return NULL;
@@ -1930,6 +2050,8 @@ static PyTypeObject *GetType( AstObject *this ) {
    if( class ) {
       if( !strcmp( class, "ZoomMap" ) ) {
          result = (PyTypeObject *) &ZoomMapType;
+      } else if( !strcmp( class, "PermMap" ) ) {
+        result = (PyTypeObject *) &PermMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else {
