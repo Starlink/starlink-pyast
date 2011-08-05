@@ -265,5 +265,10 @@ class TestAst(unittest.TestCase):
       self.assertEqual( permmap.Nin, 3 )
       self.assertEqual( permmap.Nout, 2 )
 
+   def test_UnitMap(self):
+      unitmap = starlink.Ast.UnitMap( 3 )
+      self.assertIsInstance( unitmap, starlink.Ast.UnitMap )
+      self.assertEqual( unitmap.Nin, 3 )
+
 if __name__ == "__main__":
     unittest.main()
