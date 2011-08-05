@@ -1563,7 +1563,7 @@ static PyObject *Frame_convert( Frame *self, PyObject *args ) {
   PyObject *result = NULL;
   const char *domainlist = NULL;
 
-   if( PyArg_ParseTuple(args, "O|s:" NAME, (PyObject**)&other, &domainlist ) ) {
+  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType, (PyObject**)&other, &domainlist ) ) {
       AstFrameSet *conversion = astConvert( THIS, THAT,
                                             (domainlist ? domainlist : "" ) );
       if (astOK) {
@@ -1699,7 +1699,7 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
    npy_intp dims[1];
    PyArrayObject * axes = NULL;
 
-   if( PyArg_ParseTuple( args, "O:" NAME,
+   if( PyArg_ParseTuple( args, "O!:" NAME, &FrameType,
                          (PyObject **) &other ) ) {
      dims[0] = astGetI( THAT, "Naxes" );
      axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
@@ -2020,7 +2020,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
    int result = -1;
    int naxes;
 
-   if( PyArg_ParseTuple(args, "O|s:" CLASS, (PyObject**)&other, &options ) ) {
+   if( PyArg_ParseTuple(args, "O!|s:" CLASS, &FrameType, (PyObject**)&other, &options ) ) {
       AstFrameSet *this = astFrameSet( THAT, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
