@@ -403,8 +403,10 @@ static PyObject *Mapping_decompose( Mapping *self ) {
    if( astOK ) {
       map1_object = NewObject( (AstObject *) map1 );
       map2_object = NewObject( (AstObject *) map2 );
-      result = Py_BuildValue( "OOiii", map1_object, map2_object, series,
-                              invert1, invert2 );
+      if (map1_object && map2_object) {
+        result = Py_BuildValue( "OOiii", map1_object, map2_object, series,
+                                invert1, invert2 );
+      }
       Py_XDECREF(map1_object);
       Py_XDECREF(map2_object);
    }
@@ -1874,12 +1876,15 @@ static PyObject *NewObject( AstObject *this ) {
    store the AST Object pointer in it and record it as the proxy for the
    AST Object. Delete the starlink.Ast.object if anything goes wrong. */
       } else {
-         self = (Object *) _PyObject_New( GetType( this ) );
-         if( self ) {
-            if( SetProxy( this, self ) == 0 ) {
-               result = (PyObject *) self;
-            } else {
-               Object_dealloc( self );
+         PyTypeObject * type = GetType( this );
+         if( type ) {
+            self = (Object *) _PyObject_New( type );
+            if( self ) {
+              if( SetProxy( this, self ) == 0 ) {
+                result = (PyObject *) self;
+              } else {
+                Object_dealloc( self );
+              }
             }
          }
       }
