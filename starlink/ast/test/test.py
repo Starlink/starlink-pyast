@@ -135,6 +135,9 @@ class TestAst(unittest.TestCase):
       point4,d1,d2 = frame.resolve( [0,0], [3,3], [0,4] )
       self.assertAlmostEqual( d2, 0.0 )
       self.assertAlmostEqual( d1, math.sqrt(18) )
+      nchars,value = frame.unformat( 1, "56.4 #" )
+      self.assertEqual( nchars, 5 )
+      self.assertEqual( value, 56.4 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

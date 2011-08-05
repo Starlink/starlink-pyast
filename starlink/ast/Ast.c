@@ -1325,6 +1325,7 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args );
 static PyObject *Frame_permaxes( Frame *self, PyObject *args );
 static PyObject *Frame_pickaxes( Frame *self, PyObject *args );
 static PyObject *Frame_resolve( Frame *self, PyObject *args );
+static PyObject *Frame_unformat( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1349,6 +1350,7 @@ static PyMethodDef Frame_methods[] = {
   {"permaxes", (PyCFunction)Frame_permaxes, METH_VARARGS, "Permute the axis order in a Frame"},
   {"pickaxes", (PyCFunction)Frame_pickaxes, METH_VARARGS, "Crate a new Frame by picking axes from an existing one"},
   {"resolve", (PyCFunction)Frame_resolve, METH_VARARGS, "Resolve a vector into two orthogonal components"},
+  {"unformat", (PyCFunction)Frame_unformat, METH_VARARGS, "Read a formatted coordinate value for a Frame"},
    {NULL}  /* Sentinel */
 };
 
@@ -1856,6 +1858,24 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
     Py_XDECREF( point2 );
     Py_XDECREF( point3 );
     Py_XDECREF( point4 );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".unformat"
+static PyObject *Frame_unformat( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int axis;
+  const char * string = NULL;
+
+  if ( PyArg_ParseTuple( args, "is:" NAME, &axis, &string ) && astOK ) {
+    double value;
+    int nchars;
+    nchars = astUnformat( THIS, axis, string, &value );
+    if (astOK) result = Py_BuildValue( "id", nchars, value );
   }
 
   TIDY;
