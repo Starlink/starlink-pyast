@@ -126,6 +126,12 @@ class TestAst(unittest.TestCase):
       self.assertAlmostEqual( point[0], 8 )
       self.assertAlmostEqual( point[1], 6 )
       frame.permaxes( [2,1] )
+      nframe,mapping = frame.pickaxes( [ 2 ] )
+      self.assertEqual(nframe.Nin, 1 )
+      self.assertIsInstance( frame, starlink.Ast.Frame )
+      self.assertIsInstance( mapping, starlink.Ast.PermMap )
+      self.assertEqual( mapping.Nin, 2 )
+      self.assertEqual( mapping.Nout, 1 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

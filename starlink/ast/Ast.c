@@ -1323,6 +1323,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args );
 static PyObject *Frame_offset( Frame *self, PyObject *args );
 static PyObject *Frame_offset2( Frame *self, PyObject *args );
 static PyObject *Frame_permaxes( Frame *self, PyObject *args );
+static PyObject *Frame_pickaxes( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1345,6 +1346,7 @@ static PyMethodDef Frame_methods[] = {
   {"offset", (PyCFunction)Frame_offset, METH_VARARGS, "Calculate an offset along a geodesic curve"},
   {"offset2", (PyCFunction)Frame_offset2, METH_VARARGS, "Calculate an offset along a geodesic curve in a 2D Frame"},
   {"permaxes", (PyCFunction)Frame_permaxes, METH_VARARGS, "Permute the axis order in a Frame"},
+  {"pickaxes", (PyCFunction)Frame_pickaxes, METH_VARARGS, "Crate a new Frame by picking axes from an existing one"},
    {NULL}  /* Sentinel */
 };
 
@@ -1769,6 +1771,47 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
       if (astOK) result = Py_None;
     }
     Py_XDECREF( perm );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".pickaxes"
+static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *axes = NULL;
+  PyObject *axes_object = NULL;
+
+  // We get naxes from the axes argument
+  if ( PyArg_ParseTuple( args, "O:" NAME, &axes_object ) && astOK ) {
+    axes = (PyArrayObject *) PyArray_ContiguousFromAny( axes_object,
+                                                        PyArray_INT, 0, 100);
+    if (axes) {
+      AstMapping *map = NULL;
+      AstFrame * frame = NULL;
+      int naxes;
+
+      naxes = PyArray_Size( (PyObject*)axes );
+      frame = astPickAxes( THIS, naxes,
+                           (const int *)axes->data,
+                           &map);
+      if (astOK) {
+        PyObject *map_object = NULL;
+        PyObject *frame_object = NULL;
+        frame_object = NewObject( (AstObject *)frame );
+        map_object = NewObject( (AstObject *)map );
+        if (frame_object && map_object ) {
+          result = Py_BuildValue( "OO", frame_object, map_object );
+        }
+        Py_XDECREF( map_object );
+        Py_XDECREF( frame_object );
+      }
+      if ( map ) map = astAnnul( map );
+      if (frame) frame=astAnnul( frame );
+    }
+    Py_XDECREF( axes );
   }
 
   TIDY;
