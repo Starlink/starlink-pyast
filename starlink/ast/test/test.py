@@ -122,6 +122,9 @@ class TestAst(unittest.TestCase):
       point = frame.offset( [0,0], [4,3], 10 )
       self.assertEqual( point[0], 8 )
       self.assertEqual( point[1], 6 )
+      direction, point = frame.offset2( [0,0], math.atan2(4,3), 10 )
+      self.assertAlmostEqual( point[0], 8 )
+      self.assertAlmostEqual( point[1], 6 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

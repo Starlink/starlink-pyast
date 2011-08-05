@@ -1205,6 +1205,7 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args );
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
 static PyObject *Frame_norm( Frame *self, PyObject *args );
 static PyObject *Frame_offset( Frame *self, PyObject *args );
+static PyObject *Frame_offset2( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1225,6 +1226,7 @@ static PyMethodDef Frame_methods[] = {
   {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
   {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
   {"offset", (PyCFunction)Frame_offset, METH_VARARGS, "Calculate an offset along a geodesic curve"},
+  {"offset2", (PyCFunction)Frame_offset2, METH_VARARGS, "Calculate an offset along a geodesic curve in a 2D Frame"},
    {NULL}  /* Sentinel */
 };
 
@@ -1595,6 +1597,38 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
     Py_XDECREF( point1 );
     Py_XDECREF( point2 );
     Py_XDECREF( point3);
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".offset2"
+static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *point1 = NULL;
+  PyArrayObject *point2 = NULL;
+  PyObject *point1_object = NULL;
+  int naxes;
+  npy_intp dims[1];
+  double offset;
+  double angle;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "Odd:" NAME, &point1_object,
+                         &angle, &offset ) && astOK ) {
+    point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+    dims[0] = naxes;
+    point2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    if (point1 && point2 ) {
+      double direction = astOffset2( THIS, (const double *)point1->data,
+                                    angle, offset,
+                                    (double *)point2->data );
+      if (astOK) result = Py_BuildValue("dO", direction, PyArray_Return(point2));
+    }
+    Py_XDECREF( point1 );
+    Py_XDECREF( point2 );
   }
 
   TIDY;
