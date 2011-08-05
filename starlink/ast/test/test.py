@@ -136,6 +136,8 @@ class TestAst(unittest.TestCase):
       fset = frame.convert( nframe )
       self.assertIsInstance( fset, starlink.Ast.FrameSet )
       self.assertEqual( fset.Nframe, 2 )
+      fset2 = fset.findframe( nframe )
+      self.assertIsInstance( fset, starlink.Ast.FrameSet )
       point4,d1,d2 = frame.resolve( [0,0], [3,3], [0,4] )
       self.assertAlmostEqual( d2, 0.0 )
       self.assertAlmostEqual( d1, math.sqrt(18) )

@@ -1317,6 +1317,7 @@ static PyObject *Frame_axdistance( Frame *self, PyObject *args );
 static PyObject *Frame_axoffset( Frame *self, PyObject *args );
 static PyObject *Frame_convert( Frame *self, PyObject *args );
 static PyObject *Frame_distance( Frame *self, PyObject *args );
+static PyObject *Frame_findframe( Frame *self, PyObject *args );
 static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
@@ -1340,7 +1341,7 @@ static PyMethodDef Frame_methods[] = {
   {"axoffset", (PyCFunction)Frame_axoffset, METH_VARARGS, "Add an increment onto a supplied axis value"},
   {"convert", (PyCFunction)Frame_convert, METH_VARARGS, "Determine how to convert between two coordinate systems"},
   {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
-  // astFindFrame needs FrameSet
+  {"findframe", (PyCFunction)Frame_findframe, METH_VARARGS, "Find a coordinate system with specified characteristics"},
   {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
   // astGetActiveUnit should be implemented as an attribute getter
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
@@ -1605,6 +1606,30 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
 
   TIDY;
   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".findframe"
+static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
+  Object *other = NULL;
+  PyObject *result = NULL;
+  const char *domainlist = NULL;
+
+  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType, (PyObject**)&other, &domainlist ) ) {
+      AstFrameSet *found = astFindFrame( THIS, THAT,
+                                         (domainlist ? domainlist : "" ) );
+      if (astOK) {
+        PyObject *found_object = NewObject( (AstObject *)found );
+        if (found_object) {
+          result = Py_BuildValue( "O", found_object );
+        }
+        Py_XDECREF( found_object );
+      }
+      if (found) found = astAnnul( found );
+   }
+
+   TIDY;
+   return result;
 }
 
 #undef NAME
