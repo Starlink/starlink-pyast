@@ -1315,6 +1315,7 @@ static PyObject *Frame_angle( Frame *self, PyObject *args );
 static PyObject *Frame_axangle( Frame *self, PyObject *args );
 static PyObject *Frame_axdistance( Frame *self, PyObject *args );
 static PyObject *Frame_axoffset( Frame *self, PyObject *args );
+static PyObject *Frame_convert( Frame *self, PyObject *args );
 static PyObject *Frame_distance( Frame *self, PyObject *args );
 static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
@@ -1337,7 +1338,7 @@ static PyMethodDef Frame_methods[] = {
   {"axangle", (PyCFunction)Frame_axangle, METH_VARARGS, "Returns the angle from an axis, to a line through two points"},
   {"axdistance", (PyCFunction)Frame_axdistance, METH_VARARGS, "Find the distance between two axis values"},
   {"axoffset", (PyCFunction)Frame_axoffset, METH_VARARGS, "Add an increment onto a supplied axis value"},
-  // astConvert needs FrameSet to be implemented
+  {"convert", (PyCFunction)Frame_convert, METH_VARARGS, "Determine how to convert between two coordinate systems"},
   {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
   // astFindFrame needs FrameSet
   {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
@@ -1552,6 +1553,30 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
 
   TIDY;
   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".convert"
+static PyObject *Frame_convert( Frame *self, PyObject *args ) {
+  Object *other = NULL;
+  PyObject *result = NULL;
+  const char *domainlist = NULL;
+
+   if( PyArg_ParseTuple(args, "O|s:" NAME, (PyObject**)&other, &domainlist ) ) {
+      AstFrameSet *conversion = astConvert( THIS, THAT,
+                                            (domainlist ? domainlist : "" ) );
+      if (astOK) {
+        PyObject *conversion_object = NewObject( (AstObject *)conversion );
+        if (conversion_object) {
+          result = Py_BuildValue( "O", conversion_object );
+        }
+        Py_XDECREF( conversion_object );
+      }
+      if (conversion) conversion = astAnnul( conversion );
+   }
+
+   TIDY;
+   return result;
 }
 
 #undef NAME
