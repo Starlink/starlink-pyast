@@ -1,3 +1,4 @@
 build/
 starlink/ast/exceptions.c
 __pycache__/
+.#*
