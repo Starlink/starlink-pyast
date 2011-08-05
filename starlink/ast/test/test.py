@@ -119,6 +119,9 @@ class TestAst(unittest.TestCase):
       coords = [3,2]
       ncoords = frame.norm( coords )
       self.assertEqual( ncoords[0], coords[0] )
+      point = frame.offset( [0,0], [4,3], 10 )
+      self.assertEqual( point[0], 8 )
+      self.assertEqual( point[1], 6 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

@@ -1204,6 +1204,7 @@ static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
 static PyObject *Frame_norm( Frame *self, PyObject *args );
+static PyObject *Frame_offset( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1223,6 +1224,7 @@ static PyMethodDef Frame_methods[] = {
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
   {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
   {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
+  {"offset", (PyCFunction)Frame_offset, METH_VARARGS, "Calculate an offset along a geodesic curve"},
    {NULL}  /* Sentinel */
 };
 
@@ -1558,6 +1560,41 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
     }
     Py_XDECREF( value );
     Py_XDECREF( axes );
+  }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".offset"
+static PyObject *Frame_offset( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *point1 = NULL;
+  PyArrayObject *point2 = NULL;
+  PyArrayObject *point3 = NULL;
+  PyObject *point1_object = NULL;
+  PyObject *point2_object = NULL;
+  int naxes;
+  npy_intp dims[1];
+  double offset;
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "OOd:" NAME, &point1_object,
+                         &point2_object, &offset ) && astOK ) {
+    point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+    point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
+    dims[0] = naxes;
+    point3 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    if (point1 && point2 && point3 ) {
+      astOffset( THIS, (const double *)point1->data,
+                 (const double *)point2->data, offset,
+                 (double *)point3->data );
+      if (astOK) result = Py_BuildValue("O", PyArray_Return(point3));
+    }
+    Py_XDECREF( point1 );
+    Py_XDECREF( point2 );
+    Py_XDECREF( point3);
   }
 
   TIDY;
