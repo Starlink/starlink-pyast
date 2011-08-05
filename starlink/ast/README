@@ -150,5 +150,8 @@ astRebinD, astRebinF and astRebinI are replaced by
 starlink.Ast.Mapping.rebin). The data type to use is determined from the
 supplied array containing the input data.
 
+- The C interface to astNorm modifies the array in place. The python
+interface returns a new modified copy of the input array:
 
+ normalised = frame.norm( input )
 

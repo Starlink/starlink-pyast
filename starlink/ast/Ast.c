@@ -1203,6 +1203,7 @@ static PyObject *Frame_distance( Frame *self, PyObject *args );
 static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
+static PyObject *Frame_norm( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1221,6 +1222,7 @@ static PyMethodDef Frame_methods[] = {
   // astGetActiveUnit should be implemented as an attribute getter
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
   {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
+  {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
    {NULL}  /* Sentinel */
 };
 
@@ -1531,6 +1533,35 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
    }
    TIDY;
    return result;
+}
+
+#undef NAME
+#define NAME CLASS ".norm"
+static PyObject *Frame_norm( Frame *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *value = NULL;
+  PyArrayObject *axes = NULL;
+  PyObject *value_object = NULL;
+  int naxes;
+  npy_intp dims[1];
+
+  naxes = astGetI( THIS, "Naxes" );
+  if ( PyArg_ParseTuple( args, "O:" NAME,
+                          &value_object ) && astOK ) {
+    value = GetArray1D( value_object, &naxes, "value", NAME );
+    dims[0] = naxes;
+    axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    if ( value && axes ) {
+      memcpy( axes->data, value->data, sizeof(double)*naxes);
+      astNorm( THIS, (double *)axes->data );
+      if (astOK) result = Py_BuildValue( "O", PyArray_Return(axes) );
+    }
+    Py_XDECREF( value );
+    Py_XDECREF( axes );
+  }
+
+  TIDY;
+  return result;
 }
 
 
