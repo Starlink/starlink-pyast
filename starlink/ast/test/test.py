@@ -111,6 +111,11 @@ class TestAst(unittest.TestCase):
       cross = frame.intersect( [-1,1],[1,1],[0,0],[2,2] )
       self.assertEqual( cross[0], 1.0 )
       self.assertEqual( cross[1], 1.0 )
+      frame2 = starlink.Ast.Frame( 3 )
+      axes = frame.matchaxes( frame2 )
+      self.assertEqual( axes[0], 1 )
+      self.assertEqual( axes[1], 2 )
+      self.assertEqual( axes[2], 0 )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):

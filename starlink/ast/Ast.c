@@ -1202,6 +1202,7 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args );
 static PyObject *Frame_distance( Frame *self, PyObject *args );
 static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
+static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(Frame)
@@ -1219,6 +1220,7 @@ static PyMethodDef Frame_methods[] = {
   {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
   // astGetActiveUnit should be implemented as an attribute getter
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
+  {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
    {NULL}  /* Sentinel */
 };
 
@@ -1508,6 +1510,29 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
   TIDY;
   return result;
 }
+
+#undef NAME
+#define NAME CLASS ".matchaxes"
+static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
+   PyObject *result = NULL;
+   Frame *other;
+   npy_intp dims[1];
+   PyArrayObject * axes = NULL;
+
+   if( PyArg_ParseTuple( args, "O:" NAME,
+                         (PyObject **) &other ) ) {
+     dims[0] = astGetI( THAT, "Naxes" );
+     axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+     if (axes) {
+       astMatchAxes( THIS, THAT, (int *)axes->data );
+       if( astOK ) result = Py_BuildValue("O", PyArray_Return(axes));
+     }
+     Py_XDECREF( axes );
+   }
+   TIDY;
+   return result;
+}
+
 
 /* Now describe the whole AST module */
 /* ================================= */
