@@ -1,6 +1,7 @@
 /* Various simple short-hands */
 #define THIS ((Object *)self)->ast_object
 #define THAT ((Object *)other)->ast_object
+#define ANOTHER ((Object *)another)->ast_object
 #define MXDIM 20
 
 /*

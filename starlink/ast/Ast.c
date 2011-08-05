@@ -2029,7 +2029,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds );
-//static PyObject *FrameSet_unformat( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(FrameSet)
@@ -2037,7 +2037,7 @@ MAKE_ISA(FrameSet)
 /* Describe the methods of the class */
 static PyMethodDef FrameSet_methods[] = {
   DEF_ISA(FrameSet,frameset),
-  //  {"angle", (PyCFunction)Frame_angle, METH_VARARGS, "Calculate the angle subtended by two points at a this point"},
+  {"addframe", (PyCFunction)FrameSet_addframe, METH_VARARGS, "Add a Frame to a FrameSet to define a new coordinate system"},
    {NULL}  /* Sentinel */
 };
 
@@ -2113,6 +2113,24 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+#undef NAME
+#define NAME CLASS ".addframe"
+static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
+  Object *other = NULL;
+  Object *another = NULL;
+  PyObject *result = NULL;
+  int iframe;
+
+  if( PyArg_ParseTuple(args, "iO!O!:" NAME, &iframe,
+                       &MappingType, (PyObject**)&other,
+                       &FrameType, (PyObject**)&another ) && astOK ) {
+      astAddFrame( THIS, iframe, THAT, ANOTHER );
+      if (astOK) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
 
 /* Now describe the whole AST module */
 /* ================================= */
