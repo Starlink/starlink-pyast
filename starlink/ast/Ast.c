@@ -1646,7 +1646,8 @@ static PyObject *Frame_convert( Frame *self, PyObject *args ) {
   PyObject *result = NULL;
   const char *domainlist = NULL;
 
-  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType, (PyObject**)&other, &domainlist ) ) {
+  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType,
+                       (PyObject**)&other, &domainlist ) && astOK ) {
       AstFrameSet *conversion = astConvert( THIS, THAT,
                                             (domainlist ? domainlist : "" ) );
       if (astOK) {
@@ -1698,7 +1699,8 @@ static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
   PyObject *result = NULL;
   const char *domainlist = NULL;
 
-  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType, (PyObject**)&other, &domainlist ) ) {
+  if( PyArg_ParseTuple(args, "O!|s:" NAME, &FrameType,
+                       (PyObject**)&other, &domainlist ) && astOK ) {
       AstFrameSet *found = astFindFrame( THIS, THAT,
                                          (domainlist ? domainlist : "" ) );
       if (astOK) {
@@ -1783,7 +1785,7 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
    PyArrayObject * axes = NULL;
 
    if( PyArg_ParseTuple( args, "O!:" NAME, &FrameType,
-                         (PyObject **) &other ) ) {
+                         (PyObject **) &other ) && astOK ) {
      dims[0] = astGetI( THAT, "Naxes" );
      axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
      if (axes) {
