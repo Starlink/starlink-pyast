@@ -22,7 +22,7 @@ class TestAst(unittest.TestCase):
    def test_ZoomMap(self):
       zoommap = starlink.Ast.ZoomMap( 1, 1.2 )
       self.assertEqual( zoommap.Class, "ZoomMap" )
-      self.assertEqual( str(type(zoommap)), "<class 'starlink.Ast.ZoomMap'>" )
+      self.assertIsInstance( zoommap, starlink.Ast.ZoomMap )
       self.assertEqual( zoommap.Nobject, 1 )
       with self.assertRaises(AttributeError):
          zoommap.fred = 1.0
@@ -31,13 +31,13 @@ class TestAst(unittest.TestCase):
       zoommap.ID = "Hello there"
       self.assertEqual( zoommap.ID, "Hello there" )
       self.assertEqual( zoommap.get("ID"), "Hello there" )
-      self.assertEqual( zoommap.test("ID"), True )
+      self.assertTrue( zoommap.test("ID") )
       zoommap.clear("ID")
-      self.assertEqual( zoommap.test("ID"), False )
+      self.assertFalse( zoommap.test("ID") )
       self.assertEqual( zoommap.ID, "" )
       zoommap.set("ID=fred")
       self.assertEqual( zoommap.ID, "fred" )
-      self.assertEqual( zoommap.UseDefs, True )
+      self.assertTrue( zoommap.UseDefs )
       self.assertEqual( zoommap.Nin, 1 )
       self.assertEqual( zoommap.Nout, 1 )
       self.assertEqual( zoommap.Zoom, 1.2 )
@@ -46,7 +46,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( zoommap.get("Zoom"), "-1.3" )
       zm = copy.deepcopy(zoommap)
       self.assertEqual( zoommap.Nobject, 2 )
-      self.assertEqual( str(type(zm)), "<class 'starlink.Ast.ZoomMap'>" )
+      self.assertIsInstance( zm, starlink.Ast.ZoomMap )
       self.assertEqual( zm.Zoom, -1.3 )
       self.assertEqual( zoommap.Zoom, -1.3 )
       zm.Zoom = 3.0
@@ -54,7 +54,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( zoommap.Zoom, -1.3 )
       zm2 = zoommap.copy()
       self.assertEqual( zoommap.Nobject, 3 )
-      self.assertEqual( str(type(zm2)), "<class 'starlink.Ast.ZoomMap'>" )
+      self.assertIsInstance( zm2, starlink.Ast.ZoomMap )
       self.assertEqual( zm2.Zoom, -1.3 )
       self.assertEqual( zoommap.Zoom, -1.3 )
       zm2.Zoom = 3.0
@@ -62,15 +62,15 @@ class TestAst(unittest.TestCase):
       self.assertEqual( zoommap.Zoom, -1.3 )
       zm2 = None
       self.assertEqual( zoommap.Nobject, 2 )
-      self.assertEqual( zoommap.same(zoommap), True )
-      self.assertEqual( zoommap.same(zm), False )
+      self.assertTrue( zoommap.same(zoommap) )
+      self.assertFalse( zoommap.same(zm) )
       del zm
       self.assertEqual( zoommap.Nobject, 1 )
-      self.assertEqual( zoommap.hasattribute("ID"), True )
-      self.assertEqual( zoommap.hasattribute("FID"), False )
-      self.assertEqual( zoommap.isaobject(), True )
-      self.assertEqual( zoommap.isamapping(), True )
-      self.assertEqual( zoommap.isazoommap(), True )
+      self.assertTrue( zoommap.hasattribute("ID") )
+      self.assertFalse( zoommap.hasattribute("FID") )
+      self.assertTrue( zoommap.isaobject() )
+      self.assertTrue( zoommap.isamapping() )
+      self.assertTrue( zoommap.isazoommap() )
 
       self.assertEqual( zoommap.RefCount, 1 )
       with self.assertRaises(AttributeError):
@@ -88,7 +88,7 @@ class TestAst(unittest.TestCase):
 
    def test_Frame(self):
       frame = starlink.Ast.Frame( 2 )
-      self.assertEqual( str(type(frame)), "<class 'starlink.Ast.Frame'>")
+      self.assertIsInstance( frame, starlink.Ast.Frame )
       self.assertEqual( frame.Nin, 2 )
       self.assertEqual( frame.Nout, 2 )
       testtitle = "Test Frame"
@@ -160,22 +160,22 @@ class TestAst(unittest.TestCase):
          mapping = starlink.Ast.Mapping()
       zoommap = starlink.Ast.ZoomMap( 1, 1.2 )
       map1,map2,series,invert1,invert2 = zoommap.decompose()
-      self.assertEqual( str(type(map1)), "<class 'starlink.Ast.ZoomMap'>" )
+      self.assertIsInstance( map1, starlink.Ast.ZoomMap )
       self.assertEqual( map1.Zoom, 1.2 )
-      self.assertEqual( map2, None )
-      self.assertEqual( invert1, False )
-      self.assertEqual( invert2, False )
-      self.assertEqual( series, True )
-      self.assertEqual( zoommap.Invert, False )
+      self.assertIsNone( map2 )
+      self.assertFalse( invert1 )
+      self.assertFalse( invert2 )
+      self.assertTrue( series )
+      self.assertFalse( zoommap.Invert )
       zoommap.Invert = True
-      self.assertEqual( zoommap.Invert, True )
+      self.assertTrue( zoommap.Invert )
       zoommap.invert()
-      self.assertEqual( zoommap.Invert, False )
-      self.assertEqual( zoommap.IsLinear, True )
-      self.assertEqual( zoommap.IsSimple, False )
-      self.assertEqual( zoommap.Report, False )
-      self.assertEqual( zoommap.TranForward, True )
-      self.assertEqual( zoommap.TranInverse, True )
+      self.assertFalse( zoommap.Invert )
+      self.assertTrue( zoommap.IsLinear )
+      self.assertFalse( zoommap.IsSimple )
+      self.assertFalse( zoommap.Report )
+      self.assertTrue( zoommap.TranForward )
+      self.assertTrue( zoommap.TranInverse )
 
       xin = numpy.linspace( -1, 1, 10 )
       xout = zoommap.trann( xin, True )
@@ -204,7 +204,7 @@ class TestAst(unittest.TestCase):
       answer = numpy.array( [ 0., 0., 2., 0., 0., 2.] )
       d = (answer - fit)**2
       self.assertEqual( d.sum(), 0.0 )
-      self.assertEqual( islin, True )
+      self.assertTrue( islin )
 
       lb,ub,xl,xu = zoommap.mapbox(  [1,0], [3,2], True, 2 )
       self.assertEqual( lb, 0 )
@@ -214,7 +214,7 @@ class TestAst(unittest.TestCase):
 
       isquad,fit,rms = zoommap.quadapprox(  [1,0], [3,2], 3, 3 )
 
-      self.assertEqual( isquad, True )
+      self.assertTrue( isquad )
       self.assertEqual( rms, 0.0 )
       answer = numpy.array( [ 0.,2.,0.,0.,0.,0.,0.,0.,2.,0.,0.,0.] )
       d = (answer - fit)**2
@@ -235,7 +235,7 @@ class TestAst(unittest.TestCase):
                               8., 9., starlink.Ast.BAD] )
       d = (answer - out)**2
       self.assertEqual( d.sum(), 0.0 )
-      self.assertEqual( outv, None )
+      self.assertIsNone( outv )
 
       data_in = numpy.array( [[1,2,3],[4,5,6],[7,8,9]], dtype=numpy.int32 )
       data_out = numpy.empty( (3,3), dtype=numpy.int32 )
