@@ -2983,6 +2983,92 @@ static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* SpecFluxFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SpecFluxFrame"
+
+/* Define the class structure */
+typedef struct {
+   CmpFrame parent;
+} SpecFluxFrame;
+
+/* Prototypes for class functions */
+static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(SpecFluxFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef SpecFluxFrame_methods[] = {
+  DEF_ISA(SpecFluxFrame,specfluxframe),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SpecFluxFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(SpecFluxFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SpecFluxFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   SpecFluxFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SpecFluxFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+   Object *other;
+   Object *another;
+
+   if( PyArg_ParseTuple(args, "O!O!|s:" CLASS,
+			&SpecFrameType, (PyObject**)&other,
+			&FluxFrameType, (PyObject**)&another, &options ) ) {
+      AstSpecFluxFrame *this = astSpecFluxFrame( THAT, ANOTHER, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -3144,6 +3230,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&FluxFrameType) < 0) return NULL;
    Py_INCREF(&FluxFrameType);
    PyModule_AddObject( m, "FluxFrame", (PyObject *)&FluxFrameType);
+
+   SpecFluxFrameType.tp_new = PyType_GenericNew;
+   SpecFluxFrameType.tp_base = &CmpFrameType;
+   if( PyType_Ready(&SpecFluxFrameType) < 0) return NULL;
+   Py_INCREF(&SpecFluxFrameType);
+   PyModule_AddObject( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -3334,6 +3426,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &TimeFrameType;
       } else if( !strcmp( class, "FluxFrame" ) ) {
          result = (PyTypeObject *) &FluxFrameType;
+      } else if( !strcmp( class, "SpecFluxFrame" ) ) {
+         result = (PyTypeObject *) &SpecFluxFrameType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

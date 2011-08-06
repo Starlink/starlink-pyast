@@ -367,6 +367,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( fframe, starlink.Ast.Frame )
       self.assertIsInstance( fframe, starlink.Ast.FluxFrame )
 
+   def test_SpecFluxFrame(self):
+      sfframe = starlink.Ast.SpecFluxFrame( starlink.Ast.SpecFrame(),
+                                            starlink.Ast.FluxFrame(57, starlink.Ast.SpecFrame()))
+      self.assertIsInstance( sfframe, starlink.Ast.Frame )
+      self.assertIsInstance( sfframe, starlink.Ast.CmpFrame )
+      self.assertIsInstance( sfframe, starlink.Ast.SpecFluxFrame )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
