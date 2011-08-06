@@ -2030,6 +2030,7 @@ typedef struct {
 /* Prototypes for class functions */
 static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds );
 static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(FrameSet)
@@ -2038,6 +2039,7 @@ MAKE_ISA(FrameSet)
 static PyMethodDef FrameSet_methods[] = {
   DEF_ISA(FrameSet,frameset),
   {"addframe", (PyCFunction)FrameSet_addframe, METH_VARARGS, "Add a Frame to a FrameSet to define a new coordinate system"},
+  {"getframe", (PyCFunction)FrameSet_getframe, METH_VARARGS, "Obtain an reference to a specified Frame in a FrameSet"},
    {NULL}  /* Sentinel */
 };
 
@@ -2126,6 +2128,29 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
                        &FrameType, (PyObject**)&another ) && astOK ) {
       astAddFrame( THIS, iframe, THAT, ANOTHER );
       if (astOK) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getframe"
+static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int iframe;
+
+  if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
+      AstFrame * frame = astGetFrame( THIS, iframe );
+      if (astOK) {
+        PyObject *frame_object = NULL;
+        frame_object = NewObject( (AstObject *)frame );
+        if (frame_object) {
+          result = Py_BuildValue( "O", frame_object );
+        }
+        Py_XDECREF( frame_object );
+        if (frame) frame = astAnnul(frame);
+      }
    }
 
    TIDY;
