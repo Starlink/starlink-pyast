@@ -292,5 +292,10 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( cmpmap, starlink.Ast.CmpMap )
       self.assertIsInstance( cmpmap, starlink.Ast.Mapping )
 
+   def test_SpecFrame(self):
+      specframe = starlink.Ast.SpecFrame()
+      self.assertIsInstance( specframe, starlink.Ast.Frame )
+      self.assertIsInstance( specframe, starlink.Ast.SpecFrame )
+
 if __name__ == "__main__":
     unittest.main()
