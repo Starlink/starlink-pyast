@@ -86,7 +86,7 @@ class TestAst(unittest.TestCase):
 
       zoommap.lock(1)
 
-   def test_Frame(self):
+   def test_FrameSimple(self):
       frame = starlink.Ast.Frame( 2 )
       self.assertIsInstance( frame, starlink.Ast.Frame )
       self.assertEqual( frame.Nin, 2 )
@@ -95,36 +95,63 @@ class TestAst(unittest.TestCase):
       frame.Title = testtitle
       self.assertEqual( frame.Title, testtitle)
       self.assertEqual( frame.get("Title"), testtitle)
+
       # Some methods
+   def test_FrameAngle(self):
+      frame = starlink.Ast.Frame(2)
       angle = frame.angle( [4,3], [0,0], [4,0] )
       self.assertEqual( angle, math.atan2(3,4) )
+
+   def test_FrameAxis(self):
+      frame = starlink.Ast.Frame(2)
       angle = frame.axangle( [0,0], [4,3], 1 )
       self.assertEqual( angle, -math.atan2(3,4) )
       distance = frame.axdistance( 1, 0, 4 )
       self.assertEqual( distance, 4 )
       axoffset = frame.axoffset( 1, 1, 4 )
       self.assertEqual( axoffset, 5 )
+
+   def test_FrameDistance(self):
+      frame = starlink.Ast.Frame(2)
       distance = frame.distance( [0,0],[4,3] )
       self.assertEqual( distance, 5 )
+
+   def test_FrameFormat(self):
+      frame = starlink.Ast.Frame(2)
       format = frame.format( 1, 55.270)
       self.assertEqual( format, "55.27" )
+
+   def test_FrameIntersect(self):
+      frame = starlink.Ast.Frame(2)
       cross = frame.intersect( [-1,1],[1,1],[0,0],[2,2] )
       self.assertEqual( cross[0], 1.0 )
       self.assertEqual( cross[1], 1.0 )
+
+   def test_FrameMatchAxes(self):
+      frame = starlink.Ast.Frame(2)
       frame2 = starlink.Ast.Frame( 3 )
       axes = frame.matchaxes( frame2 )
       self.assertEqual( axes[0], 1 )
       self.assertEqual( axes[1], 2 )
       self.assertEqual( axes[2], 0 )
+
+   def test_FrameNorm(self):
+      frame = starlink.Ast.Frame(2)
       coords = [3,2]
       ncoords = frame.norm( coords )
       self.assertEqual( ncoords[0], coords[0] )
+
+   def test_FrameOffset(self):
+      frame = starlink.Ast.Frame(2)
       point = frame.offset( [0,0], [4,3], 10 )
       self.assertEqual( point[0], 8 )
       self.assertEqual( point[1], 6 )
       direction, point = frame.offset2( [0,0], math.atan2(4,3), 10 )
       self.assertAlmostEqual( point[0], 8 )
       self.assertAlmostEqual( point[1], 6 )
+
+   def test_FramePerm(self):
+      frame = starlink.Ast.Frame(2)
       frame.permaxes( [2,1] )
       nframe,mapping = frame.pickaxes( [ 2 ] )
       self.assertEqual(nframe.Nin, 1 )
@@ -132,18 +159,30 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( mapping, starlink.Ast.PermMap )
       self.assertEqual( mapping.Nin, 2 )
       self.assertEqual( mapping.Nout, 1 )
+
+   def test_FrameConvert(self):
+      frame = starlink.Ast.Frame(2)
       nframe = starlink.Ast.Frame( 2 )
       fset = frame.convert( nframe )
       self.assertIsInstance( fset, starlink.Ast.FrameSet )
       self.assertEqual( fset.Nframe, 2 )
       fset2 = fset.findframe( nframe )
       self.assertIsInstance( fset, starlink.Ast.FrameSet )
+
+   def test_FrameResolve(self):
+      frame = starlink.Ast.Frame(2)
       point4,d1,d2 = frame.resolve( [0,0], [3,3], [0,4] )
       self.assertAlmostEqual( d2, 0.0 )
       self.assertAlmostEqual( d1, math.sqrt(18) )
+
+   def test_FrameUnformat(self):
+      frame = starlink.Ast.Frame(2)
       nchars,value = frame.unformat( 1, "56.4 #" )
       self.assertEqual( nchars, 5 )
       self.assertEqual( value, 56.4 )
+
+   def test_FrameActiveUnit(self):
+      frame = starlink.Ast.Frame(2)
       self.assertFalse( frame.ActiveUnit )
       frame.ActiveUnit = True
       self.assertTrue( frame.ActiveUnit )
