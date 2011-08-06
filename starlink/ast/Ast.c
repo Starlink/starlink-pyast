@@ -2419,7 +2419,7 @@ MAKE_ISA(SpecFrame)
 
 /* Describe the methods of the class */
 static PyMethodDef SpecFrame_methods[] = {
-  DEF_ISA(SpecFrame,cmpframe),
+  DEF_ISA(SpecFrame,specframe),
    {NULL}  /* Sentinel */
 };
 
