@@ -2413,6 +2413,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds );
+static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(SkyFrame)
@@ -2420,6 +2421,7 @@ MAKE_ISA(SkyFrame)
 /* Describe the methods of the class */
 static PyMethodDef SkyFrame_methods[] = {
   DEF_ISA(SkyFrame,skyframe),
+  {"skyoffsetmap", (PyCFunction)SkyFrame_skyoffsetmap, METH_NOARGS,"Returns a Mapping which goes from absolute coordinates to offset coordinates"},
    {NULL}  /* Sentinel */
 };
 
@@ -2501,6 +2503,28 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".skyoffsetmap"
+static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int iframe1;
+   int iframe2;
+
+   AstMapping * mapping = astSkyOffsetMap( THIS  );
+   if (astOK) {
+      PyObject *mapping_object = NULL;
+      mapping_object = NewObject( (AstObject *)mapping );
+      if (mapping_object) {
+         result = Py_BuildValue( "O", mapping_object );
+      }
+      Py_XDECREF( mapping_object );
+   }
+   if (mapping) mapping = astAnnul(mapping);
 
    TIDY;
    return result;

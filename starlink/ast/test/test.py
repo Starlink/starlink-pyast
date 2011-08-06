@@ -306,6 +306,8 @@ class TestAst(unittest.TestCase):
       skyframe = starlink.Ast.SkyFrame()
       self.assertIsInstance( skyframe, starlink.Ast.Frame )
       self.assertIsInstance( skyframe, starlink.Ast.SkyFrame )
+      mapping = skyframe.skyoffsetmap()
+      self.assertIsInstance( mapping, starlink.Ast.Mapping )
 
 if __name__ == "__main__":
     unittest.main()
