@@ -2034,6 +2034,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds );
 static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(FrameSet)
@@ -2044,6 +2045,7 @@ static PyMethodDef FrameSet_methods[] = {
   {"addframe", (PyCFunction)FrameSet_addframe, METH_VARARGS, "Add a Frame to a FrameSet to define a new coordinate system"},
   {"getframe", (PyCFunction)FrameSet_getframe, METH_VARARGS, "Obtain an reference to a specified Frame in a FrameSet"},
   {"getmapping", (PyCFunction)FrameSet_getmapping, METH_VARARGS, "Obtain a Mapping that converts between two Frames in a FrameSet"},
+  {"remapframe", (PyCFunction)FrameSet_remapframe, METH_VARARGS, "Modify a Frame's relationship to other Frames in a FrameSet"},
    {NULL}  /* Sentinel */
 };
 
@@ -2179,6 +2181,23 @@ static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
         Py_XDECREF( mapping_object );
         if (mapping) mapping = astAnnul(mapping);
       }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".remapframe"
+static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
+  Object *other = NULL;
+  PyObject *result = NULL;
+  int iframe;
+
+  if( PyArg_ParseTuple(args, "iO!:" NAME, &iframe,
+                       &MappingType, (PyObject**)&other ) && astOK ) {
+      astRemapFrame( THIS, iframe, THAT );
+      if (astOK) result = Py_None;
    }
 
    TIDY;

@@ -156,6 +156,7 @@ class TestAst(unittest.TestCase):
       self.assertTrue( frame2.same(frame) )
       mapping = frameset.getmapping( 1, 2 )
       self.assertIsInstance( mapping, starlink.Ast.UnitMap )
+      frameset.remapframe( 1, starlink.Ast.UnitMap(2) )
 
    def test_Mapping(self):
       with self.assertRaises(TypeError):
