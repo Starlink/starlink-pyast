@@ -341,6 +341,14 @@ class TestAst(unittest.TestCase):
       self.assertAlmostEqual( refpos[0], 0, 5 )
       self.assertAlmostEqual( refpos[1], 1 )
 
+   def test_DSBSpecFrame(self):
+      dsbspecframe = starlink.Ast.DSBSpecFrame( "IF=4.0,AlignSideBand=1")
+      self.assertIsInstance( dsbspecframe, starlink.Ast.Frame )
+      self.assertIsInstance( dsbspecframe, starlink.Ast.SpecFrame )
+      self.assertIsInstance( dsbspecframe, starlink.Ast.DSBSpecFrame )
+      self.assertTrue( dsbspecframe.AlignSideBand )
+      self.assertEqual( dsbspecframe.IF, 4.0 )
+
    def test_SkyFrame(self):
       skyframe = starlink.Ast.SkyFrame()
       self.assertIsInstance( skyframe, starlink.Ast.Frame )

@@ -2679,6 +2679,105 @@ static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
    return result;
 }
 
+/* DSBSpecFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".DSBSpecFrame"
+
+/* Define the class structure */
+typedef struct {
+   SpecFrame parent;
+} DSBSpecFrame;
+
+/* Prototypes for class functions */
+static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(DSBSpecFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef DSBSpecFrame_methods[] = {
+  DEF_ISA(DSBSpecFrame,dsbspecframe),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(DSBSpecFrame,AlignSideBand)
+MAKE_GETSETD(DSBSpecFrame,DSBCentre)
+MAKE_GETSETD(DSBSpecFrame,IF)
+MAKE_GETSETD(DSBSpecFrame,ImagFreq)
+MAKE_GETSETC(DSBSpecFrame,SideBand)
+
+static PyGetSetDef DSBSpecFrame_getseters[] = {
+   DEFATT(AlignSideBand,"Should alignment occur between sidebands?"),
+   DEFATT(DSBCentre,"The central position of interest"),
+   DEFATT(IF,"The intermediate frequency used to define the LO frequency"),
+   DEFATT(ImagFreq,"The image sideband equivalent of the rest frequency"),
+   DEFATT(SideBand,"Indicates which sideband the DSBSpecFrame represents"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject DSBSpecFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(DSBSpecFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST DSBSpecFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   DSBSpecFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   DSBSpecFrame_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)DSBSpecFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstDSBSpecFrame *this = astDSBSpecFrame( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -2816,6 +2915,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&SpecFrameType) < 0) return NULL;
    Py_INCREF(&SpecFrameType);
    PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
+
+   DSBSpecFrameType.tp_new = PyType_GenericNew;
+   DSBSpecFrameType.tp_base = &SpecFrameType;
+   if( PyType_Ready(&DSBSpecFrameType) < 0) return NULL;
+   Py_INCREF(&DSBSpecFrameType);
+   PyModule_AddObject( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType);
 
    SkyFrameType.tp_new = PyType_GenericNew;
    SkyFrameType.tp_base = &FrameType;
@@ -3004,6 +3109,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &CmpFrameType;
       } else if( !strcmp( class, "SpecFrame" ) ) {
          result = (PyTypeObject *) &SpecFrameType;
+      } else if( !strcmp( class, "DSBSpecFrame" ) ) {
+         result = (PyTypeObject *) &DSBSpecFrameType;
       } else if( !strcmp( class, "SkyFrame" ) ) {
          result = (PyTypeObject *) &SkyFrameType;
       } else {
