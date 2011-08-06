@@ -2035,6 +2035,7 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(FrameSet)
@@ -2046,6 +2047,7 @@ static PyMethodDef FrameSet_methods[] = {
   {"getframe", (PyCFunction)FrameSet_getframe, METH_VARARGS, "Obtain an reference to a specified Frame in a FrameSet"},
   {"getmapping", (PyCFunction)FrameSet_getmapping, METH_VARARGS, "Obtain a Mapping that converts between two Frames in a FrameSet"},
   {"remapframe", (PyCFunction)FrameSet_remapframe, METH_VARARGS, "Modify a Frame's relationship to other Frames in a FrameSet"},
+  {"removeframe", (PyCFunction)FrameSet_removeframe, METH_VARARGS, "Remove a Frame from a FrameSet"},
    {NULL}  /* Sentinel */
 };
 
@@ -2197,6 +2199,21 @@ static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
   if( PyArg_ParseTuple(args, "iO!:" NAME, &iframe,
                        &MappingType, (PyObject**)&other ) && astOK ) {
       astRemapFrame( THIS, iframe, THAT );
+      if (astOK) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".removeframe"
+static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int iframe;
+
+  if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
+      astRemoveFrame( THIS, iframe );
       if (astOK) result = Py_None;
    }
 
