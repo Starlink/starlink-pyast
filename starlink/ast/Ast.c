@@ -2791,6 +2791,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds );
+static PyObject *TimeFrame_currenttime( TimeFrame *self );
 
 /* Standard AST class functons */
 MAKE_ISA(TimeFrame)
@@ -2798,6 +2799,7 @@ MAKE_ISA(TimeFrame)
 /* Describe the methods of the class */
 static PyMethodDef TimeFrame_methods[] = {
   DEF_ISA(TimeFrame,timeframe),
+  {"currenttime", (PyCFunction)TimeFrame_currenttime, METH_NOARGS,"Return the current system time"},
    {NULL}  /* Sentinel */
 };
 
@@ -2867,6 +2869,21 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
       AstTimeFrame *this = astTimeFrame( options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".currenttime"
+static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
+   Object *other = NULL;
+   PyObject *result = NULL;
+
+   if ( astOK ) {
+      double currtime = astCurrentTime( THIS );
+      if (astOK) result = Py_BuildValue( "d", currtime );
    }
 
    TIDY;

@@ -360,6 +360,7 @@ class TestAst(unittest.TestCase):
       tframe = starlink.Ast.TimeFrame( "TimeScale=TAI" )
       self.assertIsInstance( tframe, starlink.Ast.Frame )
       self.assertEqual( tframe.TimeScale, "TAI" )
+      self.assertGreater( tframe.currenttime(), 55700.0)
 
 if __name__ == "__main__":
     #unittest.main()
