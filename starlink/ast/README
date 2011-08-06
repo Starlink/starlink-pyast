@@ -103,6 +103,9 @@ astImport, astGet<X> (except astGetC, see above), astSet<X>.
 module (e.g. "newobj = copy.deepcopy(obj)"), or using the standard AST
 "copy" method (e.g. "newobj = obj.copy()").
 
+- Boolean values in the AST interface can usually be passed integers
+or True/False. True/False booleans are not enforced (but this may
+change).
 
 
 Special Cases:
@@ -155,3 +158,10 @@ interface returns a new modified copy of the input array:
 
  normalised = frame.norm( input )
 
+- Frame.ActiveUnit is treated as an attribute in the Python interface
+rather than being implemented as two distinct method calls (astGetActiveUnit
+and astSetActiveUnit).
+
+- For SpecFrames astSetRefPos takes two separate arguments for the lon
+and lat and GetRefPos returns a tuple with two values. It may be that
+we should be using numpy arrays here.
