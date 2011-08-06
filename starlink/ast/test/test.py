@@ -356,6 +356,11 @@ class TestAst(unittest.TestCase):
       mapping = skyframe.skyoffsetmap()
       self.assertIsInstance( mapping, starlink.Ast.Mapping )
 
+   def test_TimeFrame(self):
+      tframe = starlink.Ast.TimeFrame( "TimeScale=TAI" )
+      self.assertIsInstance( tframe, starlink.Ast.Frame )
+      self.assertEqual( tframe.TimeScale, "TAI" )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)

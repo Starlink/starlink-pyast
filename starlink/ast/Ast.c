@@ -2777,6 +2777,101 @@ static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds
    return result;
 }
 
+/* TimeFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".TimeFrame"
+
+/* Define the class structure */
+typedef struct {
+   Frame parent;
+} TimeFrame;
+
+/* Prototypes for class functions */
+static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(TimeFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef TimeFrame_methods[] = {
+  DEF_ISA(TimeFrame,timeframe),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETC(TimeFrame,AlignTimeScale)
+MAKE_GETSETD(TimeFrame,LTOffset)
+MAKE_GETSETD(TimeFrame,TimeOrigin)
+MAKE_GETSETC(TimeFrame,TimeScale)
+
+static PyGetSetDef TimeFrame_getseters[] = {
+   DEFATT(AlignTimeScale,"Time scale in which to align TimeFrames"),
+   DEFATT(LTOffset,"The offset of Local Time from UTC in hours"),
+   DEFATT(TimeOrigin,"The zero point for TimeFrame axis values"),
+   DEFATT(TimeScale,"The timescale used by the TimeFrame"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject TimeFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(TimeFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST TimeFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   TimeFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   TimeFrame_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)TimeFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstTimeFrame *this = astTimeFrame( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -2927,6 +3022,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&SkyFrameType) < 0) return NULL;
    Py_INCREF(&SkyFrameType);
    PyModule_AddObject( m, "SkyFrame", (PyObject *)&SkyFrameType);
+
+   TimeFrameType.tp_new = PyType_GenericNew;
+   TimeFrameType.tp_base = &FrameType;
+   if( PyType_Ready(&TimeFrameType) < 0) return NULL;
+   Py_INCREF(&TimeFrameType);
+   PyModule_AddObject( m, "TimeFrame", (PyObject *)&TimeFrameType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -3113,6 +3214,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &DSBSpecFrameType;
       } else if( !strcmp( class, "SkyFrame" ) ) {
          result = (PyTypeObject *) &SkyFrameType;
+      } else if( !strcmp( class, "TimeFrame" ) ) {
+         result = (PyTypeObject *) &TimeFrameType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "
