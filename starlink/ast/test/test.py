@@ -349,4 +349,6 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( mapping, starlink.Ast.Mapping )
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
+    unittest.TextTestRunner(verbosity=2).run(suite)
