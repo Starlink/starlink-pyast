@@ -296,6 +296,11 @@ class TestAst(unittest.TestCase):
       specframe = starlink.Ast.SpecFrame()
       self.assertIsInstance( specframe, starlink.Ast.Frame )
       self.assertIsInstance( specframe, starlink.Ast.SpecFrame )
+      sky = starlink.Ast.SkyFrame()
+      specframe.setrefpos( sky, 0, 1 )
+      refpos = specframe.getrefpos(sky)
+      self.assertAlmostEqual( refpos[0], 0, 5 )
+      self.assertAlmostEqual( refpos[1], 1 )
 
    def test_SkyFrame(self):
       skyframe = starlink.Ast.SkyFrame()

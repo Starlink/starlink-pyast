@@ -2399,114 +2399,6 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* SpecFrame */
-/* ======= */
-
-/* Define a string holding the fully qualified Python class name. */
-#undef CLASS
-#define CLASS MODULE ".SpecFrame"
-
-/* Define the class structure */
-typedef struct {
-   Frame parent;
-} SpecFrame;
-
-/* Prototypes for class functions */
-static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(SpecFrame)
-
-/* Describe the methods of the class */
-static PyMethodDef SpecFrame_methods[] = {
-  DEF_ISA(SpecFrame,specframe),
-   {NULL}  /* Sentinel */
-};
-
-/* Define the AST attributes of the class */
-MAKE_GETSETL(SpecFrame,AlignSpecOffset)
-MAKE_GETSETC(SpecFrame,AlignStdOfRest)
-MAKE_GETSETC(SpecFrame,RefDec)
-MAKE_GETSETC(SpecFrame,RefRA)
-MAKE_GETSETD(SpecFrame,RestFreq)
-MAKE_GETSETC(SpecFrame,SourceSys)
-MAKE_GETSETD(SpecFrame,SourceVel)
-MAKE_GETSETC(SpecFrame,SourceVRF)
-MAKE_GETSETD(SpecFrame,SpecOrigin)
-MAKE_GETSETC(SpecFrame,StdOfRest)
-
-static PyGetSetDef SpecFrame_getseters[] = {
-   DEFATT(AlignSpecOffset,"Align SpecFrames using the offset coordinate system?"),
-   DEFATT(AlignStdOfRest,"Standard of rest in which to align SpecFrames"),
-   DEFATT(RefDec,"Declination of the source (FK5 J2000)"),
-   DEFATT(RefRA,"Right ascension of the source (FK5 J2000)"),
-   DEFATT(RestFreq,"Rest frequency"),
-   DEFATT(SourceSys,"Source velocity spectral system"),
-   DEFATT(SourceVel,"Source velocity"),
-   DEFATT(SourceVRF,"Source velocity rest frame"),
-   DEFATT(SpecOrigin,"The zero point for SpecFrame axis values"),
-   DEFATT(StdOfRest,"Standard of rest"),
-   {NULL}  /* Sentinel */
-};
-
-/* Define the class Python type structure */
-static PyTypeObject SpecFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
-   CLASS,                     /* tp_name */
-   sizeof(SpecFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   SpecFrame_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   SpecFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
-};
-
-
-/* Define the class methods */
-static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
-   const char *options = " ";
-   int result = -1;
-
-   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstSpecFrame *this = astSpecFrame( options );
-      result = SetProxy( (AstObject *) this, (Object *) self );
-      this = astAnnul( this );
-   }
-
-   TIDY;
-   return result;
-}
-
 /* SkyFrame */
 /* ======= */
 
@@ -2608,6 +2500,155 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
       AstSkyFrame *this = astSkyFrame( options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* SpecFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SpecFrame"
+
+/* Define the class structure */
+typedef struct {
+   Frame parent;
+} SpecFrame;
+
+/* Prototypes for class functions */
+static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds );
+static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args );
+static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args );
+
+/* Standard AST class functons */
+MAKE_ISA(SpecFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef SpecFrame_methods[] = {
+  DEF_ISA(SpecFrame,specframe),
+  {"setrefpos", (PyCFunction)SpecFrame_setrefpos, METH_VARARGS,"Set the reference position in a specified celestial coordinate system"},
+  {"getrefpos", (PyCFunction)SpecFrame_getrefpos, METH_VARARGS, "Return the reference position in a specified celestial coordinate system"},
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(SpecFrame,AlignSpecOffset)
+MAKE_GETSETC(SpecFrame,AlignStdOfRest)
+MAKE_GETSETC(SpecFrame,RefDec)
+MAKE_GETSETC(SpecFrame,RefRA)
+MAKE_GETSETD(SpecFrame,RestFreq)
+MAKE_GETSETC(SpecFrame,SourceSys)
+MAKE_GETSETD(SpecFrame,SourceVel)
+MAKE_GETSETC(SpecFrame,SourceVRF)
+MAKE_GETSETD(SpecFrame,SpecOrigin)
+MAKE_GETSETC(SpecFrame,StdOfRest)
+
+static PyGetSetDef SpecFrame_getseters[] = {
+   DEFATT(AlignSpecOffset,"Align SpecFrames using the offset coordinate system?"),
+   DEFATT(AlignStdOfRest,"Standard of rest in which to align SpecFrames"),
+   DEFATT(RefDec,"Declination of the source (FK5 J2000)"),
+   DEFATT(RefRA,"Right ascension of the source (FK5 J2000)"),
+   DEFATT(RestFreq,"Rest frequency"),
+   DEFATT(SourceSys,"Source velocity spectral system"),
+   DEFATT(SourceVel,"Source velocity"),
+   DEFATT(SourceVRF,"Source velocity rest frame"),
+   DEFATT(SpecOrigin,"The zero point for SpecFrame axis values"),
+   DEFATT(StdOfRest,"Standard of rest"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SpecFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(SpecFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SpecFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   SpecFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   SpecFrame_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SpecFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstSpecFrame *this = astSpecFrame( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".setrefpos"
+static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
+  Object *other = NULL;
+  PyObject *result = NULL;
+  double lon;
+  double lat;
+
+  if( PyArg_ParseTuple(args, "O!dd:" NAME,
+                       &SkyFrameType, (PyObject**)&other,
+                       &lon, &lat ) && astOK ) {
+      astSetRefPos( THIS, THAT, lon, lat );
+      if (astOK) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getrefpos"
+static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
+  Object *other = NULL;
+  PyObject *result = NULL;
+  double lon;
+  double lat;
+
+  if( PyArg_ParseTuple(args, "O!:" NAME,
+                       &SkyFrameType, (PyObject**)&other ) && astOK ) {
+      astGetRefPos( THIS, THAT, &lon, &lat );
+      if (astOK) result = Py_BuildValue( "dd", lon, lat );
    }
 
    TIDY;
