@@ -2507,6 +2507,113 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* SkyFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SkyFrame"
+
+/* Define the class structure */
+typedef struct {
+   Frame parent;
+} SkyFrame;
+
+/* Prototypes for class functions */
+static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(SkyFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef SkyFrame_methods[] = {
+  DEF_ISA(SkyFrame,skyframe),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(SkyFrame,AlignOffset)
+// AsTime(axis)
+MAKE_GETSETD(SkyFrame,Equinox)
+// IsLatAxis(axis)
+// IsLonAxis(axis)
+MAKE_GETSETI(SkyFrame,LatAxis)
+MAKE_GETSETI(SkyFrame,LonAxis)
+MAKE_GETSETL(SkyFrame,NegLon)
+MAKE_GETSETC(SkyFrame,Projection)
+// SkyRef(axis)
+MAKE_GETSETC(SkyFrame,SkyRefIs)
+// SkyRefP(axis)
+
+static PyGetSetDef SkyFrame_getseters[] = {
+   DEFATT(AlignOffset,"Align SkyFrames using the offset coordinate system?"),
+   DEFATT(Equinox,"Epoch of the mean equinox"),
+   DEFATT(LatAxis,"Index of the latitude axis"),
+   DEFATT(LonAxis,"Index of the longitude axis"),
+   DEFATT(NegLon,"Display longitude values in the range [-pi,pi]?"),
+   DEFATT(Projection,"Sky projection description"),
+   DEFATT(SkyRefIs,"Selects the nature of the offset coordinate system"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SkyFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(SkyFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SkyFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   SkyFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   SkyFrame_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SkyFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstSkyFrame *this = astSkyFrame( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -2644,6 +2751,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&SpecFrameType) < 0) return NULL;
    Py_INCREF(&SpecFrameType);
    PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
+
+   SkyFrameType.tp_new = PyType_GenericNew;
+   SkyFrameType.tp_base = &FrameType;
+   if( PyType_Ready(&SkyFrameType) < 0) return NULL;
+   Py_INCREF(&SkyFrameType);
+   PyModule_AddObject( m, "SkyFrame", (PyObject *)&SkyFrameType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -2826,6 +2939,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &CmpFrameType;
       } else if( !strcmp( class, "SpecFrame" ) ) {
          result = (PyTypeObject *) &SpecFrameType;
+      } else if( !strcmp( class, "SkyFrame" ) ) {
+         result = (PyTypeObject *) &SkyFrameType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

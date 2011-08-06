@@ -297,5 +297,10 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( specframe, starlink.Ast.Frame )
       self.assertIsInstance( specframe, starlink.Ast.SpecFrame )
 
+   def test_SkyFrame(self):
+      skyframe = starlink.Ast.SkyFrame()
+      self.assertIsInstance( skyframe, starlink.Ast.Frame )
+      self.assertIsInstance( skyframe, starlink.Ast.SkyFrame )
+
 if __name__ == "__main__":
     unittest.main()
