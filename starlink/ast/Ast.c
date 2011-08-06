@@ -1860,7 +1860,7 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
     }
     Py_XDECREF( a1 );
     Py_XDECREF( a2 );
-    Py_XDECREF( b2 );
+    Py_XDECREF( b1 );
     Py_XDECREF( b2 );
     Py_XDECREF( out );
   }
