@@ -203,7 +203,7 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
    int value;
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
       value = astHasAttribute( THIS, attrib);
-      if( astOK ) result = value ? Py_True : Py_False;
+      if( astOK ) result = Py_BuildValue( "O", (value ? Py_True : Py_False) );
    }
    TIDY;
    return result;
@@ -231,7 +231,7 @@ static PyObject *Object_same( Object *self, PyObject *args ) {
    if( PyArg_ParseTuple( args, "O!:" NAME, &ObjectType,
                          (PyObject **) &other ) ) {
       value = astSame( THIS, THAT );
-      if( astOK ) result = value ?  Py_True : Py_False;
+      if( astOK ) result = Py_BuildValue( "O", (value ?  Py_True : Py_False) );
    }
    TIDY;
    return result;
@@ -267,7 +267,7 @@ static PyObject *Object_test( Object *self, PyObject *args ) {
    int value;
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
       value = astTest( THIS, attrib);
-      if( astOK ) result = value ?  Py_True : Py_False;
+      if( astOK ) result = Py_BuildValue( "O", (value ?  Py_True : Py_False));
    }
    TIDY;
    return result;
