@@ -2031,6 +2031,7 @@ typedef struct {
 static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds );
 static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(FrameSet)
@@ -2040,6 +2041,7 @@ static PyMethodDef FrameSet_methods[] = {
   DEF_ISA(FrameSet,frameset),
   {"addframe", (PyCFunction)FrameSet_addframe, METH_VARARGS, "Add a Frame to a FrameSet to define a new coordinate system"},
   {"getframe", (PyCFunction)FrameSet_getframe, METH_VARARGS, "Obtain an reference to a specified Frame in a FrameSet"},
+  {"getmapping", (PyCFunction)FrameSet_getmapping, METH_VARARGS, "Obtain a Mapping that converts between two Frames in a FrameSet"},
    {NULL}  /* Sentinel */
 };
 
@@ -2150,6 +2152,30 @@ static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
         }
         Py_XDECREF( frame_object );
         if (frame) frame = astAnnul(frame);
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getmapping"
+static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
+  PyObject *result = NULL;
+  int iframe1;
+  int iframe2;
+
+  if( PyArg_ParseTuple(args, "ii:" NAME, &iframe1, &iframe2 ) && astOK ) {
+      AstMapping * mapping = astGetMapping( THIS, iframe1, iframe2 );
+      if (astOK) {
+        PyObject *mapping_object = NULL;
+        mapping_object = NewObject( (AstObject *)mapping );
+        if (mapping_object) {
+          result = Py_BuildValue( "O", mapping_object );
+        }
+        Py_XDECREF( mapping_object );
+        if (mapping) mapping = astAnnul(mapping);
       }
    }
 
