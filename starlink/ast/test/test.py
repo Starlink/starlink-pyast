@@ -362,6 +362,11 @@ class TestAst(unittest.TestCase):
       self.assertEqual( tframe.TimeScale, "TAI" )
       self.assertGreater( tframe.currenttime(), 55700.0)
 
+   def test_FluxFrame(self):
+      fframe = starlink.Ast.FluxFrame( 52.5, starlink.Ast.SpecFrame() )
+      self.assertIsInstance( fframe, starlink.Ast.Frame )
+      self.assertIsInstance( fframe, starlink.Ast.FluxFrame )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)

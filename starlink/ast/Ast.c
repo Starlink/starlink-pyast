@@ -2890,6 +2890,99 @@ static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
    return result;
 }
 
+/* FluxFrame */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".FluxFrame"
+
+/* Define the class structure */
+typedef struct {
+   Frame parent;
+} FluxFrame;
+
+/* Prototypes for class functions */
+static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(FluxFrame)
+
+/* Describe the methods of the class */
+static PyMethodDef FluxFrame_methods[] = {
+  DEF_ISA(FluxFrame,fluxframe),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETD(FluxFrame,SpecVal)
+
+static PyGetSetDef FluxFrame_getseters[] = {
+   DEFATT(SpecVal,"The spectral position at which the flux values are measured"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject FluxFrameType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(FluxFrame),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST FluxFrame",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   FluxFrame_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   FluxFrame_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)FluxFrame_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+   double specval;
+   Object *other;
+
+   if( PyArg_ParseTuple(args, "dO!|s:" CLASS, &specval,
+			&SpecFrameType, (PyObject**)&other, &options ) ) {
+      AstFluxFrame *this = astFluxFrame( specval, THAT, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -3045,6 +3138,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&TimeFrameType) < 0) return NULL;
    Py_INCREF(&TimeFrameType);
    PyModule_AddObject( m, "TimeFrame", (PyObject *)&TimeFrameType);
+
+   FluxFrameType.tp_new = PyType_GenericNew;
+   FluxFrameType.tp_base = &FrameType;
+   if( PyType_Ready(&FluxFrameType) < 0) return NULL;
+   Py_INCREF(&FluxFrameType);
+   PyModule_AddObject( m, "FluxFrame", (PyObject *)&FluxFrameType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -3233,6 +3332,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &SkyFrameType;
       } else if( !strcmp( class, "TimeFrame" ) ) {
          result = (PyTypeObject *) &TimeFrameType;
+      } else if( !strcmp( class, "FluxFrame" ) ) {
+         result = (PyTypeObject *) &FluxFrameType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "
