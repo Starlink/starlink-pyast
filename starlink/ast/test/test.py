@@ -144,6 +144,9 @@ class TestAst(unittest.TestCase):
       nchars,value = frame.unformat( 1, "56.4 #" )
       self.assertEqual( nchars, 5 )
       self.assertEqual( value, 56.4 )
+      self.assertFalse( frame.ActiveUnit )
+      frame.ActiveUnit = True
+      self.assertTrue( frame.ActiveUnit )
 
    def test_FrameSet(self):
       frame = starlink.Ast.Frame( 2 )

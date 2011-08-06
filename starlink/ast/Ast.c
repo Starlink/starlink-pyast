@@ -1512,7 +1512,7 @@ static PyMethodDef Frame_methods[] = {
   {"distance", (PyCFunction)Frame_distance, METH_VARARGS, "Calculate the distance between two points in a Frame"},
   {"findframe", (PyCFunction)Frame_findframe, METH_VARARGS, "Find a coordinate system with specified characteristics"},
   {"format", (PyCFunction)Frame_format, METH_VARARGS, "Format a coordinate value for a Frame axis"},
-  // astGetActiveUnit should be implemented as an attribute getter
+  // astGetActiveUnit is implemented as an attribute
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
   {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
   {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
@@ -1551,6 +1551,12 @@ MAKE_GETSETC(Frame,Title)
 // Top(axis)
 // Unit(axis)
 
+// Have to write our own GETSET routines for ActiveUnit
+MAKE_GET( Frame, ActiveUnit,
+          astGetActiveUnit( THIS ) ? Py_True : Py_False );
+MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == Py_True ) ); if (astOK) result = 0; );
+
+
 static PyGetSetDef Frame_getseters[] = {
    DEFATT(AlignSystem,"Coordinate system used to align Frames"),
    DEFATT(Domain, "Coordinate system domain"),
@@ -1567,6 +1573,7 @@ static PyGetSetDef Frame_getseters[] = {
    DEFATT(PreserveAxes, "Preserve axes?"),
    DEFATT(System, "Coordinate system used to describe the domain"),
    DEFATT(Title, "Frame title"),
+   DEFATT(ActiveUnit, "Control how the frame behaves when it is used to match anothe Frame"),
    {NULL}  /* Sentinel */
 };
 
