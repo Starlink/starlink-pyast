@@ -285,7 +285,7 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( cmpframe, starlink.Ast.Frame )
 
    def test_CmpMap(self):
-      cmpmap = starlink.Ast.CmpMap( starlink.Ast.UnitMap(2), starlink.Ast.UnitMap(2), 1 )
+      cmpmap = starlink.Ast.CmpMap( starlink.Ast.UnitMap(2), starlink.Ast.UnitMap(2), True )
       self.assertIsInstance( cmpmap, starlink.Ast.CmpMap )
       self.assertIsInstance( cmpmap, starlink.Ast.Mapping )
 
