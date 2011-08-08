@@ -333,6 +333,12 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( unitmap, starlink.Ast.UnitMap )
       self.assertEqual( unitmap.Nin, 3 )
 
+   def test_GrismMap(self):
+      grismmap = starlink.Ast.GrismMap("GrismM=1")
+      self.assertIsInstance( grismmap, starlink.Ast.GrismMap )
+      self.assertIsInstance( grismmap, starlink.Ast.Mapping )
+      self.assertEqual( grismmap.GrismM, 1 )
+
    def test_WinMap(self):
       with self.assertRaises(ValueError):
          winmap = starlink.Ast.WinMap( [1], [1,2], [3,4],[5,6])

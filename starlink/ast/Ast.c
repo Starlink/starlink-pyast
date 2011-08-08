@@ -1183,6 +1183,110 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* GrismMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".GrismMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} GrismMap;
+
+/* Prototypes for class functions */
+static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(GrismMap)
+
+/* Describe the methods of the class */
+static PyMethodDef GrismMap_methods[] = {
+   DEF_ISA(GrismMap,grismmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETD(GrismMap,GrismNR)
+MAKE_GETSETD(GrismMap,GrismNRP)
+MAKE_GETSETD(GrismMap,GrismWaveR)
+MAKE_GETSETD(GrismMap,GrismAlpha)
+MAKE_GETSETD(GrismMap,GrismG)
+MAKE_GETSETI(GrismMap,GrismM)
+MAKE_GETSETD(GrismMap,GrismEps)
+MAKE_GETSETD(GrismMap,GrismTheta)
+
+static PyGetSetDef GrismMap_getseters[] = {
+   DEFATT(GrismNR,"The refractive index at the reference wavelength"),
+   DEFATT(GrismNRP,"Rate of change of refractive index with wavelength"),
+   DEFATT(GrismWaveR,"The reference wavelength"),
+   DEFATT(GrismAlpha,"The angle of incidence of the incoming light"),
+   DEFATT(GrismG,"The grating ruling density"),
+   DEFATT(GrismM,"The interference order"),
+   DEFATT(GrismEps,"The angle between the normal and the dispersion plane"),
+   DEFATT(GrismTheta,"Angle between normal to detector plane and reference ray"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject GrismMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(GrismMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST GrismMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   GrismMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   GrismMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)GrismMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstGrismMap *this = astGrismMap( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* UnitMap */
 /* ======= */
 
@@ -3479,6 +3583,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
 
+   GrismMapType.tp_new = PyType_GenericNew;
+   GrismMapType.tp_base = &MappingType;
+   if( PyType_Ready(&GrismMapType) < 0) return NULL;
+   Py_INCREF(&GrismMapType);
+   PyModule_AddObject( m, "GrismMap", (PyObject *)&GrismMapType);
+
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
    if( PyType_Ready(&UnitMapType) < 0) return NULL;
@@ -3738,6 +3848,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &ZoomMapType;
       } else if( !strcmp( class, "UnitMap" ) ) {
         result = (PyTypeObject *) &UnitMapType;
+      } else if( !strcmp( class, "GrismMap" ) ) {
+        result = (PyTypeObject *) &GrismMapType;
       } else if( !strcmp( class, "CmpMap" ) ) {
         result = (PyTypeObject *) &CmpMapType;
       } else if( !strcmp( class, "PermMap" ) ) {
