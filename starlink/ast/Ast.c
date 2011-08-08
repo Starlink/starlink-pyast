@@ -1466,6 +1466,101 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* ShiftMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".ShiftMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} ShiftMap;
+
+/* Prototypes for class functions */
+static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(ShiftMap)
+
+/* Describe the methods of the class */
+static PyMethodDef ShiftMap_methods[] = {
+   DEF_ISA(ShiftMap,shiftmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject ShiftMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(ShiftMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST ShiftMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   ShiftMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)ShiftMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   PyArrayObject * shift = NULL;
+   PyObject * shift_object = NULL;
+
+   int result = -1;
+
+   // We get nin and nou from the arrays themselves
+   if( PyArg_ParseTuple(args, "O|s:" CLASS, &shift_object,
+                        &options ) ) {
+      shift = (PyArrayObject *) PyArray_ContiguousFromAny( shift_object,
+                                                            PyArray_DOUBLE, 0, 100);
+      if (shift) {
+         AstShiftMap * this = NULL;
+         this = astShiftMap( PyArray_Size( (PyObject*)shift),
+                            (const double *)shift->data,
+                            options);
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( shift );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Frame */
 /* ======= */
 
@@ -3183,6 +3278,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&PermMapType);
    PyModule_AddObject( m, "PermMap", (PyObject *)&PermMapType);
 
+   ShiftMapType.tp_new = PyType_GenericNew;
+   ShiftMapType.tp_base = &MappingType;
+   if( PyType_Ready(&ShiftMapType) < 0) return NULL;
+   Py_INCREF(&ShiftMapType);
+   PyModule_AddObject( m, "ShiftMap", (PyObject *)&ShiftMapType);
+
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
    if( PyType_Ready(&FrameType) < 0) return NULL;
@@ -3410,6 +3511,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &CmpMapType;
       } else if( !strcmp( class, "PermMap" ) ) {
         result = (PyTypeObject *) &PermMapType;
+      } else if( !strcmp( class, "ShiftMap" ) ) {
+        result = (PyTypeObject *) &ShiftMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
