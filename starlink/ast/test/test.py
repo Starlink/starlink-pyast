@@ -317,10 +317,10 @@ class TestAst(unittest.TestCase):
       self.assertEqual( permmap.Nout, 2 )
 
    def test_ShiftMap(self):
-      permmap = starlink.Ast.ShiftMap( [1,2] )
-      self.assertIsInstance( permmap, starlink.Ast.ShiftMap )
-      self.assertIsInstance( permmap, starlink.Ast.Mapping )
-      self.assertEqual( permmap.Nout, 2 )
+      shiftmap = starlink.Ast.ShiftMap( [1,2] )
+      self.assertIsInstance( shiftmap, starlink.Ast.ShiftMap )
+      self.assertIsInstance( shiftmap, starlink.Ast.Mapping )
+      self.assertEqual( shiftmap.Nout, 2 )
 
    def test_LutMap(self):
       lutmap = starlink.Ast.LutMap( [1,2,3,4,5], 1, 0.5 )
