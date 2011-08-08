@@ -346,6 +346,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( winmap, starlink.Ast.WinMap )
       self.assertEqual( winmap.Nin, 2 )
 
+   def test_NormMap(self):
+      with self.assertRaises(TypeError):
+         normmap = starlink.Ast.NormMap( starlink.Ast.UnitMap( 1 ) )
+      normmap = starlink.Ast.NormMap( starlink.Ast.Frame( 2 ) )
+      self.assertIsInstance( normmap, starlink.Ast.NormMap )
+      self.assertEqual( normmap.Nin, 2 )
+
    def test_CmpFrame(self):
       cmpframe = starlink.Ast.CmpFrame( starlink.Ast.Frame(2), starlink.Ast.Frame(2) )
       self.assertIsInstance( cmpframe, starlink.Ast.CmpFrame )
