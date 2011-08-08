@@ -322,6 +322,12 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( permmap, starlink.Ast.Mapping )
       self.assertEqual( permmap.Nout, 2 )
 
+   def test_LutMap(self):
+      lutmap = starlink.Ast.LutMap( [1,2,3,4,5], 1, 0.5 )
+      self.assertIsInstance( lutmap, starlink.Ast.LutMap )
+      self.assertIsInstance( lutmap, starlink.Ast.Mapping )
+      self.assertEqual( lutmap.Nout, 1 )
+
    def test_UnitMap(self):
       unitmap = starlink.Ast.UnitMap( 3 )
       self.assertIsInstance( unitmap, starlink.Ast.UnitMap )
