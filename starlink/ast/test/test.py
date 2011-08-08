@@ -333,6 +333,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( unitmap, starlink.Ast.UnitMap )
       self.assertEqual( unitmap.Nin, 3 )
 
+   def test_WinMap(self):
+      with self.assertRaises(ValueError):
+         winmap = starlink.Ast.WinMap( [1], [1,2], [3,4],[5,6])
+      winmap = starlink.Ast.WinMap( [1,1],[2,2], [1,1],[3,3] )
+      self.assertIsInstance( winmap, starlink.Ast.WinMap )
+      self.assertEqual( winmap.Nin, 2 )
+
    def test_CmpFrame(self):
       cmpframe = starlink.Ast.CmpFrame( starlink.Ast.Frame(2), starlink.Ast.Frame(2) )
       self.assertIsInstance( cmpframe, starlink.Ast.CmpFrame )

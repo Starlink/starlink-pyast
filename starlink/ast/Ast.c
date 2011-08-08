@@ -1658,6 +1658,128 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* WinMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".WinMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} WinMap;
+
+/* Prototypes for class functions */
+static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(WinMap)
+
+/* Describe the methods of the class */
+static PyMethodDef WinMap_methods[] = {
+   DEF_ISA(WinMap,winmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject WinMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(WinMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST WinMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   WinMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)WinMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   PyArrayObject * ina = NULL;
+   PyArrayObject * inb = NULL;
+   PyArrayObject * outa= NULL;
+   PyArrayObject * outb= NULL;
+   PyObject * ina_object = NULL;
+   PyObject * inb_object = NULL;
+   PyObject * outa_object = NULL;
+   PyObject * outb_object = NULL;
+
+   int result = -1;
+
+   // We get nin and nou from the arrays themselves
+   if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, &ina_object,
+                        &inb_object, &outa_object, &outb_object, &options ) ) {
+      ina = (PyArrayObject *) PyArray_ContiguousFromAny( ina_object,
+                                                         PyArray_DOUBLE, 0, 100);
+      inb = (PyArrayObject *) PyArray_ContiguousFromAny( inb_object,
+                                                         PyArray_DOUBLE, 0, 100);
+      outa = (PyArrayObject *) PyArray_ContiguousFromAny( outa_object,
+                                                         PyArray_DOUBLE, 0, 100);
+      outb = (PyArrayObject *) PyArray_ContiguousFromAny( outb_object,
+                                                         PyArray_DOUBLE, 0, 100);
+      if (ina && inb && outa && outb ) {
+         AstWinMap * this = NULL;
+         // Sanity check size
+         size_t ncoord = PyArray_Size( (PyObject*)ina );
+         if ( ncoord == PyArray_Size( (PyObject*)inb ) &&
+              ncoord == PyArray_Size( (PyObject*)outa) &&
+              ncoord == PyArray_Size( (PyObject*)outb) ) {
+           this = astWinMap( ncoord,
+                             (const double *)ina->data,
+                             (const double *)inb->data,
+                             (const double *)outa->data,
+                             (const double *)outb->data,
+                             options);
+           result = SetProxy( (AstObject *) this, (Object *) self );
+           this = astAnnul( this );
+         } else {
+           PyErr_SetString( PyExc_ValueError,
+                            "All input arrays must have the same number of elements for WinMap");
+         }
+      }
+      Py_XDECREF( ina );
+      Py_XDECREF( inb );
+      Py_XDECREF( outa );
+      Py_XDECREF( outb );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Frame */
 /* ======= */
 
@@ -3387,6 +3509,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&LutMapType);
    PyModule_AddObject( m, "LutMap", (PyObject *)&LutMapType);
 
+   WinMapType.tp_new = PyType_GenericNew;
+   WinMapType.tp_base = &MappingType;
+   if( PyType_Ready(&WinMapType) < 0) return NULL;
+   Py_INCREF(&WinMapType);
+   PyModule_AddObject( m, "WinMap", (PyObject *)&WinMapType);
+
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
    if( PyType_Ready(&FrameType) < 0) return NULL;
@@ -3618,6 +3746,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &ShiftMapType;
       } else if( !strcmp( class, "LutMap" ) ) {
         result = (PyTypeObject *) &LutMapType;
+      } else if( !strcmp( class, "WinMap" ) ) {
+        result = (PyTypeObject *) &WinMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
