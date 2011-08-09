@@ -1470,6 +1470,92 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* RateMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".RateMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} RateMap;
+
+/* Prototypes for class functions */
+static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(RateMap)
+
+/* Describe the methods of the class */
+static PyMethodDef RateMap_methods[] = {
+   DEF_ISA(RateMap,ratemap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject RateMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(RateMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST RateMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   RateMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)RateMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Mapping *other;
+   int ax1;
+   int ax2;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!ii|s:" CLASS, &MappingType, (PyObject**)&other,
+			&ax1, &ax2, &options ) ) {
+      AstRateMap *this = astRateMap( THAT, ax1, ax2, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* CmpMap */
 /* ======= */
 
@@ -3788,6 +3874,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&UnitMapType);
    PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
 
+   RateMapType.tp_new = PyType_GenericNew;
+   RateMapType.tp_base = &MappingType;
+   if( PyType_Ready(&RateMapType) < 0) return NULL;
+   Py_INCREF(&RateMapType);
+   PyModule_AddObject( m, "RateMap", (PyObject *)&RateMapType);
+
    CmpMapType.tp_new = PyType_GenericNew;
    CmpMapType.tp_base = &MappingType;
    if( PyType_Ready(&CmpMapType) < 0) return NULL;
@@ -4049,6 +4141,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
         result = (PyTypeObject *) &GrismMapType;
+      } else if( !strcmp( class, "RateMap" ) ) {
+        result = (PyTypeObject *) &RateMapType;
       } else if( !strcmp( class, "PcdMap" ) ) {
         result = (PyTypeObject *) &PcdMapType;
       } else if( !strcmp( class, "CmpMap" ) ) {

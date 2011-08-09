@@ -322,6 +322,12 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( shiftmap, starlink.Ast.Mapping )
       self.assertEqual( shiftmap.Nout, 2 )
 
+   def test_RateMap(self):
+      ratemap = starlink.Ast.RateMap( starlink.Ast.UnitMap(2), 1, 2 )
+      self.assertIsInstance( ratemap, starlink.Ast.RateMap )
+      self.assertIsInstance( ratemap, starlink.Ast.Mapping )
+      self.assertEqual( ratemap.Nout, 1 )
+
    def test_PcdMap(self):
       pcdmap = starlink.Ast.PcdMap( 0.2, [1,2] )
       self.assertIsInstance( pcdmap, starlink.Ast.PcdMap )
