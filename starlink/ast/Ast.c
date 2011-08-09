@@ -1759,6 +1759,91 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* TranMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".TranMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} TranMap;
+
+/* Prototypes for class functions */
+static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(TranMap)
+
+/* Describe the methods of the class */
+static PyMethodDef TranMap_methods[] = {
+   DEF_ISA(TranMap,tranmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject TranMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(TranMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST TranMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   TranMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)TranMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Mapping *other;
+   Mapping *another;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!O!|s:" CLASS, &MappingType, (PyObject**)&other,
+                        &MappingType, (PyObject**)&another, &options ) ) {
+      AstTranMap *this = astTranMap( THAT, ANOTHER, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* PermMap */
 /* ======= */
 
@@ -4009,6 +4094,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&CmpMapType);
    PyModule_AddObject( m, "CmpMap", (PyObject *)&CmpMapType);
 
+   TranMapType.tp_new = PyType_GenericNew;
+   TranMapType.tp_base = &MappingType;
+   if( PyType_Ready(&TranMapType) < 0) return NULL;
+   Py_INCREF(&TranMapType);
+   PyModule_AddObject( m, "TranMap", (PyObject *)&TranMapType);
+
    NormMapType.tp_new = PyType_GenericNew;
    NormMapType.tp_base = &MappingType;
    if( PyType_Ready(&NormMapType) < 0) return NULL;
@@ -4272,6 +4363,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &PcdMapType;
       } else if( !strcmp( class, "CmpMap" ) ) {
         result = (PyTypeObject *) &CmpMapType;
+      } else if( !strcmp( class, "TranMap" ) ) {
+        result = (PyTypeObject *) &TranMapType;
       } else if( !strcmp( class, "NormMap" ) ) {
         result = (PyTypeObject *) &NormMapType;
       } else if( !strcmp( class, "PermMap" ) ) {

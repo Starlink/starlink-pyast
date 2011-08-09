@@ -389,6 +389,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( cmpmap, starlink.Ast.CmpMap )
       self.assertIsInstance( cmpmap, starlink.Ast.Mapping )
 
+   def test_TranMap(self):
+      tranmap = starlink.Ast.TranMap( starlink.Ast.UnitMap(2), starlink.Ast.UnitMap(2) )
+      self.assertIsInstance( tranmap, starlink.Ast.TranMap )
+      self.assertIsInstance( tranmap, starlink.Ast.Mapping )
+      with self.assertRaises(TypeError):
+         tranmap = starlink.Ast.TranMap( starlink.Ast.UnitMap( 1 ), [1] )
+
    def test_SpecFrame(self):
       specframe = starlink.Ast.SpecFrame()
       self.assertIsInstance( specframe, starlink.Ast.Frame )
