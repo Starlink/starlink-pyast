@@ -1287,6 +1287,106 @@ static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* PcdMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".PcdMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} PcdMap;
+
+/* Prototypes for class functions */
+static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(PcdMap)
+
+/* Describe the methods of the class */
+static PyMethodDef PcdMap_methods[] = {
+   DEF_ISA(PcdMap,pcdmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETD(PcdMap,Disco)
+// PcdCen(axis)
+
+static PyGetSetDef PcdMap_getseters[] = {
+   DEFATT(Disco,"PcdMap pincushion/barrel distortion coefficient"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject PcdMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(PcdMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST PcdMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   PcdMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   PcdMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)PcdMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+   double disco;
+   PyArrayObject * pcdcen = NULL;
+   PyObject * pcdcen_object = NULL;
+
+   if( PyArg_ParseTuple(args, "dO|s:" CLASS, &disco, &pcdcen_object, &options ) ) {
+      AstPcdMap * this = NULL;
+      int ncoord = 2;
+      pcdcen = GetArray1D( pcdcen_object, &ncoord, "pcdcen", NAME );
+      if (pcdcen) {
+	this = astPcdMap( disco, (const double *)pcdcen->data, options );
+	result = SetProxy( (AstObject *) this, (Object *) self );
+	this = astAnnul( this );
+      }
+      Py_XDECREF( pcdcen );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* UnitMap */
 /* ======= */
 
@@ -3676,6 +3776,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&GrismMapType);
    PyModule_AddObject( m, "GrismMap", (PyObject *)&GrismMapType);
 
+   PcdMapType.tp_new = PyType_GenericNew;
+   PcdMapType.tp_base = &MappingType;
+   if( PyType_Ready(&PcdMapType) < 0) return NULL;
+   Py_INCREF(&PcdMapType);
+   PyModule_AddObject( m, "PcdMap", (PyObject *)&PcdMapType);
+
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
    if( PyType_Ready(&UnitMapType) < 0) return NULL;
@@ -3943,6 +4049,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
         result = (PyTypeObject *) &GrismMapType;
+      } else if( !strcmp( class, "PcdMap" ) ) {
+        result = (PyTypeObject *) &PcdMapType;
       } else if( !strcmp( class, "CmpMap" ) ) {
         result = (PyTypeObject *) &CmpMapType;
       } else if( !strcmp( class, "NormMap" ) ) {
