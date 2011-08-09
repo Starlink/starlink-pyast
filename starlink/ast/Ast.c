@@ -1484,6 +1484,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds );
+static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args );
 
 /* Standard AST class functons */
 MAKE_ISA(TimeMap)
@@ -1491,6 +1492,7 @@ MAKE_ISA(TimeMap)
 /* Describe the methods of the class */
 static PyMethodDef TimeMap_methods[] = {
    DEF_ISA(TimeMap,timemap),
+   {"timeadd", (PyCFunction)TimeMap_timeadd, METH_VARARGS, "Add a time coordinate conversion to a TimeMap"},
    {NULL}  /* Sentinel */
 };
 
@@ -1555,6 +1557,34 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
 
    TIDY;
    return result;
+}
+
+#undef NAME
+#define NAME CLASS ".timeadd"
+static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
+  PyObject *result = NULL;
+  PyArrayObject *astargs = NULL;
+  PyObject *astargs_object = NULL;
+  const char * cvt = "";
+
+  /* Currently every cvt option takes an argument so we do not mark
+     args as optional */
+  if ( PyArg_ParseTuple( args, "sO:" NAME, &cvt,
+                         &astargs_object ) && astOK ) {
+    /* Ideally we would like to determine how many elements we
+       have in "args" to make sure it is correct. Putting the code
+       here and in AST seems silly though. */
+    astargs = (PyArrayObject *) PyArray_ContiguousFromAny( astargs_object,
+                                                           PyArray_DOUBLE, 0, 100);
+    if (astargs) {
+      astTimeAdd( THIS, cvt, (const double *)astargs->data );
+      if (astOK) result = Py_None;
+    }
+    Py_XDECREF( astargs );
+  }
+
+  TIDY;
+  return result;
 }
 
 /* RateMap */

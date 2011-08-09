@@ -375,6 +375,9 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( timemap, starlink.Ast.TimeMap )
       self.assertIsInstance( timemap, starlink.Ast.Mapping )
       self.assertEqual( timemap.Nin, 1 )
+      timemap.timeadd( "BEPTOMJD", [560,720] )
+      with self.assertRaises(starlink.Ast.TIMIN):
+         timemap.timeadd( "UNRECOGNIZED", [1] )
 
    def test_CmpFrame(self):
       cmpframe = starlink.Ast.CmpFrame( starlink.Ast.Frame(2), starlink.Ast.Frame(2) )
