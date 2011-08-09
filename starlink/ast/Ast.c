@@ -1470,6 +1470,93 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* TimeMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".TimeMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} TimeMap;
+
+/* Prototypes for class functions */
+static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(TimeMap)
+
+/* Describe the methods of the class */
+static PyMethodDef TimeMap_methods[] = {
+   DEF_ISA(TimeMap,timemap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject TimeMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(TimeMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST TimeMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   TimeMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)TimeMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int flags;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "i|s:" CLASS, &flags, &options ) ) {
+      if (flags != 0) {
+         PyErr_SetString( PyExc_ValueError, "The TimeMap flags argument must currently always be zero");
+      } else {
+         AstTimeMap *this = astTimeMap( flags, options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
 /* RateMap */
 /* ======= */
 
@@ -3874,6 +3961,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&UnitMapType);
    PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
 
+   TimeMapType.tp_new = PyType_GenericNew;
+   TimeMapType.tp_base = &MappingType;
+   if( PyType_Ready(&TimeMapType) < 0) return NULL;
+   Py_INCREF(&TimeMapType);
+   PyModule_AddObject( m, "TimeMap", (PyObject *)&TimeMapType);
+
    RateMapType.tp_new = PyType_GenericNew;
    RateMapType.tp_base = &MappingType;
    if( PyType_Ready(&RateMapType) < 0) return NULL;
@@ -4139,6 +4232,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &ZoomMapType;
       } else if( !strcmp( class, "UnitMap" ) ) {
         result = (PyTypeObject *) &UnitMapType;
+      } else if( !strcmp( class, "TimeMap" ) ) {
+        result = (PyTypeObject *) &TimeMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
         result = (PyTypeObject *) &GrismMapType;
       } else if( !strcmp( class, "RateMap" ) ) {

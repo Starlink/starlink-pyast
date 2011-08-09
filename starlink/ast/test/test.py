@@ -368,6 +368,14 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( normmap, starlink.Ast.NormMap )
       self.assertEqual( normmap.Nin, 2 )
 
+   def test_TimeMap(self):
+      with self.assertRaises(ValueError):
+         timemap = starlink.Ast.TimeMap( 1 )
+      timemap = starlink.Ast.TimeMap( 0 )
+      self.assertIsInstance( timemap, starlink.Ast.TimeMap )
+      self.assertIsInstance( timemap, starlink.Ast.Mapping )
+      self.assertEqual( timemap.Nin, 1 )
+
    def test_CmpFrame(self):
       cmpframe = starlink.Ast.CmpFrame( starlink.Ast.Frame(2), starlink.Ast.Frame(2) )
       self.assertIsInstance( cmpframe, starlink.Ast.CmpFrame )
