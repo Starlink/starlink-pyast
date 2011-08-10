@@ -462,6 +462,9 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( box, starlink.Ast.Region )
       self.assertIsInstance( box, starlink.Ast.Frame )
       self.assertIsInstance( box.getregionframe(), starlink.Ast.Frame )
+      lbnd,ubnd = box.getregionbounds()
+      self.assertEqual( lbnd[0], 0 )
+      self.assertEqual( ubnd[0], 3 )
 
 if __name__ == "__main__":
     #unittest.main()

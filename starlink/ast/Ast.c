@@ -4171,6 +4171,7 @@ typedef struct {
 /* Prototypes for class functions */
 static int Region_init( Region *self, PyObject *args, PyObject *kwds );
 static PyObject *Region_getregionframe( Region *self );
+static PyObject *Region_getregionbounds( Region *self );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -4197,6 +4198,7 @@ MAKE_ISA(Region)
 static PyMethodDef Region_methods[] = {
   DEF_ISA(Region,region),
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
+  {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
    {NULL}  /* Sentinel */
 };
 
@@ -4255,10 +4257,32 @@ static int Region_init( Region *self, PyObject *args, PyObject *kwds ){
 }
 
 #undef NAME
+#define NAME CLASS ".getregionbounds"
+static PyObject *Region_getregionbounds( Region *self ) {
+  PyObject *result = NULL;
+  int naxes;
+  npy_intp dims[1];
+  PyArrayObject * lbnd = NULL;
+  PyArrayObject * ubnd = NULL;
+
+  naxes = astGetI( THIS, "Naxes" );
+  dims[0] = naxes;
+  lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
+  if (astOK) result = Py_BuildValue("OO", PyArray_Return(lbnd),
+                                    PyArray_Return(ubnd));
+  Py_XDECREF(lbnd);
+  Py_XDECREF(ubnd);
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
 #define NAME CLASS ".getregionframe"
 static PyObject *Region_getregionframe( Region *self ) {
   PyObject *result = NULL;
-  int iframe;
 
   AstFrame * frame = astGetRegionFrame( THIS );
   if (astOK) {
@@ -4274,7 +4298,6 @@ static PyObject *Region_getregionframe( Region *self ) {
   TIDY;
   return result;
 }
-
 
 /* Region: Box */
 /* ======= */
