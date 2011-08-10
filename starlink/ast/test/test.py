@@ -455,6 +455,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( sfframe, starlink.Ast.CmpFrame )
       self.assertIsInstance( sfframe, starlink.Ast.SpecFluxFrame )
 
+   def test_Box(self):
+      box = starlink.Ast.Box( starlink.Ast.Frame(2), 1,
+                             [0,0],[3,4] )
+      self.assertIsInstance( box, starlink.Ast.Box )
+      self.assertIsInstance( box, starlink.Ast.Region )
+      self.assertIsInstance( box, starlink.Ast.Frame )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)

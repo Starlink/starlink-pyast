@@ -4156,6 +4156,202 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
    return result;
 }
 
+/* Region */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Region"
+
+/* Define the class structure */
+typedef struct {
+   Frame parent;
+} Region;
+
+/* Prototypes for class functions */
+static int Region_init( Region *self, PyObject *args, PyObject *kwds );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(Region,Adaptive)
+MAKE_GETSETL(Region,Negated)
+MAKE_GETSETL(Region,Closed)
+MAKE_GETSETI(Region,MeshSize)
+MAKE_GETSETD(Region,FillFactor)
+MAKE_GETROL(Region,Bounded)
+
+static PyGetSetDef Region_getseters[] = {
+  DEFATT(Adaptive,"Should the area adapt to changes in the coordinate system?"),
+  DEFATT(Negated,"Has the original region been negated?"),
+  DEFATT(Closed,"Should the boundary be considered to be inside the region?"),
+  DEFATT(MeshSize,"Number of points used to create a mesh covering the Region"),
+  DEFATT(FillFactor,"Fraction of the Region which is of interest"),
+  DEFATT(Bounded,"Is the Region bounded?"),
+   {NULL}  /* Sentinel */
+};
+
+/* Standard AST class functons */
+MAKE_ISA(Region)
+
+/* Describe the methods of the class */
+static PyMethodDef Region_methods[] = {
+  DEF_ISA(Region,region),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject RegionType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Region),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST Region",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Region_methods,          /* tp_methods */
+   0,                         /* tp_members */
+   Region_getseters,          /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Region_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Region_init( Region *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   /* There is no constructor */
+
+   TIDY;
+   return result;
+}
+
+/* Region: Box */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Box"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} Box;
+
+/* Prototypes for class functions */
+static int Box_init( Box *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(Box)
+
+/* Describe the methods of the class */
+static PyMethodDef Box_methods[] = {
+  DEF_ISA(Box,box),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject BoxType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Box),               /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST box",                 /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Box_methods,               /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Box_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Frame *other;
+   Region *another;
+   int form; /* boolean */
+   PyArrayObject * point1 = NULL;
+   PyArrayObject * point2 = NULL;
+   PyObject * point1_object = NULL;
+   PyObject * point2_object = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!iOO|O!s:" CLASS,
+			&FrameType, (PyObject**)&other,
+                        &form, &point1_object, &point2_object,
+			&RegionType, (PyObject**)&another, &options ) ) {
+      int naxes;
+      AstBox * this = NULL;
+      AstRegion * unc = NULL;
+      if (another) unc = (AstRegion *) ANOTHER;
+      naxes = astGetI( THAT, "Naxes" );
+      point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+      point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
+      this = astBox( THAT, form, (const double*)point1->data,
+                     (const double*)point2->data, unc, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -4389,6 +4585,19 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&SpecFluxFrameType) < 0) return NULL;
    Py_INCREF(&SpecFluxFrameType);
    PyModule_AddObject( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType);
+
+   RegionType.tp_new = PyType_GenericNew;
+   RegionType.tp_base = &FrameType;
+   if( PyType_Ready(&RegionType) < 0) return NULL;
+   Py_INCREF(&RegionType);
+   PyModule_AddObject( m, "Region", (PyObject *)&RegionType);
+
+   BoxType.tp_new = PyType_GenericNew;
+   BoxType.tp_base = &RegionType;
+   if( PyType_Ready(&BoxType) < 0) return NULL;
+   Py_INCREF(&BoxType);
+   PyModule_AddObject( m, "Box", (PyObject *)&BoxType);
+
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -4635,6 +4844,10 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &FluxFrameType;
       } else if( !strcmp( class, "SpecFluxFrame" ) ) {
          result = (PyTypeObject *) &SpecFluxFrameType;
+      } else if( !strcmp( class, "Region" ) ) {
+         result = (PyTypeObject *) &RegionType;
+      } else if( !strcmp( class, "Box" ) ) {
+         result = (PyTypeObject *) &BoxType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "
