@@ -1387,6 +1387,108 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* WcsMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".WcsMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} WcsMap;
+
+/* Prototypes for class functions */
+static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(WcsMap)
+
+/* Describe the methods of the class */
+static PyMethodDef WcsMap_methods[] = {
+   DEF_ISA(WcsMap,wcsmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETROD(WcsMap,NatLat)
+MAKE_GETROD(WcsMap,NatLon)
+// PVi_m - would seem to need a loop
+// PVMax(i)
+// WcsAxis(lonlat)
+// WcsType - should this return a string?
+
+static PyGetSetDef WcsMap_getseters[] = {
+   DEFATT(NatLat,"Native latitude of the reference point of a FITS-WCS projection"),
+   DEFATT(NatLon,"Native longitude of the reference point of a FITS-WCS projection"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject WcsMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(WcsMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST WcsMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   WcsMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   WcsMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)WcsMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+   int ncoord;
+   int type;
+   int lonax;
+   int latax;
+
+   if( PyArg_ParseTuple(args, "iiii|s:" CLASS, &ncoord,
+                        &type, &lonax, &latax, &options ) ) {
+      AstWcsMap * this = NULL;
+      this = astWcsMap( ncoord, type, lonax, latax, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* UnitMap */
 /* ======= */
 
@@ -4070,6 +4172,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&PcdMapType);
    PyModule_AddObject( m, "PcdMap", (PyObject *)&PcdMapType);
 
+   WcsMapType.tp_new = PyType_GenericNew;
+   WcsMapType.tp_base = &MappingType;
+   if( PyType_Ready(&WcsMapType) < 0) return NULL;
+   Py_INCREF(&WcsMapType);
+   PyModule_AddObject( m, "WcsMap", (PyObject *)&WcsMapType);
+
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
    if( PyType_Ready(&UnitMapType) < 0) return NULL;
@@ -4219,6 +4327,38 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(SOMB);
    ICONST(SOMBCOS);
 
+   ICONST(AZP);
+   ICONST(SZP);
+   ICONST(TAN);
+   ICONST(STG);
+   ICONST(SIN);
+   ICONST(ARC);
+   ICONST(ZPN);
+   ICONST(ZEA);
+   ICONST(AIR);
+   ICONST(CYP);
+   ICONST(CEA);
+   ICONST(CAR);
+   ICONST(MER);
+   ICONST(SFL);
+   ICONST(PAR);
+   ICONST(MOL);
+   ICONST(AIT);
+   ICONST(COP);
+   ICONST(COE);
+   ICONST(COD);
+   ICONST(COO);
+   ICONST(BON);
+   ICONST(PCO);
+   ICONST(TSC);
+   ICONST(CSC);
+   ICONST(QSC);
+   ICONST(NCP);
+   ICONST(GLS);
+   ICONST(TPN);
+   ICONST(HPX);
+   ICONST(WCSBAD);
+
    DCONST(BAD);
 
 #undef ICONST
@@ -4361,6 +4501,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &RateMapType;
       } else if( !strcmp( class, "PcdMap" ) ) {
         result = (PyTypeObject *) &PcdMapType;
+      } else if( !strcmp( class, "WcsMap" ) ) {
+        result = (PyTypeObject *) &WcsMapType;
       } else if( !strcmp( class, "CmpMap" ) ) {
         result = (PyTypeObject *) &CmpMapType;
       } else if( !strcmp( class, "TranMap" ) ) {

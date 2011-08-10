@@ -328,6 +328,15 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( ratemap, starlink.Ast.Mapping )
       self.assertEqual( ratemap.Nout, 1 )
 
+   def test_WcsMap(self):
+      wcsmap = starlink.Ast.WcsMap( 2, starlink.Ast.TAN, 1, 2 )
+      self.assertIsInstance( wcsmap, starlink.Ast.WcsMap )
+      self.assertIsInstance( wcsmap, starlink.Ast.Mapping )
+      self.assertEqual( wcsmap.Nout,2 )
+      with self.assertRaises(starlink.Ast.WCSTY):
+         wcsmap = starlink.Ast.WcsMap( 2, 4000, 1, 2 )
+
+
    def test_PcdMap(self):
       pcdmap = starlink.Ast.PcdMap( 0.2, [1,2] )
       self.assertIsInstance( pcdmap, starlink.Ast.PcdMap )
