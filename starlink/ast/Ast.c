@@ -4172,6 +4172,8 @@ typedef struct {
 static int Region_init( Region *self, PyObject *args, PyObject *kwds );
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
+static PyObject *Region_getregionbounds( Region *self );
+static PyObject *Region_overlap( Region *self, PyObject * args );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -4199,6 +4201,7 @@ static PyMethodDef Region_methods[] = {
   DEF_ISA(Region,region),
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
   {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
+  {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
    {NULL}  /* Sentinel */
 };
 
@@ -4294,6 +4297,22 @@ static PyObject *Region_getregionframe( Region *self ) {
      Py_XDECREF( frame_object );
      if (frame) frame = astAnnul(frame);
   }
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".overlap"
+static PyObject *Region_overlap( Region *self, PyObject * args ) {
+  PyObject *result = NULL;
+  Region *other = NULL;
+
+   if( PyArg_ParseTuple( args, "O!:" NAME, &RegionType,
+                         (PyObject **) &other ) && astOK ) {
+      int overlap = astOverlap( THIS, THAT );
+      if( astOK ) result = Py_BuildValue("i", overlap);
+   }
 
   TIDY;
   return result;

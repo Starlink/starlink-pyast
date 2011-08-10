@@ -465,6 +465,10 @@ class TestAst(unittest.TestCase):
       lbnd,ubnd = box.getregionbounds()
       self.assertEqual( lbnd[0], 0 )
       self.assertEqual( ubnd[0], 3 )
+      testbox = starlink.Ast.Box( starlink.Ast.Frame(2), 1,
+                                 [1,1],[4,5])
+      overlap = box.overlap( testbox )
+      self.assertEqual( overlap, 4 )
 
 if __name__ == "__main__":
     #unittest.main()
