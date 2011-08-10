@@ -470,6 +470,18 @@ class TestAst(unittest.TestCase):
       overlap = box.overlap( testbox )
       self.assertEqual( overlap, 4 )
 
+   def test_Circle(self):
+      circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
+                             [0,0],[3,4] )
+      self.assertIsInstance( circle, starlink.Ast.Circle )
+      self.assertIsInstance( circle, starlink.Ast.Region )
+      self.assertIsInstance( circle, starlink.Ast.Frame )
+      self.assertIsInstance( circle.getregionframe(), starlink.Ast.Frame )
+      testcircle = starlink.Ast.Circle( starlink.Ast.Frame(2), 1,
+                                 [0,0],5)
+      overlap = circle.overlap( testcircle )
+      self.assertEqual( overlap, 5 )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
