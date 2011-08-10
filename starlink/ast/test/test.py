@@ -322,6 +322,13 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( shiftmap, starlink.Ast.Mapping )
       self.assertEqual( shiftmap.Nout, 2 )
 
+   def test_SphMap(self):
+      sphmap = starlink.Ast.SphMap( "UnitRadius=1" )
+      self.assertIsInstance( sphmap, starlink.Ast.SphMap )
+      self.assertIsInstance( sphmap, starlink.Ast.Mapping )
+      self.assertEqual( sphmap.Nout, 2 )
+      self.assertTrue( sphmap.UnitRadius )
+
    def test_RateMap(self):
       ratemap = starlink.Ast.RateMap( starlink.Ast.UnitMap(2), 1, 2 )
       self.assertIsInstance( ratemap, starlink.Ast.RateMap )

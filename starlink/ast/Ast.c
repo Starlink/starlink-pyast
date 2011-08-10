@@ -1183,6 +1183,98 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* SphMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SphMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} SphMap;
+
+/* Prototypes for class functions */
+static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(SphMap)
+
+/* Describe the methods of the class */
+static PyMethodDef SphMap_methods[] = {
+   DEF_ISA(SphMap,sphmap),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(SphMap,UnitRadius)
+MAKE_GETSETD(SphMap,PolarLong)
+static PyGetSetDef SphMap_getseters[] = {
+   DEFATT(UnitRadius,"SphMap input vectors lie on a unit sphere?"),
+   DEFATT(PolarLong,"The longitude value to assign to either pole"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SphMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(SphMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SphMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   SphMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   SphMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SphMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   double zoom;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstSphMap *this = astSphMap( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* GrismMap */
 /* ======= */
 
@@ -4160,6 +4252,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
 
+   SphMapType.tp_new = PyType_GenericNew;
+   SphMapType.tp_base = &MappingType;
+   if( PyType_Ready(&SphMapType) < 0) return NULL;
+   Py_INCREF(&SphMapType);
+   PyModule_AddObject( m, "SphMap", (PyObject *)&SphMapType);
+
    GrismMapType.tp_new = PyType_GenericNew;
    GrismMapType.tp_base = &MappingType;
    if( PyType_Ready(&GrismMapType) < 0) return NULL;
@@ -4495,6 +4593,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "TimeMap" ) ) {
         result = (PyTypeObject *) &TimeMapType;
+      } else if( !strcmp( class, "SphMap" ) ) {
+        result = (PyTypeObject *) &SphMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
         result = (PyTypeObject *) &GrismMapType;
       } else if( !strcmp( class, "RateMap" ) ) {
