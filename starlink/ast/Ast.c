@@ -4170,6 +4170,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int Region_init( Region *self, PyObject *args, PyObject *kwds );
+static PyObject *Region_getregionframe( Region *self );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -4195,6 +4196,7 @@ MAKE_ISA(Region)
 /* Describe the methods of the class */
 static PyMethodDef Region_methods[] = {
   DEF_ISA(Region,region),
+  {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
    {NULL}  /* Sentinel */
 };
 
@@ -4251,6 +4253,28 @@ static int Region_init( Region *self, PyObject *args, PyObject *kwds ){
    TIDY;
    return result;
 }
+
+#undef NAME
+#define NAME CLASS ".getregionframe"
+static PyObject *Region_getregionframe( Region *self ) {
+  PyObject *result = NULL;
+  int iframe;
+
+  AstFrame * frame = astGetRegionFrame( THIS );
+  if (astOK) {
+     PyObject *frame_object = NULL;
+     frame_object = NewObject( (AstObject *)frame );
+     if (frame_object) {
+       result = Py_BuildValue( "O", frame_object );
+     }
+     Py_XDECREF( frame_object );
+     if (frame) frame = astAnnul(frame);
+  }
+
+  TIDY;
+  return result;
+}
+
 
 /* Region: Box */
 /* ======= */
