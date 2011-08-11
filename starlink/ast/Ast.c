@@ -4521,6 +4521,92 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Region: CmpRegion */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".CmpRegion"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} CmpRegion;
+
+/* Prototypes for class functions */
+static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(CmpRegion)
+
+/* Describe the methods of the class */
+static PyMethodDef CmpRegion_methods[] = {
+  DEF_ISA(CmpRegion,cmpregion),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject CmpRegionType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(CmpRegion),               /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST box",                 /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   CmpRegion_methods,               /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)CmpRegion_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Region *other;
+   Region *another;
+   int result = -1;
+   int oper;
+
+   if( PyArg_ParseTuple(args, "O!O!i|s:" CLASS, &RegionType, (PyObject**)&other,
+                        &RegionType, (PyObject**)&another, &oper, &options ) ) {
+      AstCmpRegion *this = astCmpRegion( THAT, ANOTHER, oper, options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -4773,6 +4859,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&CircleType);
    PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
 
+   CmpRegionType.tp_new = PyType_GenericNew;
+   CmpRegionType.tp_base = &RegionType;
+   if( PyType_Ready(&CmpRegionType) < 0) return NULL;
+   Py_INCREF(&CmpRegionType);
+   PyModule_AddObject( m, "CmpRegion", (PyObject *)&CmpRegionType);
+
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -4840,6 +4932,10 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(TPN);
    ICONST(HPX);
    ICONST(WCSBAD);
+
+   ICONST(AND);
+   ICONST(OR);
+   ICONST(XOR);
 
    DCONST(BAD);
 
@@ -5025,6 +5121,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &BoxType;
       } else if( !strcmp( class, "Circle" ) ) {
          result = (PyTypeObject *) &CircleType;
+      } else if( !strcmp( class, "CmpRegion" ) ) {
+         result = (PyTypeObject *) &CmpRegionType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

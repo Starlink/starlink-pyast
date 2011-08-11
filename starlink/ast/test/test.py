@@ -482,6 +482,15 @@ class TestAst(unittest.TestCase):
       overlap = circle.overlap( testcircle )
       self.assertEqual( overlap, 5 )
 
+   def test_CmpRegion(self):
+      circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
+                             [0,0],[3,4] )
+      box = starlink.Ast.Box( starlink.Ast.Frame(2), 1,
+                              [0,0],[3,4] )
+      cmp = starlink.Ast.CmpRegion( circle, box, starlink.Ast.AND )
+      self.assertIsInstance( cmp, starlink.Ast.CmpRegion )
+      self.assertIsInstance( cmp, starlink.Ast.Region )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
