@@ -4389,7 +4389,7 @@ static PyTypeObject BoxType = {
 static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
    Frame *other;
-   Region *another;
+   Region *another = NULL;
    int form; /* boolean */
    PyArrayObject * point1 = NULL;
    PyArrayObject * point2 = NULL;
@@ -4489,7 +4489,7 @@ static PyTypeObject CircleType = {
 static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
    Frame *other;
-   Region *another;
+   Region *another = NULL;
    int form; /* boolean */
    PyArrayObject * centre = NULL;
    PyArrayObject * point = NULL;
