@@ -482,6 +482,13 @@ class TestAst(unittest.TestCase):
       overlap = circle.overlap( testcircle )
       self.assertEqual( overlap, 5 )
 
+   def test_Ellipse(self):
+      ell = starlink.Ast.Ellipse( starlink.Ast.Frame(2), 0,
+                             [0,0],[3,4], [2,3] )
+      self.assertIsInstance( ell, starlink.Ast.Ellipse )
+      self.assertIsInstance( ell, starlink.Ast.Region )
+      self.assertIsInstance( ell, starlink.Ast.Frame )
+
    def test_NullRegion(self):
       null = starlink.Ast.NullRegion( starlink.Ast.Frame(2) )
       self.assertIsInstance( null, starlink.Ast.NullRegion )

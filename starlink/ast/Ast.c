@@ -4521,6 +4521,113 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Region: Ellipse */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Ellipse"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} Ellipse;
+
+/* Prototypes for class functions */
+static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(Ellipse)
+
+/* Describe the methods of the class */
+static PyMethodDef Ellipse_methods[] = {
+  DEF_ISA(Ellipse,ellipse),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject EllipseType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Ellipse),               /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST box",                 /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Ellipse_methods,               /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Ellipse_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Frame *other;
+   Region *another = NULL;
+   int form; /* boolean */
+   PyArrayObject * centre = NULL;
+   PyArrayObject * point1 = NULL;
+   PyArrayObject * point2 = NULL;
+   PyObject * centre_object = NULL;
+   PyObject * point1_object = NULL;
+   PyObject * point2_object = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!iOOO|O!s:" CLASS,
+			&FrameType, (PyObject**)&other,
+                        &form, &centre_object, &point1_object, &point2_object,
+			&RegionType, (PyObject**)&another, &options ) ) {
+      int naxes;
+      AstEllipse * this = NULL;
+      AstRegion * unc = NULL;
+      if (another) unc = (AstRegion *) ANOTHER;
+      naxes = 2;
+      centre = GetArray1D( centre_object, &naxes, "centre", NAME );
+      point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
+      point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
+      if (centre && point1 && point2 ) {
+        this = astEllipse( THAT, form, (const double*)centre->data,
+			   (const double*)point1->data,
+			   (const double*)point2->data,
+			   unc, options );
+        result = SetProxy( (AstObject *) this, (Object *) self );
+        this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Region: Interval */
 /* ======= */
 
@@ -5134,6 +5241,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&CircleType);
    PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
 
+   EllipseType.tp_new = PyType_GenericNew;
+   EllipseType.tp_base = &RegionType;
+   if( PyType_Ready(&EllipseType) < 0) return NULL;
+   Py_INCREF(&EllipseType);
+   PyModule_AddObject( m, "Ellipse", (PyObject *)&EllipseType);
+
    IntervalType.tp_new = PyType_GenericNew;
    IntervalType.tp_base = &RegionType;
    if( PyType_Ready(&IntervalType) < 0) return NULL;
@@ -5413,6 +5526,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &BoxType;
       } else if( !strcmp( class, "Circle" ) ) {
          result = (PyTypeObject *) &CircleType;
+      } else if( !strcmp( class, "Ellipse" ) ) {
+         result = (PyTypeObject *) &EllipseType;
       } else if( !strcmp( class, "Interval" ) ) {
          result = (PyTypeObject *) &IntervalType;
       } else if( !strcmp( class, "NullRegion" ) ) {
