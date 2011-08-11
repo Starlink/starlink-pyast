@@ -4521,6 +4521,107 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Region: Interval */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Interval"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} Interval;
+
+/* Prototypes for class functions */
+static int Interval_init( Interval *self, PyObject *args, PyObject *kwds );
+
+/* Standard AST class functons */
+MAKE_ISA(Interval)
+
+/* Describe the methods of the class */
+static PyMethodDef Interval_methods[] = {
+  DEF_ISA(Interval,interval),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject IntervalType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Interval),               /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST box",                 /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Interval_methods,               /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Interval_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Frame *other;
+   Region *another = NULL;
+   PyArrayObject * ubnd = NULL;
+   PyArrayObject * lbnd = NULL;
+   PyObject * ubnd_object = NULL;
+   PyObject * lbnd_object = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!OO|O!s:" CLASS,
+			&FrameType, (PyObject**)&other,
+                        &lbnd_object, &ubnd_object,
+			&RegionType, (PyObject**)&another, &options ) ) {
+      int naxes;
+      AstInterval * this = NULL;
+      AstRegion * unc = NULL;
+      if (another) unc = (AstRegion *) ANOTHER;
+      naxes = astGetI( THAT, "Naxes" );
+      lbnd = GetArray1D( lbnd_object, &naxes, "lbnd", NAME );
+      ubnd = GetArray1D( ubnd_object, &naxes, "ubnd", NAME );
+      if (lbnd && ubnd) {
+        this = astInterval( THAT, (const double*)lbnd->data,
+                          (const double*)ubnd->data, unc, options );
+        result = SetProxy( (AstObject *) this, (Object *) self );
+        this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Region: NullRegion */
 /* ======= */
 
@@ -4948,6 +5049,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&CircleType);
    PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
 
+   IntervalType.tp_new = PyType_GenericNew;
+   IntervalType.tp_base = &RegionType;
+   if( PyType_Ready(&IntervalType) < 0) return NULL;
+   Py_INCREF(&IntervalType);
+   PyModule_AddObject( m, "Interval", (PyObject *)&IntervalType);
+
    NullRegionType.tp_new = PyType_GenericNew;
    NullRegionType.tp_base = &RegionType;
    if( PyType_Ready(&NullRegionType) < 0) return NULL;
@@ -5216,6 +5323,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &BoxType;
       } else if( !strcmp( class, "Circle" ) ) {
          result = (PyTypeObject *) &CircleType;
+      } else if( !strcmp( class, "Interval" ) ) {
+         result = (PyTypeObject *) &IntervalType;
       } else if( !strcmp( class, "NullRegion" ) ) {
          result = (PyTypeObject *) &NullRegionType;
       } else if( !strcmp( class, "CmpRegion" ) ) {

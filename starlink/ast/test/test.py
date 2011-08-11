@@ -488,6 +488,11 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( null, starlink.Ast.Region )
       self.assertFalse( null.Negated )
 
+   def test_Interval(self):
+      interval = starlink.Ast.Interval( starlink.Ast.Frame(2), [1,2],[5,10] )
+      self.assertIsInstance( interval, starlink.Ast.Interval )
+      self.assertIsInstance( interval, starlink.Ast.Region )
+
    def test_CmpRegion(self):
       circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
                              [0,0],[3,4] )
