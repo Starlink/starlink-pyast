@@ -502,6 +502,14 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( cmp, starlink.Ast.CmpRegion )
       self.assertIsInstance( cmp, starlink.Ast.Region )
 
+   def test_Prism(self):
+      circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
+                             [0,0],[3,4] )
+      interval = starlink.Ast.Interval( starlink.Ast.Frame(1), [6],[100] )
+      prism = starlink.Ast.Prism( circle, interval )
+      self.assertIsInstance( prism, starlink.Ast.Prism )
+      self.assertIsInstance( prism, starlink.Ast.Region )
+
 if __name__ == "__main__":
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
