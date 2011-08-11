@@ -4541,7 +4541,7 @@ MAKE_ISA(NullRegion)
 
 /* Describe the methods of the class */
 static PyMethodDef NullRegion_methods[] = {
-  DEF_ISA(NullRegion,circle),
+  DEF_ISA(NullRegion,nullregion),
    {NULL}  /* Sentinel */
 };
 
