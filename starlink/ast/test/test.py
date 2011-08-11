@@ -482,6 +482,12 @@ class TestAst(unittest.TestCase):
       overlap = circle.overlap( testcircle )
       self.assertEqual( overlap, 5 )
 
+   def test_NullRegion(self):
+      null = starlink.Ast.NullRegion( starlink.Ast.Frame(2) )
+      self.assertIsInstance( null, starlink.Ast.NullRegion )
+      self.assertIsInstance( null, starlink.Ast.Region )
+      self.assertFalse( null.Negated )
+
    def test_CmpRegion(self):
       circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
                              [0,0],[3,4] )
