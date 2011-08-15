@@ -4169,7 +4169,6 @@ typedef struct {
 } Region;
 
 /* Prototypes for class functions */
-static int Region_init( Region *self, PyObject *args, PyObject *kwds );
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
@@ -4242,22 +4241,12 @@ static PyTypeObject RegionType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Region_init,    /* tp_init */
+   0,                         /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
 
-
 /* Define the class methods */
-static int Region_init( Region *self, PyObject *args, PyObject *kwds ){
-   const char *options = " ";
-   int result = -1;
-
-   /* There is no constructor */
-
-   TIDY;
-   return result;
-}
 
 #undef NAME
 #define NAME CLASS ".getregionbounds"
