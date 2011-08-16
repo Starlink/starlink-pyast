@@ -1262,7 +1262,6 @@ static PyTypeObject SphMapType = {
 /* Define the class methods */
 static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
-   double zoom;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -2324,7 +2323,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
 
    int result = -1;
 
-   // We get nin and nou from the arrays themselves
+   // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "Odd|s:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
       lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
@@ -3063,7 +3062,6 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
   PyObject *point3_object = NULL;
   int naxes;
   npy_intp dims[1];
-  double offset;
 
   naxes = astGetI( THIS, "Naxes" );
   if ( PyArg_ParseTuple( args, "OOO:" NAME, &point1_object,
@@ -3181,8 +3179,6 @@ static PyTypeObject NormMapType = {
 static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
    Mapping *other;
-   Mapping *another;
-   int series;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "O!|s:" CLASS, &FrameType, (PyObject**)&other,
@@ -3291,7 +3287,6 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
    FrameSet *other;
    int result = -1;
-   int naxes;
 
    if( PyArg_ParseTuple(args, "O!|s:" CLASS, &FrameType, (PyObject**)&other, &options ) ) {
       AstFrameSet *this = astFrameSet( THAT, options );
@@ -3599,8 +3594,6 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
 #define NAME CLASS ".skyoffsetmap"
 static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
    PyObject *result = NULL;
-   int iframe1;
-   int iframe2;
 
    AstMapping * mapping = astSkyOffsetMap( THIS  );
    if (astOK) {
@@ -3965,7 +3958,6 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".currenttime"
 static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
-   Object *other = NULL;
    PyObject *result = NULL;
 
    if ( astOK ) {
