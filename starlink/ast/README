@@ -134,7 +134,6 @@ created to store the transformed positions. IN either case, the value
 returned by the method is a new reference to the array storing the
 transformed values.
 
-
 - The Python interface for astTranGrid is
 
   pout = mapping.trangrid( lbnd, ubnd, tol, maxpix, forward )
@@ -165,3 +164,7 @@ and astSetActiveUnit).
 - For SpecFrames astSetRefPos takes two separate arguments for the lon
 and lat and GetRefPos returns a tuple with two values. It may be that
 we should be using numpy arrays here.
+
+- The Python interface for astResample has no "finterp" parameter, and
+the AST__UKERN1 and AST__UINTERP interpolation schemes are not supported.
+
