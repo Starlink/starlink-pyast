@@ -68,12 +68,80 @@ static PyTypeObject *GetType( AstObject *this );
 static int SetProxy( AstObject *this, Object *self );
 static void Object_dealloc( Object *self );
 
-/* Standard AST class functons */
+/* Class membership functions (probably not needed, but just in case).
+These are functions of the base Object class since it should be possible
+to test an object of any sub-class for membership of any other sub-class. */
+MAKE_ISA(Box)
+MAKE_ISA(Circle)
+MAKE_ISA(CmpFrame)
+MAKE_ISA(CmpMap)
+MAKE_ISA(CmpRegion)
+MAKE_ISA(DSBSpecFrame)
+MAKE_ISA(Ellipse)
+MAKE_ISA(FluxFrame)
+MAKE_ISA(Frame)
+MAKE_ISA(FrameSet)
+MAKE_ISA(GrismMap)
+MAKE_ISA(Interval)
+MAKE_ISA(LutMap)
+MAKE_ISA(Mapping)
+MAKE_ISA(NormMap)
+MAKE_ISA(NullRegion)
 MAKE_ISA(Object)
+MAKE_ISA(PcdMap)
+MAKE_ISA(PermMap)
+MAKE_ISA(Prism)
+MAKE_ISA(RateMap)
+MAKE_ISA(Region)
+MAKE_ISA(ShiftMap)
+MAKE_ISA(SkyFrame)
+MAKE_ISA(SpecFluxFrame)
+MAKE_ISA(SpecFrame)
+MAKE_ISA(SphMap)
+MAKE_ISA(TimeFrame)
+MAKE_ISA(TimeMap)
+MAKE_ISA(TranMap)
+MAKE_ISA(UnitMap)
+MAKE_ISA(WcsMap)
+MAKE_ISA(WinMap)
+MAKE_ISA(ZoomMap)
 
 /* Describe the methods of the class */
 static PyMethodDef Object_methods[] = {
+   DEF_ISA(Box,box),
+   DEF_ISA(Circle,circle),
+   DEF_ISA(CmpFrame,cmpframe),
+   DEF_ISA(CmpMap,cmpmap),
+   DEF_ISA(CmpRegion,cmpregion),
+   DEF_ISA(DSBSpecFrame,dsbspecframe),
+   DEF_ISA(Ellipse,ellipse),
+   DEF_ISA(FluxFrame,fluxframe),
+   DEF_ISA(Frame,frame),
+   DEF_ISA(FrameSet,frameset),
+   DEF_ISA(GrismMap,grismmap),
+   DEF_ISA(Interval,interval),
+   DEF_ISA(LutMap,lutmap),
+   DEF_ISA(Mapping,mapping),
+   DEF_ISA(NormMap,normmap),
+   DEF_ISA(NullRegion,nullregion),
    DEF_ISA(Object,object),
+   DEF_ISA(PcdMap,pcdmap),
+   DEF_ISA(PermMap,permmap),
+   DEF_ISA(Prism,prism),
+   DEF_ISA(RateMap,ratemap),
+   DEF_ISA(Region,region),
+   DEF_ISA(ShiftMap,shiftmap),
+   DEF_ISA(SkyFrame,skyframe),
+   DEF_ISA(SpecFluxFrame,specfluxframe),
+   DEF_ISA(SpecFrame,specframe),
+   DEF_ISA(SphMap,sphmap),
+   DEF_ISA(TimeFrame,timeframe),
+   DEF_ISA(TimeMap,timemap),
+   DEF_ISA(TranMap,tranmap),
+   DEF_ISA(UnitMap,unitmap),
+   DEF_ISA(WcsMap,wcsmap),
+   DEF_ISA(WinMap,winmap),
+   DEF_ISA(ZoomMap,zoommap),
    {"__deepcopy__", (PyCFunction)Object_deepcopy, METH_VARARGS, "Create a deep copy of an Object - used by the copy module"},
    {"clear", (PyCFunction)Object_clear, METH_VARARGS, "Clear attribute values for an Object"},
    {"copy", (PyCFunction)Object_copy, METH_NOARGS, "Create a deep copy of an Object"},
@@ -311,13 +379,10 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args );
 static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args );
 static PyObject *Mapping_trann( Mapping *self, PyObject *args );
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args );
-
-/* Standard AST class functons */
-MAKE_ISA(Mapping)
+static PyObject *Mapping_trann( Mapping *self, PyObject *args );
 
 /* Describe the methods of the class */
 static PyMethodDef Mapping_methods[] = {
-   DEF_ISA(Mapping,mapping),
    {"decompose", (PyCFunction)Mapping_decompose, METH_NOARGS, "Decompose a Mapping into two component Mappings"},
    {"invert", (PyCFunction)Mapping_invert, METH_NOARGS, "Invert a Mapping"},
    {"mapbox", (PyCFunction)Mapping_mapbox, METH_VARARGS, " Find a bounding box for a Mapping."},
@@ -1107,15 +1172,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(ZoomMap)
-
-/* Describe the methods of the class */
-static PyMethodDef ZoomMap_methods[] = {
-   DEF_ISA(ZoomMap,zoommap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the AST attributes of the class */
 MAKE_GETSETD(ZoomMap,Zoom)
 static PyGetSetDef ZoomMap_getseters[] = {
@@ -1152,7 +1208,7 @@ static PyTypeObject ZoomMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   ZoomMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    ZoomMap_getseters,         /* tp_getset */
    0,                         /* tp_base */
@@ -1184,7 +1240,7 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* SphMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -1197,15 +1253,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(SphMap)
-
-/* Describe the methods of the class */
-static PyMethodDef SphMap_methods[] = {
-   DEF_ISA(SphMap,sphmap),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(SphMap,UnitRadius)
@@ -1220,7 +1267,7 @@ static PyGetSetDef SphMap_getseters[] = {
 static PyTypeObject SphMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(SphMap),           /* tp_basicsize */
+   sizeof(SphMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -1238,22 +1285,22 @@ static PyTypeObject SphMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SphMap",             /* tp_doc */
+   "AST SphMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   SphMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
-   SphMap_getseters,         /* tp_getset */
+   SphMap_getseters,          /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)SphMap_init,    /* tp_init */
+   (initproc)SphMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -1275,7 +1322,7 @@ static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* GrismMap */
-/* ======= */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -1288,15 +1335,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(GrismMap)
-
-/* Describe the methods of the class */
-static PyMethodDef GrismMap_methods[] = {
-   DEF_ISA(GrismMap,grismmap),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the AST attributes of the class */
 MAKE_GETSETD(GrismMap,GrismNR)
@@ -1324,7 +1362,7 @@ static PyGetSetDef GrismMap_getseters[] = {
 static PyTypeObject GrismMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(GrismMap),           /* tp_basicsize */
+   sizeof(GrismMap),          /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -1342,22 +1380,22 @@ static PyTypeObject GrismMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST GrismMap",             /* tp_doc */
+   "AST GrismMap",            /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   GrismMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
-   GrismMap_getseters,         /* tp_getset */
+   GrismMap_getseters,        /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)GrismMap_init,    /* tp_init */
+   (initproc)GrismMap_init,   /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -1379,7 +1417,7 @@ static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* PcdMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -1392,15 +1430,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(PcdMap)
-
-/* Describe the methods of the class */
-static PyMethodDef PcdMap_methods[] = {
-   DEF_ISA(PcdMap,pcdmap),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the AST attributes of the class */
 MAKE_GETSETD(PcdMap,Disco)
@@ -1415,7 +1444,7 @@ static PyGetSetDef PcdMap_getseters[] = {
 static PyTypeObject PcdMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(PcdMap),           /* tp_basicsize */
+   sizeof(PcdMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -1433,22 +1462,22 @@ static PyTypeObject PcdMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PcdMap",             /* tp_doc */
+   "AST PcdMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   PcdMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
-   PcdMap_getseters,         /* tp_getset */
+   PcdMap_getseters,          /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)PcdMap_init,    /* tp_init */
+   (initproc)PcdMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -1479,7 +1508,7 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* WcsMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -1492,15 +1521,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(WcsMap)
-
-/* Describe the methods of the class */
-static PyMethodDef WcsMap_methods[] = {
-   DEF_ISA(WcsMap,wcsmap),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the AST attributes of the class */
 MAKE_GETROD(WcsMap,NatLat)
@@ -1520,7 +1540,7 @@ static PyGetSetDef WcsMap_getseters[] = {
 static PyTypeObject WcsMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(WcsMap),           /* tp_basicsize */
+   sizeof(WcsMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -1538,22 +1558,22 @@ static PyTypeObject WcsMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WcsMap",             /* tp_doc */
+   "AST WcsMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   WcsMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
-   WcsMap_getseters,         /* tp_getset */
+   WcsMap_getseters,          /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)WcsMap_init,    /* tp_init */
+   (initproc)WcsMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -1595,15 +1615,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(UnitMap)
-
-/* Describe the methods of the class */
-static PyMethodDef UnitMap_methods[] = {
-   DEF_ISA(UnitMap,unitmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject UnitMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -1633,7 +1644,7 @@ static PyTypeObject UnitMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   UnitMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -1679,12 +1690,8 @@ typedef struct {
 static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds );
 static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args );
 
-/* Standard AST class functons */
-MAKE_ISA(TimeMap)
-
 /* Describe the methods of the class */
 static PyMethodDef TimeMap_methods[] = {
-   DEF_ISA(TimeMap,timemap),
    {"timeadd", (PyCFunction)TimeMap_timeadd, METH_VARARGS, "Add a time coordinate conversion to a TimeMap"},
    {NULL}  /* Sentinel */
 };
@@ -1795,15 +1802,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(RateMap)
-
-/* Describe the methods of the class */
-static PyMethodDef RateMap_methods[] = {
-   DEF_ISA(RateMap,ratemap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject RateMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -1833,7 +1831,7 @@ static PyTypeObject RateMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   RateMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -1867,7 +1865,7 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* CmpMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -1881,20 +1879,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(CmpMap)
-
-/* Describe the methods of the class */
-static PyMethodDef CmpMap_methods[] = {
-   DEF_ISA(CmpMap,cmpmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject CmpMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(CmpMap),           /* tp_basicsize */
+   sizeof(CmpMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -1912,14 +1901,14 @@ static PyTypeObject CmpMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpMap",             /* tp_doc */
+   "AST CmpMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   CmpMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -1927,7 +1916,7 @@ static PyTypeObject CmpMapType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)CmpMap_init,    /* tp_init */
+   (initproc)CmpMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -1967,15 +1956,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(TranMap)
-
-/* Describe the methods of the class */
-static PyMethodDef TranMap_methods[] = {
-   DEF_ISA(TranMap,tranmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject TranMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -2005,7 +1985,7 @@ static PyTypeObject TranMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   TranMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -2052,15 +2032,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(PermMap)
-
-/* Describe the methods of the class */
-static PyMethodDef PermMap_methods[] = {
-   DEF_ISA(PermMap,permmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject PermMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -2090,7 +2061,7 @@ static PyTypeObject PermMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   PermMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -2152,7 +2123,7 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* ShiftMap */
-/* ======= */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -2166,20 +2137,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(ShiftMap)
-
-/* Describe the methods of the class */
-static PyMethodDef ShiftMap_methods[] = {
-   DEF_ISA(ShiftMap,shiftmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject ShiftMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(ShiftMap),           /* tp_basicsize */
+   sizeof(ShiftMap),          /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -2197,14 +2159,14 @@ static PyTypeObject ShiftMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ShiftMap",             /* tp_doc */
+   "AST ShiftMap",            /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   ShiftMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -2212,7 +2174,7 @@ static PyTypeObject ShiftMapType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)ShiftMap_init,    /* tp_init */
+   (initproc)ShiftMap_init,   /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -2247,7 +2209,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* LutMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -2261,20 +2223,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(LutMap)
-
-/* Describe the methods of the class */
-static PyMethodDef LutMap_methods[] = {
-   DEF_ISA(LutMap,lutmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject LutMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(LutMap),           /* tp_basicsize */
+   sizeof(LutMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -2292,14 +2245,14 @@ static PyTypeObject LutMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST LutMap",             /* tp_doc */
+   "AST LutMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   LutMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -2307,7 +2260,7 @@ static PyTypeObject LutMapType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)LutMap_init,    /* tp_init */
+   (initproc)LutMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -2327,7 +2280,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "Odd|s:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
       lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
-                                                            PyArray_DOUBLE, 0, 100);
+                                                         PyArray_DOUBLE, 0, 100);
       if (lut) {
          AstLutMap * this = NULL;
          this = astLutMap( PyArray_Size( (PyObject*)lut),
@@ -2344,7 +2297,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* WinMap */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -2358,20 +2311,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(WinMap)
-
-/* Describe the methods of the class */
-static PyMethodDef WinMap_methods[] = {
-   DEF_ISA(WinMap,winmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject WinMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(WinMap),           /* tp_basicsize */
+   sizeof(WinMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -2389,14 +2333,14 @@ static PyTypeObject WinMapType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WinMap",             /* tp_doc */
+   "AST WinMap",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   WinMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -2404,7 +2348,7 @@ static PyTypeObject WinMapType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)WinMap_init,    /* tp_init */
+   (initproc)WinMap_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -2466,7 +2410,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
 }
 
 /* Frame */
-/* ======= */
+/* ===== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -2497,12 +2441,8 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args );
 static PyObject *Frame_resolve( Frame *self, PyObject *args );
 static PyObject *Frame_unformat( Frame *self, PyObject *args );
 
-/* Standard AST class functons */
-MAKE_ISA(Frame)
-
 /* Describe the methods of the class */
 static PyMethodDef Frame_methods[] = {
-  DEF_ISA(Frame,frame),
   {"angle", (PyCFunction)Frame_angle, METH_VARARGS, "Calculate the angle subtended by two points at a this point"},
   {"axangle", (PyCFunction)Frame_axangle, METH_VARARGS, "Returns the angle from an axis, to a line through two points"},
   {"axdistance", (PyCFunction)Frame_axdistance, METH_VARARGS, "Find the distance between two axis values"},
@@ -3123,15 +3063,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(NormMap)
-
-/* Describe the methods of the class */
-static PyMethodDef NormMap_methods[] = {
-   DEF_ISA(NormMap,normmap),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject NormMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -3161,7 +3092,7 @@ static PyTypeObject NormMapType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   NormMap_methods,           /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -3194,7 +3125,7 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
 
 
 /* FrameSet */
-/* ======= */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3213,12 +3144,8 @@ static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args );
 
-/* Standard AST class functons */
-MAKE_ISA(FrameSet)
-
 /* Describe the methods of the class */
 static PyMethodDef FrameSet_methods[] = {
-  DEF_ISA(FrameSet,frameset),
   {"addframe", (PyCFunction)FrameSet_addframe, METH_VARARGS, "Add a Frame to a FrameSet to define a new coordinate system"},
   {"getframe", (PyCFunction)FrameSet_getframe, METH_VARARGS, "Obtain an reference to a specified Frame in a FrameSet"},
   {"getmapping", (PyCFunction)FrameSet_getmapping, METH_VARARGS, "Obtain a Mapping that converts between two Frames in a FrameSet"},
@@ -3261,7 +3188,7 @@ static PyTypeObject FrameSetType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FrameSet",             /* tp_doc */
+   "AST FrameSet",            /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -3276,7 +3203,7 @@ static PyTypeObject FrameSetType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)FrameSet_init,    /* tp_init */
+   (initproc)FrameSet_init,   /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -3397,7 +3324,7 @@ static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
 }
 
 /* CmpFrame */
-/* ======= */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3410,15 +3337,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(CmpFrame)
-
-/* Describe the methods of the class */
-static PyMethodDef CmpFrame_methods[] = {
-  DEF_ISA(CmpFrame,cmpframe),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the class Python type structure */
 static PyTypeObject CmpFrameType = {
@@ -3442,14 +3360,14 @@ static PyTypeObject CmpFrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpFrame",             /* tp_doc */
+   "AST CmpFrame",            /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   CmpFrame_methods,          /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -3457,7 +3375,7 @@ static PyTypeObject CmpFrameType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)CmpFrame_init,    /* tp_init */
+   (initproc)CmpFrame_init,   /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -3482,7 +3400,7 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
 }
 
 /* SkyFrame */
-/* ======= */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3497,12 +3415,8 @@ typedef struct {
 static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds );
 static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args );
 
-/* Standard AST class functons */
-MAKE_ISA(SkyFrame)
-
 /* Describe the methods of the class */
 static PyMethodDef SkyFrame_methods[] = {
-  DEF_ISA(SkyFrame,skyframe),
   {"skyoffsetmap", (PyCFunction)SkyFrame_skyoffsetmap, METH_NOARGS,"Returns a Mapping which goes from absolute coordinates to offset coordinates"},
    {NULL}  /* Sentinel */
 };
@@ -3561,9 +3475,9 @@ static PyTypeObject SkyFrameType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   SkyFrame_methods,         /* tp_methods */
+   SkyFrame_methods,          /* tp_methods */
    0,                         /* tp_members */
-   SkyFrame_getseters,       /* tp_getset */
+   SkyFrame_getseters,        /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
@@ -3611,7 +3525,7 @@ static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
 }
 
 /* SpecFrame */
-/* ======= */
+/* ========= */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3627,12 +3541,8 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds );
 static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args );
 static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args );
 
-/* Standard AST class functons */
-MAKE_ISA(SpecFrame)
-
 /* Describe the methods of the class */
 static PyMethodDef SpecFrame_methods[] = {
-  DEF_ISA(SpecFrame,specframe),
   {"setrefpos", (PyCFunction)SpecFrame_setrefpos, METH_VARARGS,"Set the reference position in a specified celestial coordinate system"},
   {"getrefpos", (PyCFunction)SpecFrame_getrefpos, METH_VARARGS, "Return the reference position in a specified celestial coordinate system"},
    {NULL}  /* Sentinel */
@@ -3668,7 +3578,7 @@ static PyGetSetDef SpecFrame_getseters[] = {
 static PyTypeObject SpecFrameType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(SpecFrame),          /* tp_basicsize */
+   sizeof(SpecFrame),         /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -3686,7 +3596,7 @@ static PyTypeObject SpecFrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFrame",            /* tp_doc */
+   "AST SpecFrame",           /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -3701,7 +3611,7 @@ static PyTypeObject SpecFrameType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)SpecFrame_init,   /* tp_init */
+   (initproc)SpecFrame_init,  /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -3760,7 +3670,7 @@ static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
 }
 
 /* DSBSpecFrame */
-/* ======= */
+/* ============ */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3773,15 +3683,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(DSBSpecFrame)
-
-/* Describe the methods of the class */
-static PyMethodDef DSBSpecFrame_methods[] = {
-  DEF_ISA(DSBSpecFrame,dsbspecframe),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(DSBSpecFrame,AlignSideBand)
@@ -3803,7 +3704,7 @@ static PyGetSetDef DSBSpecFrame_getseters[] = {
 static PyTypeObject DSBSpecFrameType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(DSBSpecFrame),          /* tp_basicsize */
+   sizeof(DSBSpecFrame),      /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -3821,22 +3722,22 @@ static PyTypeObject DSBSpecFrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST DSBSpecFrame",            /* tp_doc */
+   "AST DSBSpecFrame",        /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   DSBSpecFrame_methods,         /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
-   DSBSpecFrame_getseters,       /* tp_getset */
+   DSBSpecFrame_getseters,    /* tp_getset */
    0,                         /* tp_base */
    0,                         /* tp_dict */
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)DSBSpecFrame_init,   /* tp_init */
+   (initproc)DSBSpecFrame_init,/* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -3858,7 +3759,7 @@ static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds
 }
 
 /* TimeFrame */
-/* ======= */
+/* ========= */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3873,12 +3774,8 @@ typedef struct {
 static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds );
 static PyObject *TimeFrame_currenttime( TimeFrame *self );
 
-/* Standard AST class functons */
-MAKE_ISA(TimeFrame)
-
 /* Describe the methods of the class */
 static PyMethodDef TimeFrame_methods[] = {
-  DEF_ISA(TimeFrame,timeframe),
   {"currenttime", (PyCFunction)TimeFrame_currenttime, METH_NOARGS,"Return the current system time"},
    {NULL}  /* Sentinel */
 };
@@ -3970,7 +3867,7 @@ static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
 }
 
 /* FluxFrame */
-/* ======= */
+/* ========= */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -3984,15 +3881,6 @@ typedef struct {
 /* Prototypes for class functions */
 static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(FluxFrame)
-
-/* Describe the methods of the class */
-static PyMethodDef FluxFrame_methods[] = {
-  DEF_ISA(FluxFrame,fluxframe),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the AST attributes of the class */
 MAKE_GETSETD(FluxFrame,SpecVal)
 
@@ -4005,7 +3893,7 @@ static PyGetSetDef FluxFrame_getseters[] = {
 static PyTypeObject FluxFrameType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(FluxFrame),          /* tp_basicsize */
+   sizeof(FluxFrame),         /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4023,14 +3911,14 @@ static PyTypeObject FluxFrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FluxFrame",            /* tp_doc */
+   "AST FluxFrame",           /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   FluxFrame_methods,         /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    FluxFrame_getseters,       /* tp_getset */
    0,                         /* tp_base */
@@ -4038,7 +3926,7 @@ static PyTypeObject FluxFrameType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)FluxFrame_init,   /* tp_init */
+   (initproc)FluxFrame_init,  /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4063,7 +3951,7 @@ static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
 }
 
 /* SpecFluxFrame */
-/* ======= */
+/* ============= */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4077,20 +3965,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(SpecFluxFrame)
-
-/* Describe the methods of the class */
-static PyMethodDef SpecFluxFrame_methods[] = {
-  DEF_ISA(SpecFluxFrame,specfluxframe),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject SpecFluxFrameType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(SpecFluxFrame),          /* tp_basicsize */
+   sizeof(SpecFluxFrame),     /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4108,14 +3987,14 @@ static PyTypeObject SpecFluxFrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFluxFrame",            /* tp_doc */
+   "AST SpecFluxFrame",       /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   SpecFluxFrame_methods,         /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4123,7 +4002,7 @@ static PyTypeObject SpecFluxFrameType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)SpecFluxFrame_init,   /* tp_init */
+   (initproc)SpecFluxFrame_init,/* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4149,7 +4028,7 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 }
 
 /* Region */
-/* ======= */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4184,12 +4063,8 @@ static PyGetSetDef Region_getseters[] = {
    {NULL}  /* Sentinel */
 };
 
-/* Standard AST class functons */
-MAKE_ISA(Region)
-
 /* Describe the methods of the class */
 static PyMethodDef Region_methods[] = {
-  DEF_ISA(Region,region),
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
   {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
@@ -4200,7 +4075,7 @@ static PyMethodDef Region_methods[] = {
 static PyTypeObject RegionType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(Region),          /* tp_basicsize */
+   sizeof(Region),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4218,28 +4093,20 @@ static PyTypeObject RegionType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Region",             /* tp_doc */
+   "AST Region",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Region_methods,          /* tp_methods */
+   Region_methods,            /* tp_methods */
    0,                         /* tp_members */
    Region_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   0,                         /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
 };
 
-/* Define the class methods */
 
+/* Define the class methods */
 #undef NAME
 #define NAME CLASS ".getregionbounds"
 static PyObject *Region_getregionbounds( Region *self ) {
@@ -4253,9 +4120,11 @@ static PyObject *Region_getregionbounds( Region *self ) {
   dims[0] = naxes;
   lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
   ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
-  if (astOK) result = Py_BuildValue("OO", PyArray_Return(lbnd),
-                                    PyArray_Return(ubnd));
+  if( lbnd && ubnd ) {
+     astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
+     if (astOK) result = Py_BuildValue("OO", PyArray_Return(lbnd),
+                                        PyArray_Return(ubnd));
+  }
   Py_XDECREF(lbnd);
   Py_XDECREF(ubnd);
 
@@ -4299,8 +4168,8 @@ static PyObject *Region_overlap( Region *self, PyObject * args ) {
   return result;
 }
 
-/* Region: Box */
-/* ======= */
+/* Box */
+/* === */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4313,15 +4182,6 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int Box_init( Box *self, PyObject *args, PyObject *kwds );
-
-/* Standard AST class functons */
-MAKE_ISA(Box)
-
-/* Describe the methods of the class */
-static PyMethodDef Box_methods[] = {
-  DEF_ISA(Box,box),
-   {NULL}  /* Sentinel */
-};
 
 /* Define the class Python type structure */
 static PyTypeObject BoxType = {
@@ -4352,7 +4212,7 @@ static PyTypeObject BoxType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Box_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4360,7 +4220,7 @@ static PyTypeObject BoxType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Box_init,    /* tp_init */
+   (initproc)Box_init,        /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4399,8 +4259,8 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: Circle */
-/* ======= */
+/* Circle */
+/* ====== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4414,20 +4274,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int Circle_init( Circle *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(Circle)
-
-/* Describe the methods of the class */
-static PyMethodDef Circle_methods[] = {
-  DEF_ISA(Circle,circle),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject CircleType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(Circle),               /* tp_basicsize */
+   sizeof(Circle),            /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4452,7 +4303,7 @@ static PyTypeObject CircleType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Circle_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4460,7 +4311,7 @@ static PyTypeObject CircleType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Circle_init,    /* tp_init */
+   (initproc)Circle_init,     /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4502,7 +4353,7 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: Ellipse */
+/* Ellipse */
 /* ======= */
 
 /* Define a string holding the fully qualified Python class name. */
@@ -4517,20 +4368,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(Ellipse)
-
-/* Describe the methods of the class */
-static PyMethodDef Ellipse_methods[] = {
-  DEF_ISA(Ellipse,ellipse),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject EllipseType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(Ellipse),               /* tp_basicsize */
+   sizeof(Ellipse),           /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4555,7 +4397,7 @@ static PyTypeObject EllipseType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Ellipse_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4609,8 +4451,8 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: Interval */
-/* ======= */
+/* Interval */
+/* ======== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4624,20 +4466,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int Interval_init( Interval *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(Interval)
-
-/* Describe the methods of the class */
-static PyMethodDef Interval_methods[] = {
-  DEF_ISA(Interval,interval),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject IntervalType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(Interval),               /* tp_basicsize */
+   sizeof(Interval),          /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4662,7 +4495,7 @@ static PyTypeObject IntervalType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Interval_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4670,7 +4503,7 @@ static PyTypeObject IntervalType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Interval_init,    /* tp_init */
+   (initproc)Interval_init,   /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4710,8 +4543,8 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: NullRegion */
-/* ======= */
+/* NullRegion */
+/* ========== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4725,20 +4558,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(NullRegion)
-
-/* Describe the methods of the class */
-static PyMethodDef NullRegion_methods[] = {
-  DEF_ISA(NullRegion,nullregion),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject NullRegionType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(NullRegion),               /* tp_basicsize */
+   sizeof(NullRegion),        /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4763,7 +4587,7 @@ static PyTypeObject NullRegionType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   NullRegion_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4771,7 +4595,7 @@ static PyTypeObject NullRegionType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)NullRegion_init,    /* tp_init */
+   (initproc)NullRegion_init, /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4799,8 +4623,8 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: CmpRegion */
-/* ======= */
+/* CmpRegion */
+/* ========= */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4814,20 +4638,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(CmpRegion)
-
-/* Describe the methods of the class */
-static PyMethodDef CmpRegion_methods[] = {
-  DEF_ISA(CmpRegion,cmpregion),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject CmpRegionType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(CmpRegion),               /* tp_basicsize */
+   sizeof(CmpRegion),         /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4852,7 +4667,7 @@ static PyTypeObject CmpRegionType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   CmpRegion_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4860,7 +4675,7 @@ static PyTypeObject CmpRegionType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)CmpRegion_init,    /* tp_init */
+   (initproc)CmpRegion_init,  /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -4885,8 +4700,8 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Region: Prism */
-/* ======= */
+/* Prism */
+/* ===== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -4900,20 +4715,11 @@ typedef struct {
 /* Prototypes for class functions */
 static int Prism_init( Prism *self, PyObject *args, PyObject *kwds );
 
-/* Standard AST class functons */
-MAKE_ISA(Prism)
-
-/* Describe the methods of the class */
-static PyMethodDef Prism_methods[] = {
-  DEF_ISA(Prism,prism),
-   {NULL}  /* Sentinel */
-};
-
 /* Define the class Python type structure */
 static PyTypeObject PrismType = {
    PyVarObject_HEAD_INIT(NULL, 0)
    CLASS,                     /* tp_name */
-   sizeof(Prism),               /* tp_basicsize */
+   sizeof(Prism),             /* tp_basicsize */
    0,                         /* tp_itemsize */
    0,                         /* tp_dealloc */
    0,                         /* tp_print */
@@ -4938,7 +4744,7 @@ static PyTypeObject PrismType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   Prism_methods,               /* tp_methods */
+   0,                         /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -4946,7 +4752,7 @@ static PyTypeObject PrismType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Prism_init,    /* tp_init */
+   (initproc)Prism_init,      /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
