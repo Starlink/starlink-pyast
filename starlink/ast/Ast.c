@@ -28,6 +28,8 @@ static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
        const char *fun );
 static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
        const char *fun );
+static void Sinka( const char *text );
+static char *DumpToString( AstObject *object, const char *options );
 
 /* Macros used in this file */
 #include "pyast.h"
@@ -59,11 +61,13 @@ static PyObject *Object_deepcopy( Object *self, PyObject *args );
 static PyObject *Object_get( Object *self, PyObject *args );
 static PyObject *Object_hasattribute( Object *self, PyObject *args );
 static PyObject *Object_lock( Object *self, PyObject *args );
-static PyObject *Object_unlock( Object *self, PyObject *args );
+static PyObject *Object_repr( PyObject *self );
+static PyObject *Object_same( Object *self, PyObject *args );
 static PyObject *Object_set( Object *self, PyObject *args );
 static PyObject *Object_show( Object *self );
-static PyObject *Object_same( Object *self, PyObject *args );
+static PyObject *Object_str( PyObject *self );
 static PyObject *Object_test( Object *self, PyObject *args );
+static PyObject *Object_unlock( Object *self, PyObject *args );
 static PyTypeObject *GetType( AstObject *this );
 static int SetProxy( AstObject *this, Object *self );
 static void Object_dealloc( Object *self );
@@ -187,13 +191,13 @@ static PyTypeObject ObjectType = {
    0,                         /* tp_getattr */
    0,                         /* tp_setattr */
    0,                         /* tp_reserved */
-   0,                         /* tp_repr */
+   Object_repr,               /* tp_repr */
    0,                         /* tp_as_number */
    0,                         /* tp_as_sequence */
    0,                         /* tp_as_mapping */
    0,                         /* tp_hash  */
    0,                         /* tp_call */
-   0,                         /* tp_str */
+   Object_str,                /* tp_str */
    0,                         /* tp_getattro */
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
@@ -243,6 +247,40 @@ static void Object_dealloc( Object *self ) {
    }
    Py_TYPE(self)->tp_free((PyObject*)self);
    TIDY;
+}
+
+static PyObject *Object_repr( PyObject *self ) {
+   char *p1 = NULL;
+   char *p2 = NULL;
+   int nc = 0;
+
+   PyObject *result = NULL;
+   if( THIS ) {
+      p1 = DumpToString( THIS, "Comment=0,Full=-1" );
+      p2 = astAppendString( p2, &nc, "<" );
+      p2 = astAppendString( p2, &nc, p1 );
+      p2 = astAppendString( p2, &nc, ">" );
+      result = Py_BuildValue( "s", p2 );
+      p2 = astFree( p2 );
+      p1 = astFree( p1 );
+   }
+
+   TIDY;
+   return result;
+}
+
+static PyObject *Object_str( PyObject *self ) {
+   char *p1 = NULL;
+
+   PyObject *result = NULL;
+   if( THIS ) {
+      p1 = DumpToString( THIS, "Comment=1,Full=0" );
+      result = Py_BuildValue( "s", p1 );
+      p1 = astFree( p1 );
+   }
+
+   TIDY;
+   return result;
 }
 
 static PyObject *Object_deepcopy( Object *self, PyObject *args ) {
@@ -5793,5 +5831,46 @@ static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
 
 */
    return GetArray( object, PyArray_INT, 1, 1, dim, arg, fun );
+}
+
+static char *DumpToString( AstObject *this, const char *options ){
+/*
+*  Name:
+*     DumpToString
+
+*  Purpose:
+*     Returns a pointer to a dynamically allocated string containing a
+*     dump of the supplied Object.
+
+*/
+   AstChannel *ch = NULL;
+   char *result = NULL;
+
+   if( !astOK ) return result;
+
+   ch = astChannel( NULL, Sinka, options );
+   astPutChannelData( ch, &result );
+   astWrite( ch, this );
+   ch = astAnnul( ch );
+
+   return result;
+}
+
+static void Sinka( const char *text ){
+/*
+*  Name:
+*     Sinka
+
+*  Purpose:
+*     Appends a supplied line of text to an expanding string associated
+*     with a Channel.
+
+*/
+   if( text ) {
+      char **store = astChannelData;
+      int nc = astChrLen( *store );
+      if( nc ) *store = astAppendString( *store, &nc, "\n" );
+      *store = astAppendString( *store, &nc, text );
+   }
 }
 
