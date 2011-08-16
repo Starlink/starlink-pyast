@@ -84,6 +84,9 @@ class TestAst(unittest.TestCase):
       with self.assertRaises(starlink.Ast.NOWRT):
          zoommap = starlink.Ast.ZoomMap( 1, 12.25, "Nin=3" )
 
+      self.assertTrue( starlink.Ast.ZoomMap( 1, 1.0 ).simplify().isaunitmap() )
+
+
       zoommap.lock(1)
 
    def test_FrameSimple(self):
@@ -310,6 +313,23 @@ class TestAst(unittest.TestCase):
       self.assertEqual( d.sum(), 0.0 )
       self.assertEqual( nused, 12 )
 
+      data_in = numpy.linspace( 1, 9, 9 )
+      zoommap = starlink.Ast.ZoomMap( 2, 1.0 )
+      npix,out,outv = zoommap.resample( [1,0], [3,2], data_in, None,
+                                   starlink.Ast.NEAREST, None, starlink.Ast.USEBAD,
+                                   0.0, 100, starlink.Ast.BAD, [2,0], [4,2], [2,0],
+                                   [4,2] )
+
+      answer = numpy.array( [ 2., 3., starlink.Ast.BAD,
+                              5., 6., starlink.Ast.BAD,
+                              8., 9., starlink.Ast.BAD] )
+      d = (answer - out)**2
+      self.assertEqual( d.sum(), 0.0 )
+      self.assertIsNone( outv )
+      self.assertEqual( npix, 3 )
+
+
+
    def test_PermMap(self):
       permmap = starlink.Ast.PermMap( [2,1,3],[1,2] )
       self.assertIsInstance( permmap, starlink.Ast.PermMap )
@@ -469,6 +489,7 @@ class TestAst(unittest.TestCase):
                                  [1,1],[4,5])
       overlap = box.overlap( testbox )
       self.assertEqual( overlap, 4 )
+      self.assertTrue(  box.removeregions().isaframe() )
 
    def test_Circle(self):
       circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,

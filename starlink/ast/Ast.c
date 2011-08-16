@@ -377,7 +377,9 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args );
 static PyObject *Mapping_rate( Mapping *self, PyObject *args );
 static PyObject *Mapping_rebin( Mapping *self, PyObject *args );
 static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args );
-static PyObject *Mapping_trann( Mapping *self, PyObject *args );
+static PyObject *Mapping_resample( Mapping *self, PyObject *args );
+static PyObject *Mapping_removeregions( Mapping *self );
+static PyObject *Mapping_simplify( Mapping *self );
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args );
 static PyObject *Mapping_trann( Mapping *self, PyObject *args );
 
@@ -391,6 +393,9 @@ static PyMethodDef Mapping_methods[] = {
    {"rate", (PyCFunction)Mapping_rate, METH_VARARGS, "Calculate the rate of change of a Mapping output"},
    {"rebin", (PyCFunction)Mapping_rebin, METH_VARARGS, "Rebin a region of a data grid"},
    {"rebinseq", (PyCFunction)Mapping_rebinseq, METH_VARARGS, "Rebin a region of a sequence of data grids"},
+   {"resample", (PyCFunction)Mapping_resample, METH_VARARGS, "Resample a region of a data grid"},
+   {"removeregions", (PyCFunction)Mapping_removeregions, METH_NOARGS, "Remove any Regions from a Mapping"},
+   {"simplify", (PyCFunction)Mapping_simplify, METH_NOARGS, "Simplify a Mapping"},
    {"trann", (PyCFunction)Mapping_trann, METH_VARARGS, "Transform N-dimensional coordinates"},
    {"trangrid", (PyCFunction)Mapping_trangrid, METH_VARARGS, "Transform a grid of positions"},
    {NULL}  /* Sentinel */
@@ -1037,6 +1042,300 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
       Py_XDECREF( out_var );
       Py_XDECREF( weights );
    }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".resample"
+static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
+   PyArrayObject *in = NULL;
+   PyArrayObject *in_var = NULL;
+   PyArrayObject *lbnd = NULL;
+   PyArrayObject *lbnd_in = NULL;
+   PyArrayObject *lbnd_out = NULL;
+   PyArrayObject *out = NULL;
+   PyArrayObject *out_var = NULL;
+   PyArrayObject *params = NULL;
+   PyArrayObject *ubnd = NULL;
+   PyArrayObject *ubnd_in = NULL;
+   PyArrayObject *ubnd_out = NULL;
+   PyObject *in_object = NULL;
+   PyObject *in_var_object = NULL;
+   PyObject *lbnd_in_object = NULL;
+   PyObject *lbnd_object = NULL;
+   PyObject *lbnd_out_object = NULL;
+   PyObject *params_object = NULL;
+   PyObject *result = NULL;
+   PyObject *ubnd_in_object = NULL;
+   PyObject *ubnd_object = NULL;
+   PyObject *ubnd_out_object = NULL;
+   char badval_b;
+   char buf[200];
+   char format[] = "OOOOiOididOOOO:" NAME;
+   double badval_d;
+   double tol;
+   float badval_f;
+   int badval_i;
+   int dims[ MXDIM ];
+   int flags;
+   int i;
+   int interp;
+   int maxpix;
+   int ncoord_in;
+   int ncoord_out;
+   int ndim = 0;
+   int noutpix = 0;
+   int nparam;
+   int type = 0;
+   npy_intp *pdims = NULL;
+   short int badval_h;
+   unsigned char badval_B;
+   unsigned int badval_I;
+   unsigned short int badval_H;
+   void *pbadval = NULL;
+
+/* Get the number of inputs and outputs for the Mapping */
+   ncoord_in = astGetI( THIS, "Nin" );
+   ncoord_out = astGetI( THIS, "Nin" );
+
+/* We do not know yet what format code to use for badval. We need to parse
+   the arguments twice. The first time, we determine the data type from
+   the "in" array. This allows us to choose the correct format code for
+   badval, so we then parse the arguments a second time, using the
+   correct code. */
+   if( PyArg_ParseTuple( args, format, &lbnd_in_object,
+                         &ubnd_in_object, &in_object, &in_var_object,
+                         &interp, &params_object, &flags, &tol, &maxpix,
+                         &badval_d, &lbnd_out_object, &ubnd_out_object,
+                         &lbnd_object, &ubnd_object ) && astOK ) {
+
+      type = ((PyArrayObject*) in_object)->descr->type_num;
+      if( type == PyArray_DOUBLE ) {
+         format[ 9 ] = 'd';
+         pbadval = &badval_d;
+      } else if( type == PyArray_FLOAT ) {
+         format[ 9 ] = 'f';
+         pbadval = &badval_f;
+      } else if( type == PyArray_INT ) {
+         format[ 9 ] = 'i';
+         pbadval = &badval_i;
+      } else if( type == PyArray_SHORT ) {
+         format[ 9 ] = 'h';
+         pbadval = &badval_h;
+      } else if( type == PyArray_BYTE ) {
+         format[ 9 ] = 'b';
+         pbadval = &badval_b;
+      } else if( type == PyArray_UINT ) {
+         format[ 9 ] = 'I';
+         pbadval = &badval_I;
+      } else if( type == PyArray_USHORT ) {
+         format[ 9 ] = 'H';
+         pbadval = &badval_H;
+      } else if( type == PyArray_UBYTE ) {
+         format[ 9 ] = 'B';
+         pbadval = &badval_B;
+      } else {
+         PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                          "to " NAME " has a data type that is not "
+                          "supported by " NAME "." );
+      }
+
+/* Also record the number of axes and dimensions in the input array. */
+      ndim = ((PyArrayObject*) in_object)->nd;
+      pdims = ((PyArrayObject*) in_object)->dimensions;
+      if( ndim > MXDIM ) {
+         sprintf( buf, "The 'in' array supplied to " NAME " has too "
+                  "many (%d) dimensions (must be no more than %d).",
+                  ndim, MXDIM );
+         PyErr_SetString( PyExc_ValueError, buf );
+         pbadval = NULL;
+      } else {
+         for( i = 0; i < ndim; i++ ) {
+            dims[ i ] = pdims[ i ];
+         }
+      }
+   }
+
+/* Parse the arguments again, this time with the correct code for
+   badval. */
+   if( PyArg_ParseTuple( args, format, &lbnd_in_object,
+                         &ubnd_in_object, &in_object, &in_var_object,
+                         &interp, &params_object, &flags, &tol, &maxpix,
+                         pbadval, &lbnd_out_object, &ubnd_out_object,
+                         &lbnd_object, &ubnd_object ) && pbadval ) {
+
+      lbnd_in = GetArray1I( lbnd_in_object, &ncoord_in, "lbnd_in", NAME );
+      ubnd_in = GetArray1I( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
+
+      in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
+      if( in_var_object != Py_None ) {
+         in_var = GetArray( in_var_object, type, 1, ndim, dims, "in_var", NAME );
+      }
+
+      if( params_object != Py_None ) {
+         nparam = 0;
+         params = GetArray1D( params_object, &nparam, "params", NAME );
+      }
+
+      lbnd_out = GetArray1I( lbnd_out_object, &ncoord_out, "lbnd_out", NAME );
+      ubnd_out = GetArray1I( ubnd_out_object, &ncoord_out, "ubnd_out", NAME );
+
+      lbnd = GetArray1I( lbnd_object, &ncoord_in, "lbnd", NAME );
+      ubnd = GetArray1I( ubnd_object, &ncoord_in, "ubnd", NAME );
+
+      if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd && in ) {
+
+         out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims, type );
+         if( in_var ) out_var = (PyArrayObject *) PyArray_SimpleNew( ndim,
+                                                                 pdims, type );
+
+         if( out && ( ( in_var && out_var ) || !in_var ) ) {
+
+            if( type == PyArray_DOUBLE ) {
+               noutpix = astResampleD( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const double *)in->data,
+                          (in_var ? (const double *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_d, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (double *)out->data,
+                          (out_var ? (double *)out_var->data : NULL ) );
+            } else if( type == PyArray_FLOAT ) {
+               noutpix = astResampleF( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const float *)in->data,
+                          (in_var ? (const float *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (float *)out->data,
+                          (out_var ? (float *)out_var->data : NULL ) );
+            } else if( type == PyArray_INT ) {
+               noutpix = astResampleI( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const int *)in->data,
+                          (in_var ? (const int *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_i, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (int *)out->data,
+                          (out_var ? (int *)out_var->data : NULL ) );
+            } else if( type == PyArray_SHORT ) {
+               noutpix = astResampleS( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const short int *)in->data,
+                          (in_var ? (const short int *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (short int *)out->data,
+                          (out_var ? (short int *)out_var->data : NULL ) );
+            } else if( type == PyArray_BYTE ) {
+               noutpix = astResampleB( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const signed char *)in->data,
+                          (in_var ? (const signed char *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (signed char *)out->data,
+                          (out_var ? (signed char *)out_var->data : NULL ) );
+            } else if( type == PyArray_UINT ) {
+               noutpix = astResampleUI( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const unsigned int *)in->data,
+                          (in_var ? (const unsigned int *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_i, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (unsigned int *)out->data,
+                          (out_var ? (unsigned int *)out_var->data : NULL ) );
+            } else if( type == PyArray_USHORT ) {
+               noutpix = astResampleUS( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const unsigned short int *)in->data,
+                          (in_var ? (const unsigned short int *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (unsigned short int *)out->data,
+                          (out_var ? (unsigned short int *)out_var->data : NULL ) );
+            } else if( type == PyArray_UBYTE ) {
+               noutpix = astResampleUB( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const unsigned char *)in->data,
+                          (in_var ? (const unsigned char *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (unsigned char *)out->data,
+                          (out_var ? (unsigned char *)out_var->data : NULL ) );
+            } else {
+               PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                                "to " NAME " has a data type that is not "
+                                "supported by " NAME "." );
+            }
+
+            if( astOK ) {
+               if( !out_var ) out_var = (PyArrayObject *) Py_None;
+               result = Py_BuildValue( "iOO", noutpix, out, out_var );
+            }
+         }
+
+         Py_XDECREF( out );
+         Py_XDECREF( out_var );
+      }
+
+      Py_XDECREF( lbnd );
+      Py_XDECREF( ubnd );
+      Py_XDECREF( lbnd_in );
+      Py_XDECREF( ubnd_in );
+      Py_XDECREF( lbnd_out );
+      Py_XDECREF( ubnd_out );
+      Py_XDECREF( in );
+      Py_XDECREF( in_var );
+   }
+
+   TIDY;
+   return result;
+}
+
+static PyObject *Mapping_removeregions( Mapping *self ) {
+   PyObject *result = NULL;
+   PyObject *map_object = NULL;
+   AstMapping *map;
+
+   map = astRemoveRegions( THIS );
+   if( astOK ) {
+      map_object = NewObject( (AstObject *) map );
+      if( map_object ) {
+         result = Py_BuildValue( "O", map_object );
+      }
+      Py_XDECREF(map_object);
+   }
+   if( map ) map = astAnnul( map );
+
+   TIDY;
+   return result;
+}
+
+static PyObject *Mapping_simplify( Mapping *self ) {
+   PyObject *result = NULL;
+   PyObject *map_object = NULL;
+   AstMapping *map;
+
+   map = astSimplify( THIS );
+   if( astOK ) {
+      map_object = NewObject( (AstObject *) map );
+      if( map_object ) {
+         result = Py_BuildValue( "O", map_object );
+      }
+      Py_XDECREF(map_object);
+   }
+   if( map ) map = astAnnul( map );
 
    TIDY;
    return result;
