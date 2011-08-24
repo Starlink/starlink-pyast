@@ -155,7 +155,7 @@ static PyObject *get##attrib( class *self, void *closure ){ \
 static int set##attrib( class *self, PyObject *value, void *closure ); \
 static int set##attrib( class *self, PyObject *value, void *closure ){ \
    int result = -1; \
-   if (value == NULL) { \
+   if (value == NULL || value == Py_None ) { \
       astClear( ((Object*)self)->ast_object, #attrib ); \
       if( astOK ) result = 0; \
    } else if( !Py##pytype##_Check(value) ) { \
@@ -314,11 +314,10 @@ MAKE_GET(class,attrib, \
 
 
 #define SETCODEC(attrib) \
-   char *cval = GetString(value); \
+   const char *cval = GetString(value); \
    if( cval ) { \
       astSetC( ((Object*)self)->ast_object, #attrib, cval ); \
       if( astOK ) result = 0; \
-      cval = astFree( cval ); \
    }
 
 #define MAKE_GETSETC(class,attrib) \

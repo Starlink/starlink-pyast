@@ -21,7 +21,7 @@
 
 /* Prototypes for local functions (need to come here since they may be
    referred to inside Ast.h). */
-static char *GetString( PyObject *value );
+static const char *GetString( PyObject *value );
 static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim,
        int *dims, const char *arg, const char *fun );
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
@@ -76,6 +76,7 @@ static void Object_dealloc( Object *self );
 These are functions of the base Object class since it should be possible
 to test an object of any sub-class for membership of any other sub-class. */
 MAKE_ISA(Box)
+MAKE_ISA(Channel)
 MAKE_ISA(Circle)
 MAKE_ISA(CmpFrame)
 MAKE_ISA(CmpMap)
@@ -113,6 +114,7 @@ MAKE_ISA(ZoomMap)
 /* Describe the methods of the class */
 static PyMethodDef Object_methods[] = {
    DEF_ISA(Box,box),
+   DEF_ISA(Channel,channel),
    DEF_ISA(Circle,circle),
    DEF_ISA(CmpFrame,cmpframe),
    DEF_ISA(CmpMap,cmpmap),
@@ -2875,7 +2877,7 @@ static PyTypeObject FrameType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Frame",             /* tp_doc */
+   "AST Frame",               /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -2890,7 +2892,7 @@ static PyTypeObject FrameType = {
    0,                         /* tp_descr_get */
    0,                         /* tp_descr_set */
    0,                         /* tp_dictoffset */
-   (initproc)Frame_init,    /* tp_init */
+   (initproc)Frame_init,      /* tp_init */
    0,                         /* tp_alloc */
    0,                         /* tp_new */
 };
@@ -5113,6 +5115,224 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+
+
+
+/* Channel */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Channel"
+
+/* Define the class structure */
+typedef struct {
+   Object parent;
+} Channel;
+
+/* Prototypes for class functions */
+static PyObject *Channel_warnings( Channel *self );
+static PyObject *Channel_read( Channel *self );
+static PyObject *Channel_write( Channel *self, PyObject *args );
+static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
+const char *py_source( void );
+void py_sink( const char *text );
+
+
+/* Describe the methods of the class */
+static PyMethodDef Channel_methods[] = {
+   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
+   {"read", (PyCFunction)Channel_read, METH_NOARGS, "Read an Object from a Channel."},
+   {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETC(Channel,SourceFile)
+MAKE_GETSETC(Channel,SinkFile)
+MAKE_GETSETL(Channel,Comment)
+MAKE_GETSETI(Channel,Full)
+MAKE_GETSETI(Channel,Indent)
+MAKE_GETSETI(Channel,ReportLevel)
+MAKE_GETSETL(Channel,Skip)
+MAKE_GETSETL(Channel,Strict)
+static PyGetSetDef Channel_getseters[] = {
+   DEFATT(SourceFile,"Input file from which to read data"),
+   DEFATT(SinkFile,"Output file to which to data should be written"),
+   DEFATT(Comment,"Include textual comments in output?"),
+   DEFATT(Full,"Set level of output detail"),
+   DEFATT(Indent,"Specifies the indentation to use in text produced by a Channel"),
+   DEFATT(ReportLevel,"Determines which read/write conditions are reported"),
+   DEFATT(Skip,"Skip irrelevant data?"),
+   DEFATT(Strict,"Report an error if any unexpeted data items are found?"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject ChannelType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Channel),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST Channel",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Channel_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   Channel_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Channel_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
+   const char *(* source)( void );
+   void (* sink)( const char * );
+   const char *options = " ";
+   int result = -1;
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+
+/* The base Channel class does not implement Source or Sink methods, but
+   classes that extend Channel may do. Search the list of class methods
+   for methods named "sink" and "source". */
+      sink = PyObject_HasAttrString( (PyObject *) self, "sink" ) ? py_sink : NULL;
+      source = PyObject_HasAttrString( (PyObject *) self, "source" ) ? py_source : NULL;
+
+/* Create the channel using the above selected source and sink functions. */
+      AstChannel *this = astChannel( source, sink, options );
+
+/* Store the PyObject pointer in the Channel so that the the source and sink
+   functions can get at it. */
+      astPutChannelData( this, self );
+
+/* Store self as the Python proxy for the AST Channel. */
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+static PyObject *Channel_warnings( Channel *self ) {
+   AstKeyMap *km;
+   PyObject *result = NULL;
+   PyObject *str;
+   const char *text;
+   int nkey;
+   int ikey;
+
+   km = astWarnings( THIS );
+   nkey = astMapSize( km );
+
+   if( astOK ) {
+      result = PyTuple_New( nkey );
+      for( ikey = 0; ikey < nkey; ikey++ ) {
+         astMapGet0C( THIS, astMapKey( THIS, ikey ), &text );
+         str = Py_BuildValue( "s", text );
+         PyTuple_SetItem( result, ikey, str );
+      }
+   }
+
+   km = astAnnul( km );
+
+   TIDY;
+   return result;
+}
+
+static PyObject *Channel_read( Channel *self ){
+   PyObject *result = NULL;
+   PyObject *object = NULL;
+   AstObject *obj;
+   obj = astRead( THIS );
+   if( astOK ) {
+      if( obj ) {
+         object = NewObject( (AstObject *) obj );
+         if( object ) result = Py_BuildValue( "O", object );
+         Py_XDECREF(object);
+      } else {
+         result = Py_None;
+      }
+   }
+   if( obj ) obj = astAnnul( obj );
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".write"
+static PyObject *Channel_write( Channel *self, PyObject *args ){
+   Object *other = NULL;
+   PyObject *result = NULL;
+   int nwrite;
+   if( PyArg_ParseTuple(args, "O!:" NAME, &ObjectType, (PyObject**) &other ) ) {
+      nwrite = astWrite( THIS, THAT );
+      if (astOK) result = Py_BuildValue( "i", nwrite );
+   }
+   TIDY;
+   return result;
+}
+
+
+/* Source and sink functions which are called by the AST Channel C code.
+   These invoke the source and sink methods on the Python Object
+   associated with the Channel. */
+
+const char *py_source( void ){
+   const char *result = NULL;
+   char buffer[ 1024 ];
+   PyObject *o = astChannelData;
+   PyObject *pytext = PyObject_CallMethod( o, "source", NULL );
+   const char *text = GetString( pytext );
+   if( text ) {
+      if( strlen( text ) < 1024 ) {
+         strcpy( buffer, text );
+         result = buffer;
+      } else {
+         PyErr_SetString( RDERR_err, "Text read by " CLASS " source "
+                          "function exceeded 1024 characters.");
+      }
+   }
+   Py_XDECREF(pytext);
+   return result;
+}
+
+void py_sink( const char *text ){
+   PyObject *o = astChannelData;
+   PyObject *result = PyObject_CallMethod( o, "sink", "s", text );
+   Py_XDECREF(result);
+}
+
+
+
 /* Now describe the whole AST module */
 /* ================================= */
 
@@ -5395,6 +5615,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&PrismType);
    PyModule_AddObject( m, "Prism", (PyObject *)&PrismType);
 
+   ChannelType.tp_new = PyType_GenericNew;
+   ChannelType.tp_base = &ObjectType;
+   if( PyType_Ready(&ChannelType) < 0) return NULL;
+   Py_INCREF(&ChannelType);
+   PyModule_AddObject( m, "Channel", (PyObject *)&ChannelType);
+
 /* The constants provided by this module. */
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
@@ -5475,24 +5701,20 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 /* Utility functions */
 /* ================= */
 
-static char *GetString( PyObject *value ) {
+static const char *GetString( PyObject *value ) {
 /*
 *  Name:
 *     GetString
 
 *  Purpose:
-*     Read a null terminated string from a PyObject and store in
-      dynamic memory (free the returned pointer using astFree).
+*     Get a pointer to a null terminated string from a PyObject.
 
 */
-   char *result = NULL;
+   const char *result = NULL;
    if( value ) {
       PyObject *bytes = PyUnicode_AsASCIIString(value);
       if( bytes ) {
-         const char *cval =  PyBytes_AS_STRING(bytes);
-         if( cval ) {
-            result = astStore( NULL, cval, strlen(cval ) + 1 );
-         }
+         result =  PyBytes_AS_STRING(bytes);
          Py_DECREF(bytes);
       }
    }
@@ -5654,6 +5876,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &CmpRegionType;
       } else if( !strcmp( class, "Prism" ) ) {
          result = (PyTypeObject *) &PrismType;
+      } else if( !strcmp( class, "Channel" ) ) {
+         result = (PyTypeObject *) &ChannelType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "
@@ -5873,4 +6097,5 @@ static void Sinka( const char *text ){
       *store = astAppendString( *store, &nc, text );
    }
 }
+
 

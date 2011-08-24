@@ -115,6 +115,7 @@ void astPutErr_( int status_value, const char *message ) {
    PyObject *ptype;
    PyObject *pvalue;
    PyObject *ptraceback;
+   const char *str;
    char *text;
    int lstat;
    int nc;
@@ -131,8 +132,9 @@ void astPutErr_( int status_value, const char *message ) {
 
 /* Get the existing Exception text */
          PyErr_Fetch( &ptype, &pvalue, &ptraceback );
-         text = GetString( pvalue );
-         nc = astChrLen( text );
+         str = GetString( pvalue );
+         nc = str ? strlen( str ) : 0;
+         text = astStore( NULL, str, nc + 1 );
 
 /* Ignore messages that give the C source file and line number since they are
    not useful for Python users. */

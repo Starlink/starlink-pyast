@@ -18,6 +18,11 @@ python3 starlink/ast/test/test.py
 General Notes:
 --------------
 
+- In AST the word "attribute" is always used to refer to a property (i.e.
+an item of data) stored within a class instance. In the AST sense, object
+methods and attributes are distinct. The attributes and methods of each
+AST class are listed in SUN/211.
+
 - Each AST object class has a corresponding Python class (e.g. the AST
 ZoomMap class corresponds to Python type starlink.Ast.ZoomMap)
 
@@ -167,4 +172,21 @@ we should be using numpy arrays here.
 
 - The Python interface for astResample has no "finterp" parameter, and
 the AST__UKERN1 and AST__UINTERP interpolation schemes are not supported.
+
+- The Python interface for astWarnings returns a python tuple containing
+the warning messages, rather than an AST KeyMap.
+
+- The python interface for the Channel constructor as no Source and Sink
+arguments. Anything written to a Channel will get written to the file
+specified by the SinkFile attribute of the Channel, or will appear on
+standard output if no value is assigned to SinkFile. In order to provide
+source and/or sink functions, a custom class should be written in python
+that extends the starlink.Ast.Channel class, and provides implementations
+for methods called "source" and "sink". On each invocation, the source
+method should read the next line of text from some external source and
+return it (or return None if there is no more text to return). On each
+invocation, the sink method will be provided with the next line of text
+as its (only) argument - it should write this text to some external data
+sink.
+
 

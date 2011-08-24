@@ -3,7 +3,43 @@ import starlink.Ast
 import copy
 import numpy
 import math
+import copy
+import filecmp
 
+
+#  Extends the AST Channel class, adding source and sink functions that
+#  store text in an internal list.
+class MyChannel(starlink.Ast.Channel):
+
+   def __init__( self, options="" ):
+      super().__init__( options )
+      self.reset_sink()
+      self.reset_source()
+
+   def reset_sink( self ):
+      self.text = []
+
+   def reset_source( self ):
+      self.index = 0;
+
+   def sink( self, text ):
+      self.text.append(text)
+
+   def source( self ):
+      if self.index < len( self.text ):
+         result = self.text[ self.index ]
+         self.index += 1
+      else:
+         result = None
+      return result
+
+   def get( self ):
+      return copy.deepcopy(self.text)
+
+
+
+
+#  Tester
 class TestAst(unittest.TestCase):
 
    def test_Static(self):
@@ -537,6 +573,45 @@ class TestAst(unittest.TestCase):
       prism = starlink.Ast.Prism( circle, interval )
       self.assertIsInstance( prism, starlink.Ast.Prism )
       self.assertIsInstance( prism, starlink.Ast.Region )
+
+   def test_Channel(self):
+      channel = starlink.Ast.Channel()
+      self.assertIsInstance( channel, starlink.Ast.Object)
+      self.assertIsInstance( channel, starlink.Ast.Channel )
+      self.assertTrue(  channel.isachannel() )
+      self.assertTrue(  channel.isaobject() )
+      zoommap = starlink.Ast.ZoomMap( 2, 0.1, "ID=Hello there" )
+      channel.SinkFile= "fred.txt"
+      n = channel.write( zoommap )
+      self.assertEqual( n, 1 )
+      channel.SourceFile= "fred.txt"
+      with self.assertRaises(starlink.Ast.RDERR):
+         obj = channel.read( )
+      channel.SinkFile = None
+      channel.SourceFile= "fred.txt"
+      obj = channel.read( )
+      channel.SinkFile = "fred2.txt"
+      channel.write( obj )
+      channel.SinkFile = None
+      channel.SourceFile = None
+      self.assertTrue( filecmp.cmp("fred.txt", "fred2.txt", shallow=False)  )
+
+   def test_MyChannel(self):
+      channel = MyChannel("comment=0,Indent=0")
+      self.assertIsInstance( channel, starlink.Ast.Object)
+      self.assertIsInstance( channel, starlink.Ast.Channel )
+      self.assertIsInstance( channel, MyChannel )
+      zoommap = starlink.Ast.ZoomMap( 2, 0.1, "ID=Hello there" )
+      n = channel.write( zoommap )
+      self.assertEqual( n, 1 )
+      a = channel.get()
+      obj = channel.read( )
+      channel.reset_sink()
+      channel.reset_source()
+      n = channel.write( obj )
+      self.assertEqual( n, 1 )
+      b = channel.get()
+      self.assertEqual( a, b )
 
 if __name__ == "__main__":
     #unittest.main()
