@@ -1,6 +1,6 @@
 /* Issues:
 
-   - providing more base methods (repr, str, equal, etc)
+   - providing more base methods (equal, etc)
    - are there any memory leaks (either in AST or Python)?
    - implement more methods and classes
    - is starlink.Ast.BAD (== AST__BAD) implemented in the best way?
@@ -83,6 +83,7 @@ MAKE_ISA(CmpMap)
 MAKE_ISA(CmpRegion)
 MAKE_ISA(DSBSpecFrame)
 MAKE_ISA(Ellipse)
+MAKE_ISA(FitsChan)
 MAKE_ISA(FluxFrame)
 MAKE_ISA(Frame)
 MAKE_ISA(FrameSet)
@@ -121,6 +122,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(CmpRegion,cmpregion),
    DEF_ISA(DSBSpecFrame,dsbspecframe),
    DEF_ISA(Ellipse,ellipse),
+   DEF_ISA(FitsChan,fitschan),
    DEF_ISA(FluxFrame,fluxframe),
    DEF_ISA(Frame,frame),
    DEF_ISA(FrameSet,frameset),
@@ -5332,6 +5334,372 @@ void py_sink( const char *text ){
 }
 
 
+/* FitsChan */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".FitsChan"
+
+/* Define the class structure */
+typedef struct {
+   Channel parent;
+} FitsChan;
+
+/* Prototypes for class functions */
+static PyObject *FitsChan_delfits( FitsChan *self );
+static PyObject *FitsChan_emptyfits( FitsChan *self );
+static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsCF( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsCI( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsF( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsI( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsL( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsS( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsCN( FitsChan *self, PyObject *args );
+/* TBD static PyObject *FitsChan_gettables( FitsChan *self ); */
+static PyObject *FitsChan_purgewcs( FitsChan *self );
+static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args );
+/* TBD static PyObject *FitsChan_puttable( FitsChan *self, PyObject *args ); */
+/* TBD static PyObject *FitsChan_puttables( FitsChan *self, PyObject *args ); */
+/* TBD static PyObject *FitsChan_removetables( FitsChan *self, PyObject *args ); */
+static PyObject *FitsChan_retainfits( FitsChan *self );
+static PyObject *FitsChan_setfitsCF( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsCI( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsF( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsI( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsL( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsS( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_setfitsCN( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args );
+static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
+
+/* Describe the methods of the class */
+static PyMethodDef FitsChan_methods[] = {
+   {"delfits", (PyCFunction)FitsChan_delfits, METH_NOARGS, "Delete the current FITS card in a FitsChan."},
+   {"emptyfits", (PyCFunction)FitsChan_emptyfits, METH_NOARGS, "Delete all cards in a FitsChan."},
+   {"findfits", (PyCFunction)FitsChan_findfits, METH_VARARGS, "Find a FITS card in a FitsChan by keyword."},
+   {"getfitsCF", (PyCFunction)FitsChan_getfitsCF, METH_VARARGS, "Get a complex floating point keyword value from a FitsChan."},
+   {"getfitsCI", (PyCFunction)FitsChan_getfitsCI, METH_VARARGS, "Get a complex integer keyword value from a FitsChan."},
+   {"getfitsF", (PyCFunction)FitsChan_getfitsF, METH_VARARGS, "Get a floating point keyword value from a FitsChan."},
+   {"getfitsI", (PyCFunction)FitsChan_getfitsI, METH_VARARGS, "Get an integer value from a FitsChan."},
+   {"getfitsL", (PyCFunction)FitsChan_getfitsL, METH_VARARGS, "Get an integer value from a FitsChan."},
+   {"getfitsS", (PyCFunction)FitsChan_getfitsS, METH_VARARGS, "Get a string keyword value from a FitsChan."},
+   {"getfitsCN", (PyCFunction)FitsChan_getfitsCN, METH_VARARGS, "Get a string keyword value from a FitsChan."},
+   {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
+   {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
+   {"putfits", (PyCFunction)FitsChan_putfits, METH_VARARGS, "Store a FITS header card in a FitsChan."},
+   {"retainfits", (PyCFunction)FitsChan_retainfits, METH_NOARGS, "Ensure current card is retained in a FitsChan."},
+   {"setfitsCF", (PyCFunction)FitsChan_setfitsCF, METH_VARARGS, "Store a new complex floating point keyword value in a FitsChan."},
+   {"setfitsCI", (PyCFunction)FitsChan_setfitsCI, METH_VARARGS, "Store a new complex integer keyword value in a FitsChan."},
+   {"setfitsF", (PyCFunction)FitsChan_setfitsF, METH_VARARGS, "Store a new floating point keyword value in a FitsChan."},
+   {"setfitsI", (PyCFunction)FitsChan_setfitsI, METH_VARARGS, "Store a new integer value in a FitsChan."},
+   {"setfitsL", (PyCFunction)FitsChan_setfitsL, METH_VARARGS, "Store a new integer value in a FitsChan."},
+   {"setfitsS", (PyCFunction)FitsChan_setfitsS, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
+   {"setfitsCN", (PyCFunction)FitsChan_setfitsCN, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
+   {"testfits", (PyCFunction)FitsChan_testfits, METH_VARARGS, "Test if a keyword has a defined value in a FitsChan."},
+   {NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETROC(FitsChan,AllWarnings)
+MAKE_GETSETI(FitsChan,Card)
+MAKE_GETSETL(FitsChan,CarLin)
+MAKE_GETSETL(FitsChan,CDMatrix)
+MAKE_GETSETL(FitsChan,Clean)
+MAKE_GETSETL(FitsChan,DefB1950)
+MAKE_GETSETC(FitsChan,Encoding)
+MAKE_GETSETI(FitsChan,FitsDigits)
+MAKE_GETSETL(FitsChan,Iwc)
+MAKE_GETROI(FitsChan,Ncard)
+/* TBD MAKE_GETSETL(FitsChan,TabOK)*/
+MAKE_GETSETI(FitsChan,PolyTan)
+MAKE_GETSETC(FitsChan,Warnings)
+
+static PyGetSetDef FitsChan_getseters[] = {
+   DEFATT(AllWarnings,"A list of the available conditions"),
+   DEFATT(Card,"Index of current FITS card in a FitsChan"),
+   DEFATT(CarLin,"Ignore spherical rotations on CAR projections?"),
+   DEFATT(CDMatrix,"Use a CD matrix instead of a PC matrix?"),
+   DEFATT(Clean,"Remove cards used whilst reading even if an error occurs?"),
+   DEFATT(DefB1950,"Use FK4 B1950 as default equatorial coordinates?"),
+   DEFATT(Encoding,"System for encoding Objects as FITS headers"),
+   DEFATT(FitsDigits,"Digits of precision for floating-point FITS values"),
+   DEFATT(Iwc,"Add a Frame describing Intermediate World Coords?"),
+   DEFATT(Ncard,"Number of FITS header cards in a FitsChan"),
+   DEFATT(PolyTan,"Use PVi_m keywords to define distorted TAN projection?"),
+   DEFATT(Warnings,"Produces warnings about selected conditions"),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject FitsChanType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(FitsChan),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST FitsChan",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   FitsChan_methods,          /* tp_methods */
+   0,                         /* tp_members */
+   FitsChan_getseters,        /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)FitsChan_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
+   const char *(* source)( void );
+   void (* sink)( const char * );
+   const char *options = " ";
+   int result = -1;
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+
+/* The base FitsChan class does not implement Source or Sink methods, but
+   classes that extend FitsChan may do. Search the list of class methods
+   for methods named "sink" and "source". */
+      sink = PyObject_HasAttrString( (PyObject *) self, "sink" ) ? py_sink : NULL;
+      source = PyObject_HasAttrString( (PyObject *) self, "source" ) ? py_source : NULL;
+
+/* Create the FitsChan using the above selected source and sink functions. */
+      AstFitsChan *this = astFitsChan( source, sink, options );
+
+/* Store the PyObject pointer in the FitsChan so that the the source and sink
+   functions can get at it. */
+      astPutChannelData( this, self );
+
+/* Store self as the Python proxy for the AST FitsChan. */
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* Define the AST methods of the class. */
+static PyObject *FitsChan_delfits( FitsChan *self ) {
+   PyObject *result = NULL;
+   astDelFits( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+static PyObject *FitsChan_emptyfits( FitsChan *self ) {
+   PyObject *result = NULL;
+   astEmptyFits( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".findfits"
+static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int inc;
+   const char *name = NULL;
+
+   if ( PyArg_ParseTuple( args, "si:" NAME, &name, &inc ) && astOK ) {
+      char card[ 81 ];
+      int found = astFindFits( THIS, name, card, inc );
+      if( astOK ) {
+         result = Py_BuildValue( "Os", (found ? Py_True : Py_False), card );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#define MAKE_GETFITS(typecode,type,fmt) \
+\
+static PyObject *FitsChan_getfits##typecode( FitsChan *self, PyObject *args ) { \
+   PyObject *result = NULL; \
+   const char *name = NULL; \
+   if ( PyArg_ParseTuple( args, "s:" NAME ".getfits" #typecode, &name ) && astOK ) { \
+      type value[2];\
+      int there = astGetFits##typecode( THIS, name, value ); \
+      if( astOK ) { \
+         result = Py_BuildValue( "O" #fmt, (there ? Py_True : Py_False), \
+                                  value[0], value[1] ); \
+      } \
+   } \
+   TIDY; \
+   return result; \
+}
+
+MAKE_GETFITS(CF,double,(dd))
+MAKE_GETFITS(CI,int,(ii))
+
+#undef MAKE_GETFITS
+
+#define MAKE_GETFITS(typecode,type,fmt,valexp) \
+\
+static PyObject *FitsChan_getfits##typecode( FitsChan *self, PyObject *args ) { \
+   PyObject *result = NULL; \
+   const char *name = NULL; \
+   if ( PyArg_ParseTuple( args, "s:" NAME ".getfits" #typecode, &name ) && astOK ) { \
+      type value;\
+      int there = astGetFits##typecode( THIS, name, &value ); \
+      if( astOK ) { \
+         result = Py_BuildValue( "O" #fmt, (there ? Py_True : Py_False), \
+                                  valexp ); \
+      } \
+   } \
+   TIDY; \
+   return result; \
+}
+
+MAKE_GETFITS(F,double,d,value)
+MAKE_GETFITS(I,int,i,value)
+MAKE_GETFITS(L,int,O,(value?Py_True:Py_False))
+MAKE_GETFITS(S,char *,s,value)
+MAKE_GETFITS(CN,char *,s,value)
+
+#undef MAKE_GETFITS
+
+#undef NAME
+#define NAME CLASS ".putcards"
+static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
+   PyObject *result = NULL;
+   const char *cards = NULL;
+   if ( PyArg_ParseTuple( args, "s:" NAME, &cards ) && astOK ) {
+      astPutCards( THIS, cards );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".putfits"
+static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int overwrite;
+   const char *card = NULL;
+   if ( PyArg_ParseTuple( args, "si:" NAME, &card, &overwrite ) && astOK ) {
+      astPutFits( THIS, card, overwrite );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
+
+#define MAKE_SETFITS(typecode,type,fmt) \
+\
+static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { \
+   PyObject *result = NULL; \
+   const char *name = NULL; \
+   const char *comment = NULL; \
+   int overwrite; \
+   type value[2]; \
+   if ( PyArg_ParseTuple( args, "s" #fmt "si:" NAME ".setfits" #typecode, \
+                          &name, value, value + 1, &comment, &overwrite) && astOK ) { \
+      astSetFits##typecode( THIS, name, value, comment, overwrite ); \
+      if( astOK ) result = Py_None; \
+   } \
+   TIDY; \
+   return result; \
+}
+
+MAKE_SETFITS(CF,double,(dd))
+MAKE_SETFITS(CI,int,(ii))
+
+#undef MAKE_SETFITS
+
+#define MAKE_SETFITS(typecode,type,fmt,valexp) \
+\
+static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { \
+   PyObject *result = NULL; \
+   const char *name = NULL; \
+   const char *comment = NULL; \
+   int overwrite; \
+   type value; \
+   if ( PyArg_ParseTuple( args, "s" #fmt "si:" NAME ".setfits" #typecode, \
+                          &name, &value, &comment, &overwrite) && astOK ) { \
+      astSetFits##typecode( THIS, name, valexp, comment, overwrite ); \
+      if( astOK ) result = Py_None; \
+   } \
+   TIDY; \
+   return result; \
+}
+
+MAKE_SETFITS(F,double,d,value)
+MAKE_SETFITS(I,int,i,value)
+MAKE_SETFITS(L,PyObject *,O,(value==Py_True))
+MAKE_SETFITS(S,const char *,s,value)
+MAKE_SETFITS(CN,const char *,s,value)
+
+#undef MAKE_SETFITS
+
+
+#undef NAME
+#define NAME CLASS ".testfits"
+static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args ) {
+   PyObject *result = NULL;
+   const char *name;
+   if ( PyArg_ParseTuple( args, "s:" NAME, &name ) && astOK ) {
+      int there;
+      int ok = astTestFits( THIS, name, &there );
+      if( astOK ) {
+         result = Py_BuildValue( "OO", (ok ? Py_True : Py_False),
+                                  (there ? Py_True : Py_False) );
+      }
+   }
+   TIDY;
+   return result;
+}
+
+static PyObject *FitsChan_retainfits( FitsChan *self ) {
+   PyObject *result = NULL;
+   astRetainFits( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+static PyObject *FitsChan_purgewcs( FitsChan *self ) {
+   PyObject *result = NULL;
+   astPurgeWCS( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+
+
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -5621,6 +5989,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&ChannelType);
    PyModule_AddObject( m, "Channel", (PyObject *)&ChannelType);
 
+   FitsChanType.tp_new = PyType_GenericNew;
+   FitsChanType.tp_base = &ChannelType;
+   if( PyType_Ready(&FitsChanType) < 0) return NULL;
+   Py_INCREF(&FitsChanType);
+   PyModule_AddObject( m, "FitsChan", (PyObject *)&FitsChanType);
+
 /* The constants provided by this module. */
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
@@ -5878,6 +6252,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &PrismType;
       } else if( !strcmp( class, "Channel" ) ) {
          result = (PyTypeObject *) &ChannelType;
+      } else if( !strcmp( class, "FitsChan" ) ) {
+         result = (PyTypeObject *) &FitsChanType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

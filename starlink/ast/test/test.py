@@ -5,7 +5,7 @@ import numpy
 import math
 import copy
 import filecmp
-
+import string
 
 #  Extends the AST Channel class, adding source and sink functions that
 #  store text in an internal list.
@@ -612,6 +612,137 @@ class TestAst(unittest.TestCase):
       self.assertEqual( n, 1 )
       b = channel.get()
       self.assertEqual( a, b )
+
+   def test_FitsChan(self):
+      fc = starlink.Ast.FitsChan()
+      self.assertIsInstance( fc, starlink.Ast.Object)
+      self.assertIsInstance( fc, starlink.Ast.Channel )
+      self.assertIsInstance( fc, starlink.Ast.FitsChan )
+      self.assertTrue( fc.isafitschan() )
+      self.assertTrue( fc.isachannel() )
+      self.assertTrue( fc.isaobject() )
+
+      fc.setfitsI( "FRED", 99, "Hello there", True)
+      there,value = fc.getfitsI( "FRED" )
+      self.assertTrue( there )
+      self.assertEqual( value, 99 )
+      there,value = fc.getfitsS( "FRED" )
+      self.assertTrue( there )
+      self.assertEqual( value, "99" )
+      fc.setfitsF( "FRED1", 99.9, "Hello there", True)
+      there,value = fc.getfitsS( "FRED1" )
+      self.assertTrue( there )
+      self.assertEqual( value, "99.9" )
+      fc.setfitsCF( "FRED2", (99.9,99.8), "Hello there", True)
+      there,(real,imag) = fc.getfitsCF( "FRED2" )
+      self.assertTrue( there )
+      self.assertEqual( real, 99.9 )
+      self.assertEqual( imag, 99.8 )
+      fc.setfitsCI( "FRED3", (99,98), "Hello there", True)
+      there,value = fc.getfitsS( "FRED3" )
+      self.assertTrue( there )
+      self.assertEqual( value, "99 98" )
+      fc.setfitsS( "FRED4", "-12", "Hello there", True)
+      there,value = fc.getfitsI( "FRED4" )
+      self.assertTrue( there )
+      self.assertEqual( value, -12 )
+
+      fc.emptyfits()
+      self.assertEqual( fc.Ncard, 0 )
+
+      cards = "CRVAL1  = 0                                                                     CRVAL2  = 0                                                                     "
+      fc.putcards( cards )
+      self.assertEqual( fc.Card, 1 )
+      fc.set( "Card=10" )
+      self.assertEqual( fc.Card, 3 )
+      fc.Card = None
+      self.assertEqual( fc.Card, 1 )
+      fc.putfits( "NAXIS1  = 200", False )
+      fc.putfits( "NAXIS2  = 200", False )
+      fc.putfits( "CTYPE1  = 'RA--TAN'", False )
+      fc.putfits( "CTYPE2  = 'DEC-TAN'", False )
+      fc.putfits( "CRPIX1  = 100", False )
+      fc.putfits( "CRPIX2  = 100", False )
+      fc.putfits( "CDELT1  = 0.001", False )
+      fc.putfits( "CDELT2  = 0.001", False )
+      self.assertEqual( fc.Ncard, 10 )
+      self.assertEqual( fc.Card, 9 )
+      self.assertEqual( fc.Encoding, "FITS-WCS" )
+      there, card = fc.findfits( "%f", False )
+      self.assertTrue( there )
+      self.assertEqual( card, "CRVAL1  =                    0                                                  " )
+      fc.delfits()
+      self.assertEqual( fc.Ncard, 9 )
+      self.assertEqual( fc.Card, 9 )
+      there, card = fc.findfits( "%f", False )
+      self.assertTrue( there )
+      self.assertEqual( card, "CRVAL2  =                    0                                                  " )
+      fc.putfits( "CRVAL1  = 0", False )
+      self.assertEqual( fc.Ncard, 10 )
+      self.assertEqual( fc.Card, 10 )
+      there, card = fc.findfits( "%f", False )
+      self.assertTrue( there )
+      self.assertEqual( card, "CRVAL2  =                    0                                                  " )
+      fc.Card = None
+      obj = fc.read()
+      self.assertIsInstance( obj, starlink.Ast.FrameSet)
+      self.assertTrue( obj.isaframeset() )
+
+      fc = starlink.Ast.FitsChan("Encoding=FITS-WCS")
+      n = fc.write( obj )
+      self.assertEqual( n, 1 )
+      fc.Card = None
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "WCSAXES =                    2 / Number of WCS axes" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CRPIX1  =                100.0 / Reference pixel on axis 1" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CRPIX2  =                100.0 / Reference pixel on axis 2" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CRVAL1  =                  0.0 / Value at ref. pixel on axis 1" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CRVAL2  =                  0.0 / Value at ref. pixel on axis 2" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CTYPE1  = 'RA---TAN'           / Type of co-ordinate on axis 1" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CTYPE2  = 'DEC--TAN'           / Type of co-ordinate on axis 2" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CDELT1  =                0.001 / Pixel size on axis 1" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "CDELT2  =                0.001 / Pixel size on axis 2" )
+
+      there, card = fc.findfits( "%f", True )
+      card = card.rstrip()
+      self.assertTrue( there )
+      self.assertEqual(card, "RADESYS = 'ICRS    '           / Reference frame for RA/DEC values" )
+
 
 if __name__ == "__main__":
     #unittest.main()
