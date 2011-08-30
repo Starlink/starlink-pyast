@@ -5400,7 +5400,7 @@ const char *source_wrapper( void ){
    char buffer[ 1024 ];
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
-   const char *text = (pytext != Py_None) ? GetString( pytext ) : NULL;
+   const char *text = GetString( pytext );
    if( text ) {
       if( strlen( text ) < 1024 ) {
          strcpy( buffer, text );
