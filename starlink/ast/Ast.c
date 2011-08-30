@@ -221,6 +221,7 @@ static PyTypeObject ObjectType = {
 #undef NAME
 #define NAME CLASS ".clear"
 static PyObject *Object_clear( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *attrib;
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
@@ -232,6 +233,7 @@ static PyObject *Object_clear( Object *self, PyObject *args ) {
 }
 
 static PyObject *Object_copy( Object *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
    if( astOK ) {
@@ -252,6 +254,7 @@ static void Object_dealloc( Object *self ) {
 }
 
 static PyObject *Object_repr( PyObject *self ) {
+   if( PyErr_Occurred() ) return NULL;
    char *p1 = NULL;
    char *p2 = NULL;
    int nc = 0;
@@ -272,6 +275,7 @@ static PyObject *Object_repr( PyObject *self ) {
 }
 
 static PyObject *Object_str( PyObject *self ) {
+   if( PyErr_Occurred() ) return NULL;
    char *p1 = NULL;
 
    PyObject *result = NULL;
@@ -286,12 +290,14 @@ static PyObject *Object_str( PyObject *self ) {
 }
 
 static PyObject *Object_deepcopy( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    return Object_copy( self );
 }
 
 #undef NAME
 #define NAME CLASS ".get"
 static PyObject *Object_get( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *attrib;
    const char *value;
@@ -306,6 +312,7 @@ static PyObject *Object_get( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".hasattribute"
 static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -320,6 +327,7 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".lock"
 static PyObject *Object_lock( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int wait;
    if( PyArg_ParseTuple( args, "i:" NAME, &wait ) ) {
@@ -333,6 +341,7 @@ static PyObject *Object_lock( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".same"
 static PyObject *Object_same( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    Object *other;
    int value;
@@ -348,6 +357,7 @@ static PyObject *Object_same( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".set"
 static PyObject *Object_set( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *settings;
    if( PyArg_ParseTuple( args, "s:" NAME, &settings ) ) {
@@ -360,6 +370,7 @@ static PyObject *Object_set( Object *self, PyObject *args ) {
 
 /* Define the AST methods of the class. */
 static PyObject *Object_show( Object *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astShow( THIS );
    if( astOK ) result = Py_None;
@@ -370,6 +381,7 @@ static PyObject *Object_show( Object *self ) {
 #undef NAME
 #define NAME CLASS ".test"
 static PyObject *Object_test( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -384,6 +396,7 @@ static PyObject *Object_test( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unlock"
 static PyObject *Object_unlock( Object *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int report;
    if( PyArg_ParseTuple( args, "i:" NAME, &report ) ) {
@@ -500,6 +513,7 @@ static PyTypeObject MappingType = {
 /* Define the class methods */
 
 static PyObject *Mapping_decompose( Mapping *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *map1_object = NULL;
    PyObject *map2_object = NULL;
@@ -528,6 +542,7 @@ static PyObject *Mapping_decompose( Mapping *self ) {
 }
 
 static PyObject *Mapping_invert( Mapping *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astInvert( THIS );
    if( astOK ) result = Py_None;
@@ -538,6 +553,7 @@ static PyObject *Mapping_invert( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".linearapprox"
 static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *islinear = NULL;
    PyArrayObject *fit = NULL;
@@ -579,6 +595,7 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".mapbox"
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *lbnd_in = NULL;
    PyArrayObject *ubnd_in = NULL;
    PyArrayObject *xl = NULL;
@@ -624,6 +641,7 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".quadapprox"
 static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *isquad;
    PyArrayObject *fit = NULL;
@@ -667,6 +685,7 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rate"
 static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyArrayObject *at = NULL;
    PyObject *at_object = NULL;
@@ -693,6 +712,7 @@ static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebin"
 static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -876,6 +896,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebinseq"
 static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1090,6 +1111,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".resample"
 static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1344,6 +1366,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 }
 
 static PyObject *Mapping_removeregions( Mapping *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1363,6 +1386,7 @@ static PyObject *Mapping_removeregions( Mapping *self ) {
 }
 
 static PyObject *Mapping_simplify( Mapping *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1384,6 +1408,7 @@ static PyObject *Mapping_simplify( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".trangrid"
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *lbnd = NULL;
    PyArrayObject *pout = NULL;
    PyArrayObject *ubnd = NULL;
@@ -1442,6 +1467,7 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".trann"
 static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
    PyObject *result = NULL;
@@ -2101,6 +2127,7 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".timeadd"
 static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *astargs = NULL;
   PyObject *astargs_object = NULL;
@@ -2917,6 +2944,7 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".angle"
 static PyObject *Frame_angle( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *a = NULL;
   PyArrayObject *b = NULL;
@@ -2950,6 +2978,7 @@ static PyObject *Frame_angle( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".axangle"
 static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *a = NULL;
   PyArrayObject *b = NULL;
@@ -2979,6 +3008,7 @@ static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".axdistance"
 static PyObject *Frame_axdistance( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int axis;
   double v1;
@@ -3013,6 +3043,7 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".convert"
 static PyObject *Frame_convert( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   PyObject *result = NULL;
   const char *domainlist = NULL;
@@ -3038,6 +3069,7 @@ static PyObject *Frame_convert( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".distance"
 static PyObject *Frame_distance( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3066,6 +3098,7 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".findframe"
 static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   PyObject *result = NULL;
   const char *domainlist = NULL;
@@ -3091,6 +3124,7 @@ static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".format"
 static PyObject *Frame_format( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int axis;
   double value;
@@ -3107,6 +3141,7 @@ static PyObject *Frame_format( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".intersect"
 static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *a1 = NULL;
   PyArrayObject *a2 = NULL;
@@ -3150,6 +3185,7 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".matchaxes"
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    Frame *other;
    npy_intp dims[1];
@@ -3172,6 +3208,7 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".norm"
 static PyObject *Frame_norm( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *value = NULL;
   PyArrayObject *axes = NULL;
@@ -3201,6 +3238,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".offset"
 static PyObject *Frame_offset( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3236,6 +3274,7 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".offset2"
 static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3268,6 +3307,7 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".permaxes"
 static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *perm = NULL;
   PyObject *perm_object = NULL;
@@ -3290,6 +3330,7 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".pickaxes"
 static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *axes = NULL;
   PyObject *axes_object = NULL;
@@ -3331,6 +3372,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".resolve"
 static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3372,6 +3414,7 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unformat"
 static PyObject *Frame_unformat( Frame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int axis;
   const char * string = NULL;
@@ -3567,6 +3610,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".addframe"
 static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   Object *another = NULL;
   PyObject *result = NULL;
@@ -3586,6 +3630,7 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getframe"
 static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int iframe;
 
@@ -3609,6 +3654,7 @@ static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getmapping"
 static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int iframe1;
   int iframe2;
@@ -3633,6 +3679,7 @@ static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".remapframe"
 static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   PyObject *result = NULL;
   int iframe;
@@ -3650,6 +3697,7 @@ static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".removeframe"
 static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int iframe;
 
@@ -3846,6 +3894,7 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".skyoffsetmap"
 static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
 
    AstMapping * mapping = astSkyOffsetMap( THIS  );
@@ -3974,6 +4023,7 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".setrefpos"
 static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   PyObject *result = NULL;
   double lon;
@@ -3993,6 +4043,7 @@ static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getrefpos"
 static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
   Object *other = NULL;
   PyObject *result = NULL;
   double lon;
@@ -4194,6 +4245,7 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".currenttime"
 static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
 
    if ( astOK ) {
@@ -4381,7 +4433,6 @@ typedef struct {
 /* Prototypes for class functions */
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
-static PyObject *Region_getregionbounds( Region *self );
 static PyObject *Region_overlap( Region *self, PyObject * args );
 
 /* Define the AST attributes of the class */
@@ -4449,6 +4500,7 @@ static PyTypeObject RegionType = {
 #undef NAME
 #define NAME CLASS ".getregionbounds"
 static PyObject *Region_getregionbounds( Region *self ) {
+  if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   int naxes;
   npy_intp dims[1];
@@ -4474,6 +4526,7 @@ static PyObject *Region_getregionbounds( Region *self ) {
 #undef NAME
 #define NAME CLASS ".getregionframe"
 static PyObject *Region_getregionframe( Region *self ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
 
   AstFrame * frame = astGetRegionFrame( THIS );
@@ -4494,6 +4547,7 @@ static PyObject *Region_getregionframe( Region *self ) {
 #undef NAME
 #define NAME CLASS ".overlap"
 static PyObject *Region_overlap( Region *self, PyObject * args ) {
+   if( PyErr_Occurred() ) return NULL;
   PyObject *result = NULL;
   Region *other = NULL;
 
@@ -5133,7 +5187,7 @@ typedef struct {
 } Channel;
 
 /* Prototypes for class functions */
-static PyObject *Channel_warnings( Channel *self );
+/* static PyObject *Channel_warnings( Channel *self ); */
 static PyObject *Channel_read( Channel *self );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
@@ -5143,7 +5197,7 @@ void sink_wrapper( const char *text );
 
 /* Describe the methods of the class */
 static PyMethodDef Channel_methods[] = {
-   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
+/*   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},*/
    {"read", (PyCFunction)Channel_read, METH_NOARGS, "Read an Object from a Channel."},
    {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
    {NULL}  /* Sentinel */
@@ -5271,7 +5325,9 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/*
 static PyObject *Channel_warnings( Channel *self ) {
+   if( PyErr_Occurred() ) return NULL;
    AstKeyMap *km;
    PyObject *result = NULL;
    PyObject *str;
@@ -5296,8 +5352,9 @@ static PyObject *Channel_warnings( Channel *self ) {
    TIDY;
    return result;
 }
-
+*/
 static PyObject *Channel_read( Channel *self ){
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    PyObject *object = NULL;
    AstObject *obj;
@@ -5320,6 +5377,7 @@ static PyObject *Channel_read( Channel *self ){
 #undef NAME
 #define NAME CLASS ".write"
 static PyObject *Channel_write( Channel *self, PyObject *args ){
+   if( PyErr_Occurred() ) return NULL;
    Object *other = NULL;
    PyObject *result = NULL;
    int nwrite;
@@ -5342,7 +5400,7 @@ const char *source_wrapper( void ){
    char buffer[ 1024 ];
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
-   const char *text = GetString( pytext );
+   const char *text = (pytext != Py_None) ? GetString( pytext ) : NULL;
    if( text ) {
       if( strlen( text ) < 1024 ) {
          strcpy( buffer, text );
@@ -5568,6 +5626,7 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 
 /* Define the AST methods of the class. */
 static PyObject *FitsChan_delfits( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astDelFits( THIS );
    if( astOK ) result = Py_None;
@@ -5576,6 +5635,7 @@ static PyObject *FitsChan_delfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_writefits( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astWriteFits( THIS );
    if( astOK ) result = Py_None;
@@ -5584,6 +5644,7 @@ static PyObject *FitsChan_writefits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_readfits( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astReadFits( THIS );
    if( astOK ) result = Py_None;
@@ -5592,6 +5653,7 @@ static PyObject *FitsChan_readfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_emptyfits( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astEmptyFits( THIS );
    if( astOK ) result = Py_None;
@@ -5603,6 +5665,7 @@ static PyObject *FitsChan_emptyfits( FitsChan *self ) {
 #undef NAME
 #define NAME CLASS ".findfits"
 static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int inc;
    const char *name = NULL;
@@ -5622,6 +5685,7 @@ static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
 #define MAKE_GETFITS(typecode,type,fmt) \
 \
 static PyObject *FitsChan_getfits##typecode( FitsChan *self, PyObject *args ) { \
+   if( PyErr_Occurred() ) return NULL; \
    PyObject *result = NULL; \
    const char *name = NULL; \
    if ( PyArg_ParseTuple( args, "s:" NAME ".getfits" #typecode, &name ) && astOK ) { \
@@ -5644,6 +5708,7 @@ MAKE_GETFITS(CI,int,(ii))
 #define MAKE_GETFITS(typecode,type,fmt,valexp) \
 \
 static PyObject *FitsChan_getfits##typecode( FitsChan *self, PyObject *args ) { \
+   if( PyErr_Occurred() ) return NULL; \
    PyObject *result = NULL; \
    const char *name = NULL; \
    if ( PyArg_ParseTuple( args, "s:" NAME ".getfits" #typecode, &name ) && astOK ) { \
@@ -5669,6 +5734,7 @@ MAKE_GETFITS(CN,char *,s,value)
 #undef NAME
 #define NAME CLASS ".putcards"
 static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *cards = NULL;
    if ( PyArg_ParseTuple( args, "s:" NAME, &cards ) && astOK ) {
@@ -5682,6 +5748,7 @@ static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".putfits"
 static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int overwrite;
    const char *card = NULL;
@@ -5696,6 +5763,7 @@ static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
 #define MAKE_SETFITS(typecode,type,fmt) \
 \
 static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { \
+   if( PyErr_Occurred() ) return NULL; \
    PyObject *result = NULL; \
    const char *name = NULL; \
    const char *comment = NULL; \
@@ -5718,6 +5786,7 @@ MAKE_SETFITS(CI,int,(ii))
 #define MAKE_SETFITS(typecode,type,fmt,valexp) \
 \
 static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { \
+   if( PyErr_Occurred() ) return NULL; \
    PyObject *result = NULL; \
    const char *name = NULL; \
    const char *comment = NULL; \
@@ -5744,6 +5813,7 @@ MAKE_SETFITS(CN,const char *,s,value)
 #undef NAME
 #define NAME CLASS ".testfits"
 static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    const char *name;
    if ( PyArg_ParseTuple( args, "s:" NAME, &name ) && astOK ) {
@@ -5759,6 +5829,7 @@ static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args ) {
 }
 
 static PyObject *FitsChan_retainfits( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astRetainFits( THIS );
    if( astOK ) result = Py_None;
@@ -5767,13 +5838,13 @@ static PyObject *FitsChan_retainfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_purgewcs( FitsChan *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    astPurgeWCS( THIS );
    if( astOK ) result = Py_None;
    TIDY;
    return result;
 }
-
 
 
 
@@ -5790,6 +5861,7 @@ static PyObject *Static_version( PyObject *self );
 #undef NAME
 #define NAME MODULE ".escapes"
 static PyObject *Static_escapes( PyObject *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int newval;
    int value;
@@ -5804,6 +5876,7 @@ static PyObject *Static_escapes( PyObject *self, PyObject *args ) {
 #undef NAME
 #define NAME MODULE ".tune"
 static PyObject *Static_tune( PyObject *self, PyObject *args ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int value;
    int oldval;
@@ -5817,6 +5890,7 @@ static PyObject *Static_tune( PyObject *self, PyObject *args ) {
 }
 
 static PyObject *Static_version( PyObject *self ) {
+   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int version;
    version = astVersion;

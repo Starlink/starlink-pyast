@@ -6,6 +6,7 @@ import math
 import copy
 import filecmp
 import string
+import sys
 
 #  Extends the AST Channel class, adding source and sink functions that
 #  store text in an internal list.
@@ -767,6 +768,25 @@ class TestAst(unittest.TestCase):
       fc = None
       b = ss.get()
       self.assertEqual( a, b )
+
+   def test_StcsChan(self):
+      ss = TextStream()
+      ch = starlink.Ast.StcsChan( ss, ss, "ReportLevel=3" )
+      self.assertIsInstance( ch, starlink.Ast.Object)
+      self.assertIsInstance( ch, starlink.Ast.Channel )
+      self.assertIsInstance( ch, starlink.Ast.StcsChan )
+      self.assertTrue( ch.isastcschan() )
+      self.assertTrue( ch.isachannel() )
+      self.assertTrue( ch.isaobject() )
+      ss.sink("StartTime 1900-01-01 Circle ICRS 148.9 69.1 2.0")
+      ss.sink("SpeCtralInterval 4000 7000 unit Angstrom")
+      obj = ch.read()
+      self.assertIsInstance( obj, starlink.Ast.Prism )
+      self.assertEqual( obj.Class, "Prism" )
+      self.assertEqual( obj.Naxes, 4 )
+      lbnd,ubnd = obj.getregionbounds()
+#      self.assertEqual( ubnd[0], sys.float_info.max )
+
 
 if __name__ == "__main__":
     #unittest.main()
