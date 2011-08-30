@@ -38,8 +38,6 @@ static char *DumpToString( AstObject *object, const char *options );
    appropriate Python exceptions instead. */
 #include "exceptions.c"
 
-
-
 /* Object */
 /* ====== */
 
@@ -5130,6 +5128,8 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
 /* Define the class structure */
 typedef struct {
    Object parent;
+   PyObject *source;
+   PyObject *sink;
 } Channel;
 
 /* Prototypes for class functions */
@@ -5137,8 +5137,8 @@ static PyObject *Channel_warnings( Channel *self );
 static PyObject *Channel_read( Channel *self );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
-const char *py_source( void );
-void py_sink( const char *text );
+const char *source_wrapper( void );
+void sink_wrapper( const char *text );
 
 
 /* Describe the methods of the class */
@@ -5215,28 +5215,56 @@ static PyTypeObject ChannelType = {
 
 /* Define the class methods */
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
-   const char *(* source)( void );
-   void (* sink)( const char * );
+   PyObject *source = NULL;
+   PyObject *sink = NULL;
+   const char *(* source_wrap)( void ) = NULL;
+   void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
    int result = -1;
-   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+   if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
-/* The base Channel class does not implement Source or Sink methods, but
-   classes that extend Channel may do. Search the list of class methods
-   for methods named "sink" and "source". */
-      sink = PyObject_HasAttrString( (PyObject *) self, "sink" ) ? py_sink : NULL;
-      source = PyObject_HasAttrString( (PyObject *) self, "source" ) ? py_source : NULL;
+/* Assume success. */
+      result = 0;
 
-/* Create the channel using the above selected source and sink functions. */
-      AstChannel *this = astChannel( source, sink, options );
+/* If a source object was supplied, we use the local "source_wrapper" function
+   as a C-callable wrapper for the object's "source" method. Otherwise, we use
+   a NULL wrapper. Also store a pointer to the source object in the Channel
+   structure. */
+      if( source ) {
+         if( PyObject_HasAttrString( source, "source" ) ) {
+            source_wrap = source_wrapper;
+            self->source = source;
+         } else if( source != Py_None ){
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
+                             "object does not have a 'source' method" );
+         }
+      }
 
-/* Store the PyObject pointer in the Channel so that the the source and sink
-   functions can get at it. */
-      astPutChannelData( this, self );
+/* Do the same for the sink object. */
+      if( sink ) {
+         if( PyObject_HasAttrString( sink, "sink" ) ) {
+            sink_wrap = sink_wrapper;
+            self->sink = sink;
+         } else if( sink != Py_None ) {
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
+                             "object does not have a 'sink' method" );
+         }
+      }
+
+/* Create the channel using the above selected wrapper functions. */
+      if( result == 0 ) {
+         AstChannel *this = astChannel( source_wrap, sink_wrap, options );
+
+/* Store a pointer to the PyObject Channel in the AST Channel so that the
+   source and sink wrapper functions can get at it. */
+         astPutChannelData( this, self );
 
 /* Store self as the Python proxy for the AST Channel. */
-      result = SetProxy( (AstObject *) this, (Object *) self );
-      this = astAnnul( this );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
    }
 
    TIDY;
@@ -5306,13 +5334,14 @@ static PyObject *Channel_write( Channel *self, PyObject *args ){
 
 /* Source and sink functions which are called by the AST Channel C code.
    These invoke the source and sink methods on the Python Object
-   associated with the Channel. */
+   associated with the Channel. Note, these cannot be static as they are
+   called from within AST. */
 
-const char *py_source( void ){
+const char *source_wrapper( void ){
    const char *result = NULL;
    char buffer[ 1024 ];
-   PyObject *o = astChannelData;
-   PyObject *pytext = PyObject_CallMethod( o, "source", NULL );
+   Channel *channel = astChannelData;
+   PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
    const char *text = GetString( pytext );
    if( text ) {
       if( strlen( text ) < 1024 ) {
@@ -5327,9 +5356,9 @@ const char *py_source( void ){
    return result;
 }
 
-void py_sink( const char *text ){
-   PyObject *o = astChannelData;
-   PyObject *result = PyObject_CallMethod( o, "sink", "s", text );
+void sink_wrapper( const char *text ){
+   Channel *channel = astChannelData;
+   PyObject *result = PyObject_CallMethod( channel->sink, "sink", "s", text );
    Py_XDECREF(result);
 }
 
@@ -5347,7 +5376,10 @@ typedef struct {
 } FitsChan;
 
 /* Prototypes for class functions */
+static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
 static PyObject *FitsChan_delfits( FitsChan *self );
+static PyObject *FitsChan_readfits( FitsChan *self );
+static PyObject *FitsChan_writefits( FitsChan *self );
 static PyObject *FitsChan_emptyfits( FitsChan *self );
 static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsCF( FitsChan *self, PyObject *args );
@@ -5373,7 +5405,6 @@ static PyObject *FitsChan_setfitsL( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsS( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsCN( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args );
-static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
 
 /* Describe the methods of the class */
 static PyMethodDef FitsChan_methods[] = {
@@ -5390,6 +5421,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
    {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
    {"putfits", (PyCFunction)FitsChan_putfits, METH_VARARGS, "Store a FITS header card in a FitsChan."},
+   {"readfits", (PyCFunction)FitsChan_readfits, METH_NOARGS, "Read cards from the external source of a FitsChan."},
    {"retainfits", (PyCFunction)FitsChan_retainfits, METH_NOARGS, "Ensure current card is retained in a FitsChan."},
    {"setfitsCF", (PyCFunction)FitsChan_setfitsCF, METH_VARARGS, "Store a new complex floating point keyword value in a FitsChan."},
    {"setfitsCI", (PyCFunction)FitsChan_setfitsCI, METH_VARARGS, "Store a new complex integer keyword value in a FitsChan."},
@@ -5399,6 +5431,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"setfitsS", (PyCFunction)FitsChan_setfitsS, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
    {"setfitsCN", (PyCFunction)FitsChan_setfitsCN, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
    {"testfits", (PyCFunction)FitsChan_testfits, METH_VARARGS, "Test if a keyword has a defined value in a FitsChan."},
+   {"writefits", (PyCFunction)FitsChan_writefits, METH_NOARGS, "Write out all cards to the external sink of a FitsChan."},
    {NULL}  /* Sentinel */
 };
 
@@ -5476,30 +5509,57 @@ static PyTypeObject FitsChanType = {
 };
 
 
-/* Define the class methods */
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
-   const char *(* source)( void );
-   void (* sink)( const char * );
+   PyObject *source = NULL;
+   PyObject *sink = NULL;
+   const char *(* source_wrap)( void ) = NULL;
+   void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
    int result = -1;
-   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+   if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
-/* The base FitsChan class does not implement Source or Sink methods, but
-   classes that extend FitsChan may do. Search the list of class methods
-   for methods named "sink" and "source". */
-      sink = PyObject_HasAttrString( (PyObject *) self, "sink" ) ? py_sink : NULL;
-      source = PyObject_HasAttrString( (PyObject *) self, "source" ) ? py_source : NULL;
+/* Assume success. */
+      result = 0;
 
-/* Create the FitsChan using the above selected source and sink functions. */
-      AstFitsChan *this = astFitsChan( source, sink, options );
+/* If a source object was supplied, we use the local "source_wrapper" function
+   as a C-callable wrapper for the object's "source" method. Otherwise, we use
+   a NULL wrapper. Also store a pointer to the source object in the parent
+   Channel structure. */
+      if( source ) {
+         if( PyObject_HasAttrString( source, "source" ) ) {
+            source_wrap = source_wrapper;
+            ((Channel *)self)->source = source;
+         } else if( source != Py_None ){
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
+                             "object does not have a 'source' method" );
+         }
+      }
 
-/* Store the PyObject pointer in the FitsChan so that the the source and sink
-   functions can get at it. */
-      astPutChannelData( this, self );
+/* Do the same for the sink object. */
+      if( sink ) {
+         if( PyObject_HasAttrString( sink, "sink" ) ) {
+            sink_wrap = sink_wrapper;
+            ((Channel *)self)->sink = sink;
+         } else if( sink != Py_None ) {
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
+                             "object does not have a 'sink' method" );
+         }
+      }
+
+/* Create the FitsChan using the above selected wrapper functions. */
+      if( result == 0 ) {
+         AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, options );
+
+/* Store a pointer to the PyObject FitsChan in the AST FitsChan so that the
+   source and sink wrapper functions can get at it. */
+         astPutChannelData( this, self );
 
 /* Store self as the Python proxy for the AST FitsChan. */
-      result = SetProxy( (AstObject *) this, (Object *) self );
-      this = astAnnul( this );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
    }
 
    TIDY;
@@ -5510,6 +5570,22 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 static PyObject *FitsChan_delfits( FitsChan *self ) {
    PyObject *result = NULL;
    astDelFits( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+static PyObject *FitsChan_writefits( FitsChan *self ) {
+   PyObject *result = NULL;
+   astWriteFits( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+static PyObject *FitsChan_readfits( FitsChan *self ) {
+   PyObject *result = NULL;
+   astReadFits( THIS );
    if( astOK ) result = Py_None;
    TIDY;
    return result;

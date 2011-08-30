@@ -9,10 +9,9 @@ import string
 
 #  Extends the AST Channel class, adding source and sink functions that
 #  store text in an internal list.
-class MyChannel(starlink.Ast.Channel):
+class TextStream():
 
-   def __init__( self, options="" ):
-      super().__init__( options )
+   def __init__( self ):
       self.reset_sink()
       self.reset_source()
 
@@ -35,6 +34,11 @@ class MyChannel(starlink.Ast.Channel):
 
    def get( self ):
       return copy.deepcopy(self.text)
+
+
+#  A dummy object used to test channel error reporting.
+class DummyStream():
+   pass
 
 
 
@@ -597,20 +601,21 @@ class TestAst(unittest.TestCase):
       self.assertTrue( filecmp.cmp("fred.txt", "fred2.txt", shallow=False)  )
 
    def test_MyChannel(self):
-      channel = MyChannel("comment=0,Indent=0")
-      self.assertIsInstance( channel, starlink.Ast.Object)
-      self.assertIsInstance( channel, starlink.Ast.Channel )
-      self.assertIsInstance( channel, MyChannel )
+      ss = DummyStream()
+      with self.assertRaises(TypeError):
+         channel = starlink.Ast.Channel( ss, ss )
+      ss = TextStream()
+      channel = starlink.Ast.Channel( ss, ss )
       zoommap = starlink.Ast.ZoomMap( 2, 0.1, "ID=Hello there" )
       n = channel.write( zoommap )
       self.assertEqual( n, 1 )
-      a = channel.get()
+      a = ss.get()
       obj = channel.read( )
-      channel.reset_sink()
-      channel.reset_source()
+      ss.reset_sink()
+      ss.reset_source()
       n = channel.write( obj )
       self.assertEqual( n, 1 )
-      b = channel.get()
+      b = ss.get()
       self.assertEqual( a, b )
 
    def test_FitsChan(self):
@@ -688,7 +693,11 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( obj, starlink.Ast.FrameSet)
       self.assertTrue( obj.isaframeset() )
 
-      fc = starlink.Ast.FitsChan("Encoding=FITS-WCS")
+      with self.assertRaises(TypeError):
+         fc = starlink.Ast.FitsChan("Encoding=FITS-WCS")
+
+      fc = starlink.Ast.FitsChan( None, None, "Encoding=FITS-WCS")
+
       n = fc.write( obj )
       self.assertEqual( n, 1 )
       fc.Card = None
@@ -743,6 +752,21 @@ class TestAst(unittest.TestCase):
       self.assertTrue( there )
       self.assertEqual(card, "RADESYS = 'ICRS    '           / Reference frame for RA/DEC values" )
 
+      ss = TextStream()
+      fc = starlink.Ast.FitsChan( ss, ss, "Encoding=FITS-WCS")
+      n = fc.write( obj )
+      self.assertEqual( n, 1 )
+      fc.writefits()
+      a = ss.get()
+      fc.readfits()
+      obj = fc.read( )
+      ss.reset_sink()
+      ss.reset_source()
+      n = fc.write( obj )
+      self.assertEqual( n, 1 )
+      fc = None
+      b = ss.get()
+      self.assertEqual( a, b )
 
 if __name__ == "__main__":
     #unittest.main()
