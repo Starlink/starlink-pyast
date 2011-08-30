@@ -102,6 +102,7 @@ MAKE_ISA(SkyFrame)
 MAKE_ISA(SpecFluxFrame)
 MAKE_ISA(SpecFrame)
 MAKE_ISA(SphMap)
+MAKE_ISA(StcsChan)
 MAKE_ISA(TimeFrame)
 MAKE_ISA(TimeMap)
 MAKE_ISA(TranMap)
@@ -141,6 +142,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(SpecFluxFrame,specfluxframe),
    DEF_ISA(SpecFrame,specframe),
    DEF_ISA(SphMap,sphmap),
+   DEF_ISA(StcsChan,stcschan),
    DEF_ISA(TimeFrame,timeframe),
    DEF_ISA(TimeMap,timemap),
    DEF_ISA(TranMap,tranmap),
@@ -5400,7 +5402,7 @@ const char *source_wrapper( void ){
    char buffer[ 1024 ];
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
-   const char *text = GetString( pytext );
+   const char *text = (pytext != Py_None) ? GetString( pytext ) : NULL;
    if( text ) {
       if( strlen( text ) < 1024 ) {
          strcpy( buffer, text );
@@ -5847,6 +5849,136 @@ static PyObject *FitsChan_purgewcs( FitsChan *self ) {
 }
 
 
+/* StcsChan */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".StcsChan"
+
+/* Define the class structure */
+typedef struct {
+   Channel parent;
+} StcsChan;
+
+/* Prototypes for class functions */
+static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(StcsChan,StcsArea)
+MAKE_GETSETL(StcsChan,StcsCoords)
+MAKE_GETSETL(StcsChan,StcsProps)
+MAKE_GETSETI(StcsChan,StcsLength)
+
+static PyGetSetDef StcsChan_getseters[] = {
+   DEFATT(StcsArea,"Return the CoordinateArea component when reading an STC-S document?"),
+   DEFATT(StcsCoords,"Return the Coordinates component when reading an STC-S document?"),
+   DEFATT(StcsProps,"Return all properties when reading an STC-S document?"),
+   DEFATT(StcsLength,"Controls output line length."),
+   {NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject StcsChanType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(StcsChan),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST StcsChan",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   StcsChan_getseters,        /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)StcsChan_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
+   PyObject *source = NULL;
+   PyObject *sink = NULL;
+   const char *(* source_wrap)( void ) = NULL;
+   void (* sink_wrap)( const char * ) = NULL;
+   const char *options = " ";
+   int result = -1;
+   if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
+
+/* Assume success. */
+      result = 0;
+
+/* If a source object was supplied, we use the local "source_wrapper" function
+   as a C-callable wrapper for the object's "source" method. Otherwise, we use
+   a NULL wrapper. Also store a pointer to the source object in the parent
+   Channel structure. */
+      if( source ) {
+         if( PyObject_HasAttrString( source, "source" ) ) {
+            source_wrap = source_wrapper;
+            ((Channel *)self)->source = source;
+         } else if( source != Py_None ){
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
+                             "object does not have a 'source' method" );
+         }
+      }
+
+/* Do the same for the sink object. */
+      if( sink ) {
+         if( PyObject_HasAttrString( sink, "sink" ) ) {
+            sink_wrap = sink_wrapper;
+            ((Channel *)self)->sink = sink;
+         } else if( sink != Py_None ) {
+            result = -1;
+            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
+                             "object does not have a 'sink' method" );
+         }
+      }
+
+/* Create the StcsChan using the above selected wrapper functions. */
+      if( result == 0 ) {
+         AstStcsChan *this = astStcsChan( source_wrap, sink_wrap, options );
+
+/* Store a pointer to the PyObject StcsChan in the AST StcsChan so that the
+   source and sink wrapper functions can get at it. */
+         astPutChannelData( this, self );
+
+/* Store self as the Python proxy for the AST StcsChan. */
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -6145,6 +6277,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&FitsChanType);
    PyModule_AddObject( m, "FitsChan", (PyObject *)&FitsChanType);
 
+   StcsChanType.tp_new = PyType_GenericNew;
+   StcsChanType.tp_base = &ChannelType;
+   if( PyType_Ready(&StcsChanType) < 0) return NULL;
+   Py_INCREF(&StcsChanType);
+   PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
+
 /* The constants provided by this module. */
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
@@ -6404,6 +6542,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &ChannelType;
       } else if( !strcmp( class, "FitsChan" ) ) {
          result = (PyTypeObject *) &FitsChanType;
+      } else if( !strcmp( class, "StcsChan" ) ) {
+         result = (PyTypeObject *) &StcsChanType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

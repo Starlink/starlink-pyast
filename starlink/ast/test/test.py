@@ -785,7 +785,13 @@ class TestAst(unittest.TestCase):
       self.assertEqual( obj.Class, "Prism" )
       self.assertEqual( obj.Naxes, 4 )
       lbnd,ubnd = obj.getregionbounds()
-#      self.assertEqual( ubnd[0], sys.float_info.max )
+      self.assertEqual( ubnd[0], sys.float_info.max )
+      self.assertAlmostEqual( lbnd[1], 2.50080939227851 )
+      self.assertAlmostEqual( ubnd[1], 2.6967811201606 )
+      self.assertAlmostEqual( lbnd[2], 1.171115928088195 )
+      self.assertAlmostEqual( ubnd[2], 1.24091013301998 )
+      self.assertEqual( lbnd[3], 4000.0 )
+      self.assertEqual( ubnd[3], 7000.0 )
 
 
 if __name__ == "__main__":
