@@ -1,6 +1,6 @@
 from distutils.core import setup, Extension
 import os, subprocess, numpy
-from tools import make_exceptions
+from tools import make_exceptions, make_attributes
 
 library_dirs = []
 include_dirs = []
@@ -19,6 +19,7 @@ include_dirs.append(numpy.get_include())
 
 # create the support files needed for the build
 make_exceptions.make_exceptions( os.path.join('starlink','ast') )
+make_attributes.make_attributes( os.path.join('starlink','ast') )
 
 Ast = Extension('starlink.Ast',
                 include_dirs         = include_dirs,

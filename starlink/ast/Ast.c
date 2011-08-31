@@ -30,6 +30,7 @@ static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
        const char *fun );
 static void Sinka( const char *text );
 static char *DumpToString( AstObject *object, const char *options );
+static const char *AttNorm( const char *att, char *buff );
 
 /* Macros used in this file */
 #include "pyast.h"
@@ -1799,10 +1800,11 @@ typedef struct {
 static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the AST attributes of the class */
+#include "PcdCen_def.c"
 MAKE_GETSETD(PcdMap,Disco)
-// PcdCen(axis)
 
 static PyGetSetDef PcdMap_getseters[] = {
+   #include "PcdCen_desc.c"
    DEFATT(Disco,"PcdMap pincushion/barrel distortion coefficient"),
    {NULL}  /* Sentinel */
 };
@@ -1890,14 +1892,16 @@ typedef struct {
 static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the AST attributes of the class */
-MAKE_GETROD(WcsMap,NatLat)
-MAKE_GETROD(WcsMap,NatLon)
+#include "PVMax_def.c"
+#include "WcsAxis_def.c"
 // PVi_m - would seem to need a loop
-// PVMax(i)
-// WcsAxis(lonlat)
 // WcsType - should this return a string?
+MAKE_GETROD(WcsMap,NatLon)
+MAKE_GETROD(WcsMap,NatLat)
 
 static PyGetSetDef WcsMap_getseters[] = {
+   #include "PVMax_desc.c"
+   #include "WcsAxis_desc.c"
    DEFATT(NatLat,"Native latitude of the reference point of a FITS-WCS projection"),
    DEFATT(NatLon,"Native longitude of the reference point of a FITS-WCS projection"),
    {NULL}  /* Sentinel */
@@ -2833,30 +2837,30 @@ static PyMethodDef Frame_methods[] = {
 };
 
 /* Define the AST attributes of the class */
-MAKE_GETSETC(Frame,AlignSystem)
-// Bottom(axis)
-// Digits(axis)
-// Direction(axis)
-MAKE_GETSETC(Frame,Domain)
-MAKE_GETSETD(Frame,Dut1)
-MAKE_GETSETD(Frame,Epoch)
-// Format(axis)
-// Label(axis)
-MAKE_GETSETL(Frame,MatchEnd)
-MAKE_GETSETI(Frame,MaxAxes)
-MAKE_GETSETI(Frame,MinAxes)
+#include "Bottom_def.c"
+#include "Digits_def.c"
+#include "Direction_def.c"
+#include "Format_def.c"
+#include "Label_def.c"
+#include "NormUnit_def.c"
+#include "Symbol_def.c"
+#include "Top_def.c"
+#include "Unit_def.c"
 MAKE_GETROI(Frame,Naxes)
-// NormUnits(axis)
-MAKE_GETSETD(Frame,ObsAlt)
-MAKE_GETSETD(Frame,ObsLat)
-MAKE_GETSETD(Frame,ObsLon)
-MAKE_GETSETL(Frame,Permute)
-MAKE_GETSETL(Frame,PreserveAxes)
-// Symbol(axis)
+MAKE_GETSETC(Frame,AlignSystem)
+MAKE_GETSETC(Frame,Domain)
 MAKE_GETSETC(Frame,System)
 MAKE_GETSETC(Frame,Title)
-// Top(axis)
-// Unit(axis)
+MAKE_GETSETD(Frame,Dut1)
+MAKE_GETSETD(Frame,Epoch)
+MAKE_GETSETD(Frame,ObsAlt)
+MAKE_GETSETD(Frame,ObsLon)
+MAKE_GETSETD(Frame,ObsLat)
+MAKE_GETSETI(Frame,MaxAxes)
+MAKE_GETSETI(Frame,MinAxes)
+MAKE_GETSETL(Frame,MatchEnd)
+MAKE_GETSETL(Frame,Permute)
+MAKE_GETSETL(Frame,PreserveAxes)
 
 // Have to write our own GETSET routines for ActiveUnit
 MAKE_GET( Frame, ActiveUnit,
@@ -2865,6 +2869,15 @@ MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == P
 
 
 static PyGetSetDef Frame_getseters[] = {
+   #include "Bottom_desc.c"
+   #include "Digits_desc.c"
+   #include "Direction_desc.c"
+   #include "Format_desc.c"
+   #include "Label_desc.c"
+   #include "NormUnit_desc.c"
+   #include "Symbol_desc.c"
+   #include "Top_desc.c"
+   #include "Unit_desc.c"
    DEFATT(AlignSystem,"Coordinate system used to align Frames"),
    DEFATT(Domain, "Coordinate system domain"),
    DEFATT(Dut1, "Difference between the UT1 and UTC timescale"),
@@ -3811,20 +3824,25 @@ static PyMethodDef SkyFrame_methods[] = {
 };
 
 /* Define the AST attributes of the class */
-MAKE_GETSETL(SkyFrame,AlignOffset)
-// AsTime(axis)
+#include "AsTime_def.c"
+#include "IsLatAxis_def.c"
+#include "IsLonAxis_def.c"
+#include "SkyRefP_def.c"
+#include "SkyRef_def.c"
+MAKE_GETSETC(SkyFrame,Projection)
+MAKE_GETSETC(SkyFrame,SkyRefIs)
 MAKE_GETSETD(SkyFrame,Equinox)
-// IsLatAxis(axis)
-// IsLonAxis(axis)
 MAKE_GETSETI(SkyFrame,LatAxis)
 MAKE_GETSETI(SkyFrame,LonAxis)
+MAKE_GETSETL(SkyFrame,AlignOffset)
 MAKE_GETSETL(SkyFrame,NegLon)
-MAKE_GETSETC(SkyFrame,Projection)
-// SkyRef(axis)
-MAKE_GETSETC(SkyFrame,SkyRefIs)
-// SkyRefP(axis)
 
 static PyGetSetDef SkyFrame_getseters[] = {
+   #include "AsTime_desc.c"
+   #include "IsLatAxis_desc.c"
+   #include "IsLonAxis_desc.c"
+   #include "SkyRef_desc.c"
+   #include "SkyRefP_desc.c"
    DEFATT(AlignOffset,"Align SkyFrames using the offset coordinate system?"),
    DEFATT(Equinox,"Epoch of the mean equinox"),
    DEFATT(LatAxis,"Index of the latitude axis"),
@@ -6764,4 +6782,24 @@ static void Sinka( const char *text ){
    }
 }
 
+static const char *AttNorm( const char *att, char *buff ){
+/*
+*  Name:
+*     AttNorm
+
+*  Purpose:
+*     Normalise an attribute name. Multi-valued attribute names of the
+*     form "<a>_<b>" are changed to "<a>(<b>)"
+
+*/
+   const char *result = att;
+   if( att && buff ) {
+      const char *us = strchr( att, '_' );
+      if( us ) {
+         sprintf( buff, "%.*s(%s)", (int)( us - att ), att, us + 1 );
+         result = buff;
+      }
+   }
+   return result;
+}
 

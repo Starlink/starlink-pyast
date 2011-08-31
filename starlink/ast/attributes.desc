@@ -1,0 +1,48 @@
+
+# Description of the multi-valued attributes used by AST. This file is
+# processed by the make_attributes.py script to create two separate files
+# describing each attribute, which should be included into Ast.c.
+# This file should contain a line for each multi-valued attribute,
+# containing a comma separated list of fields in the following order:
+#
+#   class,name,readonly,atype,desc,count,list
+#
+# These fields are described below:
+#   class - the ast Class name (e.g. "FrameSet")
+#   name - the AST name for the attribute (e.g "Domain")
+#   readonly - "RO" if the attribute is read-only or "SET" otherwise
+#   atype - the natural data type of the attribute:
+#      "C" - string
+#      "I" - integer
+#      "L" - boolean
+#      "D" - 64 bit floating point
+#   desc - a text string description (must not include any commas!)
+#   count - the max allowed number of values in a multi-valued attribute
+#           when the attribute has integer keys (1 if the attribute is not
+#           multi-valued or has string keys). The value "MXDIM" can be
+#           given, specifying the hard-wired maximum number of axes used by
+#           pyast.
+#   list - a space separated list of keys for  multi-valued attribute when
+#           the attribute has string keys ("-" if the attribute is not
+#           multi-valued or has integer keys).
+
+Frame,Bottom,SET,D,Lowest axis value to display,MXDIM,-
+Frame,Digits,SET,C,Number of digits of precision,MXDIM,-
+Frame,Direction,SET,L,Display axis in conventional direction?,MXDIM,-
+Frame,Format,SET,C,Format specification for axis values,MXDIM,-
+Frame,Label,SET,C,Axis label,MXDIM,-
+Frame,NormUnit,RO,C,Normalised axis physical units,MXDIM,-
+Frame,Symbol,SET,C,Axis symbol,MXDIM,-
+Frame,Top,SET,D,Highest axis value to display,MXDIM,-
+Frame,Unit,SET,C,Axis physical units,MXDIM,-
+SkyFrame,AsTime,SET,L,Format celestal coordinates as times?,2,-
+SkyFrame,IsLatAxis,RO,L,Is the specified celestial axis a latitude axis?,2,-
+SkyFrame,IsLonAxis,RO,L,Is the specified celestial axis a longitude axis?,2,-
+SkyFrame,SkyRef,SET,D,Position defining the offset coordinate system ,2,-
+SkyFrame,SkyRefP,SET,D,Position on primary meridian of offset coordinate sys,2,-
+WcsMap,PVMax,RO,I,Maximum number of FITS-WCS projection parameters,99,-
+WcsMap,WcsAxis,RO,I,FITS-WCS projection axes,2,-
+#  WcsMap,Projp has a lower index of 0, not 1.
+#  WcsMap,PVi_m needs special treatment
+PcdMap,PcdCen,SET,D,Centre coordinates of pincushion/barrel distortion,2,-
+

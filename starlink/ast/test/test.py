@@ -131,7 +131,7 @@ class TestAst(unittest.TestCase):
       zoommap.lock(1)
 
    def test_FrameSimple(self):
-      frame = starlink.Ast.Frame( 2 )
+      frame = starlink.Ast.Frame( 2, "label(1)=a b,label(2)=c d" )
       self.assertIsInstance( frame, starlink.Ast.Frame )
       self.assertEqual( frame.Nin, 2 )
       self.assertEqual( frame.Nout, 2 )
@@ -139,6 +139,12 @@ class TestAst(unittest.TestCase):
       frame.Title = testtitle
       self.assertEqual( frame.Title, testtitle)
       self.assertEqual( frame.get("Title"), testtitle)
+      self.assertEqual( frame.Label_1, "a b" )
+      self.assertEqual( frame.Label_2, "c d" )
+      frame.Label_2 = "A new label"
+      self.assertEqual( frame.Label_2, "A new label" )
+      frame.Label_2 = None
+      self.assertEqual( frame.Label_2, "Axis 2" )
 
       # Some methods
    def test_FrameAngle(self):

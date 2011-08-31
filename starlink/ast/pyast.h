@@ -3,6 +3,8 @@
 #define THAT ((Object *)other)->ast_object
 #define ANOTHER ((Object *)another)->ast_object
 #define MXDIM 20
+#define MXATTR_LEN 50
+#define ATTNORM(attrib) AttNorm(attrib,att_buf)
 
 /*
 *  Name:
@@ -115,6 +117,7 @@ static PyObject *isa_##class( Object *self ){ \
 \
 static PyObject *get##attrib( class *self, void *closure ); \
 static PyObject *get##attrib( class *self, void *closure ){ \
+   char att_buf[ MXATTR_LEN ]; \
    PyObject *result = (getval); \
    TIDY; \
    return result; \
@@ -154,9 +157,10 @@ static PyObject *get##attrib( class *self, void *closure ){ \
 \
 static int set##attrib( class *self, PyObject *value, void *closure ); \
 static int set##attrib( class *self, PyObject *value, void *closure ){ \
+   char att_buf[ MXATTR_LEN ]; \
    int result = -1; \
    if (value == NULL || value == Py_None ) { \
-      astClear( ((Object*)self)->ast_object, #attrib ); \
+      astClear( ((Object*)self)->ast_object, ATTNORM(#attrib) ); \
       if( astOK ) result = 0; \
    } else if( !Py##pytype##_Check(value) ) { \
       PyErr_SetString( PyExc_TypeError, \
@@ -223,7 +227,7 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
 
 #define MAKE_GETC(class,attrib) \
 MAKE_GET(class,attrib, \
-   Py_BuildValue( "s", astGetC( ((Object*)self)->ast_object, #attrib ) ));
+   Py_BuildValue( "s", astGetC( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ));
 
 
 /*
@@ -246,7 +250,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETL(class,attrib) \
 MAKE_GET(class,attrib, \
-   astGetI( ((Object*)self)->ast_object, #attrib ) ? Py_True : Py_False);
+   astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ? Py_True : Py_False);
 
 
 /*
@@ -269,7 +273,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETI(class,attrib) \
 MAKE_GET(class,attrib, \
-   PyLong_FromLong((long int) astGetI( ((Object*)self)->ast_object, #attrib )));
+   PyLong_FromLong((long int) astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) )));
 
 /*
 *  Name:
@@ -291,7 +295,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETD(class,attrib) \
 MAKE_GET(class,attrib, \
-   PyFloat_FromDouble(astGetD( ((Object*)self)->ast_object, #attrib )));
+   PyFloat_FromDouble(astGetD( ((Object*)self)->ast_object, ATTNORM(#attrib) )));
 
 
 /*
@@ -316,7 +320,7 @@ MAKE_GET(class,attrib, \
 #define SETCODEC(attrib) \
    const char *cval = GetString(value); \
    if( cval ) { \
-      astSetC( ((Object*)self)->ast_object, #attrib, cval ); \
+      astSetC( ((Object*)self)->ast_object, ATTNORM(#attrib), cval ); \
       if( astOK ) result = 0; \
    }
 
@@ -346,7 +350,7 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODEL(attrib) \
-   astSetI( ((Object*)self)->ast_object, #attrib, ( value == Py_True ) ); \
+   astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), ( value == Py_True ) ); \
    if( astOK ) result = 0;
 
 #define MAKE_GETSETL(class,attrib) \
@@ -374,7 +378,7 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODEI(attrib) \
-   astSetI( ((Object*)self)->ast_object, #attrib, PyLong_AsLong(value) ); \
+   astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), PyLong_AsLong(value) ); \
    if( astOK ) result = 0;
 
 #define MAKE_GETSETI(class,attrib) \
@@ -402,7 +406,7 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODED(attrib) \
-   astSetD( ((Object*)self)->ast_object, #attrib, PyFloat_AsDouble(value) ); \
+   astSetD( ((Object*)self)->ast_object, ATTNORM(#attrib), PyFloat_AsDouble(value) ); \
    if( astOK ) result = 0;
 
 #define MAKE_GETSETD(class,attrib) \
@@ -431,7 +435,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETROC(class,attrib) \
    MAKE_GET(class,attrib, \
-      Py_BuildValue( "s", astGetC( ((Object*)self)->ast_object, #attrib ) )); \
+      Py_BuildValue( "s", astGetC( ((Object*)self)->ast_object, ATTNORM(#attrib) ) )); \
    MAKE_SETRO(class,attrib)
 
 
@@ -456,7 +460,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETROL(class,attrib) \
    MAKE_GET(class,attrib, \
-      astGetI( ((Object*)self)->ast_object, #attrib ) ? Py_True : Py_False); \
+      astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ? Py_True : Py_False); \
    MAKE_SETRO(class,attrib)
 
 
@@ -481,7 +485,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETROI(class,attrib) \
    MAKE_GET(class,attrib, \
-      PyLong_FromLong((long int) astGetI( ((Object*)self)->ast_object, #attrib ))); \
+      PyLong_FromLong((long int) astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ))); \
    MAKE_SETRO(class,attrib)
 
 /*
@@ -505,7 +509,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETROD(class,attrib) \
    MAKE_GET(class,attrib, \
-      PyFloat_FromDouble(astGetD( ((Object*)self)->ast_object, #attrib ))); \
+      PyFloat_FromDouble(astGetD( ((Object*)self)->ast_object, ATTNORM(#attrib) ))); \
    MAKE_SETRO(class,attrib)
 
 
