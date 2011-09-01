@@ -1895,7 +1895,7 @@ static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
 #include "ProjP_def.c"
 #include "PVMax_def.c"
 #include "WcsAxis_def.c"
-// PVi_m - would seem to need a loop
+// PVi_m - would required 10000 properties so not done.
 // WcsType - should this return a string?
 MAKE_GETROD(WcsMap,NatLon)
 MAKE_GETROD(WcsMap,NatLat)

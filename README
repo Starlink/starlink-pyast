@@ -86,6 +86,10 @@ attribute for the second axis of a Frame:
    >>> frm.set("Label(2)=Flux density")
    >>> frm.Label_2 = "Flux density"
 
+- The PVi_m attribute (defined by the WcsMap class) has no corresponding
+python properties. To access this attribute, use the set and get methods
+instead.
+
 - Ast attributes can be retrieved using the AST "Get" method or the
 corresponding Python property:
 
