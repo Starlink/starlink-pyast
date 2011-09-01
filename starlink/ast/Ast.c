@@ -21,7 +21,7 @@
 
 /* Prototypes for local functions (need to come here since they may be
    referred to inside Ast.h). */
-static const char *GetString( PyObject *value );
+static char *GetString( PyObject *value );
 static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim,
        int *dims, const char *arg, const char *fun );
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
@@ -5420,7 +5420,7 @@ const char *source_wrapper( void ){
    char buffer[ 1024 ];
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
-   const char *text = (pytext != Py_None) ? GetString( pytext ) : NULL;
+   char *text = GetString( pytext );
    if( text ) {
       if( strlen( text ) < 1024 ) {
          strcpy( buffer, text );
@@ -5429,6 +5429,7 @@ const char *source_wrapper( void ){
          PyErr_SetString( RDERR_err, "Text read by " CLASS " source "
                           "function exceeded 1024 characters.");
       }
+      text = astFree( text );
    }
    Py_XDECREF(pytext);
    return result;
@@ -6381,7 +6382,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 /* Utility functions */
 /* ================= */
 
-static const char *GetString( PyObject *value ) {
+static char *GetString( PyObject *value ) {
 /*
 *  Name:
 *     GetString
@@ -6389,12 +6390,17 @@ static const char *GetString( PyObject *value ) {
 *  Purpose:
 *     Get a pointer to a null terminated string from a PyObject.
 
+*  Returned Value:
+*     A dynamically allocated copy of the string. It should be freed
+*     using astFree when no longer needed.
+
 */
-   const char *result = NULL;
-   if( value ) {
+   char *result = NULL;
+   if( value && value != Py_None ) {
       PyObject *bytes = PyUnicode_AsASCIIString(value);
       if( bytes ) {
-         result =  PyBytes_AS_STRING(bytes);
+         const char *bytestr =  PyBytes_AS_STRING(bytes);
+         result = astStore( NULL, bytestr, PyBytes_Size( bytes ) + 1 );
          Py_DECREF(bytes);
       }
    }

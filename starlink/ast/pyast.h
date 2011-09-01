@@ -318,10 +318,11 @@ MAKE_GET(class,attrib, \
 
 
 #define SETCODEC(attrib) \
-   const char *cval = GetString(value); \
+   char *cval = GetString(value); \
    if( cval ) { \
       astSetC( ((Object*)self)->ast_object, ATTNORM(#attrib), cval ); \
       if( astOK ) result = 0; \
+      cval = astFree( cval ); \
    }
 
 #define MAKE_GETSETC(class,attrib) \

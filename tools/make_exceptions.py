@@ -115,7 +115,6 @@ void astPutErr_( int status_value, const char *message ) {
    PyObject *ptype;
    PyObject *pvalue;
    PyObject *ptraceback;
-   const char *str;
    char *text;
    int lstat;
    int nc;
@@ -132,26 +131,26 @@ void astPutErr_( int status_value, const char *message ) {
 
 /* Get the existing Exception text */
          PyErr_Fetch( &ptype, &pvalue, &ptraceback );
-         str = GetString( pvalue );
-         nc = str ? strlen( str ) : 0;
-         text = astStore( NULL, str, nc + 1 );
+         text = GetString( pvalue );
+         if( text ) {
 
 /* Ignore messages that give the C source file and line number since they are
    not useful for Python users. */
-         if( strstr( text, "Ast.c" ) ) {
-            text = astFree( text );
-            nc = 0;
-         } else {
-            text = astAppendString( text, &nc, "\n" );
-         }
+            if( strstr( text, "Ast.c" ) ) {
+               text = astFree( text );
+               nc = 0;
+            } else {
+               nc = strlen( text );
+               text = astAppendString( text, &nc, "\n" );
+            }
 
 /* Append the new message and store the extended text with the Exception. */
-         text = astAppendString( text, &nc, message );
-         Py_DECREF( pvalue );
-         pvalue = PyUnicode_FromString( text );
-         PyErr_Restore( ptype, pvalue, ptraceback);
-
-         text = astFree( text );
+            text = astAppendString( text, &nc, message );
+            Py_DECREF( pvalue );
+            pvalue = PyUnicode_FromString( text );
+            PyErr_Restore( ptype, pvalue, ptraceback);
+            text = astFree( text );
+         }
       }
 
 /* If an AST or non-AST exception has already occurred, return without action. */
