@@ -37,7 +37,10 @@ def make_attributes( dirname=None ):
          continue
 
 #  Split the line into comma-separated fields
-      (classname,attname,readonly,atype,desc,count,items) = line.split(",")
+      (classname,attname,readonly,atype,desc,maxindex,minindex,items) = line.split(",")
+
+#  Convert strings to numerical values
+      minindex = int(minindex)
 
 #  Initialise lists
       att_decs = list()
@@ -45,13 +48,13 @@ def make_attributes( dirname=None ):
 
 #  Convert the fields to more useful types.
       items = items.split()
-      if count == "MXDIM":
-         count = mxdim
+      if maxindex == "MXDIM":
+         maxindex = mxdim
       else:
-         count = int(count)
+         maxindex = int(maxindex)
 
 #  Loop over all indices for multi-valued attributes
-      for i in range(1,count+1):
+      for i in range(minindex,maxindex+1):
 
 #  Loop over all keys for multi-valued attributes
          for item in items:

@@ -1892,6 +1892,7 @@ typedef struct {
 static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the AST attributes of the class */
+#include "ProjP_def.c"
 #include "PVMax_def.c"
 #include "WcsAxis_def.c"
 // PVi_m - would seem to need a loop
@@ -1900,6 +1901,7 @@ MAKE_GETROD(WcsMap,NatLon)
 MAKE_GETROD(WcsMap,NatLat)
 
 static PyGetSetDef WcsMap_getseters[] = {
+#include "ProjP_desc.c"
    #include "PVMax_desc.c"
    #include "WcsAxis_desc.c"
    DEFATT(NatLat,"Native latitude of the reference point of a FITS-WCS projection"),

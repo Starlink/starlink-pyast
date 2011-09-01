@@ -68,12 +68,23 @@ AST method name.
 optional in the Python interface.
 
 - Each AST Object "attribute" (as listed in SUN/211) has a corresponding
-Python property with exactly the same name. So for instance, either of
-the following can be used to set the "Zoom" attribute (the zoom factor)
-in a ZoomMap refered to by "zm":
+Python property with the same name. So for instance, either of the following
+can be used to set the "Zoom" attribute (the zoom factor) in a ZoomMap
+refered to by "zm":
 
    >>> zm.set("Zoom=1.2")
    >>> zm.Zoom = 1.2
+
+Note, some AST attributes are multi-valued, with individual values being
+refered to by attribute names of the form "name(index)" (i.e. the
+attribute name followed by a numerical of string index in parentheses).
+The corresponding Python properties are of the form "name_index" (i.e.
+the index is appended with an underscore rather than being enclosed in
+parentheses). For instance, either of the following will set the Label
+attribute for the second axis of a Frame:
+
+   >>> frm.set("Label(2)=Flux density")
+   >>> frm.Label_2 = "Flux density"
 
 - Ast attributes can be retrieved using the AST "Get" method or the
 corresponding Python property:

@@ -17,32 +17,34 @@
 #      "L" - boolean
 #      "D" - 64 bit floating point
 #   desc - a text string description (must not include any commas!)
-#   count - the max allowed number of values in a multi-valued attribute
-#           when the attribute has integer keys (1 if the attribute is not
-#           multi-valued or has string keys). The value "MXDIM" can be
-#           given, specifying the hard-wired maximum number of axes used by
-#           pyast.
+#   maxindex - the max allowed integer index for values in a multi-valued
+#           attribute (1 if the attribute is not multi-valued or has string
+#           keys). The value "MXDIM" can be given, specifying a hard-wired
+#           maximum number defined in make_attributes.py
+#   minindex - the min allowed integer index for values in a multi-valued
+#           attribute (1 if the attribute is not multi-valued or has string
+#           keys).
 #   list - a space separated list of keys for  multi-valued attribute when
 #           the attribute has string keys ("-" if the attribute is not
 #           multi-valued or has integer keys).
 
-Frame,Bottom,SET,D,Lowest axis value to display,MXDIM,-
-Frame,Digits,SET,C,Number of digits of precision,MXDIM,-
-Frame,Direction,SET,L,Display axis in conventional direction?,MXDIM,-
-Frame,Format,SET,C,Format specification for axis values,MXDIM,-
-Frame,Label,SET,C,Axis label,MXDIM,-
-Frame,NormUnit,RO,C,Normalised axis physical units,MXDIM,-
-Frame,Symbol,SET,C,Axis symbol,MXDIM,-
-Frame,Top,SET,D,Highest axis value to display,MXDIM,-
-Frame,Unit,SET,C,Axis physical units,MXDIM,-
-SkyFrame,AsTime,SET,L,Format celestal coordinates as times?,2,-
-SkyFrame,IsLatAxis,RO,L,Is the specified celestial axis a latitude axis?,2,-
-SkyFrame,IsLonAxis,RO,L,Is the specified celestial axis a longitude axis?,2,-
-SkyFrame,SkyRef,SET,D,Position defining the offset coordinate system ,2,-
-SkyFrame,SkyRefP,SET,D,Position on primary meridian of offset coordinate sys,2,-
-WcsMap,PVMax,RO,I,Maximum number of FITS-WCS projection parameters,99,-
-WcsMap,WcsAxis,RO,I,FITS-WCS projection axes,2,-
-#  WcsMap,Projp has a lower index of 0, not 1.
+Frame,Bottom,SET,D,Lowest axis value to display,MXDIM,1,-
+Frame,Digits,SET,C,Number of digits of precision,MXDIM,1,-
+Frame,Direction,SET,L,Display axis in conventional direction?,MXDIM,1,-
+Frame,Format,SET,C,Format specification for axis values,MXDIM,1,-
+Frame,Label,SET,C,Axis label,MXDIM,1,-
+Frame,NormUnit,RO,C,Normalised axis physical units,MXDIM,1,-
+Frame,Symbol,SET,C,Axis symbol,MXDIM,1,-
+Frame,Top,SET,D,Highest axis value to display,MXDIM,1,-
+Frame,Unit,SET,C,Axis physical units,MXDIM,1,-
+SkyFrame,AsTime,SET,L,Format celestal coordinates as times?,2,1,-
+SkyFrame,IsLatAxis,RO,L,Is the specified celestial axis a latitude axis?,2,1,-
+SkyFrame,IsLonAxis,RO,L,Is the specified celestial axis a longitude axis?,2,1,-
+SkyFrame,SkyRef,SET,D,Position defining the offset coordinate system ,2,1,-
+SkyFrame,SkyRefP,SET,D,Position on primary meridian of offset coordinate sys,2,1,-
+WcsMap,PVMax,RO,I,Maximum number of FITS-WCS projection parameters,99,1,-
+WcsMap,WcsAxis,RO,I,FITS-WCS projection axes,2,1,-
+WcsMap,ProjP,SET,D,FITS-WCS projection parameters,2,0,-
 #  WcsMap,PVi_m needs special treatment
-PcdMap,PcdCen,SET,D,Centre coordinates of pincushion/barrel distortion,2,-
+PcdMap,PcdCen,SET,D,Centre coordinates of pincushion/barrel distortion,2,1,-
 

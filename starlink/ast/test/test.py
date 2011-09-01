@@ -409,7 +409,8 @@ class TestAst(unittest.TestCase):
       self.assertEqual( wcsmap.Nout,2 )
       with self.assertRaises(starlink.Ast.WCSTY):
          wcsmap = starlink.Ast.WcsMap( 2, 4000, 1, 2 )
-
+      wcsmap.set( "PV2_0=1.2" )
+      self.assertEqual( wcsmap.ProjP_0, 1.2 )
 
    def test_PcdMap(self):
       pcdmap = starlink.Ast.PcdMap( 0.2, [1,2] )
