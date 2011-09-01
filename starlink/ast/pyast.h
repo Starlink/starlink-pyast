@@ -318,7 +318,7 @@ MAKE_GET(class,attrib, \
 
 
 #define SETCODEC(attrib) \
-   char *cval = GetString(value); \
+   char *cval = GetString(NULL,value); \
    if( cval ) { \
       astSetC( ((Object*)self)->ast_object, ATTNORM(#attrib), cval ); \
       if( astOK ) result = 0; \

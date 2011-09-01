@@ -131,7 +131,7 @@ void astPutErr_( int status_value, const char *message ) {
 
 /* Get the existing Exception text */
          PyErr_Fetch( &ptype, &pvalue, &ptraceback );
-         text = GetString( pvalue );
+         text = GetString( NULL, pvalue );
          if( text ) {
 
 /* Ignore messages that give the C source file and line number since they are

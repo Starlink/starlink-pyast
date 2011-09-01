@@ -21,7 +21,7 @@
 
 /* Prototypes for local functions (need to come here since they may be
    referred to inside Ast.h). */
-static char *GetString( PyObject *value );
+static char *GetString( void *mem, PyObject *value );
 static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim,
        int *dims, const char *arg, const char *fun );
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
@@ -5204,6 +5204,7 @@ typedef struct {
    Object parent;
    PyObject *source;
    PyObject *sink;
+   char *source_line;
 } Channel;
 
 /* Prototypes for class functions */
@@ -5213,6 +5214,9 @@ static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
 const char *source_wrapper( void );
 void sink_wrapper( const char *text );
+static int ChannelFuncs( Channel *self,  PyObject *source, PyObject *sink,
+                         const char *(** source_wrap)( void ),
+                         void (** sink_wrap)( const char * ) );
 
 
 /* Describe the methods of the class */
@@ -5291,41 +5295,15 @@ static PyTypeObject ChannelType = {
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    PyObject *source = NULL;
    PyObject *sink = NULL;
-   const char *(* source_wrap)( void ) = NULL;
-   void (* sink_wrap)( const char * ) = NULL;
+   const char *(* source_wrap)( void );
+   void (* sink_wrap)( const char * );
    const char *options = " ";
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
-/* Assume success. */
-      result = 0;
-
-/* If a source object was supplied, we use the local "source_wrapper" function
-   as a C-callable wrapper for the object's "source" method. Otherwise, we use
-   a NULL wrapper. Also store a pointer to the source object in the Channel
-   structure. */
-      if( source ) {
-         if( PyObject_HasAttrString( source, "source" ) ) {
-            source_wrap = source_wrapper;
-            self->source = source;
-         } else if( source != Py_None ){
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
-                             "object does not have a 'source' method" );
-         }
-      }
-
-/* Do the same for the sink object. */
-      if( sink ) {
-         if( PyObject_HasAttrString( sink, "sink" ) ) {
-            sink_wrap = sink_wrapper;
-            self->sink = sink;
-         } else if( sink != Py_None ) {
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
-                             "object does not have a 'sink' method" );
-         }
-      }
+/* Choose the source and sink wrapper functions and store info required
+   by the source and sink functions in the Channel structure. */
+      result = ChannelFuncs( self, source, sink, &source_wrap, &sink_wrap );
 
 /* Create the channel using the above selected wrapper functions. */
       if( result == 0 ) {
@@ -5379,6 +5357,7 @@ static PyObject *Channel_read( Channel *self ){
    PyObject *object = NULL;
    AstObject *obj;
    obj = astRead( THIS );
+   self->source_line = astFree( self->source_line );
    if( astOK ) {
       if( obj ) {
          object = NewObject( (AstObject *) obj );
@@ -5410,29 +5389,71 @@ static PyObject *Channel_write( Channel *self, PyObject *args ){
 }
 
 
+static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
+                         const char *(** source_wrap)( void ),
+                         void (** sink_wrap)( const char * ) ) {
+/*
+*  Name:
+*     ChannelFuncs
+
+*  Purpose:
+*     Choose the source and sink wrapper functions for a Channel, and
+*     store information required by the source and sink functions in the
+*     Channel structure.
+
+*/
+
+/* Initialise. */
+   int result = 0;
+   *source_wrap = NULL;
+   *sink_wrap = NULL;
+
+/* If a source object was supplied, we use the local "source_wrapper" function
+   as a C-callable wrapper for the object's "source" method. Otherwise, we use
+   a NULL wrapper. Also store a pointer to the source object in the Channel
+   structure. */
+   if( source ) {
+      if( PyObject_HasAttrString( source, "source" ) ) {
+         *source_wrap = source_wrapper;
+         self->source = source;
+      } else if( source != Py_None ){
+         result = -1;
+         PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
+                          "object does not have a 'source' method" );
+      }
+   }
+
+/* Do the same for the sink object. */
+   if( sink ) {
+      if( PyObject_HasAttrString( sink, "sink" ) ) {
+         *sink_wrap = sink_wrapper;
+         self->sink = sink;
+      } else if( sink != Py_None ) {
+         result = -1;
+         PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
+                          "object does not have a 'sink' method" );
+      }
+   }
+
+/* Initialise the pointer to the dynamically allocated string holding the
+   line of text read most recently by the Channel's source function. */
+   self->source_line = NULL;
+
+/* Return the success flag */
+   return result;
+}
+
 /* Source and sink functions which are called by the AST Channel C code.
    These invoke the source and sink methods on the Python Object
    associated with the Channel. Note, these cannot be static as they are
    called from within AST. */
 
 const char *source_wrapper( void ){
-   const char *result = NULL;
-   char buffer[ 1024 ];
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
-   char *text = GetString( pytext );
-   if( text ) {
-      if( strlen( text ) < 1024 ) {
-         strcpy( buffer, text );
-         result = buffer;
-      } else {
-         PyErr_SetString( RDERR_err, "Text read by " CLASS " source "
-                          "function exceeded 1024 characters.");
-      }
-      text = astFree( text );
-   }
+   channel->source_line = GetString( channel->source_line, pytext );
    Py_XDECREF(pytext);
-   return result;
+   return channel->source_line;
 }
 
 void sink_wrapper( const char *text ){
@@ -5591,41 +5612,16 @@ static PyTypeObject FitsChanType = {
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    PyObject *source = NULL;
    PyObject *sink = NULL;
-   const char *(* source_wrap)( void ) = NULL;
-   void (* sink_wrap)( const char * ) = NULL;
+   const char *(* source_wrap)( void );
+   void (* sink_wrap)( const char * );
    const char *options = " ";
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
-/* Assume success. */
-      result = 0;
-
-/* If a source object was supplied, we use the local "source_wrapper" function
-   as a C-callable wrapper for the object's "source" method. Otherwise, we use
-   a NULL wrapper. Also store a pointer to the source object in the parent
-   Channel structure. */
-      if( source ) {
-         if( PyObject_HasAttrString( source, "source" ) ) {
-            source_wrap = source_wrapper;
-            ((Channel *)self)->source = source;
-         } else if( source != Py_None ){
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
-                             "object does not have a 'source' method" );
-         }
-      }
-
-/* Do the same for the sink object. */
-      if( sink ) {
-         if( PyObject_HasAttrString( sink, "sink" ) ) {
-            sink_wrap = sink_wrapper;
-            ((Channel *)self)->sink = sink;
-         } else if( sink != Py_None ) {
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
-                             "object does not have a 'sink' method" );
-         }
-      }
+/* Choose the source and sink wrapper functions and store info required
+   by the source and sink functions in the Channel structure. */
+      result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
+                             &sink_wrap );
 
 /* Create the FitsChan using the above selected wrapper functions. */
       if( result == 0 ) {
@@ -5949,35 +5945,10 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
-/* Assume success. */
-      result = 0;
-
-/* If a source object was supplied, we use the local "source_wrapper" function
-   as a C-callable wrapper for the object's "source" method. Otherwise, we use
-   a NULL wrapper. Also store a pointer to the source object in the parent
-   Channel structure. */
-      if( source ) {
-         if( PyObject_HasAttrString( source, "source" ) ) {
-            source_wrap = source_wrapper;
-            ((Channel *)self)->source = source;
-         } else if( source != Py_None ){
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
-                             "object does not have a 'source' method" );
-         }
-      }
-
-/* Do the same for the sink object. */
-      if( sink ) {
-         if( PyObject_HasAttrString( sink, "sink" ) ) {
-            sink_wrap = sink_wrapper;
-            ((Channel *)self)->sink = sink;
-         } else if( sink != Py_None ) {
-            result = -1;
-            PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
-                             "object does not have a 'sink' method" );
-         }
-      }
+/* Choose the source and sink wrapper functions and store info required
+   by the source and sink functions in the Channel structure. */
+      result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
+                             &sink_wrap );
 
 /* Create the StcsChan using the above selected wrapper functions. */
       if( result == 0 ) {
@@ -6382,7 +6353,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 /* Utility functions */
 /* ================= */
 
-static char *GetString( PyObject *value ) {
+static char *GetString( void *mem, PyObject *value ) {
 /*
 *  Name:
 *     GetString
@@ -6390,9 +6361,17 @@ static char *GetString( PyObject *value ) {
 *  Purpose:
 *     Get a pointer to a null terminated string from a PyObject.
 
+*  Arguments:
+*     mem
+*        Pointer to memory previously allocated by AST in which the
+*        returned string should be stored. This memory will be extended
+*        if required. New memory is allocated if NULL is supplied.
+*     value
+*        The PyObject containing the string to copy.
+
 *  Returned Value:
 *     A dynamically allocated copy of the string. It should be freed
-*     using astFree when no longer needed.
+*     using astFree when no longer needed. This may be a copy of "mem".
 
 */
    char *result = NULL;
@@ -6400,7 +6379,7 @@ static char *GetString( PyObject *value ) {
       PyObject *bytes = PyUnicode_AsASCIIString(value);
       if( bytes ) {
          const char *bytestr =  PyBytes_AS_STRING(bytes);
-         result = astStore( NULL, bytestr, PyBytes_Size( bytes ) + 1 );
+         result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
          Py_DECREF(bytes);
       }
    }
