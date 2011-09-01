@@ -1896,7 +1896,7 @@ static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds );
 #include "PVMax_def.c"
 #include "WcsAxis_def.c"
 // PVi_m - would required 10000 properties so not done.
-// WcsType - should this return a string?
+MAKE_GETROI(WcsMap,WcsType)
 MAKE_GETROD(WcsMap,NatLon)
 MAKE_GETROD(WcsMap,NatLat)
 
@@ -1906,6 +1906,7 @@ static PyGetSetDef WcsMap_getseters[] = {
    #include "WcsAxis_desc.c"
    DEFATT(NatLat,"Native latitude of the reference point of a FITS-WCS projection"),
    DEFATT(NatLon,"Native longitude of the reference point of a FITS-WCS projection"),
+   DEFATT(WcsType,"FITS-WCS projection type"),
    {NULL}  /* Sentinel */
 };
 
