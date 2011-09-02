@@ -6353,6 +6353,90 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 }
 
 
+/* Functions mainly for use by other C modules */
+/* =========================================== */
+
+PyObject *PyAstFromString( const char *string ) {
+/*
+*  Name:
+*     PyAstFromString
+
+*  Purpose:
+*     Re-create a pyast Object from a string.
+
+*  Arguments:
+*     string
+*        Pointer to a string created previously by PyAstToSTring.
+
+*  Returned Value:
+*     A pointer to a new pyast Object.
+
+*/
+
+/* Check no python error has occurred, and that a string was supplied. */
+   if( PyErr_Occurred() || !string ) return NULL;
+
+/* Crate an AST Object from the string. */
+   AstObject *this = astFromString( string );
+
+/* Report an error if unsuccesfull. */
+   if( !this && !PyErr_Occurred() ) {
+      char mess[255];
+      sprintf( mess, "PyAstFromString: Could not create an AST Object "
+               "from supplied string (%.40s).", string );
+      PyErr_SetString( PyExc_ValueError, mess );
+      return NULL;
+   }
+
+/* Create a new Python Object to encapsulate the AST Object and return it. */
+   PyObject *result = NewObject( this );
+   TIDY;
+   return result;
+}
+
+char *PyAstToString( PyObject *self ) {
+/*
+*  Name:
+*     PyAstToString
+
+*  Purpose:
+*     Convert a pyast Object to a string.
+
+*  Arguments:
+*     self
+*        Pointer to a PyObject that is a pyast Object issued by this module.
+
+*  Returned Value:
+*     A dynamically allocated string holding a minimal serialisation of the
+*     AST Object. It should be freed using astFree when no longer needed.
+
+*/
+   char *result;
+
+/* Check no python error has occurred, and that an object was supplied. */
+   if( PyErr_Occurred() || !self ) return NULL;
+
+/* Report an error if supplied PyObject is not an AST Object */
+   if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
+      char mess[255];
+      if( self->ob_type && self->ob_type->tp_doc ) {
+         sprintf( mess, "PyAstToString: Expected an AST Object but a %.*s "
+                  "was supplied.", (int)( sizeof(mess) - 60 ),
+                  self->ob_type->tp_doc );
+      } else {
+         sprintf( mess, "PyAstToSTring: Expected an AST Object." );
+      }
+      PyErr_SetString( PyExc_TypeError, mess );
+      return NULL;
+   }
+
+/* Invoke the astToString method on the AST Object and return the pointer. */
+   result = astToString( THIS );
+   TIDY;
+   return result;
+}
+
+
 /* Utility functions */
 /* ================= */
 

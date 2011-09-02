@@ -1,3 +1,8 @@
+/* Prototypes for public functions */
+char *PyAstToString( PyObject *self );
+PyObject *PyAstFromString( const char *string );
+
+
 /* Various simple short-hands */
 #define THIS ((Object *)self)->ast_object
 #define THAT ((Object *)other)->ast_object
