@@ -1,7 +1,25 @@
-/* Prototypes for public functions */
-char *PyAstToString( PyObject *self );
-PyObject *PyAstFromString( const char *string );
+#ifndef PyAst_included
+#define PyAst_included
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Prototypes for public functions */
+#define PyAst_ToString_NUM 0
+#define PyAst_ToString_RETURN char *
+#define PyAst_ToString_PROTO ( PyObject *self )
+
+#define PyAst_FromString_NUM 1
+#define PyAst_FromString_RETURN PyObject *
+#define PyAst_FromString_PROTO ( const char *string )
+
+/* Total number of C API pointers */
+#define PyAst_API_pointers 2
+
+/* Following section is used only when compiling the pyast module. */
+/* --------------------------------------------------------------- */
+#ifdef PYAST_MODULE
 
 /* Various simple short-hands */
 #define THIS ((Object *)self)->ast_object
@@ -548,4 +566,30 @@ MAKE_GET(class,attrib, \
    { #attrib, (getter)get##attrib, (setter)set##attrib, doc, NULL}
 
 
+/* The following section is used only in modules that use Ast's API */
+/* ---------------------------------------------------------------- */
+#else
 
+static void **PyAst_API;
+
+#define PyAst_FromString \
+ (*(PySpam_FromString_RETURN (*)PyAst_FromString_PROTO) PyAst_API[PyAst_FromString_NUM])
+#define PyAst_ToString \
+ (*(PyAst_ToString_RETURN (*)PyAst_ToString_PROTO) PyAst_API[PyAst_ToString_NUM])
+
+/*
+ * Returns -1 on error, 0 on success.
+ * PyCapsule_Import will set an exception if there's an error.
+ */
+static int import_ast(void) {
+    PyAst_API = (void **)PyCapsule_Import( "starlink.Ast._C_API", 0 );
+    return PyAst_API ? 0 : -1;
+}
+
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

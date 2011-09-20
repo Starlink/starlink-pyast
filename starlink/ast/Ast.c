@@ -21,18 +21,18 @@
 
 /* Prototypes for local functions (need to come here since they may be
    referred to inside Ast.h). */
-static char *GetString( void *mem, PyObject *value );
-static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim,
-       int *dims, const char *arg, const char *fun );
-static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
-       const char *fun );
-static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
-       const char *fun );
-static void Sinka( const char *text );
+static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim, int *dims, const char *arg, const char *fun );
+static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg, const char *fun );
+static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg, const char *fun );
+static PyObject *PyAst_FromString( const char *string );
 static char *DumpToString( AstObject *object, const char *options );
+static char *GetString( void *mem, PyObject *value );
+static char *PyAst_ToString( PyObject *self );
 static const char *AttNorm( const char *att, char *buff );
+static void Sinka( const char *text );
 
 /* Macros used in this file */
+#define PYAST_MODULE
 #include "pyast.h"
 
 /* Include code that intercepts error reports issued by AST and raises
@@ -5977,15 +5977,15 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 /* ================================= */
 
 /* Static method prototypes */
-static PyObject *Static_escapes( PyObject *self, PyObject *args );
-static PyObject *Static_tune( PyObject *self, PyObject *args );
-static PyObject *Static_version( PyObject *self );
+static PyObject *PyAst_escapes( PyObject *self, PyObject *args );
+static PyObject *PyAst_tune( PyObject *self, PyObject *args );
+static PyObject *PyAst_version( PyObject *self );
 
 /* Static method implementations */
 
 #undef NAME
 #define NAME MODULE ".escapes"
-static PyObject *Static_escapes( PyObject *self, PyObject *args ) {
+static PyObject *PyAst_escapes( PyObject *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int newval;
@@ -6000,7 +6000,7 @@ static PyObject *Static_escapes( PyObject *self, PyObject *args ) {
 
 #undef NAME
 #define NAME MODULE ".tune"
-static PyObject *Static_tune( PyObject *self, PyObject *args ) {
+static PyObject *PyAst_tune( PyObject *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int value;
@@ -6014,7 +6014,7 @@ static PyObject *Static_tune( PyObject *self, PyObject *args ) {
    return result;
 }
 
-static PyObject *Static_version( PyObject *self ) {
+static PyObject *PyAst_version( PyObject *self ) {
    if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
    int version;
@@ -6025,10 +6025,10 @@ static PyObject *Static_version( PyObject *self ) {
 }
 
 /* Describe the static methods of the class */
-static PyMethodDef static_methods[] = {
-   {"escapes", (PyCFunction)Static_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
-   {"tune", (PyCFunction)Static_tune, METH_VARARGS,  "Set or get an AST global tuning parameter"},
-   {"version", (PyCFunction)Static_version, METH_NOARGS,  "Return the version of the AST library being used"},
+static PyMethodDef PyAst_methods[] = {
+   {"escapes", (PyCFunction)PyAst_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
+   {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an AST global tuning parameter"},
+   {"version", (PyCFunction)PyAst_version, METH_NOARGS,  "Return the version of the AST library being used"},
    {NULL}  /* Sentinel */
 };
 
@@ -6038,7 +6038,7 @@ static struct PyModuleDef astmodule = {
    "Ast",
    "AST Python interface.",
    -1,
-   static_methods,
+   PyAst_methods,
    NULL, NULL, NULL, NULL
 };
 
@@ -6046,7 +6046,9 @@ static struct PyModuleDef astmodule = {
 /* Tell the python interpreter about this module. This includes telling
    the interpreter about each of the types defined by this module. */
 PyMODINIT_FUNC PyInit_Ast(void) {
-   PyObject *m;
+   static void *PyAst_API[ PyAst_API_pointers ];
+   PyObject *c_api_object, *m;
+
    m = PyModule_Create(&astmodule);
    if( m == NULL ) return NULL;
 
@@ -6055,6 +6057,14 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    automatically by the make_exceptions.py script on the basis of the ast_err.msg
    file). */
    if( !RegisterErrors( m ) ) return NULL;
+
+/* Pointers to functions for use by other extension modules. */
+   PyAst_API[PyAst_ToString_NUM] = (void *)PyAst_ToString;
+   PyAst_API[PyAst_FromString_NUM] = (void *)PyAst_FromString;
+
+/* Create a Capsule containing the API pointer array's address */
+   c_api_object = PyCapsule_New( (void *) PyAst_API, MODULE "._C_API", NULL );
+   if( c_api_object ) PyModule_AddObject( m, "_C_API", c_api_object );
 
 /* The types provided by this module. */
    if( PyType_Ready(&ObjectType) < 0) return NULL;
@@ -6356,17 +6366,17 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 /* Functions mainly for use by other C modules */
 /* =========================================== */
 
-PyObject *PyAstFromString( const char *string ) {
+static PyObject *PyAst_FromString( const char *string ) {
 /*
 *  Name:
-*     PyAstFromString
+*     PyAst_FromString
 
 *  Purpose:
 *     Re-create a pyast Object from a string.
 
 *  Arguments:
 *     string
-*        Pointer to a string created previously by PyAstToSTring.
+*        Pointer to a string created previously by PyAst_ToString.
 
 *  Returned Value:
 *     A pointer to a new pyast Object.
@@ -6382,7 +6392,7 @@ PyObject *PyAstFromString( const char *string ) {
 /* Report an error if unsuccesfull. */
    if( !this && !PyErr_Occurred() ) {
       char mess[255];
-      sprintf( mess, "PyAstFromString: Could not create an AST Object "
+      sprintf( mess, "PyAst_FromString: Could not create an AST Object "
                "from supplied string (%.40s).", string );
       PyErr_SetString( PyExc_ValueError, mess );
       return NULL;
@@ -6394,10 +6404,10 @@ PyObject *PyAstFromString( const char *string ) {
    return result;
 }
 
-char *PyAstToString( PyObject *self ) {
+static char *PyAst_ToString( PyObject *self ) {
 /*
 *  Name:
-*     PyAstToString
+*     PyAst_ToString
 
 *  Purpose:
 *     Convert a pyast Object to a string.
@@ -6420,11 +6430,11 @@ char *PyAstToString( PyObject *self ) {
    if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
       char mess[255];
       if( self->ob_type && self->ob_type->tp_doc ) {
-         sprintf( mess, "PyAstToString: Expected an AST Object but a %.*s "
+         sprintf( mess, "PyAst_ToString: Expected an AST Object but a %.*s "
                   "was supplied.", (int)( sizeof(mess) - 60 ),
                   self->ob_type->tp_doc );
       } else {
-         sprintf( mess, "PyAstToSTring: Expected an AST Object." );
+         sprintf( mess, "PyAst_ToString: Expected an AST Object." );
       }
       PyErr_SetString( PyExc_TypeError, mess );
       return NULL;
