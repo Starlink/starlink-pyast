@@ -573,7 +573,7 @@ MAKE_GET(class,attrib, \
 static void **PyAst_API;
 
 #define PyAst_FromString \
- (*(PySpam_FromString_RETURN (*)PyAst_FromString_PROTO) PyAst_API[PyAst_FromString_NUM])
+ (*(PyAst_FromString_RETURN (*)PyAst_FromString_PROTO) PyAst_API[PyAst_FromString_NUM])
 #define PyAst_ToString \
  (*(PyAst_ToString_RETURN (*)PyAst_ToString_PROTO) PyAst_API[PyAst_ToString_NUM])
 
