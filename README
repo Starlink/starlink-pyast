@@ -202,6 +202,11 @@ to an object that implements a method called "sink". On each invocation,
 the sink method will be provided with the next line of text as its (only)
 argument - it should write this text to some external data sink.
 
-
+- The FitsChan class is an iterable class (e.g. if "fc" is a reference to
+a FitsChan, you can loop round all cards in the FitsChan by doing "for
+card in fitschan:"). However, this is achieved by incrementing the Card
+attribute of the FitsChan. So the looping will be affected by any other
+operation that changes the Card attribute of the FitsChan during the
+loop.
 
 
