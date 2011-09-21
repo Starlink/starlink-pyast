@@ -704,10 +704,8 @@ class TestAst(unittest.TestCase):
       self.assertTrue( there )
       self.assertEqual( card, "CRVAL2  =                    0                                                  " )
 
-      i = 0
-      for card in fc:
-         self.assertEqual( card, mycards[i] )
-         i += 1
+      for cards in zip(fc,mycards):
+         self.assertEqual( cards[0], cards[1] )
 
       fc.Card = None
       obj = fc.read()
