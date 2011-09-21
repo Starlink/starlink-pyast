@@ -682,8 +682,8 @@ class TestAst(unittest.TestCase):
       fc.Card = None
       self.assertEqual( fc.Card, 1 )
 
-      for i in [0,1,2,3,4,5,6,7]:
-         fc.putfits( mycards[i], False )
+      for card in mycards[0:8]:
+         fc.putfits( card, False )
 
       self.assertEqual( fc.Ncard, 10 )
       self.assertEqual( fc.Card, 9 )
