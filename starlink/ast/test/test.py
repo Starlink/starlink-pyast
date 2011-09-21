@@ -412,7 +412,6 @@ class TestAst(unittest.TestCase):
       wcsmap.set( "PV2_0=1.2" )
       self.assertEqual( wcsmap.ProjP_0, 1.2 )
       self.assertEqual( wcsmap.WcsType, starlink.Ast.TAN )
-      print( wcsmap.get( "WcsType" ))
 
    def test_PcdMap(self):
       pcdmap = starlink.Ast.PcdMap( 0.2, [1,2] )
@@ -629,6 +628,17 @@ class TestAst(unittest.TestCase):
       self.assertEqual( a, b )
 
    def test_FitsChan(self):
+      mycards = ("NAXIS1  =                  200                                                  ",
+                 "NAXIS2  =                  200                                                  ",
+                 "CTYPE1  = 'RA--TAN '                                                            ",
+                 "CTYPE2  = 'DEC-TAN '                                                            ",
+                 "CRPIX1  =                  100                                                  ",
+                 "CRPIX2  =                  100                                                  ",
+                 "CDELT1  =                0.001                                                  ",
+                 "CDELT2  =                0.001                                                  ",
+                 "CRVAL1  =                    0                                                  ",
+                 "CRVAL2  =                    0                                                  ")
+
       fc = starlink.Ast.FitsChan()
       self.assertIsInstance( fc, starlink.Ast.Object)
       self.assertIsInstance( fc, starlink.Ast.Channel )
@@ -661,7 +671,6 @@ class TestAst(unittest.TestCase):
       there,value = fc.getfitsI( "FRED4" )
       self.assertTrue( there )
       self.assertEqual( value, -12 )
-
       fc.emptyfits()
       self.assertEqual( fc.Ncard, 0 )
 
@@ -672,14 +681,10 @@ class TestAst(unittest.TestCase):
       self.assertEqual( fc.Card, 3 )
       fc.Card = None
       self.assertEqual( fc.Card, 1 )
-      fc.putfits( "NAXIS1  = 200", False )
-      fc.putfits( "NAXIS2  = 200", False )
-      fc.putfits( "CTYPE1  = 'RA--TAN'", False )
-      fc.putfits( "CTYPE2  = 'DEC-TAN'", False )
-      fc.putfits( "CRPIX1  = 100", False )
-      fc.putfits( "CRPIX2  = 100", False )
-      fc.putfits( "CDELT1  = 0.001", False )
-      fc.putfits( "CDELT2  = 0.001", False )
+
+      for i in [0,1,2,3,4,5,6,7]:
+         fc.putfits( mycards[i], False )
+
       self.assertEqual( fc.Ncard, 10 )
       self.assertEqual( fc.Card, 9 )
       self.assertEqual( fc.Encoding, "FITS-WCS" )
@@ -698,6 +703,12 @@ class TestAst(unittest.TestCase):
       there, card = fc.findfits( "%f", False )
       self.assertTrue( there )
       self.assertEqual( card, "CRVAL2  =                    0                                                  " )
+
+      i = 0
+      for card in fc:
+         self.assertEqual( card, mycards[i] )
+         i += 1
+
       fc.Card = None
       obj = fc.read()
       self.assertIsInstance( obj, starlink.Ast.FrameSet)

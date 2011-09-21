@@ -5480,6 +5480,8 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
+static PyObject *FitsChan_getiter( PyObject *self );
+static PyObject *FitsChan_next( PyObject *self );
 static PyObject *FitsChan_delfits( FitsChan *self );
 static PyObject *FitsChan_readfits( FitsChan *self );
 static PyObject *FitsChan_writefits( FitsChan *self );
@@ -5596,8 +5598,8 @@ static PyTypeObject FitsChanType = {
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
    0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
+   FitsChan_getiter,	      /* tp_iter */
+   FitsChan_next,	      /* tp_iternext */
    FitsChan_methods,          /* tp_methods */
    0,                         /* tp_members */
    FitsChan_getseters,        /* tp_getset */
@@ -5643,6 +5645,39 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    TIDY;
    return result;
 }
+
+
+/* A function that returns a Python iterator for a FitsChan. In this
+   case, the iterator is just the FitsChan itself, but the Card attribute
+   is cleared by this function so that the first card is returned first.
+   Note, this means that each FitsChan can only have one iterator associated
+   with it at any one time. That is, calling this function will reset any
+   prevoous iterators created by this function. Not ideal, but probably
+   good enough for now. */
+static PyObject *FitsChan_getiter( PyObject *self ) {
+   if( PyErr_Occurred() ) return NULL;
+   PyObject *result = NULL;
+   astClear( THIS, "Card" );
+   if( astOK ) {
+      Py_INCREF( self );
+      result = self;
+   }
+   TIDY;
+   return result;
+}
+
+/* Return the next value from the iteration of a FitsChan. */
+static PyObject *FitsChan_next( PyObject *self ) {
+   char card[ 81 ];
+   if( PyErr_Occurred() ) return NULL;
+   PyObject *result = NULL;
+   if( astFindFits( THIS, "%f", card, 1 ) ) {
+      result = Py_BuildValue( "s", card );
+   }
+   TIDY;
+   return result;
+}
+
 
 /* Define the AST methods of the class. */
 static PyObject *FitsChan_delfits( FitsChan *self ) {
