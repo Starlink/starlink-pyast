@@ -34,4 +34,5 @@ setup (name = 'Ast',
        author = 'David Berry',
        author_email = 'd.berry@jach.hawaii.edu',
        packages =['starlink'],
+       headers = [os.path.join('starlink','ast','pyast.h')],
        ext_modules=[Ast])
