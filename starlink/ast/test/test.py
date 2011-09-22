@@ -787,6 +787,46 @@ class TestAst(unittest.TestCase):
       b = ss.get()
       self.assertEqual( a, b )
 
+   def test_FitsChan_AsMapping(self):
+      fc = starlink.Ast.FitsChan()
+      fc["NAXIS1"] = 200
+      fc["NAXIS2"] = 200
+      fc["CTYPE1"] = "RA--TAN "
+      fc["CTYPE2"] = "DEC-TAN "
+      fc["CRPIX1"] = 100
+      fc["CRPIX2"] = 100
+      fc["CDELT1"] = 0.001
+      fc["CDELT2"] = 0.001
+      fc["CRVAL1"] = 0
+      fc["CRVAL2"] = 0
+
+      self.assertEqual( len(fc), 10 )
+      fc.Card = None
+      obj = fc.read( )
+      self.assertEqual( len(fc), 2 )
+
+      with self.assertRaises(KeyError):
+         a = fc["CRVAL1"]
+
+      self.assertEqual( fc["NAXIS1"], 200 )
+      fc["NAXIS2"] = None
+      self.assertEqual( len(fc), 1 )
+      fc["NAXIS2"] = "This is a string"
+      self.assertEqual( len(fc), 2 )
+      self.assertEqual( fc["NAXIS2"], "This is a string")
+      fc.setfitsI( "NAXIS2", -12, "Hello there", False )
+      self.assertEqual( fc.Ncard, 3 )
+      self.assertEqual( fc.Nkey, 2 )
+      self.assertEqual( len(fc), 2 )
+      self.assertEqual( fc["NAXIS2"][0], -12 )
+      self.assertEqual( fc["NAXIS2"][1], "This is a string" )
+      fc["NAXIS2"] = 1000
+      self.assertEqual( fc["NAXIS2"], 1000 )
+      self.assertEqual( fc.Ncard, 2 )
+      self.assertEqual( fc.Nkey, 2 )
+      self.assertEqual( len(fc), 2 )
+
+
    def test_StcsChan(self):
       ss = TextStream()
       ch = starlink.Ast.StcsChan( ss, ss, "ReportLevel=3" )

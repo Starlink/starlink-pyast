@@ -209,4 +209,14 @@ attribute of the FitsChan. So the looping will be affected by any other
 operation that changes the Card attribute of the FitsChan during the
 loop.
 
+- The FitsChan class can be used as a python mapping. So for instance, if
+"fc" is a reference to a FitsChan, you can assign a value to the NAXIS1
+keyword by doing "fc["NAXIS1"]=1200". If a card for the keyword already
+exists in the FitsChan, the value of the card will be changed. If the
+FitsChan does not contain a card for the named keyword, a new card will
+be appended to the end of the FitsChan. You can retrieve the value of the
+a keyword in a similar way: for instance, "crval1 = fc["CRVAL1"]". Note,
+if a keyword occurs more than once in a FitsChan, the the retrieved value
+will be a tuple containing all the individual keyword values.
+
 

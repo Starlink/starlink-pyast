@@ -5479,21 +5479,24 @@ typedef struct {
 } FitsChan;
 
 /* Prototypes for class functions */
-static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
-static PyObject *FitsChan_getiter( PyObject *self );
-static PyObject *FitsChan_next( PyObject *self );
 static PyObject *FitsChan_delfits( FitsChan *self );
-static PyObject *FitsChan_readfits( FitsChan *self );
-static PyObject *FitsChan_writefits( FitsChan *self );
 static PyObject *FitsChan_emptyfits( FitsChan *self );
 static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsCF( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsCI( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getfitsCN( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsF( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsI( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsL( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsS( FitsChan *self, PyObject *args );
-static PyObject *FitsChan_getfitsCN( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword );
+static PyObject *FitsChan_getiter( PyObject *self );
+static PyObject *FitsChan_next( PyObject *self );
+static PyObject *FitsChan_readfits( FitsChan *self );
+static PyObject *FitsChan_writefits( FitsChan *self );
+static Py_ssize_t FitsChan_length( PyObject *self );
+static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
+static int FitsChan_setitem( PyObject *self, PyObject *keyword, PyObject *value );
 /* TBD static PyObject *FitsChan_gettables( FitsChan *self ); */
 static PyObject *FitsChan_purgewcs( FitsChan *self );
 static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args );
@@ -5551,6 +5554,7 @@ MAKE_GETSETC(FitsChan,Encoding)
 MAKE_GETSETI(FitsChan,FitsDigits)
 MAKE_GETSETL(FitsChan,Iwc)
 MAKE_GETROI(FitsChan,Ncard)
+MAKE_GETROI(FitsChan,Nkey)
 /* TBD MAKE_GETSETL(FitsChan,TabOK)*/
 MAKE_GETSETI(FitsChan,PolyTan)
 MAKE_GETSETC(FitsChan,Warnings)
@@ -5566,9 +5570,17 @@ static PyGetSetDef FitsChan_getseters[] = {
    DEFATT(FitsDigits,"Digits of precision for floating-point FITS values"),
    DEFATT(Iwc,"Add a Frame describing Intermediate World Coords?"),
    DEFATT(Ncard,"Number of FITS header cards in a FitsChan"),
+   DEFATT(Nkey,"Number of unique FITS keywords in a FitsChan"),
    DEFATT(PolyTan,"Use PVi_m keywords to define distorted TAN projection?"),
    DEFATT(Warnings,"Produces warnings about selected conditions"),
    {NULL}  /* Sentinel */
+};
+
+/* Define the methods needed to make a FitsChan behave as a mapping. */
+static PyMappingMethods FitsChanAsMapping = {
+   FitsChan_length,
+   FitsChan_getitem,
+   FitsChan_setitem,
 };
 
 /* Define the class Python type structure */
@@ -5585,7 +5597,7 @@ static PyTypeObject FitsChanType = {
    0,                         /* tp_repr */
    0,                         /* tp_as_number */
    0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
+   &FitsChanAsMapping,        /* tp_as_mapping */
    0,                         /* tp_hash  */
    0,                         /* tp_call */
    0,                         /* tp_str */
@@ -5668,15 +5680,211 @@ static PyObject *FitsChan_getiter( PyObject *self ) {
 
 /* Return the next value from the iteration of a FitsChan. */
 static PyObject *FitsChan_next( PyObject *self ) {
-   char card[ 81 ];
-   if( PyErr_Occurred() ) return NULL;
    PyObject *result = NULL;
+   char card[ 81 ];
+   if( PyErr_Occurred() ) return result;
    if( astFindFits( THIS, "%f", card, 1 ) ) {
       result = Py_BuildValue( "s", card );
+   } else {
+      PyErr_SetString( PyExc_StopIteration, "No more header cards in FitsChan" );
    }
    TIDY;
    return result;
 }
+
+
+/* Methods needed to make a FitsChan behave as a python mapping */
+
+/* Return the number of unique keywords in the FitsChan. */
+static Py_ssize_t FitsChan_length( PyObject *self ) {
+   if( PyErr_Occurred() ) return -1;
+   Py_ssize_t result = (Py_ssize_t) astGetI( THIS, "Nkey" );
+   if( !astOK ) result = -1;
+   TIDY;
+   return result;
+}
+
+/* Return the value(s) of a given keyword. */
+static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword ){
+   PyObject *result = NULL;
+   PyObject **vals;
+   char *keyw;
+   int icard;
+   int ival;
+   int nval;
+   int type;
+
+   if( PyErr_Occurred() ) return result;
+
+/* Get the kwyord to be searched for. */
+   keyw = GetString( NULL, keyword );
+
+/* Save the current card index, and then rewind the FitsChan. */
+   icard = astGetI( THIS, "Card" );
+   astClear( THIS, "Card" );
+
+/* Search forward to the next occurrence of the requested keyword. It
+   becomes the current card. */
+   vals = NULL;
+   nval = 0;
+   while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
+
+/* If a match was found, get its card index. */
+      icard = astGetI( THIS, "Card" );
+
+/* Get the data type of the card. */
+      type = astGetI( THIS, "CardType" );
+
+/* Use the appropriate astGetFits<X> function to get the value and
+   build an appropriate PyObject. Note, astGetFITS<X> starts searching
+   with the card *following* the current card, so decrement the current card
+   so that astGetFits<X> will find the correct card. */
+      astSetI( THIS, "Card", icard - 1 );
+
+      if( type == AST__INT ) {
+         int val;
+         astGetFitsI( THIS, keyw, &val );
+         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+         if( astOK ) vals[ nval++ ] = Py_BuildValue( "i", val );
+
+      } else if( type == AST__FLOAT ) {
+         double val;
+         astGetFitsF( THIS, keyw, &val );
+         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+         if( astOK ) vals[ nval++ ] = Py_BuildValue( "d", val );
+
+      } else if( type == AST__LOGICAL ) {
+         int val;
+         astGetFitsL( THIS, keyw, &val );
+         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+         if( astOK ) vals[ nval++ ] = Py_BuildValue( "O", (val ? Py_True : Py_False) );
+
+      } else {
+         char *val;
+         astGetFitsS( THIS, keyw, &val );
+         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+         if( astOK ) vals[ nval++ ] = Py_BuildValue( "s", val );
+      }
+
+/* Increment the current card so that astFindFits will not just find the
+   same card again. */
+      astSetI( THIS, "Card", icard + 1 );
+   }
+
+/* If there is more than one value to return, construct a tuple. */
+   if( astOK ) {
+      if( nval > 1 ) {
+         result = PyTuple_New( nval );
+         for( ival = 0; ival < nval; ival++ ) {
+            PyTuple_SetItem( result, ival, vals[ ival ] );
+         }
+
+      } else if( nval == 1 ) {
+         result = vals[ 0 ];
+
+      } else {
+         char buff[ 200 ];
+         sprintf( buff, "FITS keyword %s not found in FitsChan.", keyw );
+         PyErr_SetString( PyExc_KeyError, buff );
+      }
+
+   } else if( nval > 0 ) {
+      for( ival = 0; ival < nval; ival++ ) {
+         Py_XDECREF( vals[ ival ] );
+      }
+   }
+
+   vals = astFree( vals );
+   astSetI( THIS, "Card", icard );
+   keyw = astFree( keyw );
+   TIDY;
+   return result;
+}
+
+/* Set the value of a given keyword, replacing any old value(s). */
+static int FitsChan_setitem( PyObject *self, PyObject *keyword, PyObject *value ){
+   char *keyw;
+   int icard;
+   int result = -1;
+   if( PyErr_Occurred() ) return result;
+
+/* If the keyword name is blank, just insert the supplied value (as a
+   string) before the current card, with no keyword (i.e. as a comment card). */
+   keyw = GetString( NULL, keyword );
+   if( !keyw || astChrLen( keyw ) == 0 ) {
+      if( value ) {
+         PyObject *str = PyObject_Str( value );
+         char *val = GetString( NULL, str );
+         astSetFitsCM( THIS, val, 0 );
+         val = astFree( val );
+         Py_DECREF(str);
+      }
+
+/* Otherwise replace the named keyword with the supplied value */
+   } else {
+
+/* Record the initial current card, and then rewind the FitsChan. */
+      icard = astGetI( THIS, "Card" );
+      astClear( THIS, "Card" );
+
+/* Find the first occurrence (if any) of the specified keyword in the
+   FitsChan, and make it the current card. If not found, the FitsChan is
+   left at "end-of-file". */
+      astFindFits( THIS, keyw, NULL, 0 );
+
+/* Store the supplied keyword value, overwriting the current card
+   found above. */
+      if( !value || value == Py_None ) {
+         /* Do nothing if no value supplied - the current card will be
+            deleted later */
+
+      } else if( PyLong_Check( value ) ) {
+         long int lval = PyLong_AsLong( value );
+         int val = (int) lval;
+         if( (long int) val != lval ) {
+            char buff[ 200 ];
+            sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
+                     "integer overflow.", lval, keyw );
+            PyErr_SetString( PyExc_OverflowError, buff );
+            result = 0;
+         }  else {
+            astSetFitsI( THIS, keyw, val, NULL, 1 );
+         }
+
+      } else if( PyFloat_Check( value ) ) {
+         double val = PyFloat_AsDouble( value );
+         astSetFitsF( THIS, keyw, val, NULL, 1 );
+
+      } else if( PyBool_Check( value ) ) {
+         int val = ( value == Py_True );
+         astSetFitsL( THIS, keyw, val, NULL, 1 );
+
+      } else {
+         PyObject *str = PyObject_Str( value );
+         char *val = GetString( NULL, str );
+         astSetFitsS( THIS, keyw, val, NULL, 1 );
+         val = astFree( val );
+         Py_DECREF(str);
+      }
+
+/* Search for any later occurrences of the same keyword, and delete them.
+   Modify the original current card index if the original curent card is
+   later in the FitsChan. */
+      while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
+         if( astGetI( THIS, "Card" ) < icard ) icard--;
+         astDelFits( THIS );
+      }
+
+/* Re-instate the original current card. */
+      astSetI( THIS, "Card", icard );
+   }
+
+   keyw = astFree( keyw );
+   if( astOK ) result = 0;
+   TIDY;
+   return result;
+}
+
 
 
 /* Define the AST methods of the class. */
