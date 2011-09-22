@@ -5704,11 +5704,12 @@ static Py_ssize_t FitsChan_length( PyObject *self ) {
    return result;
 }
 
-/* Return the value(s) of a given keyword. */
-static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword ){
+/* Return the value(s) of a given keyword, or the whole card with a given
+   index. */
+static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
    PyObject *result = NULL;
    PyObject **vals;
-   char *keyw;
+   char *keyw = NULL;
    int icard;
    int ival;
    int nval;
@@ -5716,170 +5717,219 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword ){
 
    if( PyErr_Occurred() ) return result;
 
-/* Get the kwyord to be searched for. */
-   keyw = GetString( NULL, keyword );
+/* Save the current card index. */
+   icard = astGetI( THIS, "Card" );
+
+/* If the index is actually an integer, treat it as the Card index. Set
+   the Card attribute in the FitsChan, and then get the current card.
+   Change from python zero-based index to ATS one-based index. */
+   if( PyLong_Check( index ) ) {
+      char card[ 81 ];
+      long int lval = PyLong_AsLong( index );
+      int val = (int) lval;
+      if( (long int) val != lval ) {
+         val = INT_MAX;
+      } else {
+         val++;
+      }
+      astSetI( THIS, "Card", val );
+      if( astFindFits( THIS, "%f", card, 0 ) ) {
+         result = Py_BuildValue( "s", card );
+      }
+
+/* Otherwise, get the keyword to be searched for. */
+   } else {
+      keyw = GetString( NULL, index );
 
 /* Save the current card index, and then rewind the FitsChan. */
-   icard = astGetI( THIS, "Card" );
-   astClear( THIS, "Card" );
+      icard = astGetI( THIS, "Card" );
+      astClear( THIS, "Card" );
 
 /* Search forward to the next occurrence of the requested keyword. It
    becomes the current card. */
-   vals = NULL;
-   nval = 0;
-   while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
+      vals = NULL;
+      nval = 0;
+      while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
 
 /* If a match was found, get its card index. */
-      icard = astGetI( THIS, "Card" );
+         icard = astGetI( THIS, "Card" );
 
 /* Get the data type of the card. */
-      type = astGetI( THIS, "CardType" );
+         type = astGetI( THIS, "CardType" );
 
 /* Use the appropriate astGetFits<X> function to get the value and
    build an appropriate PyObject. Note, astGetFITS<X> starts searching
    with the card *following* the current card, so decrement the current card
    so that astGetFits<X> will find the correct card. */
-      astSetI( THIS, "Card", icard - 1 );
+         astSetI( THIS, "Card", icard - 1 );
 
-      if( type == AST__INT ) {
-         int val;
-         astGetFitsI( THIS, keyw, &val );
-         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
-         if( astOK ) vals[ nval++ ] = Py_BuildValue( "i", val );
+         if( type == AST__INT ) {
+            int val;
+            astGetFitsI( THIS, keyw, &val );
+            vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+            if( astOK ) vals[ nval++ ] = Py_BuildValue( "i", val );
 
-      } else if( type == AST__FLOAT ) {
-         double val;
-         astGetFitsF( THIS, keyw, &val );
-         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
-         if( astOK ) vals[ nval++ ] = Py_BuildValue( "d", val );
+         } else if( type == AST__FLOAT ) {
+            double val;
+            astGetFitsF( THIS, keyw, &val );
+            vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+            if( astOK ) vals[ nval++ ] = Py_BuildValue( "d", val );
 
-      } else if( type == AST__LOGICAL ) {
-         int val;
-         astGetFitsL( THIS, keyw, &val );
-         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
-         if( astOK ) vals[ nval++ ] = Py_BuildValue( "O", (val ? Py_True : Py_False) );
+         } else if( type == AST__LOGICAL ) {
+            int val;
+            astGetFitsL( THIS, keyw, &val );
+            vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+            if( astOK ) vals[ nval++ ] = Py_BuildValue( "O", (val ? Py_True : Py_False) );
 
-      } else {
-         char *val;
-         astGetFitsS( THIS, keyw, &val );
-         vals = astGrow( vals, nval + 1, sizeof( *vals ) );
-         if( astOK ) vals[ nval++ ] = Py_BuildValue( "s", val );
-      }
+         } else {
+            char *val;
+            astGetFitsS( THIS, keyw, &val );
+            vals = astGrow( vals, nval + 1, sizeof( *vals ) );
+            if( astOK ) vals[ nval++ ] = Py_BuildValue( "s", val );
+         }
 
 /* Increment the current card so that astFindFits will not just find the
    same card again. */
-      astSetI( THIS, "Card", icard + 1 );
-   }
+         astSetI( THIS, "Card", icard + 1 );
+      }
 
 /* If there is more than one value to return, construct a tuple. */
-   if( astOK ) {
-      if( nval > 1 ) {
-         result = PyTuple_New( nval );
-         for( ival = 0; ival < nval; ival++ ) {
-            PyTuple_SetItem( result, ival, vals[ ival ] );
+      if( astOK ) {
+         if( nval > 1 ) {
+            result = PyTuple_New( nval );
+            for( ival = 0; ival < nval; ival++ ) {
+               PyTuple_SetItem( result, ival, vals[ ival ] );
+            }
+
+         } else if( nval == 1 ) {
+            result = vals[ 0 ];
+
+         } else {
+            char buff[ 200 ];
+            sprintf( buff, "FITS keyword %s not found in FitsChan.", keyw );
+            PyErr_SetString( PyExc_KeyError, buff );
          }
 
-      } else if( nval == 1 ) {
-         result = vals[ 0 ];
-
-      } else {
-         char buff[ 200 ];
-         sprintf( buff, "FITS keyword %s not found in FitsChan.", keyw );
-         PyErr_SetString( PyExc_KeyError, buff );
+      } else if( nval > 0 ) {
+         for( ival = 0; ival < nval; ival++ ) {
+            Py_XDECREF( vals[ ival ] );
+         }
       }
 
-   } else if( nval > 0 ) {
-      for( ival = 0; ival < nval; ival++ ) {
-         Py_XDECREF( vals[ ival ] );
-      }
+      vals = astFree( vals );
+      keyw = astFree( keyw );
    }
 
-   vals = astFree( vals );
    astSetI( THIS, "Card", icard );
-   keyw = astFree( keyw );
    TIDY;
    return result;
 }
 
 /* Set the value of a given keyword, replacing any old value(s). */
-static int FitsChan_setitem( PyObject *self, PyObject *keyword, PyObject *value ){
+static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
    char *keyw;
    int icard;
    int result = -1;
    if( PyErr_Occurred() ) return result;
 
-/* If the keyword name is blank, just insert the supplied value (as a
-   string) before the current card, with no keyword (i.e. as a comment card). */
-   keyw = GetString( NULL, keyword );
-   if( !keyw || astChrLen( keyw ) == 0 ) {
-      if( value ) {
+/* If the supplied index is an integer, overwrite the card with the
+   corresponding index. */
+   if( PyLong_Check( index ) ) {
+      long int lval = PyLong_AsLong( index );
+      int val = (int) lval;
+      if( (long int) val != lval ) {
+         val = INT_MAX;
+      } else {
+         val++;
+      }
+      astSetI( THIS, "Card", val );
+
+      if( value && value != Py_None ) {
          PyObject *str = PyObject_Str( value );
-         char *val = GetString( NULL, str );
-         astSetFitsCM( THIS, val, 0 );
-         val = astFree( val );
+         char *card = GetString( NULL, str );
+         astPutFits( THIS, card, 1 );
+         card = astFree( card );
          Py_DECREF(str);
+      } else {
+         astDelFits( THIS );
       }
 
-/* Otherwise replace the named keyword with the supplied value */
+/* Otherwise...get the keyword to be searched for. */
    } else {
+      keyw = GetString( NULL, index );
+
+/* If the keyword name is blank, just insert the supplied value (as a
+   string) before the current card, with no keyword (i.e. as a comment card). */
+      if( !keyw || astChrLen( keyw ) == 0 ) {
+         if( value ) {
+            PyObject *str = PyObject_Str( value );
+            char *val = GetString( NULL, str );
+            astSetFitsCM( THIS, val, 0 );
+            val = astFree( val );
+            Py_DECREF(str);
+         }
+
+/* Otherwise replace the named keyword with the supplied value */
+      } else {
 
 /* Record the initial current card, and then rewind the FitsChan. */
-      icard = astGetI( THIS, "Card" );
-      astClear( THIS, "Card" );
+         icard = astGetI( THIS, "Card" );
+         astClear( THIS, "Card" );
 
 /* Find the first occurrence (if any) of the specified keyword in the
    FitsChan, and make it the current card. If not found, the FitsChan is
    left at "end-of-file". */
-      astFindFits( THIS, keyw, NULL, 0 );
+         astFindFits( THIS, keyw, NULL, 0 );
 
 /* Store the supplied keyword value, overwriting the current card
    found above. */
-      if( !value || value == Py_None ) {
-         /* Do nothing if no value supplied - the current card will be
-            deleted later */
+         if( !value || value == Py_None ) {
+            /* Do nothing if no value supplied - the current card will be
+               deleted later */
 
-      } else if( PyLong_Check( value ) ) {
-         long int lval = PyLong_AsLong( value );
-         int val = (int) lval;
-         if( (long int) val != lval ) {
-            char buff[ 200 ];
-            sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
-                     "integer overflow.", lval, keyw );
-            PyErr_SetString( PyExc_OverflowError, buff );
-            result = 0;
-         }  else {
-            astSetFitsI( THIS, keyw, val, NULL, 1 );
+         } else if( PyLong_Check( value ) ) {
+            long int lval = PyLong_AsLong( value );
+            int val = (int) lval;
+            if( (long int) val != lval ) {
+               char buff[ 200 ];
+               sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
+                        "integer overflow.", lval, keyw );
+               PyErr_SetString( PyExc_OverflowError, buff );
+               result = 0;
+            }  else {
+               astSetFitsI( THIS, keyw, val, NULL, 1 );
+            }
+
+         } else if( PyFloat_Check( value ) ) {
+            double val = PyFloat_AsDouble( value );
+            astSetFitsF( THIS, keyw, val, NULL, 1 );
+
+         } else if( PyBool_Check( value ) ) {
+            int val = ( value == Py_True );
+            astSetFitsL( THIS, keyw, val, NULL, 1 );
+
+         } else {
+            PyObject *str = PyObject_Str( value );
+            char *val = GetString( NULL, str );
+            astSetFitsS( THIS, keyw, val, NULL, 1 );
+            val = astFree( val );
+            Py_DECREF(str);
          }
-
-      } else if( PyFloat_Check( value ) ) {
-         double val = PyFloat_AsDouble( value );
-         astSetFitsF( THIS, keyw, val, NULL, 1 );
-
-      } else if( PyBool_Check( value ) ) {
-         int val = ( value == Py_True );
-         astSetFitsL( THIS, keyw, val, NULL, 1 );
-
-      } else {
-         PyObject *str = PyObject_Str( value );
-         char *val = GetString( NULL, str );
-         astSetFitsS( THIS, keyw, val, NULL, 1 );
-         val = astFree( val );
-         Py_DECREF(str);
-      }
 
 /* Search for any later occurrences of the same keyword, and delete them.
    Modify the original current card index if the original curent card is
    later in the FitsChan. */
-      while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
-         if( astGetI( THIS, "Card" ) < icard ) icard--;
-         astDelFits( THIS );
-      }
+         while( astFindFits( THIS, keyw, NULL, 0 ) && astOK ) {
+            if( astGetI( THIS, "Card" ) < icard ) icard--;
+            astDelFits( THIS );
+         }
 
 /* Re-instate the original current card. */
-      astSetI( THIS, "Card", icard );
-   }
+         astSetI( THIS, "Card", icard );
+      }
 
-   keyw = astFree( keyw );
+      keyw = astFree( keyw );
+   }
    if( astOK ) result = 0;
    TIDY;
    return result;

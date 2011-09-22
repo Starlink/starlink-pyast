@@ -219,4 +219,10 @@ a keyword in a similar way: for instance, "crval1 = fc["CRVAL1"]". Note,
 if a keyword occurs more than once in a FitsChan, the the retrieved value
 will be a tuple containing all the individual keyword values.
 
+If a FitsChan is index using integers, the value returned is the whole
+80-column header card at the given zero-based index. When assigning to an
+element of a FitsChan indexed by an integer, the assigned value should be
+a whole 80-column header card, which will overwrite the existing card at
+the given index. If the index is larger than the number of cards in the
+FitsChan, the new card will be appended to the end of the FitsChan.
 

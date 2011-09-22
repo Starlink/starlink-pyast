@@ -801,6 +801,7 @@ class TestAst(unittest.TestCase):
       fc["CRVAL2"] = 0
 
       self.assertEqual( len(fc), 10 )
+      self.assertEqual( fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
       fc.Card = None
       obj = fc.read( )
       self.assertEqual( len(fc), 2 )
@@ -825,6 +826,20 @@ class TestAst(unittest.TestCase):
       self.assertEqual( fc.Ncard, 2 )
       self.assertEqual( fc.Nkey, 2 )
       self.assertEqual( len(fc), 2 )
+
+      fc[100] = "CTYPE1  = 'RA--TAN '                                                            "
+      self.assertEqual( fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
+      self.assertEqual( fc.Ncard, 3 )
+      self.assertEqual( fc.Nkey, 3 )
+      self.assertEqual( len(fc), 3 )
+
+      fc[0] = "NEWKEY  = 123.456"
+      self.assertEqual( fc[0], "NEWKEY  =              123.456                                                  ")
+      self.assertEqual( fc.Ncard, 3 )
+      self.assertEqual( fc.Nkey, 3 )
+      self.assertEqual( len(fc), 3 )
+
+
 
 
    def test_StcsChan(self):
