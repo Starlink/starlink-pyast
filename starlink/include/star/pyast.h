@@ -581,9 +581,13 @@ static void **PyAst_API;
  * Returns -1 on error, 0 on success.
  * PyCapsule_Import will set an exception if there's an error.
  */
-static int import_ast(void) {
-    PyAst_API = (void **)PyCapsule_Import( "starlink.Ast._C_API", 0 );
-    return PyAst_API ? 0 : -1;
+static int import_pyast(void) {
+   PyAst_API = (void **) PyCapsule_Import( "starlink.Ast._C_API", 0 );
+   if( ! PyAst_API ) {
+       PyErr_Print();
+       PyErr_SetString(PyExc_ImportError, "starlink.Ast failed to import");
+   }
+   return PyAst_API ? 0 : -1;
 }
 
 #endif

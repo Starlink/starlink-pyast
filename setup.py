@@ -16,6 +16,7 @@ else:
     exit(1)
 
 include_dirs.append(numpy.get_include())
+include_dirs.append(os.path.join('.','starlink','include'))
 
 # create the support files needed for the build
 make_exceptions.make_exceptions( os.path.join('starlink','ast') )
@@ -34,5 +35,5 @@ setup (name = 'Ast',
        author = 'David Berry',
        author_email = 'd.berry@jach.hawaii.edu',
        packages =['starlink'],
-       headers = [os.path.join('starlink','ast','pyast.h')],
+       package_data = { 'starlink': [os.path.join('include','star','pyast.h')] },
        ext_modules=[Ast])

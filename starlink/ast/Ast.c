@@ -20,7 +20,7 @@
 #define NAME
 
 /* Prototypes for local functions (need to come here since they may be
-   referred to inside Ast.h). */
+   referred to inside pyast.h). */
 static PyArrayObject *GetArray( PyObject *object, int type, int append, int ndim, int *dims, const char *arg, const char *fun );
 static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg, const char *fun );
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg, const char *fun );
@@ -33,7 +33,7 @@ static void Sinka( const char *text );
 
 /* Macros used in this file */
 #define PYAST_MODULE
-#include "pyast.h"
+#include "star/pyast.h"
 
 /* Include code that intercepts error reports issued by AST and raises
    appropriate Python exceptions instead. */
@@ -6273,6 +6273,7 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 static PyObject *PyAst_escapes( PyObject *self, PyObject *args );
 static PyObject *PyAst_tune( PyObject *self, PyObject *args );
 static PyObject *PyAst_version( PyObject *self );
+static PyObject *PyAst_get_include( PyObject *self );
 
 /* Static method implementations */
 
@@ -6317,11 +6318,52 @@ static PyObject *PyAst_version( PyObject *self ) {
    return result;
 }
 
+
+/* Return the path to the directory holding "star/pyast.h".  */
+static PyObject *PyAst_get_include( PyObject *self ) {
+   PyObject *result = NULL;
+   PyObject *str;
+   char *buff;
+   char *c;
+   int nc;
+
+/* Check no error has occurred already. */
+   if( PyErr_Occurred() ) return result;
+
+/* Get a string holding the full path to the pyast sharable library. */
+   str = PyObject_GetAttrString( self, "__file__" );
+   buff = GetString( NULL, str );
+   Py_XDECREF( str );
+
+/* Find the last directory separator ("/" or "\"). Removing the file
+   basename that follows, and replace it with "include". */
+   if( buff ) {
+      c = buff + strlen ( buff ) - 1;
+      while( *c != '/' && *c != '\\' && c > buff ) c--;
+
+      if( *c == '/' || *c == '\\' ) {
+         nc = c - buff + 1;
+         astAppendString( buff, &nc, "include" );
+         if( astOK ) result = Py_BuildValue( "s", buff );
+
+      } else {
+         PyErr_SetString( INTER_err, "Cannot determine the path to the "
+                          "pyast header file" );
+      }
+
+      buff = astFree( buff );
+   }
+   return result;
+}
+
+
+
 /* Describe the static methods of the class */
 static PyMethodDef PyAst_methods[] = {
    {"escapes", (PyCFunction)PyAst_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
    {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an AST global tuning parameter"},
    {"version", (PyCFunction)PyAst_version, METH_NOARGS,  "Return the version of the AST library being used"},
+   {"get_include", (PyCFunction)PyAst_get_include, METH_NOARGS,  "Return the path to the directory containing pyast header files"},
    {NULL}  /* Sentinel */
 };
 

@@ -7,6 +7,7 @@ import copy
 import filecmp
 import string
 import sys
+import os.path
 
 #  Extends the AST Channel class, adding source and sink functions that
 #  store text in an internal list.
@@ -55,6 +56,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( starlink.Ast.tune("ObjectCaching", starlink.Ast.TUNULL ), 1 )
       self.assertEqual( starlink.Ast.tune("ObjectCaching", 0 ), 1 )
       self.assertGreaterEqual( starlink.Ast.version(), 5007002 )
+      self.assertTrue( os.path.isfile( os.path.join( starlink.Ast.get_include(),'star','pyast.h' ) ) )
 
    def test_Object(self):
       with self.assertRaises(TypeError):
