@@ -6772,11 +6772,13 @@ static PyObject *PyAst_FromString( const char *string ) {
 
 */
 
-/* Check no python error has occurred, and that a string was supplied. */
-   if( PyErr_Occurred() || !string ) return NULL;
+  PyObject * result = NULL;
 
 /* Crate an AST Object from the string. */
    AstObject *this = astFromString( string );
+
+/* Check no python error has occurred, and that a string was supplied. */
+   if( PyErr_Occurred() || !string ) return NULL;
 
 /* Report an error if unsuccesfull. */
    if( !this && !PyErr_Occurred() ) {
@@ -6788,7 +6790,7 @@ static PyObject *PyAst_FromString( const char *string ) {
    }
 
 /* Create a new Python Object to encapsulate the AST Object and return it. */
-   PyObject *result = NewObject( this );
+   result = NewObject( this );
    TIDY;
    return result;
 }
@@ -6958,10 +6960,12 @@ static PyTypeObject *GetType( AstObject *this ) {
 *     object class.
 
 */
+
+   const char * class = NULL;
    PyTypeObject *result = NULL;
    if( !astOK ) return NULL;
 
-   const char *class = astGetC( this, "Class" );
+   class = astGetC( this, "Class" );
    if( class ) {
       if( !strcmp( class, "ZoomMap" ) ) {
          result = (PyTypeObject *) &ZoomMapType;
