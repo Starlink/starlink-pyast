@@ -112,6 +112,7 @@ static int RegisterErrors( PyObject *m ){
 void astPutErr_( int status_value, const char *message ) {
 
 /* Local Variables: */
+   PyObject *ex;
    PyObject *ptype;
    PyObject *pvalue;
    PyObject *ptraceback;
@@ -125,7 +126,7 @@ void astPutErr_( int status_value, const char *message ) {
    astClearStatus;
 
 /* If an AST exception has already occurred, append the new message to it. */
-   PyObject *ex = PyErr_Occurred();
+   ex = PyErr_Occurred();
    if( ex ){
       if( PyErr_GivenExceptionMatches( ex, AstError_err ) ) {
 
