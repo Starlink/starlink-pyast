@@ -6397,14 +6397,13 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 
       if( *c == '/' || *c == '\\' ) {
          nc = c - buff + 1;
-         astAppendString( buff, &nc, "include" );
+         buff = astAppendString( buff, &nc, "include" );
          if( astOK ) result = Py_BuildValue( "s", buff );
 
       } else {
          PyErr_SetString( INTER_err, "Cannot determine the path to the "
                           "pyast header file" );
       }
-
       buff = astFree( buff );
    }
    return result;
