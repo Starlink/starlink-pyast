@@ -182,7 +182,7 @@ static PyGetSetDef Object_getseters[] = {
    DEFATT(ObjSize,"The in-memory size of the AST Object in bytes"),
    DEFATT(RefCount,"Count of active Object pointers"),
    DEFATT(UseDefs,"Use default values for unspecified attributes?"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -475,7 +475,7 @@ static PyGetSetDef Mapping_getseters[] = {
    DEFATT(Report,"Report transformed coordinates?"),
    DEFATT(TranForward,"Forward transformation defined?"),
    DEFATT(TranInverse,"Inverse transformation defined?"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -1544,7 +1544,7 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds );
 MAKE_GETSETD(ZoomMap,Zoom)
 static PyGetSetDef ZoomMap_getseters[] = {
    DEFATT(Zoom," ZoomMap scale factor"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -1628,7 +1628,7 @@ MAKE_GETSETD(SphMap,PolarLong)
 static PyGetSetDef SphMap_getseters[] = {
    DEFATT(UnitRadius,"SphMap input vectors lie on a unit sphere?"),
    DEFATT(PolarLong,"The longitude value to assign to either pole"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -1723,7 +1723,7 @@ static PyGetSetDef GrismMap_getseters[] = {
    DEFATT(GrismM,"The interference order"),
    DEFATT(GrismEps,"The angle between the normal and the dispersion plane"),
    DEFATT(GrismTheta,"Angle between normal to detector plane and reference ray"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -1806,7 +1806,7 @@ MAKE_GETSETD(PcdMap,Disco)
 static PyGetSetDef PcdMap_getseters[] = {
    #include "PcdCen_desc.c"
    DEFATT(Disco,"PcdMap pincushion/barrel distortion coefficient"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -1907,7 +1907,7 @@ static PyGetSetDef WcsMap_getseters[] = {
    DEFATT(NatLat,"Native latitude of the reference point of a FITS-WCS projection"),
    DEFATT(NatLon,"Native longitude of the reference point of a FITS-WCS projection"),
    DEFATT(WcsType,"FITS-WCS projection type"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -2897,7 +2897,7 @@ static PyGetSetDef Frame_getseters[] = {
    DEFATT(System, "Coordinate system used to describe the domain"),
    DEFATT(Title, "Frame title"),
    DEFATT(ActiveUnit, "Control how the frame behaves when it is used to match anothe Frame"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -3563,7 +3563,7 @@ static PyGetSetDef FrameSet_getseters[] = {
    DEFATT(Base,"FrameSet base Frame index"),
    DEFATT(Current,"FrameSet current Frame index"),
    DEFATT(Nframe,"Number of Frames in a FrameSet"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -3853,7 +3853,7 @@ static PyGetSetDef SkyFrame_getseters[] = {
    DEFATT(NegLon,"Display longitude values in the range [-pi,pi]?"),
    DEFATT(Projection,"Sky projection description"),
    DEFATT(SkyRefIs,"Selects the nature of the offset coordinate system"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -3982,7 +3982,7 @@ static PyGetSetDef SpecFrame_getseters[] = {
    DEFATT(SourceVRF,"Source velocity rest frame"),
    DEFATT(SpecOrigin,"The zero point for SpecFrame axis values"),
    DEFATT(StdOfRest,"Standard of rest"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -4110,7 +4110,7 @@ static PyGetSetDef DSBSpecFrame_getseters[] = {
    DEFATT(IF,"The intermediate frequency used to define the LO frequency"),
    DEFATT(ImagFreq,"The image sideband equivalent of the rest frequency"),
    DEFATT(SideBand,"Indicates which sideband the DSBSpecFrame represents"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -4204,7 +4204,7 @@ static PyGetSetDef TimeFrame_getseters[] = {
    DEFATT(LTOffset,"The offset of Local Time from UTC in hours"),
    DEFATT(TimeOrigin,"The zero point for TimeFrame axis values"),
    DEFATT(TimeScale,"The timescale used by the TimeFrame"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -4300,7 +4300,7 @@ MAKE_GETSETD(FluxFrame,SpecVal)
 
 static PyGetSetDef FluxFrame_getseters[] = {
    DEFATT(SpecVal,"The spectral position at which the flux values are measured"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -4473,7 +4473,7 @@ static PyGetSetDef Region_getseters[] = {
   DEFATT(MeshSize,"Number of points used to create a mesh covering the Region"),
   DEFATT(FillFactor,"Fraction of the Region which is of interest"),
   DEFATT(Bounded,"Is the Region bounded?"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Describe the methods of the class */
@@ -5248,7 +5248,7 @@ static PyGetSetDef Channel_getseters[] = {
    DEFATT(ReportLevel,"Determines which read/write conditions are reported"),
    DEFATT(Skip,"Skip irrelevant data?"),
    DEFATT(Strict,"Report an error if any unexpeted data items are found?"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
@@ -5573,7 +5573,7 @@ static PyGetSetDef FitsChan_getseters[] = {
    DEFATT(Nkey,"Number of unique FITS keywords in a FitsChan"),
    DEFATT(PolyTan,"Use PVi_m keywords to define distorted TAN projection?"),
    DEFATT(Warnings,"Produces warnings about selected conditions"),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the methods needed to make a FitsChan behave as a mapping. */
@@ -6186,7 +6186,7 @@ static PyGetSetDef StcsChan_getseters[] = {
    DEFATT(StcsCoords,"Return the Coordinates component when reading an STC-S document?"),
    DEFATT(StcsProps,"Return all properties when reading an STC-S document?"),
    DEFATT(StcsLength,"Controls output line length."),
-   {NULL, NULL, NULL, NULL}  /* Sentinel */
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
 };
 
 /* Define the class Python type structure */
