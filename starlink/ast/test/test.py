@@ -641,6 +641,10 @@ class TestAst(unittest.TestCase):
                  "CRVAL1  =                    0                                                  ",
                  "CRVAL2  =                    0                                                  ")
 
+      fc = starlink.Ast.FitsChan(mycards)
+      self.assertIsInstance( fc, starlink.Ast.Object)
+      self.assertEqual( fc[ "CRVAL1" ], 0.0 )
+
       fc = starlink.Ast.FitsChan()
       self.assertIsInstance( fc, starlink.Ast.Object)
       self.assertIsInstance( fc, starlink.Ast.Channel )

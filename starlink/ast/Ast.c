@@ -5252,6 +5252,7 @@ typedef struct {
    PyObject *source;
    PyObject *sink;
    char *source_line;
+   int src_count;
 } Channel;
 
 /* Prototypes for class functions */
@@ -5260,10 +5261,12 @@ static PyObject *Channel_read( Channel *self );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
 const char *source_wrapper( void );
+const char *srcseq_wrapper( void );
 void sink_wrapper( const char *text );
 static int ChannelFuncs( Channel *self,  PyObject *source, PyObject *sink,
                          const char *(** source_wrap)( void ),
                          void (** sink_wrap)( const char * ) );
+static void Channel_dealloc( Channel *self );
 
 
 /* Describe the methods of the class */
@@ -5301,7 +5304,7 @@ static PyTypeObject ChannelType = {
    CLASS,                     /* tp_name */
    sizeof(Channel),           /* tp_basicsize */
    0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
+   (destructor)Channel_dealloc,/* tp_dealloc */
    0,                         /* tp_print */
    0,                         /* tp_getattr */
    0,                         /* tp_setattr */
@@ -5370,6 +5373,17 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+static void Channel_dealloc( Channel *self ) {
+   if( self ) {
+      Py_XDECREF( self->source );
+      Py_XDECREF( self->sink );
+      self->source_line = astFree( self->source_line );
+   }
+   Object_dealloc( (Object *) self );
+   TIDY;
+}
+
+
 /*
 static PyObject *Channel_warnings( Channel *self ) {
    AstKeyMap *km;
@@ -5399,6 +5413,7 @@ static PyObject *Channel_warnings( Channel *self ) {
    return result;
 }
 */
+
 static PyObject *Channel_read( Channel *self ){
    PyObject *result = NULL;
    PyObject *object = NULL;
@@ -5461,25 +5476,42 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    *sink_wrap = NULL;
 
 /* If a source object was supplied, we use the local "source_wrapper" function
-   as a C-callable wrapper for the object's "source" method. Otherwise, we use
-   a NULL wrapper. Also store a pointer to the source object in the Channel
-   structure. */
+   as a C-callable wrapper for the object's "source" method, and store a
+   pointer to the source object in the Channel. If the source object is a
+   sequence, we store the sequence in the source object in the Channel and
+   use srcseq_wrapper as the wrapper, which reads a single item from the
+   sequence on each invocation. Otherwise, we use a NULL wrapper. */
    if( source ) {
       if( PyObject_HasAttrString( source, "source" ) ) {
          *source_wrap = source_wrapper;
          self->source = source;
+         Py_INCREF( source );
+
+      } else if( PyUnicode_Check( source ) ) {
+         result = -1;
+         PyErr_SetString( PyExc_TypeError, "No 'source' object "
+                       "supplied." );
+
+      } else if( PySequence_Check( source ) ) {
+         *source_wrap = srcseq_wrapper;
+         self->src_count = 0;
+         self->source = source;
+         Py_INCREF( source );
+
       } else if( source != Py_None ){
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
-                          "object does not have a 'source' method" );
+                          "object does not have a 'source' method "
+                          "and is not a sequence." );
       }
    }
 
-/* Do the same for the sink object. */
+/* Do the same for the sink object (except the sink cannot be a sequence). */
    if( sink ) {
       if( PyObject_HasAttrString( sink, "sink" ) ) {
          *sink_wrap = sink_wrapper;
          self->sink = sink;
+         Py_INCREF( sink );
       } else if( sink != Py_None ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
@@ -5514,6 +5546,36 @@ void sink_wrapper( const char *text ){
    Py_XDECREF(result);
 }
 
+
+/* Source functions which are called by the AST Channel C code. It
+   returns the next item in a sequence. PyObject_Repr puts quotes (single
+   or double) round the returned string, so remove them. */
+
+const char *srcseq_wrapper( void ){
+   Channel *channel = astChannelData;
+   if( channel->src_count < PySequence_Length( channel->source ) ) {
+      PyObject *pyitem = PySequence_GetItem( channel->source,
+                                          (Py_ssize_t) channel->src_count++ );
+      PyObject *pytext = PyObject_Repr( pyitem );
+      channel->source_line = GetString( channel->source_line, pytext );
+
+      if( channel->source_line ) {
+         int len = strlen( channel->source_line );
+         char first = channel->source_line[ 0 ];
+         char last = channel->source_line[ len - 1 ];
+         if( last == first && ( first == '\'' || first == '"' ) ) {
+            char *c = channel->source_line;
+            while( *(c++) ) c[ -1 ] = *c;
+         }
+      }
+
+      Py_XDECREF(pytext);
+      Py_XDECREF(pyitem);
+   } else {
+      channel->source_line = astFree( channel->source_line );
+   }
+   return channel->source_line;
+}
 
 /* FitsChan */
 /* ======== */

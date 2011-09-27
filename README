@@ -193,14 +193,27 @@ the warning messages, rather than an AST KeyMap.
 
 - The python interface for the Channel constructor (and the constructors
 for all sub-classes of Channel) takes optional Source and Sink arguments.
-If supplied (and not equal to None), the Source argument should be a
-reference to an object that implements a method called "source". On each
-invocation, the source method should read the next line of text from some
-external source and return it (or return None if there is no more text to
-return). Likewise, if supplied, the Sink argument should be a reference
-to an object that implements a method called "sink". On each invocation,
-the sink method will be provided with the next line of text as its (only)
-argument - it should write this text to some external data sink.
+If supplied (and not equal to None), the Source argument can be either a
+sequence, or a reference to an object that implements a method called
+"source". If it is a sequence, a line of text describing the object is
+read from each element of the sequence. If "Source" is an object that
+implements the "source" method, then on each invocation, the source
+method should read the next line of text from some external source and
+return it (or return None if there is no more text to return). Likewise,
+if supplied, the Sink argument should be a reference to an object that
+implements a method called "sink". On each invocation, the sink method
+will be provided with the next line of text as its (only) argument - it
+should write this text to some external data sink.
+
+As an example of using a sequence, the "Source" argument for a FitsChan
+constructor could be a PyFITS "CardList" describing the header of a FITS
+file:
+
+import pyfits
+import starlink.Ast
+fitsfile = pyfits.open('test.fit')
+fc = starlink.Ast.FitsChan( fitsfile[0].header.ascardlist() )
+
 
 - The FitsChan class is an iterable class (e.g. if "fc" is a reference to
 a FitsChan, you can loop round all cards in the FitsChan by doing "for
