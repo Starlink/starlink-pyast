@@ -5932,8 +5932,8 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
    char *keyw;
    int icard;
-   int result = -1;
-   if( PyErr_Occurred() ) return result;
+   int result = 0;
+   if( PyErr_Occurred() ) return -1;
 
 /* If the supplied index is an integer, overwrite the card with the
    corresponding index. */
@@ -5998,7 +5998,6 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
                sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
                         "integer overflow.", lval, keyw );
                PyErr_SetString( PyExc_OverflowError, buff );
-               result = 0;
             }  else {
                astSetFitsI( THIS, keyw, val, NULL, 1 );
             }
@@ -6033,7 +6032,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
       keyw = astFree( keyw );
    }
-   if( astOK ) result = 0;
+   if( !astOK || PyErr_Occurred() ) result = -1;
    TIDY;
    return result;
 }
@@ -6525,12 +6524,30 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
    char *key = NULL;
    int ival;
    int nval;
+   int return_key = 0;
    int type;
 
    if( PyErr_Occurred() ) return result;
 
-/* Get the key for the required entry. */
-   key = GetString( NULL, index );
+/* If the index is actually an integer, get the corresponding key using
+   astMapKey, and return a tuple containing the key and value. */
+   if( PyLong_Check( index ) ) {
+      long int lval = PyLong_AsLong( index );
+      int ikey = (int) lval;
+      if( (long int) ikey != lval ) ikey = INT_MAX;
+      key = (char *) astMapKey( THIS, ikey );
+      if( astOK ) key = astStore( NULL, key, strlen( key ) + 1 );
+      return_key = 1;
+
+/* Otherwise, if it is a string, just use the supplied key. */
+   } else if( PyUnicode_Check( index ) ) {
+      key = GetString( NULL, index );
+
+/* Report an error for other index data types. */
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Illegal data type for AST "
+                       "KeyMap key." );
+   }
 
 /* Get the data type of the requested entry. */
    type = key ? astMapType( THIS, key ) : AST__BADTYPE;
@@ -6633,11 +6650,21 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
                PyTuple_SetItem( result, ival, vals[ ival ] );
             }
 
+/* Otherwise, just use the single value. */
          } else {
             result = vals[ 0 ];
          }
 
          vals = astFree( vals );
+
+/* If required, return a tuple containing the key and the value. */
+         if( return_key ) {
+            PyObject *pyval = result;
+            PyObject *pykey = Py_BuildValue( "s", key );
+            result = PyTuple_New( 2 );
+            PyTuple_SetItem( result, 0, pykey );
+            PyTuple_SetItem( result, 1, pyval );
+         }
       }
 
    } else {
@@ -6656,105 +6683,124 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
    char *key;
    int ival;
    int nval;
-   int result = -1;
+   int result = 0;
    PyObject **vals = NULL;
 
-   if( PyErr_Occurred() ) return result;
+   if( PyErr_Occurred() ) return -1;
 
-/* Get the key to be searched for. */
-   key = GetString( NULL, index );
+/* If the index is actually an integer, get the corresponding key using
+   astMapKey. */
+   if( PyLong_Check( index ) ) {
+      long int lval = PyLong_AsLong( index );
+      int ikey = (int) lval;
+      if( (long int) ikey != lval ) ikey = INT_MAX;
+      key = (char *) astMapKey( THIS, ikey );
+      if( astOK ) key = astStore( NULL, key, strlen( key ) + 1 );
 
-/* If no value was supplied, remove the entry. */
-   if( !value || value == Py_None ) {
-      astMapRemove( THIS, key );
-      nval = 0;
+/* Otherwise, if it is a string, just use the supplied key. */
+   } else if( PyUnicode_Check( index ) ) {
+      key = GetString( NULL, index );
 
-/* If a Tuple was supplied, extract the PyObjects from it. */
-   } else if( PyTuple_Check( value ) ) {
-      nval = (int) PyTuple_Size( value );
-      vals = astMalloc( nval*sizeof( *vals ) );
-      if( astOK ) {
-         for( ival = 0; ival < nval; ival++ ) {
-            vals[ ival ] = PyTuple_GET_ITEM( value,  (Py_ssize_t) ival );
-         }
-      }
-
-/* If a single value was supplied, copy it into the vals arrays. */
+/* Report an error for other index data types. */
    } else {
-      nval = 1;
-      vals = astMalloc( sizeof( *vals ) );
-      if( astOK ) vals[ 0 ] = value;
+      PyErr_SetString( PyExc_TypeError, "Illegal data type for AST "
+                       "KeyMap key." );
    }
 
+/* Do nothing if a key was not obtained. */
+   if( key ) {
+
+/* If no value was supplied, remove the entry. */
+      if( !value || value == Py_None ) {
+         astMapRemove( THIS, key );
+         nval = 0;
+
+/* If a Tuple was supplied, extract the PyObjects from it. */
+      } else if( PyTuple_Check( value ) ) {
+         nval = (int) PyTuple_Size( value );
+         vals = astMalloc( nval*sizeof( *vals ) );
+         if( astOK ) {
+            for( ival = 0; ival < nval; ival++ ) {
+               vals[ ival ] = PyTuple_GET_ITEM( value,  (Py_ssize_t) ival );
+            }
+         }
+
+/* If a single value was supplied, copy it into the vals arrays. */
+      } else {
+         nval = 1;
+         vals = astMalloc( sizeof( *vals ) );
+         if( astOK ) vals[ 0 ] = value;
+      }
+
 /* If at least one value is being added to the KeyMap... */
-   if( nval > 0 && astOK ) {
-      result = 1;
+      if( nval > 0 && astOK ) {
 
 /* If the value(s) are integers, get the integer values and store then in
    the keymap. */
-      if( PyLong_Check( vals[ 0 ] ) ) {
-         int *buf = astMalloc( nval*sizeof( *buf ) );
-         if( astOK ) {
-            for( ival = 0; ival < nval; ival++ ) {
-               long int lval = PyLong_AsLong( vals[ ival ] );
-               buf[ ival ] = (int) lval;
-               if( (long int) buf[ ival ] != lval ) {
-                  char buff[ 200 ];
-                  sprintf( buff, "Cannot assign value %ld to AST KeyMap entry %s - "
-                           "integer overflow.", lval, key );
-                  PyErr_SetString( PyExc_OverflowError, buff );
-                  break;
+         if( PyLong_Check( vals[ 0 ] ) ) {
+            int *buf = astMalloc( nval*sizeof( *buf ) );
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  long int lval = PyLong_AsLong( vals[ ival ] );
+                  buf[ ival ] = (int) lval;
+                  if( (long int) buf[ ival ] != lval ) {
+                     char buff[ 200 ];
+                     sprintf( buff, "Cannot assign value %ld to AST KeyMap entry %s - "
+                              "integer overflow.", lval, key );
+                     PyErr_SetString( PyExc_OverflowError, buff );
+                     break;
+                  }
                }
+               astMapPut1I( THIS, key, nval, buf, NULL );
             }
-            astMapPut1I( THIS, key, nval, buf, NULL );
-         }
-         buf = astFree( buf );
+            buf = astFree( buf );
 
 /* Do the same for floating point values. */
-      } else if( PyFloat_Check( vals[ 0 ] ) ) {
-         double *buf = astMalloc( nval*sizeof( *buf ) );
-         if( astOK ) {
-            for( ival = 0; ival < nval; ival++ ) {
-               buf[ ival ] = PyFloat_AsDouble( vals[ ival ] );
+         } else if( PyFloat_Check( vals[ 0 ] ) ) {
+            double *buf = astMalloc( nval*sizeof( *buf ) );
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  buf[ ival ] = PyFloat_AsDouble( vals[ ival ] );
+               }
+               astMapPut1D( THIS, key, nval, buf, NULL );
             }
-            astMapPut1D( THIS, key, nval, buf, NULL );
-         }
-         buf = astFree( buf );
+            buf = astFree( buf );
 
 /* Do the same for string values. */
-      } else if( PyUnicode_Check( vals[ 0 ] ) ) {
-         char **buf = astCalloc( nval, sizeof( *buf ) );
-         if( astOK ) {
-            for( ival = 0; ival < nval; ival++ ) {
-               buf[ ival ] = GetString( NULL, vals[ ival ] );
+         } else if( PyUnicode_Check( vals[ 0 ] ) ) {
+            char **buf = astCalloc( nval, sizeof( *buf ) );
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  buf[ ival ] = GetString( NULL, vals[ ival ] );
+               }
+               astMapPut1C( THIS, key, nval, (const char *const *) buf, NULL );
             }
-            astMapPut1C( THIS, key, nval, (const char *const *) buf, NULL );
-         }
-         buf = astFreeDouble( buf );
+            buf = astFreeDouble( buf );
 
 /* For AST Objects, convert the supplied Python references to C AST
    pointers. */
-      } else if( PyObject_TypeCheck( vals[ 0 ], &ObjectType ) ) {
-         AstObject **buf = astCalloc( nval, sizeof( *buf ) );
-         if( astOK ) {
-            for( ival = 0; ival < nval; ival++ ) {
-               buf[ ival ] = ((Object *)vals[ ival ])->ast_object;
+         } else if( PyObject_TypeCheck( vals[ 0 ], &ObjectType ) ) {
+            AstObject **buf = astCalloc( nval, sizeof( *buf ) );
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  buf[ ival ] = ((Object *)vals[ ival ])->ast_object;
+               }
+               astMapPut1A( THIS, key, nval, buf, NULL );
             }
-            astMapPut1A( THIS, key, nval, buf, NULL );
-         }
-         buf = astFree( buf );
+            buf = astFree( buf );
 
 /* For other C pointers, assume they are pointers to PyObjects and just store
    them as supplied. */
-      } else  {
-         astMapPut1P( THIS, key, nval, (void **) vals, NULL );
-      }
+         } else  {
+            astMapPut1P( THIS, key, nval, (void **) vals, NULL );
+         }
 
+      }
    }
 
    key = astFree( key );
    vals = astFree( vals );
-   if( astOK || PyErr_Occurred() ) result = 0;
+   if( !astOK || PyErr_Occurred() ) result = -1;
    TIDY;
    return result;
 }

@@ -890,13 +890,23 @@ class TestAst(unittest.TestCase):
       self.assertEqual( km['ttt'], (1.2, 3, 4.5) )
       km['SS'] = 'hello'
       self.assertEqual( len(km), 2 )
+
+      self.assertEqual( km[0], ('TTT', (1.2, 3.0, 4.5)) )
+      self.assertEqual( km[1], ('SS', 'hello'))
+
       i = 0
       for entry in km:
-         if i == 0:
-            self.assertEqual( entry, ('TTT', (1.2, 3.0, 4.5)) )
-         else:
-            self.assertEqual( entry, ('SS', 'hello'))
+         self.assertEqual( entry, km[i] )
          i += 1
+
+      km[0] = None
+      self.assertEqual( len(km), 1 )
+      self.assertEqual( km[0], ('SS', 'hello'))
+      km[0] = 'Goofbye'
+      self.assertEqual( km[0], ('SS', 'Goofbye'))
+      with self.assertRaises(starlink.Ast.MPIND):
+         km[1] = 'Nooooooo'
+
 
 if __name__ == "__main__":
     #unittest.main()

@@ -240,7 +240,15 @@ FitsChan, the new card will be appended to the end of the FitsChan.
 class are available in Python. However, KeyMaps can be created in the
 usual way, and entries can be written to or read from a KeyMap using the
 syntax of a Python mapping (e.g. "keymap['fred'] = 1.2"). Note, only
-strings should be used as keys with a KeyMap.
+strings and integers should be used as keys with a KeyMap. If a string is
+used, the returned value is the value of the KeyMap entry with the
+specified key. If an integer is used, the returned value is a tuple
+containing the key and value of the corresponding entry in the KeyMap
+(the order in which entries are returned is specified by the SortBy
+attribute of the KeyMap). When setting a value, a starlink.Ast.MPIND
+exception is reported if the specified zero-based integer index is
+greater than or equal to the number of entries in the KeyMap.
+
 
 Also, a KeyMap is iterable. Each value is returned as a (key,value) tuple.
 
