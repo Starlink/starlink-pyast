@@ -845,9 +845,6 @@ class TestAst(unittest.TestCase):
       self.assertEqual( fc.Nkey, 3 )
       self.assertEqual( len(fc), 3 )
 
-
-
-
    def test_StcsChan(self):
       ss = TextStream()
       ch = starlink.Ast.StcsChan( ss, ss, "ReportLevel=3" )
@@ -872,6 +869,34 @@ class TestAst(unittest.TestCase):
       self.assertEqual( lbnd[3], 4000.0 )
       self.assertEqual( ubnd[3], 7000.0 )
 
+   def test_KeyMap(self):
+
+      with self.assertRaises(starlink.Ast.BADAT):
+         km = starlink.Ast.KeyMap( "ReportLevel=3" )
+
+      km = starlink.Ast.KeyMap( "KeyCase=0" )
+      self.assertIsInstance( km, starlink.Ast.Object)
+      self.assertIsInstance( km, starlink.Ast.KeyMap )
+      self.assertTrue( km.isakeymap() )
+      self.assertTrue( km.isaobject() )
+      self.assertEqual( len(km), 0 )
+      km['Hello'] = 'fred'
+      self.assertEqual( len(km), 1 )
+      self.assertEqual( km['hELlo'], 'fred' )
+      km['Hello'] = None
+      self.assertEqual( len(km), 0 )
+      km['TTT'] = (1.2, 3, 4.5)
+      self.assertEqual( len(km), 1 )
+      self.assertEqual( km['ttt'], (1.2, 3, 4.5) )
+      km['SS'] = 'hello'
+      self.assertEqual( len(km), 2 )
+      i = 0
+      for entry in km:
+         if i == 0:
+            self.assertEqual( entry, ('TTT', (1.2, 3.0, 4.5)) )
+         else:
+            self.assertEqual( entry, ('SS', 'hello'))
+         i += 1
 
 if __name__ == "__main__":
     #unittest.main()

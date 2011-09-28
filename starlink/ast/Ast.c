@@ -88,6 +88,7 @@ MAKE_ISA(Frame)
 MAKE_ISA(FrameSet)
 MAKE_ISA(GrismMap)
 MAKE_ISA(Interval)
+MAKE_ISA(KeyMap)
 MAKE_ISA(LutMap)
 MAKE_ISA(Mapping)
 MAKE_ISA(NormMap)
@@ -128,6 +129,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(FrameSet,frameset),
    DEF_ISA(GrismMap,grismmap),
    DEF_ISA(Interval,interval),
+   DEF_ISA(KeyMap,keymap),
    DEF_ISA(LutMap,lutmap),
    DEF_ISA(Mapping,mapping),
    DEF_ISA(NormMap,normmap),
@@ -5810,8 +5812,8 @@ static PyObject *FitsChan_next( PyObject *self ) {
 
 /* Return the number of unique keywords in the FitsChan. */
 static Py_ssize_t FitsChan_length( PyObject *self ) {
-   Py_ssize_t result = (Py_ssize_t) astGetI( THIS, "Nkey" );
    if( PyErr_Occurred() ) return -1;
+   Py_ssize_t result = (Py_ssize_t) astGetI( THIS, "Nkey" );
    if( !astOK ) result = -1;
    TIDY;
    return result;
@@ -6381,6 +6383,397 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 }
 
 
+/* KeyMap */
+/* ====== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".KeyMap"
+
+/* Define the class structure */
+typedef struct {
+   Object parent;
+   int current_key;
+} KeyMap;
+
+/* Prototypes for class functions */
+static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds );
+static PyObject *KeyMap_getitem( PyObject *self, PyObject *keyword );
+static Py_ssize_t KeyMap_length( PyObject *self );
+static int KeyMap_setitem( PyObject *self, PyObject *keyword, PyObject *value );
+static PyObject *KeyMap_getiter( PyObject *self );
+static PyObject *KeyMap_next( PyObject *self );
+
+/* Describe the methods of the class */
+static PyMethodDef KeyMap_methods[] = {
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(KeyMap, KeyCase)
+MAKE_GETSETI(KeyMap, SizeGuess)
+MAKE_GETSETL(KeyMap, KeyError)
+MAKE_GETSETL(KeyMap, MapLocked)
+MAKE_GETSETC(KeyMap, SortBy)
+static PyGetSetDef KeyMap_getseters[] = {
+   DEFATT(KeyCase,"Sets the case in which keys are stored"),
+   DEFATT(SizeGuess,"The expected size of the KeyMap"),
+   DEFATT(KeyError,"Report an error if the requested key does not exist?"),
+   DEFATT(MapLocked,"Prevent new entries being added to the KeyMap?"),
+   DEFATT(SortBy,"Determines how keys are sorted in a KeyMap"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the methods needed to make a KeyMap behave as a mapping. */
+static PyMappingMethods KeyMapAsMapping = {
+   KeyMap_length,
+   KeyMap_getitem,
+   KeyMap_setitem,
+};
+
+/* Define the class Python type structure */
+static PyTypeObject KeyMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(KeyMap),            /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   &KeyMapAsMapping,          /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST KeyMap",              /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   KeyMap_getiter,	      /* tp_iter */
+   KeyMap_next,	              /* tp_iternext */
+   KeyMap_methods,            /* tp_methods */
+   0,                         /* tp_members */
+   KeyMap_getseters,          /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)KeyMap_init,     /* tp_init */
+};
+
+
+/* Define the class methods */
+static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      self->current_key = 0;
+      AstKeyMap *this = astKeyMap( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* A function that returns a Python iterator for a KeyMap. */
+static PyObject *KeyMap_getiter( PyObject *self ) {
+   if( PyErr_Occurred() ) return NULL;
+   ( ( KeyMap * ) self)->current_key = 0;
+   Py_INCREF( self );
+   return self;
+}
+
+/* Return the next value from the iteration of a KeyMap, as a (key,value)
+   tuple. */
+static PyObject *KeyMap_next( PyObject *self ) {
+   PyObject *result = NULL;
+   KeyMap *pyself = (KeyMap *) self;
+   if( PyErr_Occurred() ) return result;
+
+   if( pyself->current_key < astMapSize( THIS ) ) {
+      const char *key = astMapKey( THIS, (pyself->current_key)++ );
+      PyObject *pykey = Py_BuildValue( "s", key );
+      PyObject *pyval = KeyMap_getitem( self, pykey );
+      result = PyTuple_New( 2 );
+      PyTuple_SetItem( result, 0, pykey );
+      PyTuple_SetItem( result, 1, pyval );
+
+   } else {
+      PyErr_SetString( PyExc_StopIteration, "No more elements in in the supplied AST KeyMap" );
+   }
+   TIDY;
+   return result;
+}
+
+
+/* Methods needed to make a KeyMap behave as a python mapping */
+
+/* Return the number of entries in the KeyMap. */
+static Py_ssize_t KeyMap_length( PyObject *self ) {
+   if( PyErr_Occurred() ) return -1;
+   Py_ssize_t result = (Py_ssize_t) astMapSize( THIS );
+   if( !astOK ) result = -1;
+   TIDY;
+   return result;
+}
+
+/* Return the value(s) of a given entry. */
+static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
+   PyObject *result = NULL;
+   PyObject **vals;
+   char *key = NULL;
+   int ival;
+   int nval;
+   int type;
+
+   if( PyErr_Occurred() ) return result;
+
+/* Get the key for the required entry. */
+   key = GetString( NULL, index );
+
+/* Get the data type of the requested entry. */
+   type = key ? astMapType( THIS, key ) : AST__BADTYPE;
+
+/* If found, also get the length of the vector value. */
+   if( type != AST__BADTYPE ) {
+      nval = astMapLength( THIS, key );
+
+/* Create an array of PyObject pointers - one for each value. These will
+   be combined into the returned tuple (if more than one). */
+      vals = astCalloc( nval, sizeof( *vals ) );
+      if( astOK ) {
+
+/* First do integer types. */
+         if( type == AST__INTTYPE || type == AST__SINTTYPE ||
+             type == AST__BYTETYPE ) {
+
+/* Allocate a buffer of the correct size to receive the vector values */
+            int *buf = astMalloc( nval*sizeof( *buf ) );
+
+/* Get the vector of integer values for the requested key. */
+            astMapGet1I( THIS, key, nval, &nval, buf );
+
+/* If OK, create a PyObject for each integer value, and store pointers to
+   these PyObjects in the vals array. */
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  vals[ ival ] = Py_BuildValue( "i", buf[ ival ] );
+               }
+            }
+
+/* Free the buffer. */
+            buf = astFree( buf );
+
+/* Do the same for floating point types. */
+         } else if( type == AST__DOUBLETYPE || type == AST__FLOATTYPE ) {
+            double *buf = astMalloc( nval*sizeof( *buf ) );
+            astMapGet1D( THIS, key, nval, &nval, buf );
+            if( astOK ) {
+               for( ival = 0; ival < nval; ival++ ) {
+                  vals[ ival ] = Py_BuildValue( "d", buf[ ival ] );
+               }
+            }
+            buf = astFree( buf );
+
+/* For strings, astMapGet1 returns the strings in a single buffer, so we
+   need to split them up. */
+         } else if( type == AST__STRINGTYPE ) {
+            int l = astMapLenC( THIS, key ) + 1;
+            char *buf = astMalloc( nval*l*sizeof( *buf ) );
+            astMapGet1C( THIS, key, l, nval, &nval, buf );
+            if( astOK ) {
+               char *p = buf;
+               for( ival = 0; ival < nval; ival++ ) {
+                  vals[ ival ] = Py_BuildValue( "s", p );
+                  p += l;
+               }
+            }
+            buf = astFree( buf );
+
+/* For AST Objects, we need to convert each AST pointer to a Python object
+   reference. */
+         } else if( type == AST__OBJECTTYPE ) {
+            AstObject **buf = astMalloc( nval*sizeof( *buf ) );
+            astMapGet1A( THIS, key, nval, &nval, buf );
+            if( astOK ) {
+               PyObject *object;
+               for( ival = 0; ival < nval; ival++ ) {
+                  vals[ ival ] = Py_None;
+                  if( buf[ ival ] ) {
+                     object = NewObject( buf[ ival ] );
+                     if( object ) {
+                        vals[ ival ] = Py_BuildValue( "O", object );
+                        Py_DECREF( object );
+                     }
+                     buf[ ival ] = astAnnul( buf[ ival ] );
+                  }
+               }
+            }
+            buf = astFree( buf );
+
+/* For C pointers, assume that each points to a PyObject. There appears to
+   be no way of testing if a C pointer does actually point to a PyObject.
+   Why does Python not included a magic number test like AST does? */
+         } else if( type == AST__POINTERTYPE ) {
+            astMapGet1P( THIS, key, nval, &nval, (void **) vals );
+
+/* UNDEF values cannot be handled. */
+         } else {
+            char buff[ 200 ];
+            sprintf( buff, "The value of AST KeyMap entry %s is undefined.",
+                     key );
+            PyErr_SetString( PyExc_TypeError, buff );
+         }
+
+/* If there is more than one value to return, construct a tuple. */
+         if( nval > 1 ) {
+            result = PyTuple_New( nval );
+            for( ival = 0; ival < nval; ival++ ) {
+               PyTuple_SetItem( result, ival, vals[ ival ] );
+            }
+
+         } else {
+            result = vals[ 0 ];
+         }
+
+         vals = astFree( vals );
+      }
+
+   } else {
+      char buff[ 200 ];
+      sprintf( buff, "Key %s not found in AST KeyMap.", key );
+      PyErr_SetString( PyExc_KeyError, buff );
+   }
+
+   key = astFree( key );
+   TIDY;
+   return result;
+}
+
+/* Set the value of a given entry in a KeyMap. */
+static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
+   char *key;
+   int ival;
+   int nval;
+   int result = -1;
+   PyObject **vals = NULL;
+
+   if( PyErr_Occurred() ) return result;
+
+/* Get the key to be searched for. */
+   key = GetString( NULL, index );
+
+/* If no value was supplied, remove the entry. */
+   if( !value || value == Py_None ) {
+      astMapRemove( THIS, key );
+      nval = 0;
+
+/* If a Tuple was supplied, extract the PyObjects from it. */
+   } else if( PyTuple_Check( value ) ) {
+      nval = (int) PyTuple_Size( value );
+      vals = astMalloc( nval*sizeof( *vals ) );
+      if( astOK ) {
+         for( ival = 0; ival < nval; ival++ ) {
+            vals[ ival ] = PyTuple_GET_ITEM( value,  (Py_ssize_t) ival );
+         }
+      }
+
+/* If a single value was supplied, copy it into the vals arrays. */
+   } else {
+      nval = 1;
+      vals = astMalloc( sizeof( *vals ) );
+      if( astOK ) vals[ 0 ] = value;
+   }
+
+/* If at least one value is being added to the KeyMap... */
+   if( nval > 0 && astOK ) {
+      result = 1;
+
+/* If the value(s) are integers, get the integer values and store then in
+   the keymap. */
+      if( PyLong_Check( vals[ 0 ] ) ) {
+         int *buf = astMalloc( nval*sizeof( *buf ) );
+         if( astOK ) {
+            for( ival = 0; ival < nval; ival++ ) {
+               long int lval = PyLong_AsLong( vals[ ival ] );
+               buf[ ival ] = (int) lval;
+               if( (long int) buf[ ival ] != lval ) {
+                  char buff[ 200 ];
+                  sprintf( buff, "Cannot assign value %ld to AST KeyMap entry %s - "
+                           "integer overflow.", lval, key );
+                  PyErr_SetString( PyExc_OverflowError, buff );
+                  break;
+               }
+            }
+            astMapPut1I( THIS, key, nval, buf, NULL );
+         }
+         buf = astFree( buf );
+
+/* Do the same for floating point values. */
+      } else if( PyFloat_Check( vals[ 0 ] ) ) {
+         double *buf = astMalloc( nval*sizeof( *buf ) );
+         if( astOK ) {
+            for( ival = 0; ival < nval; ival++ ) {
+               buf[ ival ] = PyFloat_AsDouble( vals[ ival ] );
+            }
+            astMapPut1D( THIS, key, nval, buf, NULL );
+         }
+         buf = astFree( buf );
+
+/* Do the same for string values. */
+      } else if( PyUnicode_Check( vals[ 0 ] ) ) {
+         char **buf = astCalloc( nval, sizeof( *buf ) );
+         if( astOK ) {
+            for( ival = 0; ival < nval; ival++ ) {
+               buf[ ival ] = GetString( NULL, vals[ ival ] );
+            }
+            astMapPut1C( THIS, key, nval, (const char *const *) buf, NULL );
+         }
+         buf = astFreeDouble( buf );
+
+/* For AST Objects, convert the supplied Python references to C AST
+   pointers. */
+      } else if( PyObject_TypeCheck( vals[ 0 ], &ObjectType ) ) {
+         AstObject **buf = astCalloc( nval, sizeof( *buf ) );
+         if( astOK ) {
+            for( ival = 0; ival < nval; ival++ ) {
+               buf[ ival ] = ((Object *)vals[ ival ])->ast_object;
+            }
+            astMapPut1A( THIS, key, nval, buf, NULL );
+         }
+         buf = astFree( buf );
+
+/* For other C pointers, assume they are pointers to PyObjects and just store
+   them as supplied. */
+      } else  {
+         astMapPut1P( THIS, key, nval, (void **) vals, NULL );
+      }
+
+   }
+
+   key = astFree( key );
+   vals = astFree( vals );
+   if( astOK || PyErr_Occurred() ) result = 0;
+   TIDY;
+   return result;
+}
+
+
+
+
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -6735,6 +7128,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&StcsChanType) < 0) return NULL;
    Py_INCREF(&StcsChanType);
    PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
+
+   KeyMapType.tp_new = PyType_GenericNew;
+   KeyMapType.tp_base = &ObjectType;
+   if( PyType_Ready(&KeyMapType) < 0) return NULL;
+   Py_INCREF(&KeyMapType);
+   PyModule_AddObject( m, "KeyMap", (PyObject *)&KeyMapType);
 
 /* The constants provided by this module. */
 #define ICONST(Name) \
@@ -7098,6 +7497,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &FitsChanType;
       } else if( !strcmp( class, "StcsChan" ) ) {
          result = (PyTypeObject *) &StcsChanType;
+      } else if( !strcmp( class, "KeyMap" ) ) {
+         result = (PyTypeObject *) &KeyMapType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

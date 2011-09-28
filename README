@@ -239,3 +239,12 @@ a whole 80-column header card, which will overwrite the existing card at
 the given index. If the index is larger than the number of cards in the
 FitsChan, the new card will be appended to the end of the FitsChan.
 
+- Currently, none of the methods available within AST for the KeyMap
+class are available in Python. However, KeyMaps can be created in the
+usual way, and entries can be written to or read from a KeyMap using the
+syntax of a Python mapping (e.g. "keymap['fred'] = 1.2"). Note, only
+strings should be used as keys with a KeyMap.
+
+Also, a KeyMap is iterable. Each value is returned as a (key,value) tuple.
+
+
