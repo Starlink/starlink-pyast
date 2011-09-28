@@ -5258,7 +5258,7 @@ typedef struct {
 } Channel;
 
 /* Prototypes for class functions */
-/* static PyObject *Channel_warnings( Channel *self ); */
+static PyObject *Channel_warnings( Channel *self );
 static PyObject *Channel_read( Channel *self );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
@@ -5273,7 +5273,7 @@ static void Channel_dealloc( Channel *self );
 
 /* Describe the methods of the class */
 static PyMethodDef Channel_methods[] = {
-/*   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},*/
+   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
    {"read", (PyCFunction)Channel_read, METH_NOARGS, "Read an Object from a Channel."},
    {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -5385,36 +5385,24 @@ static void Channel_dealloc( Channel *self ) {
    TIDY;
 }
 
-
-/*
 static PyObject *Channel_warnings( Channel *self ) {
    AstKeyMap *km;
    PyObject *result = NULL;
-   PyObject *str;
-   const char *text;
-   int nkey;
-   int ikey;
 
    if( PyErr_Occurred() ) return NULL;
 
    km = astWarnings( THIS );
-   nkey = astMapSize( km );
-
    if( astOK ) {
-      result = PyTuple_New( nkey );
-      for( ikey = 0; ikey < nkey; ikey++ ) {
-         astMapGet0C( THIS, astMapKey( THIS, ikey ), &text );
-         str = Py_BuildValue( "s", text );
-         PyTuple_SetItem( result, ikey, str );
+      PyObject *km_object = NewObject( (AstObject *)km );
+      if( km_object ) {
+         result = Py_BuildValue( "O", km_object );
+         Py_DECREF( km_object );
       }
+      km = astAnnul( km );
    }
-
-   km = astAnnul( km );
-
    TIDY;
    return result;
 }
-*/
 
 static PyObject *Channel_read( Channel *self ){
    PyObject *result = NULL;

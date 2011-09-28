@@ -188,9 +188,6 @@ we should be using numpy arrays here.
 - The Python interface for astResample has no "finterp" parameter, and
 the AST__UKERN1 and AST__UINTERP interpolation schemes are not supported.
 
-- The Python interface for astWarnings returns a python tuple containing
-the warning messages, rather than an AST KeyMap.
-
 - The python interface for the Channel constructor (and the constructors
 for all sub-classes of Channel) takes optional Source and Sink arguments.
 If supplied (and not equal to None), the Source argument can be either a
