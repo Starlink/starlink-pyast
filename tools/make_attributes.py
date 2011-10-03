@@ -62,7 +62,7 @@ def make_attributes( dirname=None ):
 #  Construct the name of the attribute.
             aname = attname;
             if item != "-":
-               aname = "_" + item
+               aname += "_" + item
 
             else:
                aname += "_" + str(i)

@@ -1,7 +1,6 @@
 /* Issues:
 
-   - should ast be included with pyast or should it require AST to be
-   installed separately?
+   - AST should be included and (optionally?) built with pyast
    - Should the module be called Ast or pyast?
    - Should it be in a starlink package or standalone?
    - providing more base methods (equal, etc)
@@ -100,6 +99,7 @@ MAKE_ISA(NullRegion)
 MAKE_ISA(Object)
 MAKE_ISA(PcdMap)
 MAKE_ISA(PermMap)
+MAKE_ISA(Plot)
 MAKE_ISA(Prism)
 MAKE_ISA(RateMap)
 MAKE_ISA(Region)
@@ -141,6 +141,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(Object,object),
    DEF_ISA(PcdMap,pcdmap),
    DEF_ISA(PermMap,permmap),
+   DEF_ISA(Plot,plot),
    DEF_ISA(Prism,prism),
    DEF_ISA(RateMap,ratemap),
    DEF_ISA(Region,region),
@@ -6812,6 +6813,221 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 
 
+/* Plot */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Plot"
+
+/* Define the class structure */
+typedef struct {
+   FrameSet parent;
+   PyObject *grf;
+} Plot;
+
+/* Prototypes for class functions */
+static int Plot_init( Plot *self, PyObject *args, PyObject *kwds );
+static PyObject *Plot_border( Object *self, PyObject *args );
+static PyObject *Plot_grid( Object *self, PyObject *args );
+static void Plot_dealloc( Plot *self );
+
+/* Describe the methods of the class */
+static PyMethodDef Plot_methods[] = {
+   {"border", (PyCFunction)Plot_border, METH_NOARGS, "Draw a border around valid regions of a Plot"},
+   {"grid", (PyCFunction)Plot_grid, METH_NOARGS, "Draw a set of labelled coordinate axes around a Plot"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the (single-valued) AST attributes of the class (multi-valued
+   attributes are defined in file attributes.desc). */
+MAKE_GETSETL(Plot,Abbrev)
+MAKE_GETSETL(Plot,Border)
+MAKE_GETSETI(Plot,Clip)
+MAKE_GETSETL(Plot,ClipOp)
+MAKE_GETSETL(Plot,DrawTitle)
+MAKE_GETSETL(Plot,Escape)
+MAKE_GETSETL(Plot,Grid)
+MAKE_GETSETL(Plot,Invisible)
+MAKE_GETSETC(Plot,Labelling)
+MAKE_GETSETL(Plot,TickAll)
+MAKE_GETSETL(Plot,ForceExterior)
+MAKE_GETSETD(Plot,TitleGap)
+MAKE_GETSETD(Plot,Tol)
+#include "Colour_def.c"
+#include "DrawAxes_def.c"
+#include "Edge_def.c"
+#include "Font_def.c"
+#include "Gap_def.c"
+#include "LabelAt_def.c"
+#include "LabelUnits_def.c"
+#include "LabelUp_def.c"
+#include "LogGap_def.c"
+#include "LogLabel_def.c"
+#include "LogPlot_def.c"
+#include "LogTicks_def.c"
+#include "MajTickLen_def.c"
+#include "MinTickLen_def.c"
+#include "MinTick_def.c"
+#include "NumLab_def.c"
+#include "NumLabGap_def.c"
+#include "Size_def.c"
+#include "Style_def.c"
+#include "TextLab_def.c"
+#include "TextLabGap_def.c"
+#include "Width_def.c"
+
+static PyGetSetDef Plot_getseters[] = {
+   DEFATT(Abbrev,"Abbreviate leading fields?"),
+   DEFATT(Border,"Draw a border around valid regions of a Plot?"),
+   DEFATT(Clip,"Clip lines and/or markers at the Plot boundary?"),
+   DEFATT(ClipOp,"Combine Plot clipping limits using a boolean OR?"),
+   DEFATT(DrawTitle,"Draw a title for a Plot?"),
+   DEFATT(Escape,"Allow changes of character attributes within strings?"),
+   DEFATT(Grid,"Draw grid lines for a Plot?"),
+   DEFATT(Invisible,"Draw graphics in invisible ink?"),
+   DEFATT(Labelling,"Label and tick placement option for a Plot"),
+   DEFATT(TickAll,"Draw tick marks on all edges of a Plot?"),
+   DEFATT(ForceExterior,"Force the use of exterior labelling?"),
+   DEFATT(TitleGap,"Vertical spacing for a Plot title"),
+   DEFATT(Tol," Plotting tolerance"),
+   #include "Colour_desc.c"
+   #include "DrawAxes_desc.c"
+   #include "Edge_desc.c"
+   #include "Font_desc.c"
+   #include "Gap_desc.c"
+   #include "LabelAt_desc.c"
+   #include "LabelUnits_desc.c"
+   #include "LabelUp_desc.c"
+   #include "LogGap_desc.c"
+   #include "LogLabel_desc.c"
+   #include "LogPlot_desc.c"
+   #include "LogTicks_desc.c"
+   #include "MajTickLen_desc.c"
+   #include "MinTickLen_desc.c"
+   #include "MinTick_desc.c"
+   #include "NumLab_desc.c"
+   #include "NumLabGap_desc.c"
+   #include "Size_desc.c"
+   #include "Style_desc.c"
+   #include "TextLab_desc.c"
+   #include "TextLabGap_desc.c"
+   #include "Width_desc.c"
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject PlotType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Plot),              /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   (destructor)Plot_dealloc,  /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST Plot",                /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Plot_methods,              /* tp_methods */
+   0,                         /* tp_members */
+   Plot_getseters,            /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Plot_init,       /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Frame *other;
+   PyObject *bbox_object = NULL;
+   PyObject *gbox_object = NULL;
+   PyArrayObject *gbox = NULL;
+   PyArrayObject *bbox = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O!OO|s:" CLASS, &FrameType, (PyObject**)&other,
+                        &gbox_object, &bbox_object, &options ) ) {
+      int size = 4;
+      gbox = GetArray1D( gbox_object, &size, "graphbox", NAME );
+      bbox = GetArray1D( bbox_object, &size, "basebox", NAME );
+      if( gbox && bbox ) {
+         float graphbox[ 4 ];
+         graphbox[ 0 ] = ((const double *)gbox->data)[ 0 ];
+         graphbox[ 1 ] = ((const double *)gbox->data)[ 1 ];
+         graphbox[ 2 ] = ((const double *)gbox->data)[ 2 ];
+         graphbox[ 3 ] = ((const double *)gbox->data)[ 3 ];
+         AstPlot *this = astPlot( THAT, graphbox, (const double *)bbox->data,
+                                  options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+
+      }
+      Py_XDECREF( gbox );
+      Py_XDECREF( bbox );
+      self->grf = NULL;
+   }
+
+   TIDY;
+   return result;
+}
+
+static void Plot_dealloc( Plot *self ) {
+   if( self ) {
+      Py_XDECREF( self->grf );
+   }
+   Object_dealloc( (Object *) self );
+   TIDY;
+}
+
+#undef NAME
+#define NAME CLASS ".border"
+static PyObject *Plot_border( Object *self, PyObject *args ) {
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return result;
+   int border = astBorder( THIS );
+   if( astOK ) result = Py_BuildValue( "O", (border ?  Py_True : Py_False));
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".grid"
+static PyObject *Plot_grid( Object *self, PyObject *args ) {
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return result;
+   astGrid( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+
+
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -7058,6 +7274,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( PyType_Ready(&FrameSetType) < 0) return NULL;
    Py_INCREF(&FrameSetType);
    PyModule_AddObject( m, "FrameSet", (PyObject *)&FrameSetType);
+
+   PlotType.tp_new = PyType_GenericNew;
+   PlotType.tp_base = &FrameSetType;
+   if( PyType_Ready(&PlotType) < 0) return NULL;
+   Py_INCREF(&PlotType);
+   PyModule_AddObject( m, "Plot", (PyObject *)&PlotType);
 
    CmpFrameType.tp_new = PyType_GenericNew;
    CmpFrameType.tp_base = &FrameType;
@@ -7499,6 +7721,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
          result = (PyTypeObject *) &FrameSetType;
+      } else if( !strcmp( class, "Plot" ) ) {
+         result = (PyTypeObject *) &PlotType;
       } else if( !strcmp( class, "CmpFrame" ) ) {
          result = (PyTypeObject *) &CmpFrameType;
       } else if( !strcmp( class, "SpecFrame" ) ) {
@@ -7553,7 +7777,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
                                 const char *fun ){
 /*
 *  Name:
-*     GetArrayObject
+*     GetArray
 
 *  Purpose:
 *     A wrapper for PyArray_ContiguousFromAny that issues better
