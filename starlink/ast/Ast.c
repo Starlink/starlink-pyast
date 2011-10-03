@@ -1,5 +1,9 @@
 /* Issues:
 
+   - should ast be included with pyast or should it require AST to be
+   installed separately?
+   - Should the module be called Ast or pyast?
+   - Should it be in a starlink package or standalone?
    - providing more base methods (equal, etc)
    - are there any memory leaks (either in AST or Python)?
    - implement more methods and classes
