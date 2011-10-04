@@ -15,6 +15,7 @@
 #include <string.h>
 #include "numpy/arrayobject.h"
 #include "ast.h"
+#include "grf.h"
 
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
@@ -261,7 +262,7 @@ static PyObject *Object_copy( Object *self ) {
 static void Object_dealloc( Object *self ) {
    if( THIS ) {
       astSetProxy( THIS, NULL );
-      THIS = astAnnul( THIS );
+      LTHIS = astAnnul( THIS );
    }
    Py_TYPE(self)->tp_free((PyObject*)self);
    TIDY;
@@ -6827,9 +6828,20 @@ typedef struct {
 } Plot;
 
 /* Prototypes for class functions */
-static int Plot_init( Plot *self, PyObject *args, PyObject *kwds );
 static PyObject *Plot_border( Object *self, PyObject *args );
 static PyObject *Plot_grid( Object *self, PyObject *args );
+static int Attr_wrapper( AstObject *grfcon, int attr, double value, double *old_value, int prim );
+static int Cap_wrapper( AstObject *grfcon, int cap, int value );
+static int BBuf_wrapper( AstObject *grfcon );
+static int EBuf_wrapper( AstObject *grfcon );
+static int Flush_wrapper( AstObject *grfcon );
+static int Line_wrapper( AstObject *grfcon, int n, const float *x, const float *y );
+static int Mark_wrapper( AstObject *grfcon, int n, const float *x, const float *y, int type );
+static int Plot_init( Plot *self, PyObject *args, PyObject *kwds );
+static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh );
+static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta );
+static int Text_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just, float upx, float upy );
+static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just, float upx, float upy, float *xb, float *yb );
 static void Plot_dealloc( Plot *self );
 
 /* Describe the methods of the class */
@@ -6877,7 +6889,94 @@ MAKE_GETSETD(Plot,Tol)
 #include "TextLabGap_def.c"
 #include "Width_def.c"
 
+#define NFUN 11
+static int setGrf( Plot *self, PyObject *value, void *closure );
+static int setGrf( Plot *self, PyObject *value, void *closure ){
+   const char *fname[NFUN] = { "Attr", "BBuf", "Cap", "EBuf", "Flush",
+                               "Line", "Mark", "Qch", "Scales", "Text",
+                               "TxExt" };
+   AstGrfFun fun[NFUN] = { (AstGrfFun) Attr_wrapper, (AstGrfFun) BBuf_wrapper,
+                           (AstGrfFun) Cap_wrapper, (AstGrfFun) EBuf_wrapper,
+                           (AstGrfFun) Flush_wrapper, (AstGrfFun) Line_wrapper,
+                           (AstGrfFun) Mark_wrapper, (AstGrfFun) Qch_wrapper,
+                           (AstGrfFun) Scales_wrapper, (AstGrfFun) Text_wrapper,
+                           (AstGrfFun) TxExt_wrapper};
+   int ifun;
+   int result = -1;
+   if( PyErr_Occurred() ) return result;
+
+/* Clear out all any existing graphics functions. */
+   if( self->grf ) {
+      Py_XDECREF(self->grf);
+      self->grf = NULL;
+   }
+
+   for( ifun = 0; ifun < NFUN; ifun++ ) {
+      astGrfSet( THIS, fname[ ifun ], NULL );
+   }
+
+/* If no new graphics functions were supplied, clear the Grf attribute
+   (just for safety really). */
+   if (value == NULL || value == Py_None ) {
+      astSetI( THIS, "Grf", 0 );
+
+/* If new graphics functions were supplied, ensure the Grf attribute is
+   set  non-zero so that the wrappers are used, store the supplied PyObject
+   in the Plot and register the required wrapper functions. */
+   } else {
+      result = 0;
+      astSetI( THIS, "Grf", 1 );
+      self->grf = value;
+      Py_XINCREF(self->grf);
+
+      for( ifun = 0; ifun < NFUN; ifun++ ) {
+         if( PyObject_HasAttrString( value, fname[ ifun ] ) ) {
+            astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
+         } else {
+            PyErr_Format( PyExc_TypeError, "The supplied grf object does "
+                          "not implement the '%s' method.", fname[ ifun ] );
+            result = -1;
+            break;
+         }
+      }
+
+/* Store the Plot pointer in the graphics context KeyMap, so that it can
+   be accessed by the wrapper functions. */
+      AstKeyMap *km = astGetGrfContext( THIS );
+      astMapPut0P( km, "SELF", self, NULL );
+      km = astAnnul( km );
+   }
+
+/* If anything went wrong, clear out any graphics functions. */
+   if( !astOK || result ) {
+      if( self->grf ) {
+         Py_XDECREF(self->grf);
+         self->grf = NULL;
+      }
+
+      for( ifun = 0; ifun < NFUN; ifun++ ) {
+         astGrfSet( THIS, fname[ ifun ], NULL );
+      }
+      result = -1;
+   }
+
+   TIDY;
+   return result;
+}
+#undef NFUN
+
+static PyObject *getGrf( Plot *self, void *closure );
+static PyObject *getGrf( Plot *self, void *closure ){
+   PyObject *result = Py_None;
+   if( self->grf ) {
+      result = self->grf;
+      Py_INCREF(self->grf);
+   }
+   return result;
+}
+
 static PyGetSetDef Plot_getseters[] = {
+   { "Grf", (getter) getGrf, (setter) setGrf, "The object that draws primitives for the Plot" },
    DEFATT(Abbrev,"Abbreviate leading fields?"),
    DEFATT(Border,"Draw a border around valid regions of a Plot?"),
    DEFATT(Clip,"Clip lines and/or markers at the Plot boundary?"),
@@ -6962,33 +7061,40 @@ static PyTypeObject PlotType = {
 /* Define the class methods */
 static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
    const char *options = " ";
-   Frame *other;
+   Frame *frame;
    PyObject *bbox_object = NULL;
    PyObject *gbox_object = NULL;
    PyArrayObject *gbox = NULL;
    PyArrayObject *bbox = NULL;
    int result = -1;
 
-   if( PyArg_ParseTuple(args, "O!OO|s:" CLASS, &FrameType, (PyObject**)&other,
+   if( PyArg_ParseTuple(args, "OOO|s:" CLASS, (PyObject**)&frame,
                         &gbox_object, &bbox_object, &options ) ) {
-      int size = 4;
-      gbox = GetArray1D( gbox_object, &size, "graphbox", NAME );
-      bbox = GetArray1D( bbox_object, &size, "basebox", NAME );
-      if( gbox && bbox ) {
-         float graphbox[ 4 ];
-         graphbox[ 0 ] = ((const double *)gbox->data)[ 0 ];
-         graphbox[ 1 ] = ((const double *)gbox->data)[ 1 ];
-         graphbox[ 2 ] = ((const double *)gbox->data)[ 2 ];
-         graphbox[ 3 ] = ((const double *)gbox->data)[ 3 ];
-         AstPlot *this = astPlot( THAT, graphbox, (const double *)bbox->data,
-                                  options );
-         result = SetProxy( (AstObject *) this, (Object *) self );
-         this = astAnnul( this );
 
+      if( (PyObject *) frame != Py_None &&
+          !PyObject_TypeCheck( frame, &FrameType ) ) {
+         PyErr_SetString( PyExc_TypeError, "First argument to the Plot "
+                          "constructor must be a Frame." );
+
+      } else {
+         int size = 4;
+         gbox = GetArray1D( gbox_object, &size, "graphbox", NAME );
+         bbox = GetArray1D( bbox_object, &size, "basebox", NAME );
+         if( gbox && bbox ) {
+            float graphbox[ 4 ];
+            graphbox[ 0 ] = ((const double *)gbox->data)[ 0 ];
+            graphbox[ 1 ] = ((const double *)gbox->data)[ 1 ];
+            graphbox[ 2 ] = ((const double *)gbox->data)[ 2 ];
+            graphbox[ 3 ] = ((const double *)gbox->data)[ 3 ];
+            AstPlot *this = astPlot( AST(frame), graphbox,
+                                     (const double *)bbox->data, options );
+            result = SetProxy( (AstObject *) this, (Object *) self );
+            this = astAnnul( this );
+         }
+         Py_XDECREF( gbox );
+         Py_XDECREF( bbox );
+         self->grf = NULL;
       }
-      Py_XDECREF( gbox );
-      Py_XDECREF( bbox );
-      self->grf = NULL;
    }
 
    TIDY;
@@ -7025,6 +7131,268 @@ static PyObject *Plot_grid( Object *self, PyObject *args ) {
    TIDY;
    return result;
 }
+
+
+/* Wrapper functions for the drawing functions. */
+static int Attr_wrapper( AstObject *grfcon, int attr, double value,
+                         double *old_value, int prim ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Attr", "idi",
+                                              attr, value, prim );
+      if( result ) {
+         if( old_value ) *old_value = PyFloat_AsDouble( result );
+         Py_DECREF( result );
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+static int Cap_wrapper( AstObject *grfcon, int cap, int value ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Cap", "ii", cap, value );
+      if( result ) {
+         ret = PyLong_AsLong( result );
+         Py_DECREF( result );
+         if( PyErr_Occurred() ) ret = 0;
+      }
+   }
+   return ret;
+}
+
+static int BBuf_wrapper( AstObject *grfcon ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "BBuf", NULL );
+      Py_XDECREF( result );
+      if( !PyErr_Occurred() ) ret = 1;
+   }
+   return ret;
+}
+
+static int EBuf_wrapper( AstObject *grfcon ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "EBuf", NULL );
+      Py_XDECREF( result );
+      if( !PyErr_Occurred() ) ret = 1;
+   }
+   return ret;
+}
+
+static int Flush_wrapper( AstObject *grfcon ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Flush", NULL );
+      Py_XDECREF( result );
+      if( !PyErr_Occurred() ) ret = 1;
+   }
+   return ret;
+}
+
+static int Line_wrapper( AstObject *grfcon, int n, const float *x, const float *y ){
+   npy_intp dims[1];
+   int ret = 0;
+
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+
+   if( self && self->grf ) {
+      dims[ 0 ] = n;
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      if( xo && yo ) {
+
+         int i;
+         for( i = 0; i < n; i++ ) {
+            ((double *) xo->data)[ i ] = (double) x[ i ];
+            ((double *) yo->data)[ i ] = (double) y[ i ];
+         }
+
+         PyObject *result = PyObject_CallMethod( self->grf, "Line", "iOO",
+                                                 n, xo, yo );
+
+         Py_XDECREF( result );
+         Py_XDECREF( xo );
+         Py_XDECREF( yo );
+
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+
+static int Mark_wrapper( AstObject *grfcon, int n, const float *x, const float *y, int type ){
+   npy_intp dims[1];
+   int ret = 0;
+
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+
+   if( self && self->grf ) {
+      dims[ 0 ] = n;
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      if( xo && yo ) {
+
+         int i;
+         for( i = 0; i < n; i++ ) {
+            ((double *) xo->data)[ i ] = (double) x[ i ];
+            ((double *) yo->data)[ i ] = (double) y[ i ];
+         }
+
+         PyObject *result = PyObject_CallMethod( self->grf, "Mark", "iOOi",
+                                                 n, xo, yo, type );
+
+         Py_XDECREF( result );
+         Py_XDECREF( xo );
+         Py_XDECREF( yo );
+
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Qch", NULL );
+      if( result ) {
+         if( !PyTuple_Check( result ) ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' "
+                          "method returns a %s, should be a Tuple.",
+                          result->ob_type->tp_name );
+         } else if( (int) PyTuple_Size( result ) != 2 ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' method"
+                          " returns a tuple of length %d, should be 2.",
+                          PyTuple_Size( result ) );
+         } else {
+            PyObject *pyitem;
+            if( chv ) {
+               pyitem =  PyTuple_GET_ITEM( result, 0 );
+               *chv = PyFloat_AsDouble( pyitem );
+            }
+            if( chh ) {
+               pyitem =  PyTuple_GET_ITEM( result, 0 );
+               *chh = PyFloat_AsDouble( pyitem );
+            }
+         }
+         Py_DECREF( result );
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Scales", NULL );
+      if( result ) {
+         if( !PyTuple_Check( result ) ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' "
+                          "method returns a %s, should be a Tuple.",
+                          result->ob_type->tp_name );
+         } else if( (int) PyTuple_Size( result ) != 2 ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' method"
+                          " returns a tuple of length %d, should be 2.",
+                          PyTuple_Size( result ) );
+         } else {
+            PyObject *pyitem;
+            if( alpha ) {
+               pyitem =  PyTuple_GET_ITEM( result, 0 );
+               *alpha = PyFloat_AsDouble( pyitem );
+            }
+            if( beta ) {
+               pyitem =  PyTuple_GET_ITEM( result, 0 );
+               *beta = PyFloat_AsDouble( pyitem );
+            }
+         }
+         Py_DECREF( result );
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+static int Text_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just,
+                         float upx, float upy ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "Text", "sddsdd",
+                                              text, (double) x, (double) y,
+                                              just, (double) upx, (double) upy );
+      Py_XDECREF( result );
+      if( !PyErr_Occurred() ) ret = 1;
+   }
+   return ret;
+}
+
+static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just,
+                          float upx, float upy, float *xb, float *yb ){
+   int ret = 0;
+   Plot *self = NULL;
+   astMapGet0P( (AstKeyMap *) grfcon, "SELF", (void **) &self );
+
+   if( self && self->grf ) {
+      PyObject *result = PyObject_CallMethod( self->grf, "TxExt", "sddsdd",
+                                              text, (double) x, (double) y,
+                                              just, (double) upx, (double) upy );
+      if( result ) {
+         if( !PyTuple_Check( result ) ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' "
+                          "method returns a %s, should be a Tuple.",
+                          result->ob_type->tp_name );
+         } else if( (int) PyTuple_Size( result ) != 8 ) {
+            PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' method"
+                          " returns a tuple of length %d, should be 8.",
+                          PyTuple_Size( result ) );
+         } else {
+            PyObject *pyitem;
+            int i;
+            if( xb ) {
+               for( i = 0; i < 4; i++ ) {
+                  pyitem =  PyTuple_GET_ITEM( result, i );
+                  xb[ i ] = PyFloat_AsDouble( pyitem );
+               }
+            }
+            if( yb ) {
+               for( i = 0; i < 4; i++ ) {
+                  pyitem =  PyTuple_GET_ITEM( result, i + 4 );
+                  xb[ i ] = PyFloat_AsDouble( pyitem );
+               }
+            }
+         }
+         Py_DECREF( result );
+         if( !PyErr_Occurred() ) ret = 1;
+      }
+   }
+   return ret;
+}
+
+
+
 
 
 
@@ -7465,6 +7833,42 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 #undef ICONST
 #undef DCONST
 
+#define ICONST(Name) \
+   PyModule_AddIntConstant( m, "grf" #Name, GRF__##Name )
+
+   ICONST(STYLE);
+   ICONST(WIDTH);
+   ICONST(SIZE);
+   ICONST(FONT);
+   ICONST(COLOUR);
+
+   ICONST(TEXT);
+   ICONST(LINE);
+   ICONST(MARK);
+
+   ICONST(NATTR);
+
+   ICONST(ESC);
+   ICONST(MJUST);
+   ICONST(SCALES);
+
+   ICONST(ESPER);
+   ICONST(ESSUP);
+   ICONST(ESSUB);
+   ICONST(ESGAP);
+   ICONST(ESBAC);
+   ICONST(ESSIZ);
+   ICONST(ESWID);
+   ICONST(ESFON);
+   ICONST(ESCOL);
+   ICONST(ESSTY);
+   ICONST(ESPOP);
+   ICONST(ESPSH);
+   ICONST(ESH);
+   ICONST(ESG);
+
+#undef ICONST
+
 /* Initialise the numpi module */
    import_array();
 
@@ -7540,10 +7944,10 @@ static char *PyAst_ToString( PyObject *self ) {
 /* Report an error if supplied PyObject is not an AST Object */
    if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
       char mess[255];
-      if( self->ob_type && self->ob_type->tp_doc ) {
+      if( self->ob_type && self->ob_type->tp_name ) {
          sprintf( mess, "PyAst_ToString: Expected an AST Object but a %.*s "
                   "was supplied.", (int)( sizeof(mess) - 60 ),
-                  self->ob_type->tp_doc );
+                  self->ob_type->tp_name );
       } else {
          sprintf( mess, "PyAst_ToString: Expected an AST Object." );
       }
@@ -7663,7 +8067,7 @@ static int SetProxy( AstObject *this, Object *self ) {
 
 */
    if( !astOK ) return -1;
-   THIS = astClone( this );
+   LTHIS = astClone( this );
    astSetProxy( this, self );
    return astOK ? 0 : -1;
 }

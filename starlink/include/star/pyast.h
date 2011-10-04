@@ -22,9 +22,15 @@ extern "C" {
 #ifdef PYAST_MODULE
 
 /* Various simple short-hands */
-#define THIS ((Object *)self)->ast_object
-#define THAT ((Object *)other)->ast_object
-#define ANOTHER ((Object *)another)->ast_object
+#define LAST(pyobj) ((Object*)pyobj)->ast_object
+#define LTHIS LAST(self)
+
+#define AST(pyobj) (pyobj&&((PyObject*)pyobj!=Py_None)?LAST(pyobj):NULL)
+#define THIS AST(self)
+#define THAT AST(other)
+#define ANOTHER AST(another)
+
+
 #define MXDIM 20
 #define MXATTR_LEN 50
 #define ATTNORM(attrib) AttNorm(attrib,att_buf)

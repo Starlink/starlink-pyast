@@ -86,6 +86,11 @@ attribute for the second axis of a Frame:
    >>> frm.set("Label(2)=Flux density")
    >>> frm.Label_2 = "Flux density"
 
+and this will set the colour of a Plot border to colour index 1:
+
+   >>> plot.set("Colour(Border)=1")
+   >>> Plot.Colour_Border = 1
+
 - The PVi_m attribute (defined by the WcsMap class) has no corresponding
 python properties. To access this attribute, use the set and get methods
 instead.

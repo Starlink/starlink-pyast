@@ -9,8 +9,8 @@ import string
 import sys
 import os.path
 
-#  Extends the AST Channel class, adding source and sink functions that
-#  store text in an internal list.
+#  A class that defines Channel source and sink functions that store text
+#  in an internal list.
 class TextStream():
 
    def __init__( self ):
@@ -42,7 +42,80 @@ class TextStream():
 class DummyStream():
    pass
 
+#  A class that provides primitive graphics operatons for a Plot. All it
+#  does is record the values supplied to it by the Plot class.
+class DummyGrf():
+   def __init__( self ):
+      self.Reset()
 
+   def Reset( self ):
+      self.linex = []
+      self.liney = []
+      self.nline = 0
+      self.markx = []
+      self.marky = []
+      self.markt = []
+      self.nmark = 0
+      self.attr = []
+      self.value = []
+      self.prim = []
+      self.textt = []
+      self.textx = []
+      self.texty = []
+      self.textj = []
+      self.ntext = 0
+
+   def Attr( self, attr, value, prim ):
+      self.attr += [attr]
+      self.value += [value]
+      self.prim += [prim]
+      return 1
+
+   def BBuf( self ):
+      return 0
+
+   def Cap( self, cap, value ):
+      if cap == starlink.Ast.grfSCALES:
+         return 1
+      elif cap == starlink.Ast.grfMJUST:
+         return 0;
+      elif cap == starlink.Ast.grfESC:
+         return 0;
+      else:
+         return 0
+
+   def EBuf( self ):
+      return 0
+
+   def Flush( self ):
+      return 0
+
+   def Line( self, n, x, y ):
+      self.linex.extend(x)
+      self.liney.extend(y)
+      self.nline += n
+
+   def Mark( self, n, x, y, type ):
+      self.markx.extend(x)
+      self.marky.extend(y)
+      self.markt.extend(type)
+      self.nmark += n
+
+   def Qch( self ):
+      return (1.0,1.0)
+
+   def Scales( self ):
+      return (1.0,1.0)
+
+   def Text( self, text, x, y, just, upx, upy ):
+      self.textt += [text]
+      self.textx += [x]
+      self.texty += [y]
+      self.textj += [just]
+      self.ntext += 1
+
+   def TxExt( self, text, x, y, just, upx, upy ):
+      return (x-0.1,x+0.1,x+0.1,x-0.1,y-0.1,y-0.1,y+0.1,y+0.1)
 
 
 #  Tester
@@ -906,6 +979,51 @@ class TestAst(unittest.TestCase):
       self.assertEqual( km[0], ('SS', 'Goofbye'))
       with self.assertRaises(starlink.Ast.MPIND):
          km[1] = 'Nooooooo'
+
+   def test_Plot(self):
+      plot = starlink.Ast.Plot( None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0] )
+      self.assertIsInstance( plot, starlink.Ast.Object)
+      self.assertIsInstance( plot, starlink.Ast.Mapping )
+      self.assertIsInstance( plot, starlink.Ast.Frame )
+      self.assertIsInstance( plot, starlink.Ast.FrameSet )
+      self.assertIsInstance( plot, starlink.Ast.Plot )
+      self.assertTrue( plot.isaplot() )
+      self.assertTrue( plot.isaframeset() )
+      self.assertTrue( plot.isaframe() )
+      self.assertTrue( plot.isamapping() )
+      self.assertTrue( plot.isaobject() )
+
+      self.assertEqual( plot.Tol, 0.01 )
+      plot.Tol = 0.5
+      self.assertEqual( plot.Tol, 0.5 )
+
+      self.assertEqual( plot.Grf, None )
+      with self.assertRaises(TypeError):
+         plot.Grf = TextStream()
+      self.assertEqual( plot.Grf, None )
+      mygrf = DummyGrf()
+      plot.Grf = mygrf
+      self.assertEqual( plot.Grf, mygrf )
+
+      self.assertEqual( plot.Colour_Border, 1 )
+      plot.Colour_Border = 2
+      self.assertEqual( plot.Colour_Border, 2 )
+
+      plot.border()
+
+      self.assertAlmostEqual( mygrf.linex, [0.0, 0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959, 0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936, 0.71428573131561279, 0.78571426868438721, 0.8571428656578064, 0.92857140302658081, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.92857140302658081, 0.8571428656578064, 0.78571426868438721, 0.71428573131561279, 0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032, 0.3571428656578064, 0.28571429848670959, 0.2142857164144516, 0.1428571492433548, 0.071428574621677399, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] )
+      self.assertAlmostEqual( mygrf.liney, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959, 0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936, 0.71428573131561279, 0.78571426868438721, 0.8571428656578064, 0.92857140302658081, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.92857140302658081, 0.8571428656578064, 0.78571426868438721, 0.71428573131561279, 0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032, 0.3571428656578064, 0.28571429848670959, 0.2142857164144516, 0.1428571492433548, 0.071428574621677399, 0.0] )
+      self.assertEqual( mygrf.nline, 60 )
+      self.assertEqual( mygrf.attr, [4, 4] )
+      self.assertAlmostEqual( mygrf.value, [2.0, 1.0] )
+      self.assertEqual( mygrf.prim, [1, 1] )
+
+      mygrf.Reset()
+      plot.grid()
+      self.assertEqual( mygrf.textt, ['0', 'Axis 1', 'Axis 2', '2-d coordinate system'] )
+      self.assertEqual( mygrf.textj, ['TC', 'TC', 'BC', 'BC'])
+      self.assertEqual( mygrf.ntext, 4)
+
 
 
 if __name__ == "__main__":
