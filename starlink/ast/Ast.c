@@ -6830,6 +6830,10 @@ typedef struct {
 /* Prototypes for class functions */
 static PyObject *Plot_border( Object *self, PyObject *args );
 static PyObject *Plot_grid( Object *self, PyObject *args );
+static void Plot_dealloc( Plot *self );
+
+
+/* Wrappers for external Python Grf functions */
 static int Attr_wrapper( AstObject *grfcon, int attr, double value, double *old_value, int prim );
 static int Cap_wrapper( AstObject *grfcon, int cap, int value );
 static int BBuf_wrapper( AstObject *grfcon );
@@ -6842,7 +6846,7 @@ static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh );
 static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta );
 static int Text_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just, float upx, float upy );
 static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y, const char *just, float upx, float upy, float *xb, float *yb );
-static void Plot_dealloc( Plot *self );
+
 
 /* Describe the methods of the class */
 static PyMethodDef Plot_methods[] = {
@@ -7380,7 +7384,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
             if( yb ) {
                for( i = 0; i < 4; i++ ) {
                   pyitem =  PyTuple_GET_ITEM( result, i + 4 );
-                  xb[ i ] = PyFloat_AsDouble( pyitem );
+                  yb[ i ] = PyFloat_AsDouble( pyitem );
                }
             }
          }

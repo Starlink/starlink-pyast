@@ -1020,9 +1020,9 @@ class TestAst(unittest.TestCase):
 
       mygrf.Reset()
       plot.grid()
-      self.assertEqual( mygrf.textt, ['0', 'Axis 1', 'Axis 2', '2-d coordinate system'] )
-      self.assertEqual( mygrf.textj, ['TC', 'TC', 'BC', 'BC'])
-      self.assertEqual( mygrf.ntext, 4)
+      self.assertEqual( mygrf.textt, ['0', '0.3', '0.6', '0.9', '0.4', '0.7', '1', 'Axis 1', 'Axis 2', '2-d coordinate system'])
+      self.assertEqual( mygrf.textj,  ['TC', 'TC', 'TC', 'TC', 'CR', 'CR', 'CR', 'TC', 'BC', 'BC'])
+      self.assertEqual( mygrf.ntext, 10)
 
 
 
