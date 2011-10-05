@@ -981,7 +981,12 @@ class TestAst(unittest.TestCase):
          km[1] = 'Nooooooo'
 
    def test_Plot(self):
-      plot = starlink.Ast.Plot( None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0] )
+      with self.assertRaises(TypeError):
+         plot = starlink.Ast.Plot( None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0],
+                                   TextStream() )
+      mygrf = DummyGrf()
+      plot = starlink.Ast.Plot( None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0],
+                                mygrf )
       self.assertIsInstance( plot, starlink.Ast.Object)
       self.assertIsInstance( plot, starlink.Ast.Mapping )
       self.assertIsInstance( plot, starlink.Ast.Frame )
@@ -996,14 +1001,6 @@ class TestAst(unittest.TestCase):
       self.assertEqual( plot.Tol, 0.01 )
       plot.Tol = 0.5
       self.assertEqual( plot.Tol, 0.5 )
-
-      self.assertEqual( plot.Grf, None )
-      with self.assertRaises(TypeError):
-         plot.Grf = TextStream()
-      self.assertEqual( plot.Grf, None )
-      mygrf = DummyGrf()
-      plot.Grf = mygrf
-      self.assertEqual( plot.Grf, mygrf )
 
       self.assertEqual( plot.Colour_Border, 1 )
       plot.Colour_Border = 2

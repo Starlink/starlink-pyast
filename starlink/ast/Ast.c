@@ -6,6 +6,7 @@
         MathMap
         MatrixMap
         Plot
+        Plot3D
         PointList
         PolyMap
         Polygon
@@ -6861,7 +6862,7 @@ static PyObject *Plot_mark( Plot *self, PyObject *args );
 static PyObject *Plot_polycurve( Plot *self, PyObject *args );
 static PyObject *Plot_text( Plot *self, PyObject *args );
 static void Plot_dealloc( Plot *self );
-
+static int setGrf( Plot *self, PyObject *value );
 
 /* Wrappers for external Python Grf functions */
 static int Attr_wrapper( AstObject *grfcon, int attr, double value, double *old_value, int prim );
@@ -6933,94 +6934,7 @@ MAKE_GETSETD(Plot,Tol)
 #include "TextLabGap_def.c"
 #include "Width_def.c"
 
-#define NFUN 11
-static int setGrf( Plot *self, PyObject *value, void *closure );
-static int setGrf( Plot *self, PyObject *value, void *closure ){
-   const char *fname[NFUN] = { "Attr", "BBuf", "Cap", "EBuf", "Flush",
-                               "Line", "Mark", "Qch", "Scales", "Text",
-                               "TxExt" };
-   AstGrfFun fun[NFUN] = { (AstGrfFun) Attr_wrapper, (AstGrfFun) BBuf_wrapper,
-                           (AstGrfFun) Cap_wrapper, (AstGrfFun) EBuf_wrapper,
-                           (AstGrfFun) Flush_wrapper, (AstGrfFun) Line_wrapper,
-                           (AstGrfFun) Mark_wrapper, (AstGrfFun) Qch_wrapper,
-                           (AstGrfFun) Scales_wrapper, (AstGrfFun) Text_wrapper,
-                           (AstGrfFun) TxExt_wrapper};
-   int ifun;
-   int result = -1;
-   if( PyErr_Occurred() ) return result;
-
-/* Clear out all any existing graphics functions. */
-   if( self->grf ) {
-      Py_XDECREF(self->grf);
-      self->grf = NULL;
-   }
-
-   for( ifun = 0; ifun < NFUN; ifun++ ) {
-      astGrfSet( THIS, fname[ ifun ], NULL );
-   }
-
-/* If no new graphics functions were supplied, clear the Grf attribute
-   (just for safety really). */
-   if (value == NULL || value == Py_None ) {
-      astSetI( THIS, "Grf", 0 );
-
-/* If new graphics functions were supplied, ensure the Grf attribute is
-   set  non-zero so that the wrappers are used, store the supplied PyObject
-   in the Plot and register the required wrapper functions. */
-   } else {
-      result = 0;
-      astSetI( THIS, "Grf", 1 );
-      self->grf = value;
-      Py_XINCREF(self->grf);
-
-      for( ifun = 0; ifun < NFUN; ifun++ ) {
-         if( PyObject_HasAttrString( value, fname[ ifun ] ) ) {
-            astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
-         } else {
-            PyErr_Format( PyExc_TypeError, "The supplied grf object does "
-                          "not implement the '%s' method.", fname[ ifun ] );
-            result = -1;
-            break;
-         }
-      }
-
-/* Store the Plot pointer in the graphics context KeyMap, so that it can
-   be accessed by the wrapper functions. */
-      AstKeyMap *km = astGetGrfContext( THIS );
-      astMapPut0P( km, "SELF", self, NULL );
-      km = astAnnul( km );
-   }
-
-/* If anything went wrong, clear out any graphics functions. */
-   if( !astOK || result ) {
-      if( self->grf ) {
-         Py_XDECREF(self->grf);
-         self->grf = NULL;
-      }
-
-      for( ifun = 0; ifun < NFUN; ifun++ ) {
-         astGrfSet( THIS, fname[ ifun ], NULL );
-      }
-      result = -1;
-   }
-
-   TIDY;
-   return result;
-}
-#undef NFUN
-
-static PyObject *getGrf( Plot *self, void *closure );
-static PyObject *getGrf( Plot *self, void *closure ){
-   PyObject *result = Py_None;
-   if( self->grf ) {
-      result = self->grf;
-      Py_INCREF(self->grf);
-   }
-   return result;
-}
-
 static PyGetSetDef Plot_getseters[] = {
-   { "Grf", (getter) getGrf, (setter) setGrf, "The object that draws primitives for the Plot" },
    DEFATT(Abbrev,"Abbreviate leading fields?"),
    DEFATT(Border,"Draw a border around valid regions of a Plot?"),
    DEFATT(Clip,"Clip lines and/or markers at the Plot boundary?"),
@@ -7108,12 +7022,13 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
    Frame *frame;
    PyObject *bbox_object = NULL;
    PyObject *gbox_object = NULL;
+   PyObject *grf_object = NULL;
    PyArrayObject *gbox = NULL;
    PyArrayObject *bbox = NULL;
    int result = -1;
 
-   if( PyArg_ParseTuple(args, "OOO|s:" CLASS, (PyObject**)&frame,
-                        &gbox_object, &bbox_object, &options ) ) {
+   if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, (PyObject**)&frame,
+                        &gbox_object, &bbox_object, &grf_object, &options ) ) {
 
       if( (PyObject *) frame != Py_None &&
           !PyObject_TypeCheck( frame, &FrameType ) ) {
@@ -7121,6 +7036,7 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
                           "constructor must be a Frame." );
 
       } else {
+         self->grf = NULL;
          int size = 4;
          gbox = GetArray1D( gbox_object, &size, "graphbox", NAME );
          bbox = GetArray1D( bbox_object, &size, "basebox", NAME );
@@ -7133,11 +7049,11 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
             AstPlot *this = astPlot( AST(frame), graphbox,
                                      (const double *)bbox->data, options );
             result = SetProxy( (AstObject *) this, (Object *) self );
+            if( result == 0 ) result = setGrf( self, grf_object );
             this = astAnnul( this );
          }
          Py_XDECREF( gbox );
          Py_XDECREF( bbox );
-         self->grf = NULL;
       }
    }
 
@@ -7437,6 +7353,84 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
    return result;
 }
 
+
+
+/* Check a supplied Grf object has all the required methods, and store it
+   in the Plot. */
+#define NFUN 11
+static int setGrf( Plot *self, PyObject *value ){
+   const char *fname[NFUN] = { "Attr", "BBuf", "Cap", "EBuf", "Flush",
+                               "Line", "Mark", "Qch", "Scales", "Text",
+                               "TxExt" };
+   AstGrfFun fun[NFUN] = { (AstGrfFun) Attr_wrapper, (AstGrfFun) BBuf_wrapper,
+                           (AstGrfFun) Cap_wrapper, (AstGrfFun) EBuf_wrapper,
+                           (AstGrfFun) Flush_wrapper, (AstGrfFun) Line_wrapper,
+                           (AstGrfFun) Mark_wrapper, (AstGrfFun) Qch_wrapper,
+                           (AstGrfFun) Scales_wrapper, (AstGrfFun) Text_wrapper,
+                           (AstGrfFun) TxExt_wrapper};
+   int ifun;
+   int result = -1;
+   if( PyErr_Occurred() || !astOK ) return result;
+
+/* Clear out all any existing graphics functions. */
+   if( self->grf ) {
+      Py_XDECREF(self->grf);
+      self->grf = NULL;
+   }
+
+   for( ifun = 0; ifun < NFUN; ifun++ ) {
+      astGrfSet( THIS, fname[ ifun ], NULL );
+   }
+
+/* If no new graphics functions were supplied, clear the Grf attribute
+   (just for safety really). */
+   if (value == NULL || value == Py_None ) {
+      astSetI( THIS, "Grf", 0 );
+
+/* If new graphics functions were supplied, ensure the Grf attribute is
+   set  non-zero so that the wrappers are used, store the supplied PyObject
+   in the Plot and register the required wrapper functions. */
+   } else {
+      result = 0;
+      astSetI( THIS, "Grf", 1 );
+      self->grf = value;
+      Py_XINCREF(self->grf);
+
+      for( ifun = 0; ifun < NFUN; ifun++ ) {
+         if( PyObject_HasAttrString( value, fname[ ifun ] ) ) {
+            astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
+         } else {
+            PyErr_Format( PyExc_TypeError, "The supplied grf object does "
+                          "not implement the '%s' method.", fname[ ifun ] );
+            result = -1;
+            break;
+         }
+      }
+
+/* Store the Plot pointer in the graphics context KeyMap, so that it can
+   be accessed by the wrapper functions. */
+      AstKeyMap *km = astGetGrfContext( THIS );
+      astMapPut0P( km, "SELF", self, NULL );
+      km = astAnnul( km );
+   }
+
+/* If anything went wrong, clear out any graphics functions. */
+   if( !astOK || result ) {
+      if( self->grf ) {
+         Py_XDECREF(self->grf);
+         self->grf = NULL;
+      }
+
+      for( ifun = 0; ifun < NFUN; ifun++ ) {
+         astGrfSet( THIS, fname[ ifun ], NULL );
+      }
+      result = -1;
+   }
+
+   TIDY;
+   return result;
+}
+#undef NFUN
 
 /* Wrapper functions for the drawing functions. */
 static int Attr_wrapper( AstObject *grfcon, int attr, double value,
