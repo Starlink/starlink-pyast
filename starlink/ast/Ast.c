@@ -1,11 +1,31 @@
 /* Issues:
 
+   - Classes still to be done:
+        DssMap
+        IntraMap
+        MathMap
+        MatrixMap
+        Plot
+        PointList
+        PolyMap
+        Polygon
+        SelectorMap
+        SlaMap
+        SpecMap
+        Stc
+        StcCatalogEntryLocation
+        StcObsDataLocation
+        StcResourceProfile
+        StcSearchLocation
+        SwitchMap
+        Table
+        XmlChan
+
    - AST should be included and (optionally?) built with pyast
    - Should the module be called Ast or pyast?
    - Should it be in a starlink package or standalone?
    - providing more base methods (equal, etc)
    - are there any memory leaks (either in AST or Python)?
-   - implement more methods and classes
    - is starlink.Ast.BAD (== AST__BAD) implemented in the best way?
    - needs proper docs
 
@@ -2175,7 +2195,7 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
                                                            PyArray_DOUBLE, 0, 100);
     if (astargs) {
       astTimeAdd( THIS, cvt, (const double *)astargs->data );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
     }
     Py_XDECREF( astargs );
   }
@@ -2890,7 +2910,7 @@ MAKE_GETSETL(Frame,PreserveAxes)
 // Have to write our own GETSET routines for ActiveUnit
 MAKE_GET( Frame, ActiveUnit,
           astGetActiveUnit( THIS ) ? Py_True : Py_False );
-MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == Py_True ) ); if (astOK) result = 0; );
+MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == Py_True ) ); if( astOK ) result = 0; );
 
 
 static PyGetSetDef Frame_getseters[] = {
@@ -3005,7 +3025,7 @@ static PyObject *Frame_angle( Frame *self, PyObject *args ) {
       double angle = astAngle( THIS, (const double *)a->data,
                                (const double *)b->data,
                                (const double *)c->data);
-      if (astOK) result = Py_BuildValue( "d", angle );
+      if( astOK ) result = Py_BuildValue( "d", angle );
     }
     Py_XDECREF( a );
     Py_XDECREF( b );
@@ -3037,7 +3057,7 @@ static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
     if (a && b ) {
       double axangle = astAxAngle( THIS, (const double *)a->data,
                                    (const double *)b->data, axis );
-      if (astOK) result = Py_BuildValue( "d", axangle );
+      if( astOK ) result = Py_BuildValue( "d", axangle );
     }
     Py_XDECREF( a );
     Py_XDECREF( b );
@@ -3059,7 +3079,7 @@ static PyObject *Frame_axdistance( Frame *self, PyObject *args ) {
 
   if ( PyArg_ParseTuple( args, "idd:" NAME, &axis, &v1, &v2 ) && astOK ) {
     double axdistance = astAxDistance( THIS, axis, v1, v2 );
-    if (astOK) result = Py_BuildValue( "d", axdistance );
+    if( astOK ) result = Py_BuildValue( "d", axdistance );
   }
 
   TIDY;
@@ -3076,7 +3096,7 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
 
   if ( PyArg_ParseTuple( args, "idd:" NAME, &axis, &v1, &dist ) && astOK ) {
     double axoffset = astAxOffset( THIS, axis, v1, dist );
-    if (astOK) result = Py_BuildValue( "d", axoffset );
+    if( astOK ) result = Py_BuildValue( "d", axoffset );
   }
 
   TIDY;
@@ -3096,7 +3116,7 @@ static PyObject *Frame_convert( Frame *self, PyObject *args ) {
                        (PyObject**)&other, &domainlist ) && astOK ) {
       AstFrameSet *conversion = astConvert( THIS, THAT,
                                             (domainlist ? domainlist : "" ) );
-      if (astOK) {
+      if( astOK ) {
         PyObject *conversion_object = NewObject( (AstObject *)conversion );
         if (conversion_object) {
           result = Py_BuildValue( "O", conversion_object );
@@ -3130,7 +3150,7 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
     if (point1 && point2 ) {
       double distance = astDistance( THIS, (const double *)point1->data,
                                    (const double *)point2->data );
-      if (astOK) result = Py_BuildValue( "d", distance );
+      if( astOK ) result = Py_BuildValue( "d", distance );
     }
     Py_XDECREF( point1 );
     Py_XDECREF( point2 );
@@ -3153,7 +3173,7 @@ static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
                        (PyObject**)&other, &domainlist ) && astOK ) {
       AstFrameSet *found = astFindFrame( THIS, THAT,
                                          (domainlist ? domainlist : "" ) );
-      if (astOK) {
+      if( astOK ) {
         PyObject *found_object = NewObject( (AstObject *)found );
         if (found_object) {
           result = Py_BuildValue( "O", found_object );
@@ -3178,7 +3198,7 @@ static PyObject *Frame_format( Frame *self, PyObject *args ) {
 
   if ( PyArg_ParseTuple( args, "id:" NAME, &axis, &value ) && astOK ) {
     const char * format = astFormat( THIS, axis, value );
-    if (astOK) result = Py_BuildValue( "s", format );
+    if( astOK ) result = Py_BuildValue( "s", format );
   }
 
   TIDY;
@@ -3217,7 +3237,7 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
                     (const double *)a2->data,
                     (const double *)b1->data,
                     (const double *)b2->data, (double *)out->data );
-      if (astOK) result = Py_BuildValue("O", PyArray_Return(out));
+      if( astOK ) result = Py_BuildValue("O", PyArray_Return(out));
     }
     Py_XDECREF( a1 );
     Py_XDECREF( a2 );
@@ -3275,7 +3295,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
     if ( value && axes ) {
       memcpy( axes->data, value->data, sizeof(double)*naxes);
       astNorm( THIS, (double *)axes->data );
-      if (astOK) result = Py_BuildValue( "O", PyArray_Return(axes) );
+      if( astOK ) result = Py_BuildValue( "O", PyArray_Return(axes) );
     }
     Py_XDECREF( value );
     Py_XDECREF( axes );
@@ -3311,7 +3331,7 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
       astOffset( THIS, (const double *)point1->data,
                  (const double *)point2->data, offset,
                  (double *)point3->data );
-      if (astOK) result = Py_BuildValue("O", PyArray_Return(point3));
+      if( astOK ) result = Py_BuildValue("O", PyArray_Return(point3));
     }
     Py_XDECREF( point1 );
     Py_XDECREF( point2 );
@@ -3346,7 +3366,7 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
       double direction = astOffset2( THIS, (const double *)point1->data,
                                     angle, offset,
                                     (double *)point2->data );
-      if (astOK) result = Py_BuildValue("dO", direction, PyArray_Return(point2));
+      if( astOK ) result = Py_BuildValue("dO", direction, PyArray_Return(point2));
     }
     Py_XDECREF( point1 );
     Py_XDECREF( point2 );
@@ -3371,7 +3391,7 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
     perm = GetArray1I( perm_object, &naxes, "perm", NAME );
     if (perm) {
       astPermAxes( THIS, (const int *)perm->data );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
     }
     Py_XDECREF( perm );
   }
@@ -3402,7 +3422,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
       frame = astPickAxes( THIS, naxes,
                            (const int *)axes->data,
                            &map);
-      if (astOK) {
+      if( astOK ) {
         PyObject *map_object = NULL;
         PyObject *frame_object = NULL;
         frame_object = NewObject( (AstObject *)frame );
@@ -3454,7 +3474,7 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
                   (const double *)point2->data,
                   (const double *)point3->data,
                   (double *)point4->data, &d1, &d2);
-      if (astOK) result = Py_BuildValue("Odd", PyArray_Return(point4), d1, d2);
+      if( astOK ) result = Py_BuildValue("Odd", PyArray_Return(point4), d1, d2);
     }
     Py_XDECREF( point1 );
     Py_XDECREF( point2 );
@@ -3479,7 +3499,7 @@ static PyObject *Frame_unformat( Frame *self, PyObject *args ) {
     double value;
     int nchars;
     nchars = astUnformat( THIS, axis, string, &value );
-    if (astOK) result = Py_BuildValue( "id", nchars, value );
+    if( astOK ) result = Py_BuildValue( "id", nchars, value );
   }
 
   TIDY;
@@ -3677,7 +3697,7 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
                        &MappingType, (PyObject**)&other,
                        &FrameType, (PyObject**)&another ) && astOK ) {
       astAddFrame( THIS, iframe, THAT, ANOTHER );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
    }
 
    TIDY;
@@ -3694,7 +3714,7 @@ static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
 
   if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
       AstFrame * frame = astGetFrame( THIS, iframe );
-      if (astOK) {
+      if( astOK ) {
         PyObject *frame_object = NULL;
         frame_object = NewObject( (AstObject *)frame );
         if (frame_object) {
@@ -3720,7 +3740,7 @@ static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
 
   if( PyArg_ParseTuple(args, "ii:" NAME, &iframe1, &iframe2 ) && astOK ) {
       AstMapping * mapping = astGetMapping( THIS, iframe1, iframe2 );
-      if (astOK) {
+      if( astOK ) {
         PyObject *mapping_object = NULL;
         mapping_object = NewObject( (AstObject *)mapping );
         if (mapping_object) {
@@ -3747,7 +3767,7 @@ static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
   if( PyArg_ParseTuple(args, "iO!:" NAME, &iframe,
                        &MappingType, (PyObject**)&other ) && astOK ) {
       astRemapFrame( THIS, iframe, THAT );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
    }
 
    TIDY;
@@ -3764,7 +3784,7 @@ static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
 
   if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
       astRemoveFrame( THIS, iframe );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
    }
 
    TIDY;
@@ -3966,7 +3986,7 @@ static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
 
    mapping = astSkyOffsetMap( THIS  );
-   if (astOK) {
+   if( astOK ) {
       PyObject *mapping_object = NULL;
       mapping_object = NewObject( (AstObject *)mapping );
       if (mapping_object) {
@@ -4102,7 +4122,7 @@ static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
                        &SkyFrameType, (PyObject**)&other,
                        &lon, &lat ) && astOK ) {
       astSetRefPos( THIS, THAT, lon, lat );
-      if (astOK) result = Py_None;
+      if( astOK ) result = Py_None;
    }
 
    TIDY;
@@ -4122,7 +4142,7 @@ static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
   if( PyArg_ParseTuple(args, "O!:" NAME,
                        &SkyFrameType, (PyObject**)&other ) && astOK ) {
       astGetRefPos( THIS, THAT, &lon, &lat );
-      if (astOK) result = Py_BuildValue( "dd", lon, lat );
+      if( astOK ) result = Py_BuildValue( "dd", lon, lat );
    }
 
    TIDY;
@@ -4321,7 +4341,7 @@ static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
 
    if ( astOK ) {
       double currtime = astCurrentTime( THIS );
-      if (astOK) result = Py_BuildValue( "d", currtime );
+      if( astOK ) result = Py_BuildValue( "d", currtime );
    }
 
    TIDY;
@@ -4585,7 +4605,7 @@ static PyObject *Region_getregionbounds( Region *self ) {
   ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
   if( lbnd && ubnd ) {
      astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
-     if (astOK) result = Py_BuildValue("OO", PyArray_Return(lbnd),
+     if( astOK ) result = Py_BuildValue("OO", PyArray_Return(lbnd),
                                         PyArray_Return(ubnd));
   }
   Py_XDECREF(lbnd);
@@ -4604,7 +4624,7 @@ static PyObject *Region_getregionframe( Region *self ) {
   if( PyErr_Occurred() ) return NULL;
 
   frame = astGetRegionFrame( THIS );
-  if (astOK) {
+  if( astOK ) {
      PyObject *frame_object = NULL;
      frame_object = NewObject( (AstObject *)frame );
      if (frame_object) {
@@ -5445,7 +5465,7 @@ static PyObject *Channel_write( Channel *self, PyObject *args ){
 
    if( PyArg_ParseTuple(args, "O!:" NAME, &ObjectType, (PyObject**) &other ) ) {
       nwrite = astWrite( THIS, THAT );
-      if (astOK) result = Py_BuildValue( "i", nwrite );
+      if( astOK ) result = Py_BuildValue( "i", nwrite );
    }
    TIDY;
    return result;
@@ -6828,8 +6848,18 @@ typedef struct {
 } Plot;
 
 /* Prototypes for class functions */
-static PyObject *Plot_border( Object *self, PyObject *args );
-static PyObject *Plot_grid( Object *self, PyObject *args );
+static PyObject *Plot_border( Plot *self, PyObject *args );
+static PyObject *Plot_grid( Plot *self, PyObject *args );
+static PyObject *Plot_gridline( Plot *self, PyObject *args );
+static PyObject *Plot_bbuf( Plot *self, PyObject *args );
+static PyObject *Plot_boundingbox( Plot *self, PyObject *args );
+static PyObject *Plot_clip( Plot *self, PyObject *args );
+static PyObject *Plot_curve( Plot *self, PyObject *args );
+static PyObject *Plot_ebuf( Plot *self, PyObject *args );
+static PyObject *Plot_gencurve( Plot *self, PyObject *args );
+static PyObject *Plot_mark( Plot *self, PyObject *args );
+static PyObject *Plot_polycurve( Plot *self, PyObject *args );
+static PyObject *Plot_text( Plot *self, PyObject *args );
 static void Plot_dealloc( Plot *self );
 
 
@@ -6850,8 +6880,18 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
 
 /* Describe the methods of the class */
 static PyMethodDef Plot_methods[] = {
+   {"bbuf", (PyCFunction)Plot_bbuf, METH_NOARGS, "Begin a new graphical buffering context"},
    {"border", (PyCFunction)Plot_border, METH_NOARGS, "Draw a border around valid regions of a Plot"},
+   {"boundingbox", (PyCFunction)Plot_boundingbox, METH_NOARGS, "Return a bounding box for previously drawn graphics"},
+   {"clip", (PyCFunction)Plot_clip, METH_VARARGS, "Set up or remove clipping for a Plot"},
+   {"curve", (PyCFunction)Plot_curve, METH_VARARGS, "Draw a geodesic curve"},
+   {"ebuf", (PyCFunction)Plot_ebuf, METH_NOARGS, "End the current graphical buffering context"},
+   {"gencurve", (PyCFunction)Plot_gencurve, METH_VARARGS, "Draw a generalized curve"},
    {"grid", (PyCFunction)Plot_grid, METH_NOARGS, "Draw a set of labelled coordinate axes around a Plot"},
+   {"gridline", (PyCFunction)Plot_gridline, METH_VARARGS, "Draw a grid line (or axis) for a Plot"},
+   {"mark", (PyCFunction)Plot_mark, METH_VARARGS, "Draw a set of markers for a Plot"},
+   {"polycurve", (PyCFunction)Plot_polycurve, METH_VARARGS, "Draw a series of connected geodesic curves"},
+   {"text", (PyCFunction)Plot_text, METH_VARARGS, "Draw a text string for a Plot"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -7115,7 +7155,7 @@ static void Plot_dealloc( Plot *self ) {
 
 #undef NAME
 #define NAME CLASS ".border"
-static PyObject *Plot_border( Object *self, PyObject *args ) {
+static PyObject *Plot_border( Plot *self, PyObject *args ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    int border = astBorder( THIS );
@@ -7127,11 +7167,272 @@ static PyObject *Plot_border( Object *self, PyObject *args ) {
 
 #undef NAME
 #define NAME CLASS ".grid"
-static PyObject *Plot_grid( Object *self, PyObject *args ) {
+static PyObject *Plot_grid( Plot *self, PyObject *args ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astGrid( THIS );
    if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".bbuf"
+static PyObject *Plot_bbuf( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return result;
+   astBBuf( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".boundingbox"
+static PyObject *Plot_boundingbox( Plot *self, PyObject *args ) {
+   float flbnd[2], fubnd[2];
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return result;
+   astBoundingBox( THIS, flbnd, fubnd );
+   if( astOK ) {
+      npy_intp dims[1];
+      dims[0] = 2;
+      PyArrayObject *lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      if( lbnd ) {
+         double *v = (double *)lbnd->data;
+         v[ 0 ] = flbnd[ 0 ];
+         v[ 1 ] = flbnd[ 1 ];
+      }
+      PyArrayObject *ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      if( ubnd ) {
+         double *v = (double *)ubnd->data;
+         v[ 0 ] = fubnd[ 0 ];
+         v[ 1 ] = fubnd[ 1 ];
+      }
+      result = Py_BuildValue("OO", lbnd, ubnd );
+      Py_DECREF( ubnd );
+      Py_DECREF( lbnd );
+   }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".clip"
+static PyObject *Plot_clip( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   PyObject *lbnd_object = NULL;
+   PyObject *ubnd_object = NULL;
+   int iframe;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "iOO:" NAME, &iframe, &lbnd_object,
+                         &ubnd_object ) && astOK ) {
+
+      if( iframe != AST__NOFRAME ) {
+         AstFrame *frm = astGetFrame( THIS, iframe );
+         int naxes = astGetI( frm, "Naxes" );
+         frm = astAnnul( frm );
+
+         PyArrayObject *lbnd = GetArray1D( lbnd_object, &naxes, "lbnd_in",
+                                           NAME );
+         PyArrayObject *ubnd = GetArray1D( ubnd_object, &naxes, "ubnd_in",
+                                           NAME );
+         if( lbnd && ubnd ) {
+            astClip( THIS, iframe, (const double *)lbnd->data,
+                     (const double *)ubnd->data );
+            if( astOK ) result = Py_None;
+         }
+         Py_XDECREF( lbnd );
+         Py_XDECREF( ubnd );
+
+      } else {
+         astClip( THIS, iframe, NULL, NULL );
+         if( astOK ) result = Py_None;
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".curve"
+static PyObject *Plot_curve( Plot *self, PyObject *args ) {
+   PyObject *start_object = NULL;
+   PyObject *result = NULL;
+   PyObject *finish_object = NULL;
+   int naxes;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   naxes = astGetI( THIS, "Naxes" );
+   if( PyArg_ParseTuple( args, "OO:" NAME, &start_object, &finish_object ) &&
+       astOK ) {
+      PyArrayObject *start = GetArray1D( start_object, &naxes, "start", NAME );
+      PyArrayObject *finish = GetArray1D( finish_object, &naxes, "finish", NAME );
+      if( start && finish ) {
+         astCurve( THIS, (const double *)start->data,
+                       (const double *)finish->data );
+         if( astOK ) result = Py_None;
+      }
+      Py_XDECREF( start );
+      Py_XDECREF( finish );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".gridline"
+static PyObject *Plot_gridline( Plot *self, PyObject *args ) {
+   PyObject *start_object = NULL;
+   PyObject *result = NULL;
+   int naxes;
+   int axis;
+   double length;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   naxes = astGetI( THIS, "Naxes" );
+   if( PyArg_ParseTuple( args, "iOd:" NAME, &axis, &start_object, &length ) &&
+       astOK ) {
+      PyArrayObject *start = GetArray1D( start_object, &naxes, "start", NAME );
+      if( start ) {
+         astGridLine( THIS, axis, (const double *)start->data, length );
+         if( astOK ) result = Py_None;
+      }
+      Py_XDECREF( start );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".ebuf"
+static PyObject *Plot_ebuf( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return result;
+   astEBuf( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".gencurve"
+static PyObject *Plot_gencurve( Plot *self, PyObject *args ){
+   Mapping *map = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O!:" NAME, &MappingType, (PyObject**) &map ) ) {
+      astGenCurve( THIS, AST(map) );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".mark"
+static PyObject *Plot_mark( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   PyObject *in_object = NULL;
+   int type;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "Oi:" NAME, &in_object, &type ) && astOK ) {
+      int dims[ 2 ];
+      dims[ 0 ] = astGetI( THIS, "Naxes" );
+      dims[ 1 ] = 0;
+      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims,
+                                    "in", NAME );
+      if( in ) {
+         astMark( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
+                       (const double *)in->data, type );
+         if( astOK ) result = Py_None;
+      }
+      Py_XDECREF( in );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".polycurve"
+static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   PyObject *in_object = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "O:" NAME, &in_object ) && astOK ) {
+      int dims[ 2 ];
+      dims[ 0 ] = astGetI( THIS, "Naxes" );
+      dims[ 1 ] = 0;
+      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims,
+                                    "in", NAME );
+      if( in ) {
+         astPolyCurve( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
+                       (const double *)in->data );
+         if( astOK ) result = Py_None;
+      }
+      Py_XDECREF( in );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".text"
+static PyObject *Plot_text( Plot *self, PyObject *args ) {
+   PyObject *result = NULL;
+   PyObject *text_object = NULL;
+   PyObject *pos_object = NULL;
+   PyObject *up_object = NULL;
+   PyObject *just_object = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "OOOO:" NAME, &text_object, &pos_object,
+                         &up_object, &just_object ) && astOK ) {
+
+      int dim = astGetI( THIS, "Naxes" );
+      PyArrayObject *pos = GetArray1D( pos_object, &dim, "pos", NAME );
+
+      dim = 2;
+      PyArrayObject *up = GetArray1D( up_object, &dim, "up", NAME );
+
+      PyObject *str = PyObject_Str( text_object );
+      char *text = GetString( NULL, str );
+      Py_XDECREF(str);
+
+      str = PyObject_Str( just_object );
+      char *just = GetString( NULL, str );
+      Py_XDECREF(str);
+
+      if( pos && up && text && just ) {
+         float fup[2];
+         fup[ 0 ] = ((const double *)up->data)[ 0 ];
+         fup[ 1 ] = ((const double *)up->data)[ 1 ];
+         astText( THIS, text, (const double *)pos->data, fup, just );
+         if( astOK ) result = Py_None;
+      }
+
+      text = astFree( text );
+      just = astFree( just );
+      Py_XDECREF( pos );
+      Py_XDECREF( up );
+   }
+
    TIDY;
    return result;
 }
@@ -7774,67 +8075,154 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 #define DCONST(Name) \
    PyModule_AddObject( m, #Name, PyFloat_FromDouble(AST__##Name) )
 
-   ICONST(TUNULL);
+#define CCONST(Name) \
+   PyModule_AddObject( m, #Name, PyUnicode_FromString(AST__##Name) )
 
-   ICONST(USEVAR);
-   ICONST(USEBAD);
+
+   CCONST(XMLNS);
+
+   DCONST(AU);
+   DCONST(BAD);
+   DCONST(C);
+   DCONST(DD2R);
+   DCONST(DPI);
+   DCONST(DPIBY2);
+   DCONST(DR2D);
+   DCONST(H);
+   DCONST(NAN);
+   DCONST(NANF);
+   DCONST(SOLRAD);
+
+   ICONST(AIR);
+   ICONST(AIT);
+   ICONST(ALLFRAMES);
+   ICONST(AND);
+   ICONST(ANY);
+   ICONST(ARC);
+   ICONST(AZP);
+   ICONST(BADTYPE);
+   ICONST(BASE);
+   ICONST(BLOCKAVE);
+   ICONST(BON);
+   ICONST(BYTETYPE);
+   ICONST(CAR);
+   ICONST(CEA);
+   ICONST(COD);
+   ICONST(COE);
+   ICONST(COMMENT);
+   ICONST(COMPLEXF);
+   ICONST(COMPLEXI);
    ICONST(CONSERVEFLUX);
-   ICONST(REBININIT);
-   ICONST(REBINEND);
-   ICONST(GENVAR);
-   ICONST(VARWGT);
-   ICONST(NOBAD);
+   ICONST(CONTINUE);
+   ICONST(COO);
+   ICONST(COP);
+   ICONST(CSC);
+   ICONST(CURRENT);
+   ICONST(CYP);
    ICONST(DISVAR);
-   ICONST(NEAREST);
+   ICONST(DOUBLETYPE);
+   ICONST(EQ);
+   ICONST(FLOAT);
+   ICONST(FLOATTYPE);
+   ICONST(GATTR);
+   ICONST(GAUSS);
+   ICONST(GBBUF);
+   ICONST(GCAP);
+   ICONST(GE);
+   ICONST(GEBUF);
+   ICONST(GENVAR);
+   ICONST(GFLUSH);
+   ICONST(GLINE);
+   ICONST(GLS);
+   ICONST(GMARK);
+   ICONST(GQCH);
+   ICONST(GSCALES);
+   ICONST(GT);
+   ICONST(GTEXT);
+   ICONST(GTXEXT);
+   ICONST(HPX);
+   ICONST(INT);
+   ICONST(INTTYPE);
+   ICONST(LE);
    ICONST(LINEAR);
+   ICONST(LOGICAL);
+   ICONST(MER);
+   ICONST(MOL);
+   ICONST(MXKEYLEN);
+   ICONST(NCP);
+   ICONST(NE);
+   ICONST(NEAREST);
+   ICONST(NGRFFUN);
+   ICONST(NOBAD);
+   ICONST(NOFRAME);
+   ICONST(NOFWD);
+   ICONST(NOINV);
+   ICONST(NOTYPE);
+   ICONST(NPID);
+   ICONST(OBJECTTYPE);
+   ICONST(OR);
+   ICONST(PAR);
+   ICONST(PCO);
+   ICONST(POINTERTYPE);
+   ICONST(QSC);
+   ICONST(REBINEND);
+   ICONST(REBININIT);
+   ICONST(SFL);
+   ICONST(SIMPFI);
+   ICONST(SIMPIF);
+   ICONST(SIN);
    ICONST(SINC);
-   ICONST(SINCSINC);
    ICONST(SINCCOS);
    ICONST(SINCGAUSS);
-   ICONST(BLOCKAVE);
-   ICONST(GAUSS);
+   ICONST(SINCSINC);
+   ICONST(SINTTYPE);
    ICONST(SOMB);
    ICONST(SOMBCOS);
-
-   ICONST(AZP);
+   ICONST(STG);
+   ICONST(STRING);
+   ICONST(STRINGTYPE);
    ICONST(SZP);
    ICONST(TAN);
-   ICONST(STG);
-   ICONST(SIN);
-   ICONST(ARC);
-   ICONST(ZPN);
-   ICONST(ZEA);
-   ICONST(AIR);
-   ICONST(CYP);
-   ICONST(CEA);
-   ICONST(CAR);
-   ICONST(MER);
-   ICONST(SFL);
-   ICONST(PAR);
-   ICONST(MOL);
-   ICONST(AIT);
-   ICONST(COP);
-   ICONST(COE);
-   ICONST(COD);
-   ICONST(COO);
-   ICONST(BON);
-   ICONST(PCO);
-   ICONST(TSC);
-   ICONST(CSC);
-   ICONST(QSC);
-   ICONST(NCP);
-   ICONST(GLS);
    ICONST(TPN);
-   ICONST(HPX);
+   ICONST(TSC);
+   ICONST(TUNULL);
+   ICONST(UINTERP);
+   ICONST(UKERN1);
+   ICONST(UNDEF);
+   ICONST(UNDEFTYPE);
+   ICONST(URESAMP1);
+   ICONST(URESAMP2);
+   ICONST(URESAMP3);
+   ICONST(URESAMP4);
+   ICONST(USEBAD);
+   ICONST(USEVAR);
+   ICONST(VARWGT);
    ICONST(WCSBAD);
-
-   ICONST(AND);
-   ICONST(OR);
+   ICONST(WCSMX);
+   ICONST(XMLATTR);
+   ICONST(XMLBAD);
+   ICONST(XMLBLACK);
+   ICONST(XMLCDATA);
+   ICONST(XMLCHAR);
+   ICONST(XMLCOM);
+   ICONST(XMLCONT);
+   ICONST(XMLDEC);
+   ICONST(XMLDOC);
+   ICONST(XMLDTD);
+   ICONST(XMLELEM);
+   ICONST(XMLMISC);
+   ICONST(XMLNAME);
+   ICONST(XMLOBJECT);
+   ICONST(XMLPAR);
+   ICONST(XMLPI);
+   ICONST(XMLPRO);
+   ICONST(XMLWHITE);
    ICONST(XOR);
-
-   DCONST(BAD);
+   ICONST(ZEA);
+   ICONST(ZPN);
 
 #undef ICONST
+#undef CCONST
 #undef DCONST
 
 #define ICONST(Name) \
@@ -8409,4 +8797,5 @@ static const char *AttNorm( const char *att, char *buff ){
    }
    return result;
 }
+
 

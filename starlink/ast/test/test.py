@@ -98,7 +98,7 @@ class DummyGrf():
    def Mark( self, n, x, y, type ):
       self.markx.extend(x)
       self.marky.extend(y)
-      self.markt.extend(type)
+      self.markt += (type,)
       self.nmark += n
 
    def Qch( self ):
@@ -1023,6 +1023,86 @@ class TestAst(unittest.TestCase):
       self.assertEqual( mygrf.textt, ['0', '0.3', '0.6', '0.9', '0.4', '0.7', '1', 'Axis 1', 'Axis 2', '2-d coordinate system'])
       self.assertEqual( mygrf.textj,  ['TC', 'TC', 'TC', 'TC', 'CR', 'CR', 'CR', 'TC', 'BC', 'BC'])
       self.assertEqual( mygrf.ntext, 10)
+
+      mygrf.Reset()
+      pin = numpy.array( [[0.5,1.,0.], [0.5,1.,0.5]] )
+      plot.polycurve( pin )
+      self.assertEqual( mygrf.nline, 30 )
+
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0 )
+      self.assertAlmostEqual( lbnd[1], 0.5 )
+      self.assertAlmostEqual( ubnd[0], 1. )
+      self.assertAlmostEqual( ubnd[1], 1. )
+
+      plot.Tol = 0.0000001
+      plot.clip( starlink.Ast.CURRENT, [0.1,0.1], [0.9,0.9] )
+      plot.polycurve( pin )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.1 )
+      self.assertAlmostEqual( lbnd[1], 0.5 )
+      self.assertAlmostEqual( ubnd[0], 0.9 )
+      self.assertAlmostEqual( ubnd[1], 0.9 )
+
+      plot.curve( [0.0,0.0], [1.0,1.0] )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.1 )
+      self.assertAlmostEqual( lbnd[1], 0.1 )
+      self.assertAlmostEqual( ubnd[0], 0.9 )
+      self.assertAlmostEqual( ubnd[1], 0.9 )
+
+      plot.clip( starlink.Ast.NOFRAME, [], [] )
+      plot.curve( [0.0,0.0], [1.0,1.0] )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.0 )
+      self.assertAlmostEqual( lbnd[1], 0.0 )
+      self.assertAlmostEqual( ubnd[0], 1.0 )
+      self.assertAlmostEqual( ubnd[1], 1.0 )
+
+      xlut = starlink.Ast.LutMap( [0,1], 0, 1.0 )
+      ylut = starlink.Ast.LutMap( [0,0.5], 0, 1.0 )
+      xylut = starlink.Ast.CmpMap( xlut, ylut, False )
+      pm = starlink.Ast.PermMap( [1], [1,1] )
+      map = starlink.Ast.CmpMap( pm, xylut, True )
+      plot.gencurve( map )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.0 )
+      self.assertAlmostEqual( lbnd[1], 0.0 )
+      self.assertAlmostEqual( ubnd[0], 1.0 )
+      self.assertAlmostEqual( ubnd[1], 0.5 )
+
+      plot.gridline( 1, [0.5,0.5], 0.5 )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.5 )
+      self.assertAlmostEqual( lbnd[1], 0.5 )
+      self.assertAlmostEqual( ubnd[0], 1.0 )
+      self.assertAlmostEqual( ubnd[1], 0.5 )
+
+      mygrf.Reset()
+      plot.mark( pin, 1 )
+      lbnd,ubnd = plot.boundingbox()
+      self.assertAlmostEqual( lbnd[0], 0.0 )
+      self.assertAlmostEqual( lbnd[1], 0.5 )
+      self.assertAlmostEqual( ubnd[0], 1.0 )
+      self.assertAlmostEqual( ubnd[1], 1.0 )
+
+      self.assertAlmostEqual( pin[0][0], mygrf.markx[0] )
+      self.assertAlmostEqual( pin[0][1], mygrf.markx[1] )
+      self.assertAlmostEqual( pin[0][2], mygrf.markx[2] )
+      self.assertAlmostEqual( pin[1][0], mygrf.marky[0] )
+      self.assertAlmostEqual( pin[1][1], mygrf.marky[1] )
+      self.assertAlmostEqual( pin[1][2], mygrf.marky[2] )
+      self.assertEqual( 1, mygrf.markt[0] )
+      self.assertEqual( 3, mygrf.nmark )
+
+      mygrf.Reset()
+      plot.text( "Hello", [0.5,0.5], [0.0,1.0], "CC" )
+      self.assertEqual( mygrf.textt, ['Hello'] )
+      self.assertEqual( mygrf.textx, [0.5] )
+      self.assertEqual( mygrf.texty, [0.5] )
+      self.assertEqual( mygrf.textj, ['CC'] )
+      self.assertEqual( mygrf.ntext, 1 )
+
 
 
 
