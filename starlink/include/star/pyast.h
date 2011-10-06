@@ -191,11 +191,10 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
    if (value == NULL || value == Py_None ) { \
       astClear( ((Object*)self)->ast_object, ATTNORM(#attrib) ); \
       if( astOK ) result = 0; \
-   } else if( !Py##pytype##_Check(value) ) { \
-      PyErr_SetString( PyExc_TypeError, \
-                       "The " #attrib " attribute value must be a " #stype); \
    } else { \
       setcode \
+      if( result == -1 ) PyErr_SetString( PyExc_TypeError, "Bad value supplied " \
+                                 "for " #class " attribute '" #attrib "'." ); \
    } \
    TIDY; \
    return result; \
@@ -231,7 +230,7 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
 static int set##attrib( class *self, PyObject *value, void *closure ); \
 static int set##attrib( class *self, PyObject *value, void *closure ){ \
    PyErr_SetString( PyExc_AttributeError, \
-                    "can't set read-only attribute '" #attrib "'."); \
+                    "Can't set read-only attribute '" #attrib "'."); \
    return -1; \
 }
 
@@ -380,8 +379,11 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODEL(attrib) \
-   astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), ( value == Py_True ) ); \
-   if( astOK ) result = 0;
+   if( PyBool_Check( self ) ) { \
+      astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), ( value == Py_True ) ); \
+      if( astOK ) result = 0; \
+   }
+
 
 #define MAKE_GETSETL(class,attrib) \
    MAKE_GETL(class,attrib) \
@@ -408,8 +410,11 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODEI(attrib) \
-   astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), PyLong_AsLong(value) ); \
-   if( astOK ) result = 0;
+   int ival = PyLong_AsLong( value ); \
+   if( !PyErr_Occurred() ) { \
+      astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), ival ); \
+      if( astOK ) result = 0; \
+   }
 
 #define MAKE_GETSETI(class,attrib) \
    MAKE_GETI(class,attrib) \
@@ -436,8 +441,12 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODED(attrib) \
-   astSetD( ((Object*)self)->ast_object, ATTNORM(#attrib), PyFloat_AsDouble(value) ); \
-   if( astOK ) result = 0;
+   double dval = PyFloat_AsDouble( value ); \
+   if( !PyErr_Occurred() ) { \
+      astSetD( ((Object*)self)->ast_object, ATTNORM(#attrib), dval ); \
+      if( astOK ) result = 0; \
+   }
+
 
 #define MAKE_GETSETD(class,attrib) \
    MAKE_GETD(class,attrib) \

@@ -46,7 +46,7 @@ plot.Colour_Markers = 1
 plot.mark( [[-80,0,80],[80,0,-80]], 5)
 
 #  Draw a thick line.
-plot.Width_Curves = 10.0
+plot.Width_Curves = 10
 plot.curve( [-80,-80],[80,80])
 
 #  Plot a string using the default font 0 provided by the grf module.
