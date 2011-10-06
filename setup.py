@@ -28,7 +28,7 @@ Ast = Extension('starlink.Ast',
                 libraries            = libraries,
                 sources = [os.path.join('starlink', 'ast', 'Ast.c')] )
 
-setup (name = 'Ast',
+setup (name = 'starlink-ast',
        version = '1.0',
        description = 'This is the starlink AST package',
        url = 'http://http://starlink.jach.hawaii.edu/starlink/Ast',
@@ -36,4 +36,5 @@ setup (name = 'Ast',
        author_email = 'd.berry@jach.hawaii.edu',
        packages =['starlink'],
        package_data = { 'starlink': [os.path.join('include','star','pyast.h')] },
-       ext_modules=[Ast])
+       ext_modules=[Ast],
+       py_modules=['starlink.Grf'])

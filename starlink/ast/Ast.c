@@ -7267,7 +7267,7 @@ static PyObject *Plot_mark( Plot *self, PyObject *args ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
-      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims,
+      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 1, 2, dims,
                                     "in", NAME );
       if( in ) {
          astMark( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
