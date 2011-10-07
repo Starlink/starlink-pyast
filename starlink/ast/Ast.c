@@ -5402,13 +5402,15 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Decrement reference counts at the end so that the objects are still available if 
+   needed by the parent object deallocator. */
 static void Channel_dealloc( Channel *self ) {
+   Object_dealloc( (Object *) self );
    if( self ) {
       Py_XDECREF( self->source );
       Py_XDECREF( self->sink );
       self->source_line = astFree( self->source_line );
    }
-   Object_dealloc( (Object *) self );
    TIDY;
 }
 
@@ -7061,11 +7063,11 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Decrement reference counts at the end so that the objects are still available if 
+   needed by the parent object deallocator. */
 static void Plot_dealloc( Plot *self ) {
-   if( self ) {
-      Py_XDECREF( self->grf );
-   }
    Object_dealloc( (Object *) self );
+   if( self ) Py_XDECREF( self->grf );
    TIDY;
 }
 
