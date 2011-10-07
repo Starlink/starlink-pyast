@@ -5402,7 +5402,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Decrement reference counts at the end so that the objects are still available if 
+/* Decrement reference counts at the end so that the objects are still available if
    needed by the parent object deallocator. */
 static void Channel_dealloc( Channel *self ) {
    Object_dealloc( (Object *) self );
@@ -5568,7 +5568,8 @@ void sink_wrapper( const char *text ){
 
 /* Source functions which are called by the AST Channel C code. It
    returns the next item in a sequence. PyObject_Repr puts quotes (single
-   or double) round the returned string, so remove them. */
+   or double) round the returned string, so remove them. Also remove any
+   formatted control characters at the end of the string such as "\n".*/
 
 const char *srcseq_wrapper( void ){
    Channel *channel = astChannelData;
@@ -5581,10 +5582,15 @@ const char *srcseq_wrapper( void ){
       if( channel->source_line ) {
          int len = strlen( channel->source_line );
          char first = channel->source_line[ 0 ];
-         char last = channel->source_line[ len - 1 ];
-         if( last == first && ( first == '\'' || first == '"' ) ) {
+         char *last = channel->source_line + len - 1;
+         if( *last == first && ( first == '\'' || first == '"' ) ) {
+            *(last--) = 0;
             char *c = channel->source_line;
             while( *(c++) ) c[ -1 ] = *c;
+
+            last--;
+            while( last[-1] == '\\' ) last -= 2;
+            last[ 1 ] = 0;
          }
       }
 
@@ -7063,7 +7069,7 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Decrement reference counts at the end so that the objects are still available if 
+/* Decrement reference counts at the end so that the objects are still available if
    needed by the parent object deallocator. */
 static void Plot_dealloc( Plot *self ) {
    Object_dealloc( (Object *) self );
