@@ -88,92 +88,98 @@ class grf_matplotlib(object):
 #------------------------------------------------------------------------
    def Attr( self, attr, value, prim ):
 
-#  Save the old AST attribute value, and record the new value.
+#  Save the old AST attribute value.
       oldval = self.__attrs[prim][attr]
-      self.__attrs[prim][attr] = value
+
+#  Nothing more to do if the new value is AST__BAD
+      if value != Ast.BAD:
+
+#  Save the old AST attribute value, and record the new value (if not .
+         oldval = self.__attrs[prim][attr]
+         self.__attrs[prim][attr] = value
 
 #  Now need to update the matplotlib proprties to make them reflect the
 #  new AST value.
 
 #  Style only applied to lines
-      if attr == Ast.grfSTYLE:
-         value = int(value)
-         if prim == Ast.grfLINE:
-            if value >= 0 and value < len(self.styles):
-               self.__props[prim].update(self.styles[value])
+         if attr == Ast.grfSTYLE:
+            value = int(value)
+            if prim == Ast.grfLINE:
+               if value >= 0 and value < len(self.styles):
+                  self.__props[prim].update(self.styles[value])
 
 #  Width applies to lines, marks and texts
-      elif attr == Ast.grfWIDTH:
-         if prim == Ast.grfLINE:
+         elif attr == Ast.grfWIDTH:
+            if prim == Ast.grfLINE:
 
 #  Get bounds of plot in user coords
-            xl,xr = self.axes.get_xlim()
-            yb,yt = self.axes.get_ylim()
+               xl,xr = self.axes.get_xlim()
+               yb,yt = self.axes.get_ylim()
 
 #  Transform to device coords
-            tr = self.axes.transData
-            xl,yb = tr.transform([xl,yb])
-            xr,yt = tr.transform([xr,yt])
+               tr = self.axes.transData
+               xl,yb = tr.transform([xl,yb])
+               xr,yt = tr.transform([xr,yt])
 
 #  Transform to inches
-            tr = self.axes.get_figure().dpi_scale_trans.inverted()
-            xl,yb = tr.transform([xl,yb])
-            xr,yt = tr.transform([xr,yt])
+               tr = self.axes.get_figure().dpi_scale_trans.inverted()
+               xl,yb = tr.transform([xl,yb])
+               xr,yt = tr.transform([xr,yt])
 
 #  Find the length of the diagonal in inches, and convert to points.
-            diag = 72.0*math.sqrt( (xr-xl)**2 + (yt-yb)**2 )
+               diag = 72.0*math.sqrt( (xr-xl)**2 + (yt-yb)**2 )
 
 #  Find the number of points corresponding to an AST line width of 1.0,
 #  ensure it is at least 1 point, and then scale it by the supplied AST
 #  line width.
-            lw = max( 0.0005*diag, 1.0 )*value
-            self.__props[prim].update({"linewidth":lw})
+               lw = max( 0.0005*diag, 1.0 )*value
+               self.__props[prim].update({"linewidth":lw})
 
 #  Similar for markers
-         elif prim == Ast.grfMARK:
-            xl,xr = self.axes.get_xlim()
-            yb,yt = self.axes.get_ylim()
-            tr = self.axes.transData
-            xl,yb = tr.transform([xl,yb])
-            xr,yt = tr.transform([xr,yt])
-            tr = self.axes.get_figure().dpi_scale_trans.inverted()
-            xl,yb = tr.transform([xl,yb])
-            xr,yt = tr.transform([xr,yt])
-            diag = 72.0*math.sqrt( (xr-xl)**2 + (yt-yb)**2 )
-            lw = max( 0.0005*diag, 1.0 )*value
-            self.__props[prim].update({"markeredgewidth":lw})
+            elif prim == Ast.grfMARK:
+               xl,xr = self.axes.get_xlim()
+               yb,yt = self.axes.get_ylim()
+               tr = self.axes.transData
+               xl,yb = tr.transform([xl,yb])
+               xr,yt = tr.transform([xr,yt])
+               tr = self.axes.get_figure().dpi_scale_trans.inverted()
+               xl,yb = tr.transform([xl,yb])
+               xr,yt = tr.transform([xr,yt])
+               diag = 72.0*math.sqrt( (xr-xl)**2 + (yt-yb)**2 )
+               lw = max( 0.0005*diag, 1.0 )*value
+               self.__props[prim].update({"markeredgewidth":lw})
 
 #  Cannot control exact line width of texts, use weight instead.
-         elif prim == Ast.grfTEXT:
-            if value < 0.0:
-               wgt = 0.0
-            elif value < 1.0:
-               wgt = 400.0*value
-            elif value < 10.0:
-               wgt = (500.0*value + 3100.0 )/9.0
-            else:
-               wgt = 900
-            self.__props[prim].update({"weight":wgt})
+            elif prim == Ast.grfTEXT:
+               if value < 0.0:
+                  wgt = 0.0
+               elif value < 1.0:
+                  wgt = 400.0*value
+               elif value < 10.0:
+                  wgt = (500.0*value + 3100.0 )/9.0
+               else:
+                  wgt = 900
+               self.__props[prim].update({"weight":wgt})
 
 #  Size applies to marks and texts
-      elif attr == Ast.grfSIZE:
-         if prim == Ast.grfMARK:
-            self.__props[prim].update({"markersize":self.__defmsize*value})
-         elif prim == Ast.grfTEXT:
-            self.__props[prim].update({"size":self.__deftsize*value})
+         elif attr == Ast.grfSIZE:
+            if prim == Ast.grfMARK:
+               self.__props[prim].update({"markersize":self.__defmsize*value})
+            elif prim == Ast.grfTEXT:
+               self.__props[prim].update({"size":self.__deftsize*value})
 
 #  Font only applies to texts
-      elif attr == Ast.grfFONT:
-         value = int(value)
-         if prim == Ast.grfTEXT:
-            if value >= 0 and value < len(self.fonts):
-               self.__props[prim].update(self.fonts[value])
+         elif attr == Ast.grfFONT:
+            value = int(value)
+            if prim == Ast.grfTEXT:
+               if value >= 0 and value < len(self.fonts):
+                  self.__props[prim].update(self.fonts[value])
 
 #  Colour applied to them all
-      elif attr == Ast.grfCOLOUR:
-         value = int(value)
-         if value >= 0 and value < len(self.colours):
-            self.__props[prim].update(self.colours[value])
+         elif attr == Ast.grfCOLOUR:
+            value = int(value)
+            if value >= 0 and value < len(self.colours):
+               self.__props[prim].update(self.colours[value])
 
 
       return oldval
