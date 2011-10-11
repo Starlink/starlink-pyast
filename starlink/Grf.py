@@ -269,6 +269,7 @@ class grf_matplotlib(object):
       props["verticalalignment"] = va
       props["horizontalalignment"] = ha
       props["rotation"] = rot
+      props["rotation_mode"] = "anchor"
       if len(boxprops) > 0:
          props["bbox"] = boxprops
 
