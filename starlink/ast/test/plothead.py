@@ -70,21 +70,6 @@ ax = fig.add_axes( ( 0, 0, 1, 1 ) )
 ax.xaxis.set_visible( False )
 ax.yaxis.set_visible( False )
 
-#  Set the bounds of the box (in matplotlib data coordinates) that the
-#  Ast.Plot object will enclose within its annotated axes. We ensure that
-#  the X dn Y scales are the same on both axes.
-if dx > dy :
-   hx = 0.5*dy/dx
-   hy = 0.5
-else:
-   hx = 0.5
-   hy = 0.5*dx/dy
-
-hx *= 0.8
-hy *= 0.8
-gbox = ( 0.5 - hx, 0.5 - hy, 0.5 + hx, 0.5 + hy )
-
-
 #  If the bounds of the pixel grid to be plotted were specified, use them
 #  Note, the plot extends half a pixel beyond the first and last pixel
 #  centres.
@@ -105,6 +90,24 @@ else:
    else:
       naxis2 = 500
    bbox = ( 0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5 )
+
+#  Set the bounds (in matplotlib data coordinates) of the largest rectangle
+#  that can be drawn on the matplotlib plotting area that has the same
+#  aspect ratio as the FITS array.
+fits_aspect_ratio = ( bbox[3] - bbox[1] )/( bbox[2] - bbox[0] )
+grf_aspect_ratio = dy/dx
+if grf_aspect_ratio > fits_aspect_ratio :
+   hx = 0.5
+   hy = 0.5*fits_aspect_ratio/grf_aspect_ratio
+else:
+   hx = 0.5*grf_aspect_ratio/fits_aspect_ratio
+   hy = 0.5
+
+#  Shrink the box to leave room for axis annotation.
+hx *= 0.8
+hy *= 0.8
+
+gbox = ( 0.5 - hx, 0.5 - hy, 0.5 + hx, 0.5 + hy )
 
 #  Create a drawing object that knows how to draw primitives (lines,
 #  marks and strings) into the matplotlib plotting region.
