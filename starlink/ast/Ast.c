@@ -7629,7 +7629,7 @@ static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta ){
                *alpha = PyFloat_AsDouble( pyitem );
             }
             if( beta ) {
-               pyitem =  PyTuple_GET_ITEM( result, 0 );
+               pyitem =  PyTuple_GET_ITEM( result, 1 );
                *beta = PyFloat_AsDouble( pyitem );
             }
          }

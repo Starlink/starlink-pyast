@@ -243,9 +243,9 @@ class grf_matplotlib(object):
       xleft,xright = self.axes.get_xlim()
       ybot,ytop = self.axes.get_ylim()
       a = self.axes.transData.transform([(xleft,ybot),(xright,ytop)])
-      alpha = ( a[1][0] - a[0][0] ) / ( xright - xleft )
-      beta = ( a[1][1] - a[0][1] ) / ( ytop - ybot )
-      return (alpha,beta)
+      self.__alpha = ( a[1][0] - a[0][0] ) / ( xright - xleft )
+      self.__beta = ( a[1][1] - a[0][1] ) / ( ytop - ybot )
+      return (self.__alpha,self.__beta)
 
 #------------------------------------------------------------------------
    def Text( self, text, x, y, just, upx, upy, boxprops={} ):
@@ -263,7 +263,7 @@ class grf_matplotlib(object):
          ha = "right"
       else:
          ha = "center"
-      rot = math.atan2( -upx, upy )*Ast.DR2D
+      rot = math.atan2( -self.__alpha*upx, self.__beta*upy )*Ast.DR2D
 
       props = self.__props[Ast.grfTEXT].copy()
       props["verticalalignment"] = va
