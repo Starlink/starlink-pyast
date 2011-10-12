@@ -287,7 +287,7 @@ class grf_matplotlib(object):
          ha = "right"
       else:
          ha = "center"
-      rot = math.atan2( -self.__alpha*upx, self.__beta*upy )*Ast.DR2D
+      rot = math.atan2( -upx, upy )*Ast.DR2D
 
       props = self.__props[Ast.grfTEXT].copy()
       props["verticalalignment"] = va
