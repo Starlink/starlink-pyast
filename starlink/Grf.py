@@ -29,19 +29,45 @@ class grf_matplotlib(object):
       if isinstance(axes,matplotlib.axes.Axes):
          self.axes = axes
 
+#  Save the current axis scales.
+         self.Scales()
+
+#  Create a temporary text string and line from which we can determine
+#  the default graphics properties.
+         xl,xr = self.axes.get_xlim()
+         yb,yt = self.axes.get_ylim()
+         xc = 0.5*(xl+xr);
+         yc = 0.5*(yt+yb);
+         text = matplotlib.text.Text( xc, yc, "a")
+         line = matplotlib.lines.Line2D( [xc], [yc], marker="+")
+
+#  Save the current default marker and text sizes.
+         self.__deftsize = text.get_size()
+         self.__defmsize = line.get_markersize()
+
+#  Save the default text colour.
+         defcol = text.get_color()
+
+#  Save the default text font family and style.
+         deffont = {"family":text.get_family(),"style":text.get_style()}
+
+#  Save the default line style
+         defstyle = line.get_linestyle()
+
 #  A list used to convert AST integer marker types into matplotlib
 #  character marker types.
          self.markers = ['s','.','+','*','o','x',',','^','v','<','>',
                          'p','h','D']
 
 #  A list used to convert AST integer line style types into corresponding matplotlib
-#  properties.
-         self.styles = [ {"linestyle":'-'}, {"linestyle":'--'},
-                         {"linestyle":':'}, {"linestyle":'-.'} ]
+#  properties. Ensure the first line style is the default.
+         self.styles = [ {"linestyle":defstyle}, {"linestyle":'-'},
+                         {"linestyle":'--'}, {"linestyle":':'},
+                         {"linestyle":'-.'} ]
 
 #  A list used to convert AST integer font types into corresponding matplotlib
-#  properties.
-         self.fonts = [ {"family":'serif',"style":'normal'},
+#  properties. Ensure the first font is the default.
+         self.fonts = [ deffont, {"family":'serif',"style":'normal'},
                         {"family":'serif',"style":'italic'},
                         {"family":'sans-serif',"style":'normal'},
                         {"family":'sans-serif',"style":'italic'},
@@ -49,8 +75,8 @@ class grf_matplotlib(object):
                         {"family":'monospace',"style":'italic'} ]
 
 #  A list used to convert AST integer colours into corresponding matplotlib
-#  properties.
-         self.colours = [ {"color":'red'}, {"color":'green'},
+#  properties. Ensure the first colour is the default.
+         self.colours = [ {"color":defcol}, {"color":'red'}, {"color":'green'},
                           {"color":'blue'}, {"color":'cyan'},
                           {"color":'magenta'}, {"color":'yellow'},
                           {"color":'black'}, {"color":'darkgrey'},
@@ -68,13 +94,11 @@ class grf_matplotlib(object):
 #  The corresponding graphics properties used by matplotlib
          self.__props = { Ast.grfLINE:{}, Ast.grfMARK:{}, Ast.grfTEXT:{}}
 
-#  Save the current default marker and text sizes.
-         xl,xr = self.axes.get_xlim()
-         yb,yt = self.axes.get_ylim()
-         xc = 0.5*(xl+xr);
-         yc = 0.5*(yt+yb);
-         self.__deftsize = matplotlib.text.Text( xc, yc, "a").get_size()
-         self.__defmsize = matplotlib.lines.Line2D( [xc], [yc], marker="+").get_markersize()
+#  Ensure the defaults are current.
+         for attr in ( Ast.grfCOLOUR, Ast.grfWIDTH, Ast.grfSIZE,
+                       Ast.grfFONT, Ast.grfSTYLE ):
+            for prim in ( Ast.grfTEXT, Ast.grfLINE, Ast.grfMARK ):
+               self.Attr( attr, 1.0, prim )
 
 #  Report an error if the supplied object is not suitable
       else:
@@ -98,12 +122,12 @@ class grf_matplotlib(object):
          oldval = self.__attrs[prim][attr]
          self.__attrs[prim][attr] = value
 
-#  Now need to update the matplotlib proprties to make them reflect the
+#  Now need to update the matplotlib properties to make them reflect the
 #  new AST value.
 
 #  Style only applied to lines
          if attr == Ast.grfSTYLE:
-            value = int(value)
+            value = int(value) - 1
             if prim == Ast.grfLINE:
                if value >= 0 and value < len(self.styles):
                   self.__props[prim].update(self.styles[value])
@@ -170,14 +194,14 @@ class grf_matplotlib(object):
 
 #  Font only applies to texts
          elif attr == Ast.grfFONT:
-            value = int(value)
+            value = int(value) - 1
             if prim == Ast.grfTEXT:
                if value >= 0 and value < len(self.fonts):
                   self.__props[prim].update(self.fonts[value])
 
 #  Colour applied to them all
          elif attr == Ast.grfCOLOUR:
-            value = int(value)
+            value = int(value) - 1
             if value >= 0 and value < len(self.colours):
                self.__props[prim].update(self.colours[value])
 
@@ -279,7 +303,7 @@ class grf_matplotlib(object):
 
 #------------------------------------------------------------------------
    def TxExt( self, text, x, y, just, upx, upy ):
-      otext = self.Text(  text, x, y, just, upx, upy, boxprops={"boxstyle":"square"} )
+      otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square"} )
       renderer = self.axes.get_figure().canvas.get_renderer()
       otext.draw(renderer)
       pix_verts = otext.get_bbox_patch().get_verts()
