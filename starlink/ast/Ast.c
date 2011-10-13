@@ -5569,7 +5569,9 @@ void sink_wrapper( const char *text ){
 /* Source functions which are called by the AST Channel C code. It
    returns the next item in a sequence. PyObject_Repr puts quotes (single
    or double) round the returned string, so remove them. Also remove any
-   formatted control characters at the end of the string such as "\n".*/
+   formatted control characters at the end of the string such as "\n".
+   Also remove any escape characters in front of remaining occurences
+   of the opening quote character. */
 
 const char *srcseq_wrapper( void ){
    Channel *channel = astChannelData;
@@ -5585,10 +5587,14 @@ const char *srcseq_wrapper( void ){
          char *last = channel->source_line + len - 1;
          if( *last == first && ( first == '\'' || first == '"' ) ) {
             *(last--) = 0;
-            char *c = channel->source_line;
-            while( *(c++) ) c[ -1 ] = *c;
-
-            last--;
+            char *w = channel->source_line;
+            char *r = w + 1;
+            while( *r ) {
+               if( *r == '\\' && r[1] == first ) r++;
+               *(w++) = *(r++);
+            }
+            *w = 0;
+            last = w - 1;
             while( last[-1] == '\\' ) last -= 2;
             last[ 1 ] = 0;
          }
@@ -5599,6 +5605,7 @@ const char *srcseq_wrapper( void ){
    } else {
       channel->source_line = astFree( channel->source_line );
    }
+
    return channel->source_line;
 }
 
