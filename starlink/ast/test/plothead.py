@@ -71,10 +71,8 @@ ax.xaxis.set_visible( False )
 ax.yaxis.set_visible( False )
 
 #  If the bounds of the pixel grid to be plotted were specified, use them
-#  Note, the plot extends half a pixel beyond the first and last pixel
-#  centres.
 if box != None:
-   bbox = ( box[0] - 0.5, box[1] - 0.5, box[2] + 0.5, box[3] + 0.5 )
+   bbox = box
 
 #  Otherwise, we map the entire FITS pixel grid onto this box. So get the
 #  bounds of the pixel grid from the FitsChan. If the NAXIS1/2 keywords
@@ -95,6 +93,8 @@ else:
 #  that can be drawn on the matplotlib plotting area that has the same
 #  aspect ratio as the FITS array.
 fits_aspect_ratio = ( bbox[3] - bbox[1] )/( bbox[2] - bbox[0] )
+if fits_aspect_ratio < 0.05 or fits_aspect_ratio > 20:
+   fits_aspect_ratio = 1.0
 grf_aspect_ratio = dy/dx
 if grf_aspect_ratio > fits_aspect_ratio :
    hx = 0.5
