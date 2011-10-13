@@ -7708,12 +7708,28 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
 /* ================================= */
 
 /* Static method prototypes */
+static PyObject *PyAst_setskydelim( PyObject *self, PyObject *args );
 static PyObject *PyAst_escapes( PyObject *self, PyObject *args );
 static PyObject *PyAst_tune( PyObject *self, PyObject *args );
 static PyObject *PyAst_version( PyObject *self );
 static PyObject *PyAst_get_include( PyObject *self );
 
 /* Static method implementations */
+
+#undef NAME
+#define NAME MODULE ".setskydelim"
+static PyObject *PyAst_setskydelim( PyObject *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int field;
+   const char *delim;
+   if( PyErr_Occurred() ) return NULL;
+   if( PyArg_ParseTuple(args, "is:" NAME, &field, &delim ) ) {
+      astSetSkyDelim( field, delim );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
 
 #undef NAME
 #define NAME MODULE ".escapes"
@@ -7797,6 +7813,7 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 
 /* Describe the static methods of the class */
 static PyMethodDef PyAst_methods[] = {
+   {"setskydelim", (PyCFunction)PyAst_setskydelim, METH_VARARGS, "Set a new graphical delimiter for a formatted sky axis value"},
    {"escapes", (PyCFunction)PyAst_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
    {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an AST global tuning parameter"},
    {"version", (PyCFunction)PyAst_version, METH_NOARGS,  "Return the version of the AST library being used"},
@@ -8098,9 +8115,11 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(AIR);
    ICONST(AIT);
    ICONST(ALLFRAMES);
+   ICONST(AMIN);
    ICONST(AND);
    ICONST(ANY);
    ICONST(ARC);
+   ICONST(ASEC);
    ICONST(AZP);
    ICONST(BADTYPE);
    ICONST(BASE);
@@ -8112,8 +8131,8 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(COD);
    ICONST(COE);
    ICONST(COMMENT);
-   ICONST(COMPLEXF);
    ICONST(COMPLEXI);
+   ICONST(COMPLEXF);
    ICONST(CONSERVEFLUX);
    ICONST(CONTINUE);
    ICONST(COO);
@@ -8121,6 +8140,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(CSC);
    ICONST(CURRENT);
    ICONST(CYP);
+   ICONST(DEG);
    ICONST(DISVAR);
    ICONST(DOUBLETYPE);
    ICONST(EQ);
@@ -8143,12 +8163,14 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(GTEXT);
    ICONST(GTXEXT);
    ICONST(HPX);
+   ICONST(HRS);
    ICONST(INT);
    ICONST(INTTYPE);
    ICONST(LE);
    ICONST(LINEAR);
    ICONST(LOGICAL);
    ICONST(MER);
+   ICONST(MIN);
    ICONST(MOL);
    ICONST(MXKEYLEN);
    ICONST(NCP);
@@ -8169,6 +8191,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(QSC);
    ICONST(REBINEND);
    ICONST(REBININIT);
+   ICONST(SEC);
    ICONST(SFL);
    ICONST(SIMPFI);
    ICONST(SIMPIF);
@@ -8181,8 +8204,8 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(SOMB);
    ICONST(SOMBCOS);
    ICONST(STG);
-   ICONST(STRING);
    ICONST(STRINGTYPE);
+   ICONST(STRING);
    ICONST(SZP);
    ICONST(TAN);
    ICONST(TPN);
@@ -8192,10 +8215,10 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    ICONST(UKERN1);
    ICONST(UNDEF);
    ICONST(UNDEFTYPE);
-   ICONST(URESAMP1);
-   ICONST(URESAMP2);
-   ICONST(URESAMP3);
    ICONST(URESAMP4);
+   ICONST(URESAMP3);
+   ICONST(URESAMP2);
+   ICONST(URESAMP1);
    ICONST(USEBAD);
    ICONST(USEVAR);
    ICONST(VARWGT);

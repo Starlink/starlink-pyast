@@ -100,6 +100,15 @@ class grf_matplotlib(object):
             for prim in ( Ast.grfTEXT, Ast.grfLINE, Ast.grfMARK ):
                self.Attr( attr, 1.0, prim )
 
+#  Set new delimiters for graphical sky axis values, using appropriate escape
+#  sequences to get he superscripts looking nice.
+         Ast.setskydelim( Ast.HRS, "%-%<8+%^85+%s70+h%+" )
+         Ast.setskydelim( Ast.MIN, "%-%<13+%^85+%s70+m%+" )
+         Ast.setskydelim( Ast.SEC, "%-%<13+%^85+%s70+s%+" )
+         Ast.setskydelim( Ast.DEG, "%-%<8+%^90+%s60+o%+" )
+         Ast.setskydelim( Ast.AMIN, "%-%<8+%^30+%s85+'%+" )
+         Ast.setskydelim( Ast.ASEC, "%-%<8+%^30+%s85+\"%+" )
+
 #  Report an error if the supplied object is not suitable
       else:
          m = axes.__class__.__module__
@@ -303,7 +312,7 @@ class grf_matplotlib(object):
 
 #------------------------------------------------------------------------
    def TxExt( self, text, x, y, just, upx, upy ):
-      otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square"} )
+      otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square,pad=0.1"} )
       renderer = self.axes.get_figure().canvas.get_renderer()
       otext.draw(renderer)
       pix_verts = otext.get_bbox_patch().get_verts()
