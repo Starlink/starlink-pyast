@@ -102,12 +102,13 @@ class grf_matplotlib(object):
 
 #  Set new delimiters for graphical sky axis values, using appropriate escape
 #  sequences to get he superscripts looking nice.
-         Ast.setskydelim( Ast.HRS, "%-%<8+%^85+%s70+h%+" )
-         Ast.setskydelim( Ast.MIN, "%-%<13+%^85+%s70+m%+" )
-         Ast.setskydelim( Ast.SEC, "%-%<13+%^85+%s70+s%+" )
-         Ast.setskydelim( Ast.DEG, "%-%<8+%^90+%s60+o%+" )
-         Ast.setskydelim( Ast.AMIN, "%-%<8+%^30+%s85+'%+" )
-         Ast.setskydelim( Ast.ASEC, "%-%<8+%^30+%s85+\"%+" )
+         Ast.tunec( "hrdel", "%-%<8+%^85+%s70+h%+" )
+         Ast.tunec( "mndel", "%-%<13+%^85+%s70+m%+" )
+         Ast.tunec( "scdel", "%-%<13+%^85+%s70+s%+" )
+         Ast.tunec( "dgdel", "%-%<8+%^90+%s60+o%+" )
+         Ast.tunec( "amdel", "%-%<8+%^30+%s85+'%+" )
+         Ast.tunec( "asdel", "%-%<8+%^30+%s85+\"%+" )
+         Ast.tunec( "exdel", "10%-%<10+%^85+%s60+" )
 
 #  Report an error if the supplied object is not suitable
       else:
