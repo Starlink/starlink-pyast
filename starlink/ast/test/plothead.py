@@ -104,8 +104,8 @@ else:
    hy = 0.5
 
 #  Shrink the box to leave room for axis annotation.
-hx *= 0.8
-hy *= 0.8
+hx *= 0.7
+hy *= 0.7
 
 gbox = ( 0.5 - hx, 0.5 - hy, 0.5 + hx, 0.5 + hy )
 
