@@ -1146,6 +1146,68 @@ class TestAst(unittest.TestCase):
       self.assertEqual( pout[2][2], -7.0 )
 
 
+   def test_PolyMap(self):
+      pm = starlink.Ast.PolyMap( [[1.2,1.,2.,0.],[-0.5,1.,1.,1.],
+                                  [1.0,2.,0.,1.]])
+      self.assertIsInstance( pm, starlink.Ast.Object)
+      self.assertIsInstance( pm, starlink.Ast.Mapping )
+      self.assertIsInstance( pm, starlink.Ast.PolyMap )
+      self.assertTrue(  pm.isaobject() )
+      self.assertTrue(  pm.isamapping() )
+      self.assertTrue(  pm.isapolymap() )
+      self.assertEqual( pm.Nin, 2 )
+      self.assertEqual( pm.Nout, 2 )
+      pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
+      pout = pm.trann( pin, True )
+      for (xi,yi,xo,yo) in zip(pin[0],pin[1],pout[0],pout[1]):
+         xn = 1.2*xi*xi - 0.5*yi*xi
+         yn = yi
+         self.assertAlmostEqual( xn, xo )
+         self.assertAlmostEqual( yn, yo )
+
+      pm = starlink.Ast.PolyMap( None, [[1.2,1.,2.,0.],[-0.5,1.,1.,1.],
+                                        [1.0,2.,0.,1.]])
+      self.assertEqual( pm.Nin, 2 )
+      self.assertEqual( pm.Nout, 2 )
+      pout = pm.trann( pin, False )
+      for (xi,yi,xo,yo) in zip(pin[0],pin[1],pout[0],pout[1]):
+         xn = 1.2*xi*xi - 0.5*yi*xi
+         yn = yi
+         self.assertAlmostEqual( xn, xo )
+         self.assertAlmostEqual( yn, yo )
+
+      pm = starlink.Ast.PolyMap( [[ 1., 1., 1., 0.],
+                                  [ 1., 1., 0., 1.],
+                                  [ 1., 2., 1., 0.],
+                                  [-1., 2., 0., 1.]],
+                                 [[ 0.5, 1., 1., 0.],
+                                  [ 0.5, 1., 0., 1.],
+                                  [ 0.5, 2., 1., 0.],
+                                  [-0.5, 2., 0., 1.]] )
+
+      self.assertEqual( pm.Nin, 2 )
+      self.assertEqual( pm.Nout, 2 )
+      pout = pm.trann( pin, True )
+      pnew = pm.trann( pout, False )
+
+      for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
+         self.assertAlmostEqual( xn, xi )
+         self.assertAlmostEqual( yn, yi )
+
+      self.assertEqual( pm.NiterInverse, 4 )
+      self.assertEqual( pm.TolInverse, 1.0E-6 )
+
+
+      new = pm.polytran( False, 0.01, 0.1, 3, [-1.0, 1.0], [-1.0, 1.0] )
+
+#  The above call to astPolyTran currently does a really bad job so skip
+#  the following test until the problem is fixed in polymap.c
+#      pout = new.trann( pin, True )
+#      pnew = new.trann( pout, False )
+#      for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
+#         self.assertAlmostEqual( xn, xi )
+#         self.assertAlmostEqual( yn, yi )
+
 
 
 if __name__ == "__main__":

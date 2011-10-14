@@ -6,7 +6,6 @@
         MathMap
         Plot3D
         PointList
-        PolyMap
         Polygon
         SelectorMap
         SlaMap
@@ -121,6 +120,7 @@ MAKE_ISA(Object)
 MAKE_ISA(PcdMap)
 MAKE_ISA(PermMap)
 MAKE_ISA(Plot)
+MAKE_ISA(PolyMap)
 MAKE_ISA(Prism)
 MAKE_ISA(RateMap)
 MAKE_ISA(Region)
@@ -164,6 +164,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(PcdMap,pcdmap),
    DEF_ISA(PermMap,permmap),
    DEF_ISA(Plot,plot),
+   DEF_ISA(PolyMap,polymap),
    DEF_ISA(Prism,prism),
    DEF_ISA(RateMap,ratemap),
    DEF_ISA(Region,region),
@@ -3583,8 +3584,7 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
             this = astMatrixMap( matrix->dimensions[0], matrix->dimensions[0],
                                  1, (const double *) matrix->data, options );
          } else if( ndim == 2 ) {
-            this = astMatrixMap( matrix->dimensions[1],
-matrix->dimensions[0],
+            this = astMatrixMap( matrix->dimensions[1], matrix->dimensions[0],
                                  0, (const double *) matrix->data, options );
          } else {
             PyErr_Format( PyExc_ValueError, "The supplied array of matrix "
@@ -3598,6 +3598,223 @@ matrix->dimensions[0],
          }
          Py_DECREF( matrix );
       }
+   }
+
+   TIDY;
+   return result;
+}
+
+/* PolyMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".PolyMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} PolyMap;
+
+/* Prototypes for class functions */
+static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds );
+static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef PolyMap_methods[] = {
+  {"polytran", (PyCFunction)PolyMap_polytran, METH_VARARGS, "Fit a PolyMap inverse or forward transformation"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(PolyMap,IterInverse)
+MAKE_GETSETI(PolyMap,NiterInverse)
+MAKE_GETSETD(PolyMap,TolInverse)
+static PyGetSetDef PolyMap_getseters[] = {
+   DEFATT(IterInverse,"Provide an iterative inverse transformation?"),
+   DEFATT(NiterInverse,"Maximum number of iterations for the iterative inverse transformation."),
+   DEFATT(TolInverse,"Target relative error for the iterative inverse transformation."),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject PolyMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(PolyMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST PolyMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   PolyMap_methods,           /* tp_methods */
+   0,                         /* tp_members */
+   PolyMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)PolyMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
+   PyArrayObject *fcoeff = NULL;
+   PyArrayObject *icoeff = NULL;
+   PyObject *fcoeff_object = NULL;
+   PyObject *icoeff_object = NULL;
+   const char *options = " ";
+   const double *coeff_f = NULL;
+   const double *coeff_i = NULL;
+   int i;
+   int ncoeff_f = 0;
+   int ncoeff_i = 0;
+   int nin1 = 0;
+   int nin2 = 0;
+   int nout1 = 0;
+   int nout2 = 0;
+   int result = -1;
+
+   if( PyArg_ParseTuple( args, "O|Os:" CLASS, &fcoeff_object, &icoeff_object,
+                         &options ) ) {
+
+      if( fcoeff_object && fcoeff_object != Py_None ) {
+         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
+                                                               PyArray_DOUBLE,
+                                                               0, 100);
+         if( fcoeff ) {
+            if( fcoeff->nd != 2 ) {
+               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
+                             "coefficients must be 2 dimensional, not %d "
+                             "dimensional.", fcoeff->nd );
+            } else {
+               coeff_f = (const double *) fcoeff->data;
+               ncoeff_f = fcoeff->dimensions[ 0 ];
+               nin1 = fcoeff->dimensions[ 1 ] - 2;
+               nout1 = 0;
+               const double *p = coeff_f + 1;
+               for( i = 0; i < ncoeff_f; i++ ) {
+                  int iout = (int) ( *p + 0.5 );
+                  if( iout > nout1 ) nout1 = iout;
+                  p += nin1 + 2;
+               }
+            }
+         }
+      }
+
+      if( icoeff_object && icoeff_object != Py_None ) {
+         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
+                                                               PyArray_DOUBLE,
+                                                               0, 100);
+         if( icoeff ) {
+            if( icoeff->nd != 2 ) {
+               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
+                             "coefficients must be 2 dimensional, not %d "
+                             "dimensional.", icoeff->nd );
+            } else {
+               coeff_i = (const double *) icoeff->data;
+               ncoeff_i = icoeff->dimensions[ 0 ];
+               nout2 = icoeff->dimensions[ 1 ] - 2;
+               nin2 = 0;
+               const double *p = coeff_i + 1;
+               for( i = 0; i < ncoeff_i; i++ ) {
+                  int iin = (int) ( *p + 0.5 );
+                  if( iin > nin2 ) nin2 = iin;
+                  p += nout2 + 2;
+               }
+            }
+         }
+      }
+
+      if( nin1 != 0 && nin2 != 0 && nin1 != nin2 ) {
+         PyErr_Format( PyExc_ValueError, "The number of PolyMap inputs implied"
+                       " by the supplied arrays of forward and inverse "
+                       "coefficients differ (%d and %d).", nin1, nin2 );
+
+      } else if( nout1 != 0 && nout2 != 0 && nout1 != nout2 ) {
+         PyErr_Format( PyExc_ValueError, "The number of PolyMap outputs implied"
+                       " by the supplied arrays of forward and inverse "
+                       "coefficients differ (%d and %d).", nout1, nout2 );
+
+      } else {
+         AstPolyMap *this = astPolyMap( coeff_f?nin1:nin2, coeff_f?nout1:nout2,
+                                        ncoeff_f, coeff_f, ncoeff_i, coeff_i,
+                                        options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+
+      Py_XDECREF(fcoeff);
+      Py_XDECREF(icoeff);
+
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".polytran"
+static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int forward;
+   int maxorder;
+   double acc;
+   double maxacc;
+   PyObject *lbnd_object = NULL;
+   PyObject *ubnd_object = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "iddiOO:" NAME, &forward, &acc, &maxacc,
+                        &maxorder, &lbnd_object, &ubnd_object ) ) {
+      int ndim = astGetI( THIS, forward ? "Nin" : "Nout" );
+      PyArrayObject *lbnd = GetArray1D( lbnd_object, &ndim, "lbnd", NAME );
+      PyArrayObject *ubnd = GetArray1D( ubnd_object, &ndim, "ubnd", NAME );
+      if( lbnd && ubnd ) {
+         AstPolyMap *new = astPolyTran( THIS, forward, acc, maxacc, maxorder,
+                                        (const double *)lbnd->data,
+                                        (const double *)ubnd->data );
+         if( astOK ) {
+            if( new ) {
+               PyObject *new_object = NewObject( (AstObject *) new );
+               if( new_object) {
+                  result = Py_BuildValue( "O", new_object );
+                  Py_DECREF( new_object );
+               }
+               new = astAnnul( new );
+            } else {
+               result = Py_None;
+            }
+         }
+
+
+      }
+      Py_XDECREF(lbnd);
+      Py_XDECREF(ubnd);
    }
 
    TIDY;
@@ -8180,6 +8397,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&MatrixMapType);
    PyModule_AddObject( m, "MatrixMap", (PyObject *)&MatrixMapType);
 
+   PolyMapType.tp_new = PyType_GenericNew;
+   PolyMapType.tp_base = &MappingType;
+   if( PyType_Ready(&PolyMapType) < 0) return NULL;
+   Py_INCREF(&PolyMapType);
+   PyModule_AddObject( m, "PolyMap", (PyObject *)&PolyMapType);
+
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
    if( PyType_Ready(&FrameType) < 0) return NULL;
@@ -8759,6 +8982,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &WinMapType;
       } else if( !strcmp( class, "MatrixMap" ) ) {
         result = (PyTypeObject *) &MatrixMapType;
+      } else if( !strcmp( class, "PolyMap" ) ) {
+        result = (PyTypeObject *) &PolyMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
