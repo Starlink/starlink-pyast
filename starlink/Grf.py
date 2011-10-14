@@ -102,13 +102,21 @@ class grf_matplotlib(object):
 
 #  Set new delimiters for graphical sky axis values, using appropriate escape
 #  sequences to get he superscripts looking nice.
-         Ast.tunec( "hrdel", "%-%<8+%^85+%s70+h%+" )
-         Ast.tunec( "mndel", "%-%<13+%^85+%s70+m%+" )
-         Ast.tunec( "scdel", "%-%<13+%^85+%s70+s%+" )
-         Ast.tunec( "dgdel", "%-%<8+%^90+%s60+o%+" )
-         Ast.tunec( "amdel", "%-%<8+%^30+%s85+'%+" )
-         Ast.tunec( "asdel", "%-%<8+%^30+%s85+\"%+" )
-         Ast.tunec( "exdel", "10%-%<10+%^85+%s60+" )
+         Ast.tunec( "hrdel", "%-%^85+%s70+h%>45+%+" )
+         Ast.tunec( "mndel", "%-%^85+%s70+m%>45+%+" )
+         Ast.tunec( "scdel", "%-%^85+%s70+s%>45+%+" )
+         Ast.tunec( "dgdel", "%-%^90+%s60+o%>45+%+" )
+         Ast.tunec( "amdel", "%-%^30+%s85+'%>45+%+" )
+         Ast.tunec( "asdel", "%-%^30+%s85+\"%>45+%+" )
+         Ast.tunec( "exdel", "10%-%^85+%s60+%>20+" )
+
+#  Initialise the correction vector for text.
+         self._xcorr = 0.0
+         self._ycorr = 0.0
+
+#  Save the current character heights, and update the vertical offset
+#  correction for text.
+         self.Qch()
 
 #  Report an error if the supplied object is not suitable
       else:
@@ -266,11 +274,15 @@ class grf_matplotlib(object):
       y = 0.5*(yt-yb)
 
       a = self.TxExt( "a", x, y, "CC", 0, 1 )
-      chh = max(a[4:]) - min(a[4:])
+      self._chh = max(a[4:]) - min(a[4:])
 
       a = self.TxExt( "a", x, y, "CC", 1, 0 )
-      chv = max(a[:3]) - min(a[:3])
-      return (chv,chh)
+      self._chv = max(a[:3]) - min(a[:3])
+
+      self._xcorr = self._chv*0.15
+      self._ycorr = self._chh*0.15
+
+      return (self._chv,self._chh)
 
 #------------------------------------------------------------------------
    def Scales( self ):
@@ -299,6 +311,14 @@ class grf_matplotlib(object):
          ha = "center"
       rot = math.atan2( -upx, upy )*Ast.DR2D
 
+#  matplotlib always seems to plot each text string a little higher than
+#  requested, sp correct the reference position by a small amount
+#  determined empirically to produce visually better text positioning.
+      uplen = math.sqrt( upx**2 + upy**2 )
+      if uplen > 0.0:
+         x -= upx*self._xcorr/uplen
+         y -= upy*self._ycorr/uplen
+
       props = self.__props[Ast.grfTEXT].copy()
       props["verticalalignment"] = va
       props["horizontalalignment"] = ha
@@ -313,7 +333,7 @@ class grf_matplotlib(object):
 
 #------------------------------------------------------------------------
    def TxExt( self, text, x, y, just, upx, upy ):
-      otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square,pad=0.1"} )
+      otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square,pad=0.0"} )
       renderer = self.axes.get_figure().canvas.get_renderer()
       otext.draw(renderer)
       pix_verts = otext.get_bbox_patch().get_verts()
