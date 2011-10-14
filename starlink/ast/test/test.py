@@ -1106,6 +1106,45 @@ class TestAst(unittest.TestCase):
       self.assertEqual( mygrf.textj, ['CC'] )
       self.assertEqual( mygrf.ntext, 1 )
 
+   def test_MatrixMap(self):
+
+      with self.assertRaises(ValueError):
+         mm = starlink.Ast.MatrixMap( [ [ [1.0] ] ]  )
+
+      mm = starlink.Ast.MatrixMap( [ -1.0, 2.0 ]  )
+      self.assertIsInstance( mm, starlink.Ast.Object)
+      self.assertIsInstance( mm, starlink.Ast.Mapping )
+      self.assertIsInstance( mm, starlink.Ast.MatrixMap )
+      self.assertTrue(  mm.isaobject() )
+      self.assertTrue(  mm.isamapping() )
+      self.assertTrue(  mm.isamatrixmap() )
+      self.assertEqual( mm.Nin, 2 )
+      self.assertEqual( mm.Nout, 2 )
+      pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
+      pout = mm.trann( pin, False )
+      self.assertEqual( pout[0][0], -1.0 )
+      self.assertEqual( pout[0][1], -2.0 )
+      self.assertEqual( pout[0][2], -3.0 )
+      self.assertEqual( pout[1][0], 0.0/2.0 )
+      self.assertEqual( pout[1][1], 1.0/2.0 )
+      self.assertEqual( pout[1][2], 2.0/2.0 )
+
+      mm = starlink.Ast.MatrixMap( [[0.0,1.0], [2.0,3.0], [-1.0, -2.0]] )
+      self.assertTrue( mm.TranForward )
+      self.assertFalse( mm.TranInverse )
+      self.assertEqual( mm.Nout, 3 )
+      self.assertEqual( mm.Nin, 2 )
+      pout = mm.trann( pin, True )
+      self.assertEqual( pout[0][0], 0.0 )
+      self.assertEqual( pout[0][1], 1.0 )
+      self.assertEqual( pout[0][2], 2.0 )
+      self.assertEqual( pout[1][0], 2.0 )
+      self.assertEqual( pout[1][1], 7.0 )
+      self.assertEqual( pout[1][2], 12.0 )
+      self.assertEqual( pout[2][0], -1.0 )
+      self.assertEqual( pout[2][1], -4.0 )
+      self.assertEqual( pout[2][2], -7.0 )
+
 
 
 

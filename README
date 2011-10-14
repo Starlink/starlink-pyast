@@ -254,7 +254,17 @@ attribute of the KeyMap). When setting a value, a starlink.Ast.MPIND
 exception is reported if the specified zero-based integer index is
 greater than or equal to the number of entries in the KeyMap.
 
-
 Also, a KeyMap is iterable. Each value is returned as a (key,value) tuple.
 
+The argument list for the MatrixMap constructor contains just an array
+of matrix element values, and the usual optional list of AST attribute
+settings. The array must be either 1- or 2- dimensional. If it is
+1-dimensional, it is assumed to contain the values for the diagonal of
+the (square) matrix, all other elements being zero. In this case the
+length of the array determines the number of inputs and outputs for the
+Matrixmap. If the array is 2-dimensional, it should consist of a list in
+which element is a list of values for a single row of the matrix. For
+instance, the 2-dimensional array [[1,2,3],[4,2,1]] specifies a matrix
+with two rows and three columns. The resulting MatrixMap would have Nin=3
+and Nout=2.
 

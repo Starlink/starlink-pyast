@@ -4,8 +4,6 @@
         DssMap
         IntraMap
         MathMap
-        MatrixMap
-        Plot
         Plot3D
         PointList
         PolyMap
@@ -116,6 +114,7 @@ MAKE_ISA(Interval)
 MAKE_ISA(KeyMap)
 MAKE_ISA(LutMap)
 MAKE_ISA(Mapping)
+MAKE_ISA(MatrixMap)
 MAKE_ISA(NormMap)
 MAKE_ISA(NullRegion)
 MAKE_ISA(Object)
@@ -158,6 +157,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(KeyMap,keymap),
    DEF_ISA(LutMap,lutmap),
    DEF_ISA(Mapping,mapping),
+   DEF_ISA(MatrixMap,matrixmap),
    DEF_ISA(NormMap,normmap),
    DEF_ISA(NullRegion,nullregion),
    DEF_ISA(Object,object),
@@ -3505,6 +3505,103 @@ static PyObject *Frame_unformat( Frame *self, PyObject *args ) {
 
   TIDY;
   return result;
+}
+
+/* MatrixMap */
+/* ========= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".MatrixMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} MatrixMap;
+
+/* Prototypes for class functions */
+static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject MatrixMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(MatrixMap),         /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST MatrixMap",           /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)MatrixMap_init,  /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   PyObject *matrix_object = NULL;
+   AstMatrixMap *this = NULL;
+
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "O|s:" CLASS, &matrix_object, &options ) ) {
+      PyArrayObject *matrix = (PyArrayObject *) PyArray_ContiguousFromAny( matrix_object,
+                                                            PyArray_DOUBLE, 0, 100);
+      if( matrix ) {
+
+         int ndim = matrix->nd;
+         if( ndim == 1 ) {
+            this = astMatrixMap( matrix->dimensions[0], matrix->dimensions[0],
+                                 1, (const double *) matrix->data, options );
+         } else if( ndim == 2 ) {
+            this = astMatrixMap( matrix->dimensions[1],
+matrix->dimensions[0],
+                                 0, (const double *) matrix->data, options );
+         } else {
+            PyErr_Format( PyExc_ValueError, "The supplied array of matrix "
+                          "elements must be either 1 or 2 dimensional, not "
+                          "%d dimensional.", ndim );
+         }
+
+         if( this ) {
+            result = SetProxy( (AstObject *) this, (Object *) self );
+            this = astAnnul( this );
+         }
+         Py_DECREF( matrix );
+      }
+   }
+
+   TIDY;
+   return result;
 }
 
 /* NormMap */
@@ -8077,6 +8174,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&WinMapType);
    PyModule_AddObject( m, "WinMap", (PyObject *)&WinMapType);
 
+   MatrixMapType.tp_new = PyType_GenericNew;
+   MatrixMapType.tp_base = &MappingType;
+   if( PyType_Ready(&MatrixMapType) < 0) return NULL;
+   Py_INCREF(&MatrixMapType);
+   PyModule_AddObject( m, "MatrixMap", (PyObject *)&MatrixMapType);
+
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
    if( PyType_Ready(&FrameType) < 0) return NULL;
@@ -8654,6 +8757,8 @@ static PyTypeObject *GetType( AstObject *this ) {
         result = (PyTypeObject *) &LutMapType;
       } else if( !strcmp( class, "WinMap" ) ) {
         result = (PyTypeObject *) &WinMapType;
+      } else if( !strcmp( class, "MatrixMap" ) ) {
+        result = (PyTypeObject *) &MatrixMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
