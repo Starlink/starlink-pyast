@@ -188,9 +188,9 @@ class grf_matplotlib(object):
                if value < 0.0:
                   wgt = 0.0
                elif value < 1.0:
-                  wgt = 400.0*value
+                  wgt = 250.0*value
                elif value < 10.0:
-                  wgt = (500.0*value + 3100.0 )/9.0
+                  wgt = (650.0*value + 1600.0 )/9.0
                else:
                   wgt = 900
                self.__props[prim].update({"weight":wgt})
