@@ -5633,6 +5633,7 @@ static PyObject *FitsChan_getfitsI( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsL( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getfitsS( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword );
+static int FitsChan_contains( PyObject *self, PyObject *index );
 static PyObject *FitsChan_getiter( PyObject *self );
 static PyObject *FitsChan_next( PyObject *self );
 static PyObject *FitsChan_readfits( FitsChan *self );
@@ -5726,6 +5727,21 @@ static PyMappingMethods FitsChanAsMapping = {
    FitsChan_setitem,
 };
 
+/* Hack to implement "key in dict" */
+static PySequenceMethods FitsChanAsSequence = {
+    0,                          /* sq_length */
+    0,                          /* sq_concat */
+    0,                          /* sq_repeat */
+    0,                          /* sq_item */
+    0,                          /* sq_slice */
+    0,                          /* sq_ass_item */
+    0,                          /* sq_ass_slice */
+    FitsChan_contains,          /* sq_contains */
+    0,                          /* sq_inplace_concat */
+    0,                          /* sq_inplace_repeat */
+};
+
+
 /* Define the class Python type structure */
 static PyTypeObject FitsChanType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -5739,7 +5755,7 @@ static PyTypeObject FitsChanType = {
    0,                         /* tp_reserved */
    0,                         /* tp_repr */
    0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
+   &FitsChanAsSequence,       /* tp_as_sequence */
    &FitsChanAsMapping,        /* tp_as_mapping */
    0,                         /* tp_hash  */
    0,                         /* tp_call */
@@ -5838,6 +5854,55 @@ static PyObject *FitsChan_next( PyObject *self ) {
 }
 
 
+/* Methods needed to make a FitsChan behave as a python sequence */
+
+/* Return 1 if `index` is in the FitsChan, 0 if not, and -1 on error. */
+static int FitsChan_contains( PyObject *self, PyObject *index ) {
+   int result = -1;
+
+   if( PyErr_Occurred() ) return result;
+
+
+/* If the index is actually an integer, treat it as the Card index. The
+   card exists if the (zero based) card index is less than the number of
+   cards in the FitsChan (NCard). */
+   if( PyLong_Check( index ) ) {
+      long int lval = PyLong_AsLong( index );
+      int val = (int) lval;
+      if( (long int) val != lval ) {
+         result = 0;
+      } else {
+         result = ( val < astGetI( THIS, "NCard" ) );
+      }
+
+/* Otherwise, if it is a string, just test for the supplied index string. */
+   } else if( PyUnicode_Check( index ) ) {
+      char *keyw = GetString( NULL, index );
+
+/* Save the current card index, and then rewind the FitsChan. */
+      int icard = astGetI( THIS, "Card" );
+      astClear( THIS, "Card" );
+
+/* Search forward for an occurrence of the requested keyword. It becomes
+   the current card. */
+      result = astFindFits( THIS, keyw, NULL, 0 );
+
+/* Reset the current card index. */
+      astSetI( THIS, "Card", icard );
+
+/* Free local resources. */
+      keyw = astFree( keyw );
+   }
+
+
+/* Return -1 if an AST error occurred. */
+   if( !astOK ) result = -1;
+
+   TIDY;
+   return result;
+}
+
+
 /* Methods needed to make a FitsChan behave as a python mapping */
 
 /* Return the number of unique keywords in the FitsChan. */
@@ -5886,8 +5951,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
    } else {
       keyw = GetString( NULL, index );
 
-/* Save the current card index, and then rewind the FitsChan. */
-      icard = astGetI( THIS, "Card" );
+/* Rewind the FitsChan so that we search all cards. */
       astClear( THIS, "Card" );
 
 /* Search forward to the next occurrence of the requested keyword. It
@@ -5965,7 +6029,9 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
       keyw = astFree( keyw );
    }
 
+/* Re-instate the original current card. */
    astSetI( THIS, "Card", icard );
+
    TIDY;
    return result;
 }
@@ -6432,6 +6498,7 @@ static Py_ssize_t KeyMap_length( PyObject *self );
 static int KeyMap_setitem( PyObject *self, PyObject *keyword, PyObject *value );
 static PyObject *KeyMap_getiter( PyObject *self );
 static PyObject *KeyMap_next( PyObject *self );
+static int KeyMap_contains( PyObject *self, PyObject *key );
 
 /* Describe the methods of the class */
 static PyMethodDef KeyMap_methods[] = {
@@ -6460,6 +6527,20 @@ static PyMappingMethods KeyMapAsMapping = {
    KeyMap_setitem,
 };
 
+/* Hack to implement "key in dict" */
+static PySequenceMethods KeyMapAsSequence = {
+    0,                          /* sq_length */
+    0,                          /* sq_concat */
+    0,                          /* sq_repeat */
+    0,                          /* sq_item */
+    0,                          /* sq_slice */
+    0,                          /* sq_ass_item */
+    0,                          /* sq_ass_slice */
+    KeyMap_contains,            /* sq_contains */
+    0,                          /* sq_inplace_concat */
+    0,                          /* sq_inplace_repeat */
+};
+
 /* Define the class Python type structure */
 static PyTypeObject KeyMapType = {
    PyVarObject_HEAD_INIT(NULL, 0)
@@ -6473,7 +6554,7 @@ static PyTypeObject KeyMapType = {
    0,                         /* tp_reserved */
    0,                         /* tp_repr */
    0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
+   &KeyMapAsSequence,         /* tp_as_sequence */
    &KeyMapAsMapping,          /* tp_as_mapping */
    0,                         /* tp_hash  */
    0,                         /* tp_call */
@@ -6546,6 +6627,39 @@ static PyObject *KeyMap_next( PyObject *self ) {
    TIDY;
    return result;
 }
+
+
+/* Methods needed to make a KeyMap behave as a python sequence */
+
+/* Return 1 if `index` is in the KeyMap, 0 if not, and -1 on error. */
+static int KeyMap_contains( PyObject *self, PyObject *index ) {
+   int result = -1;
+
+   if( PyErr_Occurred() ) return result;
+
+/* If the index is actually an integer, the key exists if the (zero-based)
+   index is less than the number of entries in the KeyMap. */
+   if( PyLong_Check( index ) ) {
+      long int lval = PyLong_AsLong( index );
+      int ikey = (int) lval;
+      if( (long int) ikey != lval ) {
+         result = 0;
+      } else {
+         result = ( ikey < astMapSize( THIS ) );
+      }
+
+/* Otherwise, if it is a string, just test the supplied key. */
+   } else if( PyUnicode_Check( index ) ) {
+      char *key = GetString( NULL, index );
+      result = astMapHasKey( THIS, key );
+      key = astFree( key );
+   }
+
+   if( !astOK ) result = -1;
+   TIDY;
+   return result;
+}
+
 
 
 /* Methods needed to make a KeyMap behave as a python mapping */

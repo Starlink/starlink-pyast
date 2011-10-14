@@ -882,6 +882,8 @@ class TestAst(unittest.TestCase):
       fc["CRVAL1"] = 0
       fc["CRVAL2"] = 0
 
+      self.assertTrue( "NAXIS1" in fc )
+
       self.assertEqual( len(fc), 10 )
       self.assertEqual( fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
       fc.Card = None
@@ -969,6 +971,7 @@ class TestAst(unittest.TestCase):
 
       self.assertEqual( km[0], ('TTT', (1.2, 3.0, 4.5)) )
       self.assertEqual( km[1], ('SS', 'hello'))
+      self.assertTrue( "SS" in km )
 
       i = 0
       for entry in km:
