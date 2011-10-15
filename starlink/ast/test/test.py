@@ -1231,6 +1231,20 @@ class TestAst(unittest.TestCase):
          self.assertAlmostEqual( x, r )
          self.assertAlmostEqual( y, r )
 
+   def test_Polygon(self):
+      polygon = starlink.Ast.Polygon( starlink.Ast.Frame(2),
+                                    [[0,1,0],[0,1,2]] )
+      self.assertIsInstance( polygon, starlink.Ast.Polygon )
+      self.assertIsInstance( polygon, starlink.Ast.Region )
+      self.assertIsInstance( polygon, starlink.Ast.Frame )
+      self.assertIsInstance( polygon.getregionframe(), starlink.Ast.Frame )
+      overlap = polygon.overlap( polygon )
+      self.assertEqual( overlap, 5 )
+      testpolygon = starlink.Ast.Polygon( starlink.Ast.Frame(2),
+                                          [[0,1,0],[1,2,3]] )
+      overlap = polygon.overlap( testpolygon )
+      self.assertEqual( overlap, 4 )
+
 
 
 if __name__ == "__main__":

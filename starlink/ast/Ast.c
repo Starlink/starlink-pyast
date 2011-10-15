@@ -5,7 +5,6 @@
         IntraMap
         Plot3D
         PointList
-        Polygon
         SelectorMap
         SlaMap
         SpecMap
@@ -120,6 +119,7 @@ MAKE_ISA(Object)
 MAKE_ISA(PcdMap)
 MAKE_ISA(PermMap)
 MAKE_ISA(Plot)
+MAKE_ISA(Polygon)
 MAKE_ISA(PolyMap)
 MAKE_ISA(Prism)
 MAKE_ISA(RateMap)
@@ -165,6 +165,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(PcdMap,pcdmap),
    DEF_ISA(PermMap,permmap),
    DEF_ISA(Plot,plot),
+   DEF_ISA(Polygon,polygon),
    DEF_ISA(PolyMap,polymap),
    DEF_ISA(Prism,prism),
    DEF_ISA(RateMap,ratemap),
@@ -5280,7 +5281,7 @@ static PyTypeObject CircleType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST circle",              /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -5337,6 +5338,97 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Polygon */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Polygon"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} Polygon;
+
+/* Prototypes for class functions */
+static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject PolygonType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(Polygon),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST polygon",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Polygon_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
+   const char *options = " ";
+   Frame *other;
+   Region *another = NULL;
+   PyArrayObject *points = NULL;
+   PyObject *points_object = NULL;
+   int result = -1;
+   int dims[2];
+
+   if( PyArg_ParseTuple( args, "O!O|O!s:" CLASS, &FrameType, (PyObject**)&other,
+                         &points_object, &RegionType, (PyObject**)&another,
+                         &options ) ) {
+      dims[ 0 ] = 2;
+      dims[ 1 ] = 0;
+      points = GetArray( points_object, PyArray_DOUBLE, 0, 2, dims, "points",
+                         NAME );
+      if( points ) {
+         AstRegion *unc = NULL;
+         if( another ) unc = (AstRegion *) ANOTHER;
+         AstPolygon *this = astPolygon( THAT, dims[ 1 ], dims[ 1 ],
+                                        (const double*)points->data, unc,
+                                        options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+         Py_DECREF( points );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
 /* Ellipse */
 /* ======= */
 
@@ -5374,7 +5466,7 @@ static PyTypeObject EllipseType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST ellipse",             /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -5472,7 +5564,7 @@ static PyTypeObject IntervalType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST interval",            /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -5564,7 +5656,7 @@ static PyTypeObject NullRegionType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST null region",         /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -5644,7 +5736,7 @@ static PyTypeObject CmpRegionType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST compound region",     /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -5721,7 +5813,7 @@ static PyTypeObject PrismType = {
    0,                         /* tp_setattro */
    0,                         /* tp_as_buffer */
    Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
+   "AST prism",               /* tp_doc */
    0,		              /* tp_traverse */
    0,		              /* tp_clear */
    0,		              /* tp_richcompare */
@@ -8668,6 +8760,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&CircleType);
    PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
 
+   PolygonType.tp_new = PyType_GenericNew;
+   PolygonType.tp_base = &RegionType;
+   if( PyType_Ready(&PolygonType) < 0) return NULL;
+   Py_INCREF(&PolygonType);
+   PyModule_AddObject( m, "Polygon", (PyObject *)&PolygonType);
+
    EllipseType.tp_new = PyType_GenericNew;
    EllipseType.tp_base = &RegionType;
    if( PyType_Ready(&EllipseType) < 0) return NULL;
@@ -9199,6 +9297,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &BoxType;
       } else if( !strcmp( class, "Circle" ) ) {
          result = (PyTypeObject *) &CircleType;
+      } else if( !strcmp( class, "Polygon" ) ) {
+         result = (PyTypeObject *) &PolygonType;
       } else if( !strcmp( class, "Ellipse" ) ) {
          result = (PyTypeObject *) &EllipseType;
       } else if( !strcmp( class, "Interval" ) ) {
