@@ -3,7 +3,6 @@
    - Classes still to be done:
         DssMap
         IntraMap
-        MathMap
         Plot3D
         PointList
         Polygon
@@ -113,6 +112,7 @@ MAKE_ISA(Interval)
 MAKE_ISA(KeyMap)
 MAKE_ISA(LutMap)
 MAKE_ISA(Mapping)
+MAKE_ISA(MathMap)
 MAKE_ISA(MatrixMap)
 MAKE_ISA(NormMap)
 MAKE_ISA(NullRegion)
@@ -157,6 +157,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(KeyMap,keymap),
    DEF_ISA(LutMap,lutmap),
    DEF_ISA(Mapping,mapping),
+   DEF_ISA(MathMap,mathmap),
    DEF_ISA(MatrixMap,matrixmap),
    DEF_ISA(NormMap,normmap),
    DEF_ISA(NullRegion,nullregion),
@@ -649,9 +650,16 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
    npy_intp dims[1];
 
    if( PyErr_Occurred() ) return NULL;
-   ncoord_in = astGetI( THIS, "Nin" );
+
    if( PyArg_ParseTuple( args, "OOii:" NAME, &lbnd_in_object, &ubnd_in_object,
                          &forward, &coord_out ) && astOK ) {
+
+      if( forward ) {
+         ncoord_in = astGetI( THIS, "Nin" );
+      } else {
+         ncoord_in = astGetI( THIS, "Nout" );
+      }
+
       lbnd_in = GetArray1D( lbnd_in_object, &ncoord_in, "lbnd_in", NAME );
       ubnd_in = GetArray1D( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
       if( lbnd_in && ubnd_in ) {
@@ -1471,10 +1479,17 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 
    if( PyErr_Occurred() ) return NULL;
 
-   ncoord_in = astGetI( THIS, "Nin" );
-   ncoord_out = astGetI( THIS, "Nout" );
    if( PyArg_ParseTuple( args, "OOdii:" NAME, &lbnd_object, &ubnd_object,
                          &tol, &maxpix, &forward ) && astOK ) {
+
+      if( forward ) {
+         ncoord_in = astGetI( THIS, "Nin" );
+         ncoord_out = astGetI( THIS, "Nout" );
+      } else {
+         ncoord_in = astGetI( THIS, "Nout" );
+         ncoord_out = astGetI( THIS, "Nin" );
+      }
+
       lbnd = GetArray1I( lbnd_object, &ncoord_in, "lbnd", NAME );
       ubnd = GetArray1I( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
@@ -1527,10 +1542,17 @@ static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
 
    if( PyErr_Occurred() ) return NULL;
 
-   ncoord_in = astGetI( THIS, "Nin" );
-   ncoord_out = astGetI( THIS, "Nout" );
    if( PyArg_ParseTuple( args, "Oi|O:" NAME, &in_object, &forward,
                          &out_object ) && astOK ) {
+
+      if( forward ) {
+         ncoord_in = astGetI( THIS, "Nin" );
+         ncoord_out = astGetI( THIS, "Nout" );
+      } else {
+         ncoord_in = astGetI( THIS, "Nout" );
+         ncoord_out = astGetI( THIS, "Nin" );
+      }
+
       dims[ 0 ] = ncoord_in;
       dims[ 1 ] = 0;
       in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
@@ -1644,6 +1666,165 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
       AstZoomMap *this = astZoomMap( ncoord, zoom, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* MathMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".MathMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} MathMap;
+
+/* Prototypes for class functions */
+static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETI(MathMap,Seed)
+MAKE_GETSETL(MathMap,SimpFI)
+MAKE_GETSETL(MathMap,SimpIF)
+static PyGetSetDef MathMap_getseters[] = {
+   DEFATT(Seed,"Random number seed for a MathMap"),
+   DEFATT(SimpIF,"Inverse-forward MathMap pairs simplify?"),
+   DEFATT(SimpFI,"Forward-inverse MathMap pairs simplify?"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject MathMapType = {
+   PyVarObject_HEAD_INIT(NULL, 0)
+   CLASS,                     /* tp_name */
+   sizeof(MathMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST MathMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   MathMap_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)MathMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
+   PyObject *fwd_object = NULL;
+   PyObject *inv_object = NULL;
+   const char **fwd = NULL;
+   const char **inv = NULL;
+   const char *options = " ";
+   int i;
+   int nfwd = 0;
+   int nin;
+   int ninv = 0;
+   int nout;
+   int result = -1;
+
+   if( PyErr_Occurred() ) return result;
+
+   if( PyArg_ParseTuple( args, "iiOO|s:" CLASS, &nin, &nout, &fwd_object,
+                         &inv_object, &options ) ) {
+
+      if( PyUnicode_Check( fwd_object ) ) {
+         nfwd = 1;
+         fwd = astMalloc( sizeof(*fwd) );
+         if( astOK ) fwd[0] = GetString( NULL, fwd_object );
+
+      } else if( PySequence_Check( fwd_object ) ) {
+         nfwd = PySequence_Length( fwd_object );
+         fwd = astCalloc( nfwd, sizeof(*fwd) );
+         if( astOK ) {
+            for( i = 0; i < nfwd; i++ ) {
+               PyObject *o = PySequence_GetItem( fwd_object, (Py_ssize_t) i );
+               if( PyUnicode_Check( o ) ) {
+                  fwd[ i ] = GetString( NULL, o );
+               } else {
+                  PyErr_SetString( PyExc_TypeError, "The MathMap fwd argument must "
+                                   "be a string or a sequence of strings");
+                  nfwd = 0;
+                  break;
+               }
+               Py_XDECREF( o );
+            }
+         }
+
+      } else {
+         PyErr_SetString( PyExc_TypeError, "The MathMap fwd argument must "
+                          "be a string or a sequence of strings");
+      }
+
+      if( PyUnicode_Check( inv_object ) ) {
+         ninv = 1;
+         inv = astMalloc( sizeof(*inv) );
+         if( astOK ) inv[0] = GetString( NULL, inv_object );
+
+      } else if( PySequence_Check( inv_object ) ) {
+         ninv = PySequence_Length( inv_object );
+         inv = astCalloc( ninv, sizeof(*inv) );
+         if( astOK ) {
+            for( i = 0; i < ninv; i++ ) {
+               PyObject *o = PySequence_GetItem( inv_object, (Py_ssize_t) i );
+               if( PyUnicode_Check( o ) ) {
+                  inv[ i ] = GetString( NULL, o );
+               } else {
+                  PyErr_SetString( PyExc_TypeError, "The MathMap inv argument must "
+                                   "be a string or a sequence of strings");
+                  ninv = 0;
+                  break;
+               }
+               Py_XDECREF( o );
+            }
+         }
+
+      } else {
+         PyErr_SetString( PyExc_TypeError, "The MathMap inv argument must "
+                          "be a string or a sequence of strings");
+      }
+
+      if( nfwd > 0 && ninv > 0 && astOK ) {
+         AstMathMap *this = astMathMap( nin, nout, nfwd, fwd, ninv, inv,
+                                        options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+
+      fwd = astFreeDouble( fwd );
+      inv = astFreeDouble( inv );
    }
 
    TIDY;
@@ -8307,6 +8488,12 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
 
+   MathMapType.tp_new = PyType_GenericNew;
+   MathMapType.tp_base = &MappingType;
+   if( PyType_Ready(&MathMapType) < 0) return NULL;
+   Py_INCREF(&MathMapType);
+   PyModule_AddObject( m, "MathMap", (PyObject *)&MathMapType);
+
    SphMapType.tp_new = PyType_GenericNew;
    SphMapType.tp_base = &MappingType;
    if( PyType_Ready(&SphMapType) < 0) return NULL;
@@ -8952,6 +9139,8 @@ static PyTypeObject *GetType( AstObject *this ) {
    if( class ) {
       if( !strcmp( class, "ZoomMap" ) ) {
          result = (PyTypeObject *) &ZoomMapType;
+      } else if( !strcmp( class, "MathMap" ) ) {
+         result = (PyTypeObject *) &MathMapType;
       } else if( !strcmp( class, "UnitMap" ) ) {
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "TimeMap" ) ) {

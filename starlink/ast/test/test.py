@@ -1197,16 +1197,39 @@ class TestAst(unittest.TestCase):
       self.assertEqual( pm.NiterInverse, 4 )
       self.assertEqual( pm.TolInverse, 1.0E-6 )
 
-
       new = pm.polytran( False, 1.0E-8, 0.01, 2, [-1.0, -1.0], [1.0, 1.0] )
-
-#  The above call to astPolyTran currently does a really bad job so skip
-#  the following test until the problem is fixed in polymap.c
       pout = new.trann( pin, True )
       pnew = new.trann( pout, False )
       for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
          self.assertAlmostEqual( xn, xi )
          self.assertAlmostEqual( yn, yi )
+
+
+   def test_MathMap(self):
+      with self.assertRaises(TypeError):
+         mathmap = starlink.Ast.MathMap( 2, 1, "r = sqrt( x * x + y * y )",
+                                      (1.0, "y=r/sqrt(2)") )
+
+      with self.assertRaises(TypeError):
+         mathmap = starlink.Ast.MathMap( 2, 1, 1, ("x = r/sqrt(2)", "y=r/sqrt(2)") )
+
+      mathmap = starlink.Ast.MathMap( 2, 1, "r = sqrt( x * x + y * y )",
+                                      ("x = r", "y=r") )
+      self.assertEqual( mathmap.Class, "MathMap" )
+      self.assertIsInstance( mathmap, starlink.Ast.MathMap )
+      self.assertEqual( mathmap.Nin, 2 )
+      self.assertEqual( mathmap.Nout, 1 )
+
+      pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
+      pout = mathmap.trann( pin, True )
+      for (x,y,r) in zip( pin[0], pin[1], pout[0] ):
+         rn = math.sqrt( x*x + y*y )
+         self.assertAlmostEqual( rn, r )
+
+      pin2 = mathmap.trann( pout, False )
+      for (r,x,y) in zip( pout[0], pin2[0], pin2[1] ):
+         self.assertAlmostEqual( x, r )
+         self.assertAlmostEqual( y, r )
 
 
 
