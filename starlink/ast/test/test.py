@@ -1198,15 +1198,15 @@ class TestAst(unittest.TestCase):
       self.assertEqual( pm.TolInverse, 1.0E-6 )
 
 
-      new = pm.polytran( False, 0.01, 0.1, 3, [-1.0, 1.0], [-1.0, 1.0] )
+      new = pm.polytran( False, 1.0E-8, 0.01, 2, [-1.0, -1.0], [1.0, 1.0] )
 
 #  The above call to astPolyTran currently does a really bad job so skip
 #  the following test until the problem is fixed in polymap.c
-#      pout = new.trann( pin, True )
-#      pnew = new.trann( pout, False )
-#      for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
-#         self.assertAlmostEqual( xn, xi )
-#         self.assertAlmostEqual( yn, yi )
+      pout = new.trann( pin, True )
+      pnew = new.trann( pout, False )
+      for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
+         self.assertAlmostEqual( xn, xi )
+         self.assertAlmostEqual( yn, yi )
 
 
 
