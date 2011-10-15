@@ -1246,6 +1246,18 @@ class TestAst(unittest.TestCase):
       self.assertEqual( overlap, 4 )
 
 
+   def test_PointList(self):
+      pointlist = starlink.Ast.PointList( starlink.Ast.Frame(2),
+                                    [[0,1,0],[0,1,2]] )
+      self.assertIsInstance( pointlist, starlink.Ast.PointList )
+      self.assertIsInstance( pointlist, starlink.Ast.Region )
+      self.assertIsInstance( pointlist, starlink.Ast.Frame )
+      self.assertIsInstance( pointlist.getregionframe(), starlink.Ast.Frame )
+      overlap = pointlist.overlap( pointlist )
+      self.assertEqual( overlap, 5 )
+      self.assertEqual( pointlist.ListSize, 3 )
+
+
 
 if __name__ == "__main__":
     #unittest.main()
