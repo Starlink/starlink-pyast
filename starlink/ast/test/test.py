@@ -1244,7 +1244,20 @@ class TestAst(unittest.TestCase):
                                           [[0,1,0],[1,2,3]] )
       overlap = polygon.overlap( testpolygon )
       self.assertEqual( overlap, 4 )
+      array = numpy.array([[0,0,0,0],[0,1,1,0],[0,1,1,0],[0,0,0,0]])
+      new = starlink.Ast.outline( 1, starlink.Ast.EQ, array, [-1,2], [2,5],
+                                  0.0, 4, [0,3], True )
+      pin = numpy.array( [[0.,0.,0], [1.9,2.1,4.5]] )
+      pout = new.trann( pin, True )
+      self.assertEqual( pout[0][0], starlink.Ast.BAD )
+      self.assertEqual( pout[0][1], 0. )
+      self.assertEqual( pout[0][2], starlink.Ast.BAD )
+      self.assertEqual( pout[1][0], starlink.Ast.BAD )
+      self.assertEqual( pout[1][1], 2.1 )
+      self.assertEqual( pout[1][2], starlink.Ast.BAD )
 
+      new2 = new.downsize( 0, 3 )
+      self.assertTrue( new2.isapolygon() )
 
    def test_PointList(self):
       pointlist = starlink.Ast.PointList( starlink.Ast.Frame(2),

@@ -819,35 +819,41 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
                          &badval_d, &lbnd_out_object, &ubnd_out_object,
                          &lbnd_object, &ubnd_object ) && astOK ) {
 
-      type = ((PyArrayObject*) in_object)->descr->type_num;
-      if( type == PyArray_DOUBLE ) {
-         format[ 10 ] = 'd';
-         pbadval = &badval_d;
-      } else if( type == PyArray_FLOAT ) {
-         format[ 10 ] = 'f';
-         pbadval = &badval_f;
-      } else if( type == PyArray_INT ) {
-         format[ 10 ] = 'i';
-         pbadval = &badval_i;
+      if( !PyArray_Check(  in_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
+                          "an array object" );
       } else {
-         PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
-                          "to " NAME " has a data type that is not "
-                          "supported by " NAME " (must be float64, "
-                          "float32 or int32)." );
-      }
+
+         type = ((PyArrayObject*) in_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 10 ] = 'd';
+            pbadval = &badval_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 10 ] = 'f';
+            pbadval = &badval_f;
+         } else if( type == PyArray_INT ) {
+            format[ 10 ] = 'i';
+            pbadval = &badval_i;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME " (must be float64, "
+                             "float32 or int32)." );
+         }
 
 /* Also record the number of axes and dimensions in the input array. */
-      ndim = ((PyArrayObject*) in_object)->nd;
-      pdims = ((PyArrayObject*) in_object)->dimensions;
-      if( ndim > MXDIM ) {
-         sprintf( buf, "The 'in' array supplied to " NAME " has too "
-                  "many (%d) dimensions (must be no more than %d).",
-                  ndim, MXDIM );
-         PyErr_SetString( PyExc_ValueError, buf );
-         pbadval = NULL;
-      } else {
-         for( i = 0; i < ndim; i++ ) {
-            dims[ i ] = pdims[ i ];
+         ndim = ((PyArrayObject*) in_object)->nd;
+         pdims = ((PyArrayObject*) in_object)->dimensions;
+         if( ndim > MXDIM ) {
+            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+                     "many (%d) dimensions (must be no more than %d).",
+                     ndim, MXDIM );
+            PyErr_SetString( PyExc_ValueError, buf );
+            pbadval = NULL;
+         } else {
+            for( i = 0; i < ndim; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
          }
       }
    }
@@ -1011,43 +1017,48 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                          &lbnd_object, &ubnd_object, &out_object,
                          &out_var_object, &weights_object, &nused ) && astOK ) {
 
-      type = ((PyArrayObject*) in_object)->descr->type_num;
-      if( type == PyArray_DOUBLE ) {
-         format[ 10 ] = 'd';
-         pbadval = &badval_d;
-      } else if( type == PyArray_FLOAT ) {
-         format[ 10 ] = 'f';
-         pbadval = &badval_f;
-      } else if( type == PyArray_INT ) {
-         format[ 10 ] = 'i';
-         pbadval = &badval_i;
+      if( !PyArray_Check(  in_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
+                          "an array object" );
       } else {
-         PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
-                          "to " NAME " has a data type that is not "
-                          "supported by " NAME " (must be float64, "
-                          "float32 or int32)." );
-      }
+         type = ((PyArrayObject*) in_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 10 ] = 'd';
+            pbadval = &badval_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 10 ] = 'f';
+            pbadval = &badval_f;
+         } else if( type == PyArray_INT ) {
+            format[ 10 ] = 'i';
+            pbadval = &badval_i;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME " (must be float64, "
+                             "float32 or int32)." );
+         }
 
 /* Also record the number of axes and dimensions in the input array. */
-      ndim = ((PyArrayObject*) in_object)->nd;
-      pdims = ((PyArrayObject*) in_object)->dimensions;
-      if( ndim > MXDIM ) {
-         sprintf( buf, "The 'in' array supplied to " NAME " has too "
-                  "many (%d) dimensions (must be no more than %d).",
-                  ndim, MXDIM );
-         PyErr_SetString( PyExc_ValueError, buf );
-         pbadval = NULL;
-      } else {
-         for( i = 0; i < ndim; i++ ) {
-            dims[ i ] = pdims[ i ];
+         ndim = ((PyArrayObject*) in_object)->nd;
+         pdims = ((PyArrayObject*) in_object)->dimensions;
+         if( ndim > MXDIM ) {
+            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+                     "many (%d) dimensions (must be no more than %d).",
+                     ndim, MXDIM );
+            PyErr_SetString( PyExc_ValueError, buf );
+            pbadval = NULL;
+         } else {
+            for( i = 0; i < ndim; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
          }
-      }
 
 /* Report an error if the weights array is not double. */
-      if( ((PyArrayObject*) weights_object)->descr->type_num != PyArray_DOUBLE ) {
-         PyErr_SetString( PyExc_ValueError, "The 'weights' array supplied to "
-                          NAME " is not of type float64." );
-         pbadval = NULL;
+         if( ((PyArrayObject*) weights_object)->descr->type_num != PyArray_DOUBLE ) {
+            PyErr_SetString( PyExc_ValueError, "The 'weights' array supplied to "
+                             NAME " is not of type float64." );
+            pbadval = NULL;
+         }
       }
    }
 
@@ -1190,6 +1201,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
    double tol;
    float badval_f;
    int badval_i;
+   long badval_l;
    int dims[ MXDIM ];
    int flags;
    int i;
@@ -1225,49 +1237,58 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                          &badval_d, &lbnd_out_object, &ubnd_out_object,
                          &lbnd_object, &ubnd_object ) && astOK ) {
 
-      type = ((PyArrayObject*) in_object)->descr->type_num;
-      if( type == PyArray_DOUBLE ) {
-         format[ 9 ] = 'd';
-         pbadval = &badval_d;
-      } else if( type == PyArray_FLOAT ) {
-         format[ 9 ] = 'f';
-         pbadval = &badval_f;
-      } else if( type == PyArray_INT ) {
-         format[ 9 ] = 'i';
-         pbadval = &badval_i;
-      } else if( type == PyArray_SHORT ) {
-         format[ 9 ] = 'h';
-         pbadval = &badval_h;
-      } else if( type == PyArray_BYTE ) {
-         format[ 9 ] = 'b';
-         pbadval = &badval_b;
-      } else if( type == PyArray_UINT ) {
-         format[ 9 ] = 'I';
-         pbadval = &badval_I;
-      } else if( type == PyArray_USHORT ) {
-         format[ 9 ] = 'H';
-         pbadval = &badval_H;
-      } else if( type == PyArray_UBYTE ) {
-         format[ 9 ] = 'B';
-         pbadval = &badval_B;
+      if( !PyArray_Check(  in_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
+                          "an array object" );
       } else {
-         PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
-                          "to " NAME " has a data type that is not "
-                          "supported by " NAME "." );
-      }
+
+         type = ((PyArrayObject*) in_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 9 ] = 'd';
+            pbadval = &badval_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 9 ] = 'f';
+            pbadval = &badval_f;
+         } else if( type == PyArray_INT ) {
+            format[ 9 ] = 'i';
+            pbadval = &badval_i;
+         } else if( type == PyArray_LONG ) {
+            format[ 9 ] = 'l';
+            pbadval = &badval_l;
+         } else if( type == PyArray_SHORT ) {
+            format[ 9 ] = 'h';
+            pbadval = &badval_h;
+         } else if( type == PyArray_BYTE ) {
+            format[ 9 ] = 'b';
+            pbadval = &badval_b;
+         } else if( type == PyArray_UINT ) {
+            format[ 9 ] = 'I';
+            pbadval = &badval_I;
+         } else if( type == PyArray_USHORT ) {
+            format[ 9 ] = 'H';
+            pbadval = &badval_H;
+         } else if( type == PyArray_UBYTE ) {
+            format[ 9 ] = 'B';
+            pbadval = &badval_B;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
 
 /* Also record the number of axes and dimensions in the input array. */
-      ndim = ((PyArrayObject*) in_object)->nd;
-      pdims = ((PyArrayObject*) in_object)->dimensions;
-      if( ndim > MXDIM ) {
-         sprintf( buf, "The 'in' array supplied to " NAME " has too "
-                  "many (%d) dimensions (must be no more than %d).",
-                  ndim, MXDIM );
-         PyErr_SetString( PyExc_ValueError, buf );
-         pbadval = NULL;
-      } else {
-         for( i = 0; i < ndim; i++ ) {
-            dims[ i ] = pdims[ i ];
+         ndim = ((PyArrayObject*) in_object)->nd;
+         pdims = ((PyArrayObject*) in_object)->dimensions;
+         if( ndim > MXDIM ) {
+            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+                     "many (%d) dimensions (must be no more than %d).",
+                     ndim, MXDIM );
+            PyErr_SetString( PyExc_ValueError, buf );
+            pbadval = NULL;
+         } else {
+            for( i = 0; i < ndim; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
          }
       }
    }
@@ -1327,6 +1348,16 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (float *)out->data,
                           (out_var ? (float *)out_var->data : NULL ) );
+            } else if( type == PyArray_LONG ) {
+               noutpix = astResampleL( THIS, ncoord_in, (const int *)lbnd_in->data,
+                          (const int *)ubnd_in->data, (const long *)in->data,
+                          (in_var ? (const long *)in_var->data : NULL),
+                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          flags, tol, maxpix, badval_f, ncoord_out,
+                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
+                          (const int *)lbnd->data, (const int *)ubnd->data,
+                          (long *)out->data,
+                          (out_var ? (long *)out_var->data : NULL ) );
             } else if( type == PyArray_INT ) {
                noutpix = astResampleI( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const int *)in->data,
@@ -5339,6 +5370,9 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+
+
+
 /* Polygon */
 /* ======= */
 
@@ -5353,6 +5387,13 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds );
+static PyObject *Polygon_downsize( Polygon *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef Polygon_methods[] = {
+   {"downsize", (PyCFunction)Polygon_downsize, METH_VARARGS, "Reduce the number of vertices in a Polygon"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
 
 /* Define the class Python type structure */
 static PyTypeObject PolygonType = {
@@ -5383,7 +5424,7 @@ static PyTypeObject PolygonType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   0,                         /* tp_methods */
+   Polygon_methods,           /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -5429,6 +5470,33 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
    TIDY;
    return result;
 }
+
+
+#undef NAME
+#define NAME CLASS ".downsize"
+static PyObject *Polygon_downsize( Polygon *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int maxvert;
+   double maxerr;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "di:" NAME, &maxerr, &maxvert ) && astOK ) {
+      AstPolygon *new = astDownsize( THIS, maxerr, maxvert );
+      if( astOK ) {
+         PyObject *new_object = NewObject( (AstObject *) new );
+         if( new_object ) {
+            result = Py_BuildValue( "O", new_object );
+            Py_DECREF( new_object );
+         }
+      }
+      new = astAnnul( new );
+   }
+
+   TIDY;
+   return result;
+}
+
 
 /* PointList */
 /* ========= */
@@ -8519,6 +8587,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
 static PyObject *PyAst_escapes( PyObject *self, PyObject *args );
 static PyObject *PyAst_tune( PyObject *self, PyObject *args );
 static PyObject *PyAst_tunec( PyObject *self, PyObject *args );
+static PyObject *PyAst_outline( PyObject *self, PyObject *args );
 static PyObject *PyAst_version( PyObject *self );
 static PyObject *PyAst_get_include( PyObject *self );
 
@@ -8581,6 +8650,177 @@ static PyObject *PyAst_version( PyObject *self ) {
    return result;
 }
 
+#undef NAME
+#define NAME MODULE ".outline"
+static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
+   PyObject *array_object = NULL;
+   PyObject *inside_object = NULL;
+   PyObject *lbnd_object = NULL;
+   PyObject *result = NULL;
+   PyObject *ubnd_object = NULL;
+   char format[] = "diOOOdiOi:" NAME;
+   char value_b;
+   double maxerr;
+   double value_d;
+   float value_f;
+   int dims[ 2 ];
+   int i;
+   int maxvert;
+   int ndim = 0;
+   int oper;
+   int starpix;
+   int type = 0;
+   int value_i;
+   long int value_l;
+   npy_intp *pdims = NULL;
+   short int value_h;
+   unsigned char value_B;
+   unsigned int value_I;
+   unsigned long int value_L;
+   unsigned short int value_H;
+   void *pvalue = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* We do not know yet what format code to use for value. We need to parse
+   the arguments twice. The first time, we determine the data type from
+   the "array" argument. This allows us to choose the correct format code
+   for value, so we then parse the arguments a second time, using the
+   correct code. */
+   if( PyArg_ParseTuple( args, format, &value_d, &oper, &array_object,
+                         &lbnd_object, &ubnd_object, &maxerr, &maxvert,
+                         &inside_object, &starpix ) && astOK ) {
+
+      if( !PyArray_Check(  array_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
+                          "an array object" );
+      } else {
+         type = ((PyArrayObject*) array_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 0 ] = 'd';
+            pvalue = &value_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 0 ] = 'f';
+            pvalue = &value_f;
+         } else if( type == PyArray_INT ) {
+            format[ 0 ] = 'i';
+            pvalue = &value_i;
+         } else if( type == PyArray_LONG ) {
+            format[ 0 ] = 'l';
+            pvalue = &value_l;
+         } else if( type == PyArray_UINT ) {
+            format[ 0 ] = 'I';
+            pvalue = &value_I;
+         } else if( type == PyArray_ULONG ) {
+            format[ 0 ] = 'L';
+            pvalue = &value_L;
+         } else if( type == PyArray_SHORT ) {
+            format[ 0 ] = 'h';
+            pvalue = &value_h;
+         } else if( type == PyArray_USHORT ) {
+            format[ 0 ] = 'H';
+            pvalue = &value_H;
+         } else if( type == PyArray_BYTE ) {
+            format[ 0 ] = 'b';
+            pvalue = &value_b;
+         } else if( type == PyArray_UBYTE ) {
+            format[ 0 ] = 'B';
+            pvalue = &value_B;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'array' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME " (must be float64, "
+                             "float32 or int32)." );
+         }
+
+/* Also record the number of axes and dimensions in the input array. */
+         ndim = ((PyArrayObject*) array_object)->nd;
+         pdims = ((PyArrayObject*) array_object)->dimensions;
+         if( ndim != 2 ) {
+            PyErr_Format( PyExc_ValueError, "The 'in' array supplied to " NAME
+                          " has %d dimensions - must be 2.", ndim );
+            pvalue = NULL;
+         } else {
+            for( i = 0; i < 2; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
+         }
+      }
+   }
+
+/* Parse the arguments again, this time with the correct code for badval. */
+   if( PyArg_ParseTuple( args, format, pvalue, &oper, &array_object,
+                         &lbnd_object, &ubnd_object, &maxerr, &maxvert,
+                         &inside_object, &starpix ) && pvalue ) {
+      PyArrayObject *array = GetArray( array_object, type, 1, ndim, dims, "array", NAME );
+      PyArrayObject *lbnd = GetArray1I( lbnd_object, &ndim, "lbnd", NAME );
+      PyArrayObject *ubnd = GetArray1I( ubnd_object, &ndim, "ubnd", NAME );
+      PyArrayObject *inside = GetArray1I( inside_object, &ndim, "inside", NAME );
+
+      if( array && lbnd && ubnd && inside ) {
+         AstPolygon *new = NULL;
+
+         if( type == PyArray_DOUBLE ) {
+            new = astOutlineD( value_d, oper, (const double *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_FLOAT ) {
+            new = astOutlineF( value_f, oper, (const float *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_LONG) {
+            new = astOutlineL( value_l, oper, (const long int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_INT) {
+            new = astOutlineI( value_i, oper, (const int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_ULONG) {
+            new = astOutlineUL( value_L, oper, (const unsigned long int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_UINT) {
+            new = astOutlineUI( value_I, oper, (const unsigned int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_SHORT) {
+            new = astOutlineS( value_h, oper, (const short int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_USHORT) {
+            new = astOutlineUS( value_H, oper, (const unsigned short int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_BYTE) {
+            new = astOutlineB( value_b, oper, (const signed char *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         } else if( type == PyArray_UBYTE) {
+            new = astOutlineUB( value_B, oper, (const unsigned char *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               maxerr, maxvert, (const int *)inside->data, starpix );
+         }
+
+         if( astOK ) {
+            PyObject *new_object = NewObject( (AstObject *) new );
+            if( new_object ) {
+               result = Py_BuildValue( "O", new_object );
+               Py_DECREF( new_object );
+            }
+         }
+         new = astAnnul( new );
+      }
+
+      Py_XDECREF(array);
+      Py_XDECREF(lbnd);
+      Py_XDECREF(ubnd);
+      Py_XDECREF(inside);
+   }
+
+   TIDY;
+   return result;
+}
 
 /* Return the path to the directory holding "star/pyast.h".  */
 static PyObject *PyAst_get_include( PyObject *self ) {
@@ -8623,6 +8863,7 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 /* Describe the static methods of the class */
 static PyMethodDef PyAst_methods[] = {
    {"escapes", (PyCFunction)PyAst_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
+   {"outline", (PyCFunction)PyAst_outline, METH_VARARGS, "Create a Polygon outlining values in a pixel array"},
    {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an integer-valued AST global tuning parameter"},
    {"tunec", (PyCFunction)PyAst_tunec, METH_VARARGS,  "Set or get a character-valued AST global tuning parameter"},
    {"version", (PyCFunction)PyAst_version, METH_NOARGS,  "Return the version of the AST library being used"},
