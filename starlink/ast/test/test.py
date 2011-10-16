@@ -1273,7 +1273,7 @@ class TestAst(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    starlink.Ast.watchmemory(10914)
+#    starlink.Ast.watchmemory(10914)
     #unittest.main()
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
     unittest.TextTestRunner(verbosity=2).run(suite)
