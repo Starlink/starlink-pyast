@@ -9515,7 +9515,11 @@ static char *GetString( void *mem, PyObject *value ) {
          const char *bytestr =  PyBytes_AS_STRING(bytes);
          result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
          Py_DECREF(bytes);
+      } else {
+         result = astFree( mem );
       }
+   } else {
+      result = astFree( mem );
    }
    return result;
 }
