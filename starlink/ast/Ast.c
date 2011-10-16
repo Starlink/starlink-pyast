@@ -8590,6 +8590,7 @@ static PyObject *PyAst_tunec( PyObject *self, PyObject *args );
 static PyObject *PyAst_outline( PyObject *self, PyObject *args );
 static PyObject *PyAst_version( PyObject *self );
 static PyObject *PyAst_get_include( PyObject *self );
+static PyObject *PyAst_activememory( PyObject *self, PyObject *args );
 
 /* Static method implementations */
 
@@ -8822,6 +8823,34 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
    return result;
 }
 
+#undef NAME
+#define NAME MODULE ".activememory"
+static PyObject *PyAst_activememory( PyObject *self, PyObject *args ) {
+   PyObject *result = NULL;
+   const char *label;
+   if( PyErr_Occurred() ) return NULL;
+   if( PyArg_ParseTuple(args, "s:" NAME, &label ) ) {
+      astActiveMemory( label );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME MODULE ".watchmemory"
+static PyObject *PyAst_watchmemory( PyObject *self, PyObject *args ) {
+   PyObject *result = NULL;
+   int id;
+   if( PyErr_Occurred() ) return NULL;
+   if( PyArg_ParseTuple(args, "i:" NAME, &id ) ) {
+      astWatchMemory( id );
+      if( astOK ) result = Py_None;
+   }
+   TIDY;
+   return result;
+}
+
 /* Return the path to the directory holding "star/pyast.h".  */
 static PyObject *PyAst_get_include( PyObject *self ) {
    PyObject *result = NULL;
@@ -8866,6 +8895,8 @@ static PyMethodDef PyAst_methods[] = {
    {"outline", (PyCFunction)PyAst_outline, METH_VARARGS, "Create a Polygon outlining values in a pixel array"},
    {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an integer-valued AST global tuning parameter"},
    {"tunec", (PyCFunction)PyAst_tunec, METH_VARARGS,  "Set or get a character-valued AST global tuning parameter"},
+   {"activememory", (PyCFunction)PyAst_activememory, METH_VARARGS, "Display a list of any currently active AST memory pointers"},
+   {"watchmemory", (PyCFunction)PyAst_watchmemory, METH_VARARGS, "Report uses of the memory block with the specified identifier"},
    {"version", (PyCFunction)PyAst_version, METH_NOARGS,  "Return the version of the AST library being used"},
    {"get_include", (PyCFunction)PyAst_get_include, METH_NOARGS,  "Return the path to the directory containing pyast header files"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
