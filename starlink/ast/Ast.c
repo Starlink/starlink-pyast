@@ -6157,14 +6157,25 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
-/* Decrement reference counts at the end so that the objects are still available if
-   needed by the parent object deallocator. */
 static void Channel_dealloc( Channel *self ) {
-   Object_dealloc( (Object *) self );
    if( self ) {
-      Py_XDECREF( self->source );
-      Py_XDECREF( self->sink );
-      self->source_line = astFree( self->source_line );
+
+/* Save references to resources used by the Channel, since the following
+   call to deallocate the parent Object structure may wipe the whole Channel
+   structure. We cannot free these resources yet since they may be needed
+   by the code that deallocates the parent. */
+      PyObject *source = self->source;
+      PyObject *sink = self->sink;
+      char *source_line = self->source_line;
+
+/* Now deallocate the parent. This may use the above resources, and may
+   then additionally wipe the Channel memory structure. */
+      Object_dealloc( (Object *) self );
+
+/* Free the resources used by the Channel. */
+      Py_XDECREF( source );
+      Py_XDECREF( sink );
+      source_line = astFree( source_line );
    }
    TIDY;
 }
@@ -7948,8 +7959,26 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
 /* Decrement reference counts at the end so that the objects are still available if
    needed by the parent object deallocator. */
 static void Plot_dealloc( Plot *self ) {
-   Object_dealloc( (Object *) self );
-   if( self ) Py_XDECREF( self->grf );
+   if( self ) {
+
+/* Save references to resources used by the Plot, since the following
+   call to deallocate the parent FrameSet structure may wipe the whole Plot
+   structure. We cannot free these resources yet since they may be needed
+   by the code that deallocates the parent. */
+      PyObject *grf = self->grf;
+
+/* Now deallocate the parent. This may use the above resources, and may
+   then additionally wipe the Plot memory structure. Note, the parent is
+   the FrameSet class, but there is no specific FrameSet deallocator
+   since a FrameSet contains nothing more than an Object. So we just use
+   the Object deallocator. This is a bit dodgy since future changes may
+   require a specific FrameSet deallocator, in which case we need to
+   remember to call it here, instead of Object_dealloc.  */
+      Object_dealloc( (Object *) self );
+
+/* Free the resources used by the Plot. */
+      Py_XDECREF( grf );
+   }
    TIDY;
 }
 
