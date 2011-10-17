@@ -8919,6 +8919,21 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    static void *PyAst_API[ PyAst_API_pointers ];
    PyObject *c_api_object, *m;
 
+/* Check AST is at least at version 6.0 */
+   int v = astVersion;
+   if( v < 6000000 ) {
+      int maj = v/1000000;
+      v -= maj*1000000;
+      int min = v/1000;
+      v -= min*1000;
+      int rel = v;
+      PyErr_Format( PyExc_ValueError, "The 'starlink.Ast' module requires "
+                    "at least version 6.0 of the AST library to be "
+                    "available, but version %d.%d-%d was found.", maj, min,
+                    rel );
+      return NULL;
+   }
+
    m = PyModule_Create(&astmodule);
    if( m == NULL ) return NULL;
 
