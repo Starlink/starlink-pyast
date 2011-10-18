@@ -1,0 +1,887 @@
+<html>
+<head>
+<style type="text/css">
+div.implemented {position:relative;
+                 left:30px;
+                 margin-top:40px;
+                 margin-bottom:40px}
+
+div.implemented ul {list-style-type:none;padding-top:0px;margin-top:15px}
+div.implemented li {}
+span.inv {background-color:#FFFFDD;
+          padding-top:3px;
+          padding-bottom:3px;
+          padding-left:13px;
+          padding-right:13px;
+          font-family: monospace;
+          border:1px solid #DDD;}
+</style>
+</head>
+<body>
+<h2>Implemented AST functions</h2>
+
+The starlink.Ast module provides Python wrappers for the following AST
+functions. For each function, the corresponding Python API is displayed
+on a yellow background, together with any explanatory notes. For
+information about the purpose and parameters of each function, click on
+the "ast..." function name to display the AST reference documentation
+from SUN/211.
+<p>
+General Notes:
+<ul>
+<li> A returned value of "<code>result</code>" refers to the function value
+returned by the corresponding C function.
+<li> When the C documentation refers to a <i>NULL</i> pointer, "<code>None</code>" should be
+used instead.
+<li> Parameters that are optional in the Python API are indicated by
+strings of the form "<code>name=default</code>".
+<li> Constructors are shown preceeded by the full module name
+"<code>starlink.Ast</code>".
+<li> Methods are shown preceeded by a reference with name equal to the class
+that provides the method.
+</ul>
+<hr>
+<p>
+<div class="implemented" id="AddFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddFrame">astAddFrame</a> - Add a Frame to a FrameSet to define a new coordinate system 
+<ul>
+<li><span class=inv> frameset.addframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Angle">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAngle">astAngle</a> - Calculate the angle subtended by two points at a third point 
+<ul>
+<li><span class=inv> frame.angle(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AxAngle">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAxAngle">astAxAngle</a> - Returns the angle from an axis, to a line through two points 
+<ul>
+<li><span class=inv> frame.axangle(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AxDistance">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAxDistance">astAxDistance</a> - Find the distance between two axis values 
+<ul>
+<li><span class=inv> frame.axdistance(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AxOffset">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAxOffset">astAxOffset</a> - Add an increment onto a supplied axis value 
+<ul>
+<li><span class=inv> frame.axoffset(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="BBuf">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBBuf">astBBuf</a> - Begin a new graphical buffering context 
+<ul>
+<li><span class=inv> plot.bbuf(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Border">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBorder">astBorder</a> - Draw a border around valid regions of a Plot 
+<ul>
+<li><span class=inv> plot.border(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="BoundingBox">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBoundingBox">astBoundingBox</a> - Return a bounding box for previously drawn graphics 
+<ul>
+<li><span class=inv> plot.boundingbox(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Box">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBox">astBox</a> - Create a Box 
+<ul>
+<li><span class=inv>box = starlink.Ast.Box(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Channel">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astChannel">astChannel</a> - Create a Channel 
+<ul>
+<li><span class=inv>channel = starlink.Ast.Channel(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Circle">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCircle">astCircle</a> - Create a Circle 
+<ul>
+<li><span class=inv>circle = starlink.Ast.Circle(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Clear">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astClear">astClear</a> - Clear attribute values for an Object 
+<ul>
+<li><span class=inv> object.clear( attrib  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Clip">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astClip">astClip</a> - Set up or remove clipping for a Plot 
+<ul>
+<li><span class=inv> plot.clip(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="CmpFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpFrame">astCmpFrame</a> - Create a CmpFrame 
+<ul>
+<li><span class=inv>cmpframe = starlink.Ast.CmpFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="CmpMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpMap">astCmpMap</a> - Create a CmpMap 
+<ul>
+<li><span class=inv>cmpmap = starlink.Ast.CmpMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="CmpRegion">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpRegion">astCmpRegion</a> - Create a CmpRegion 
+<ul>
+<li><span class=inv>cmpregion = starlink.Ast.CmpRegion(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Convert">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astConvert">astConvert</a> - Determine how to convert between two coordinate systems 
+<ul>
+<li><span class=inv> frame.convert(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Copy">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCopy">astCopy</a> - Copy an Object 
+<ul>
+<li><span class=inv>result = object.copy(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="CurrentTime">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCurrentTime">astCurrentTime</a> - Return the current system time 
+<ul>
+<li><span class=inv> timeframe.currenttime(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Curve">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCurve">astCurve</a> - Draw a geodesic curve 
+<ul>
+<li><span class=inv> plot.curve(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="DSBSpecFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDSBSpecFrame">astDSBSpecFrame</a> - Create a DSBSpecFrame 
+<ul>
+<li><span class=inv>dsbspecframe = starlink.Ast.DSBSpecFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Decompose">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDecompose">astDecompose</a> - Decompose a Mapping into two component Mappings 
+<ul>
+<li><span class=inv>( map1, map2, series, invert1, invert2 ) = mapping.decompose(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="DelFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDelFits">astDelFits</a> - Delete the current FITS card in a FitsChan 
+<ul>
+<li><span class=inv> fitschan.delfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Distance">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDistance">astDistance</a> - Calculate the distance between two points in a Frame 
+<ul>
+<li><span class=inv> frame.distance(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Downsize">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDownsize">astDownsize</a> - Reduce the number of vertices in a Polygon 
+<ul>
+<li><span class=inv> polygon.downsize(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="EBuf">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEBuf">astEBuf</a> - End the current graphical buffering context 
+<ul>
+<li><span class=inv> plot.ebuf(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Ellipse">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEllipse">astEllipse</a> - Create a Ellipse 
+<ul>
+<li><span class=inv>ellipse = starlink.Ast.Ellipse(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="EmptyFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEmptyFits">astEmptyFits</a> - Delete all cards in a FitsChan 
+<ul>
+<li><span class=inv> fitschan.emptyfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Escapes">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEscapes">astEscapes</a> - Control whether graphical escape sequences are included in strings 
+<ul>
+<li><span class=inv> pyast.escapes(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="FindFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFindFits">astFindFits</a> - Find a FITS card in a FitsChan by keyword 
+<ul>
+<li><span class=inv> fitschan.findfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="FindFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFindFrame">astFindFrame</a> - Find a coordinate system with specified characteristics 
+<ul>
+<li><span class=inv> frame.findframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="FitsChan">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFitsChan">astFitsChan</a> - Create a FitsChan 
+<ul>
+<li><span class=inv>fitschan = starlink.Ast.FitsChan(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="FluxFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFluxFrame">astFluxFrame</a> - Create a FluxFrame 
+<ul>
+<li><span class=inv>fluxframe = starlink.Ast.FluxFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Format">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFormat">astFormat</a> - Format a coordinate value for a Frame axis 
+<ul>
+<li><span class=inv> frame.format(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Frame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFrame">astFrame</a> - Create a Frame 
+<ul>
+<li><span class=inv>frame = starlink.Ast.Frame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="FrameSet">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFrameSet">astFrameSet</a> - Create a FrameSet 
+<ul>
+<li><span class=inv>frameset = starlink.Ast.FrameSet(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="GenCurve">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGenCurve">astGenCurve</a> - Draw a generalized curve 
+<ul>
+<li><span class=inv> plot.gencurve(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Get">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetX">astGet</a> - Get an attribute value for an Object 
+<ul>
+<li><span class=inv>result = object.get( attrib  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetFrame">astGetFrame</a> - Obtain a pointer to a specified Frame in a FrameSet 
+<ul>
+<li><span class=inv> frameset.getframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetMapping">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetMapping">astGetMapping</a> - Obtain a Mapping that converts between two Frames in a FrameSet 
+<ul>
+<li><span class=inv> frameset.getmapping(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetRefPos">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetRefPos">astGetRefPos</a> - Return the reference position in a specified celestial coordinate system 
+<ul>
+<li><span class=inv> specframe.getrefpos(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetRegionBounds">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetRegionBounds">astGetRegionBounds</a> - Returns the bounding box of Region 
+<ul>
+<li><span class=inv> region.getregionbounds(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetRegionFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetRegionFrame">astGetRegionFrame</a> - Obtain a pointer to the encapsulated Frame within a Region 
+<ul>
+<li><span class=inv> region.getregionframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Grid">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGrid">astGrid</a> - Draw a set of labelled coordinate axes 
+<ul>
+<li><span class=inv> plot.grid(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GridLine">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGridLine">astGridLine</a> - Draw a grid line (or axis) for a Plot 
+<ul>
+<li><span class=inv> plot.gridline(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GrismMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGrismMap">astGrismMap</a> - Create a GrismMap 
+<ul>
+<li><span class=inv>grismmap = starlink.Ast.GrismMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="HasAttribute">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astHasAttribute">astHasAttribute</a> - Test if an Object has a named attribute 
+<ul>
+<li><span class=inv>result = object.hasattribute( attrib  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Intersect">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astIntersect">astIntersect</a> - Find the point of intersection between two geodesic curves 
+<ul>
+<li><span class=inv> frame.intersect(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Interval">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astInterval">astInterval</a> - Create a Interval 
+<ul>
+<li><span class=inv>interval = starlink.Ast.Interval(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Invert">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astInvert">astInvert</a> - Invert a Mapping 
+<ul>
+<li><span class=inv> mapping.invert(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="KeyMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astKeyMap">astKeyMap</a> - Create a KeyMap 
+<ul>
+<li><span class=inv>keymap = starlink.Ast.KeyMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="LinearApprox">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astLinearApprox">astLinearApprox</a> - Obtain a linear approximation to a Mapping, if appropriate 
+<ul>
+<li><span class=inv>( result, fit ) = mapping.linearapprox( lbnd, ubnd, tol  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Lock">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astLock">astLock</a> - Lock an Object for exclusive use by the calling thread 
+<ul>
+<li><span class=inv> object.lock( wait  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="LutMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astLutMap">astLutMap</a> - Create a LutMap 
+<ul>
+<li><span class=inv>lutmap = starlink.Ast.LutMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="MapBox">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMapBox">astMapBox</a> - Find a bounding box for a Mapping 
+<ul>
+<li><span class=inv>( lbnd_out, ubnd_out, xl, xu ) = mapping.mapbox( lbnd_in, ubnd_in, forward, coord_out  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Mark">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMark">astMark</a> - Draw a set of markers for a Plot 
+<ul>
+<li><span class=inv> plot.mark(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="MatchAxes">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMatchAxes">astMatchAxes</a> - Find any corresponding axes in two Frames 
+<ul>
+<li><span class=inv> frame.matchaxes(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="MathMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMathMap">astMathMap</a> - Create a MathMap 
+<ul>
+<li><span class=inv>mathmap = starlink.Ast.MathMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="MatrixMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMatrixMap">astMatrixMap</a> - Create a MatrixMap 
+<ul>
+<li><span class=inv>matrixmap = starlink.Ast.MatrixMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Norm">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astNorm">astNorm</a> - Normalise a set of Frame coordinates 
+<ul>
+<li><span class=inv> frame.norm(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="NormMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astNormMap">astNormMap</a> - Create a NormMap 
+<ul>
+<li><span class=inv>normmap = starlink.Ast.NormMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="NullRegion">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astNullRegion">astNullRegion</a> - Create a NullRegion 
+<ul>
+<li><span class=inv>nullregion = starlink.Ast.NullRegion(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Offset">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astOffset">astOffset</a> - Calculate an offset along a geodesic curve 
+<ul>
+<li><span class=inv> frame.offset(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Offset2">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astOffset2">astOffset2</a> - Calculate an offset along a geodesic curve in a 2D Frame 
+<ul>
+<li><span class=inv> frame.offset2(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Outline">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astOutlineX">astOutline</a> - Create a new Polygon outling values in a 2D data grid 
+<ul>
+<li><span class=inv> pyast.outline(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Overlap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astOverlap">astOverlap</a> - Test if two regions overlap each other 
+<ul>
+<li><span class=inv> region.overlap(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PcdMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPcdMap">astPcdMap</a> - Create a PcdMap 
+<ul>
+<li><span class=inv>pcdmap = starlink.Ast.PcdMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PermAxes">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPermAxes">astPermAxes</a> - Permute the axis order in a Frame 
+<ul>
+<li><span class=inv> frame.permaxes(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PermMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPermMap">astPermMap</a> - Create a PermMap 
+<ul>
+<li><span class=inv>permmap = starlink.Ast.PermMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PickAxes">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPickAxes">astPickAxes</a> - Create a new Frame by picking axes from an existing one 
+<ul>
+<li><span class=inv> frame.pickaxes(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Plot">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPlot">astPlot</a> - Create a Plot 
+<ul>
+<li><span class=inv>plot = starlink.Ast.Plot(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PointList">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPointList">astPointList</a> - Create a PointList 
+<ul>
+<li><span class=inv>pointlist = starlink.Ast.PointList(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PolyCurve">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolyCurve">astPolyCurve</a> - Draw a series of connected geodesic curves 
+<ul>
+<li><span class=inv> plot.polycurve(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PolyMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolyMap">astPolyMap</a> - Create a PolyMap 
+<ul>
+<li><span class=inv>polymap = starlink.Ast.PolyMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PolyTran">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolyTran">astPolyTran</a> - Fit a PolyMap inverse or forward transformation 
+<ul>
+<li><span class=inv> polymap.polytran(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Polygon">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolygon">astPolygon</a> - Create a Polygon 
+<ul>
+<li><span class=inv>polygon = starlink.Ast.Polygon(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Prism">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPrism">astPrism</a> - Create a Prism 
+<ul>
+<li><span class=inv>prism = starlink.Ast.Prism(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PurgeWCS">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPurgeWCS">astPurgeWCS</a> - Delete all cards in the FitsChan describing WCS information 
+<ul>
+<li><span class=inv> fitschan.purgewcs(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PutCards">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPutCards">astPutCards</a> - Store a set of FITS header cards in a FitsChan 
+<ul>
+<li><span class=inv> fitschan.putcards(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PutFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPutFits">astPutFits</a> - Store a FITS header card in a FitsChan 
+<ul>
+<li><span class=inv> fitschan.putfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="QuadApprox">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astQuadApprox">astQuadApprox</a> - Obtain a quadratic approximation to a 2D Mapping 
+<ul>
+<li><span class=inv>( result, fit, rms ) = mapping.quadapprox( lbnd, ubnd, nx, ny  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Rate">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRate">astRate</a> - Calculate the rate of change of a Mapping output 
+<ul>
+<li><span class=inv>result = mapping.rate( at, ax1, ax2  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RateMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRateMap">astRateMap</a> - Create a RateMap 
+<ul>
+<li><span class=inv>ratemap = starlink.Ast.RateMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Read">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRead">astRead</a> - Read an Object from a Channel 
+<ul>
+<li><span class=inv> channel.read(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="ReadFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astReadFits">astReadFits</a> - Read cards into a FitsChan from the source function 
+<ul>
+<li><span class=inv> fitschan.readfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Rebin">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRebinX">astRebin</a> - Rebin a region of a data grid 
+<ul>
+<li><span class=inv>( out, out_var ) = mapping.rebin( wlim, lbnd_in, ubnd_in, in, in_var, spread, params, flags, tol, maxpix, badval_d, lbnd_out, ubnd_out, lbnd, ubnd  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RebinSeq">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRebinSeqX">astRebinSeq</a> - Rebin a region of a sequence of data grids 
+<ul>
+<li><span class=inv>nused = mapping.rebinseq( wlim, lbnd_in, ubnd_in, in, in_var, spread, params, flags, tol, maxpix, badval_d, lbnd_out, ubnd_out, lbnd, ubnd, out, out_var, weights, nused  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RemapFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRemapFrame">astRemapFrame</a> - Modify a Frame's relationship to other Frames in a FrameSet 
+<ul>
+<li><span class=inv> frameset.remapframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RemoveFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRemoveFrame">astRemoveFrame</a> - Remove a Frame from a FrameSet 
+<ul>
+<li><span class=inv> frameset.removeframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RemoveRegions">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRemoveRegions">astRemoveRegions</a> - Remove any Regions from a Mapping 
+<ul>
+<li><span class=inv>result = mapping.removeregions(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Resample">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astResampleX">astResample</a> - Resample a region of a data grid 
+<ul>
+<li><span class=inv>( result, out, out_var ) = mapping.resample( lbnd_in, ubnd_in, in, in_var, interp, params, flags, tol, maxpix, badval_d, lbnd_out, ubnd_out, lbnd, ubnd  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Resolve">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astResolve">astResolve</a> - Resolve a vector into two orthogonal components 
+<ul>
+<li><span class=inv> frame.resolve(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RetainFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRetainFits">astRetainFits</a> - Indicate that the current card in a FitsChan should be retained 
+<ul>
+<li><span class=inv> fitschan.retainfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Same">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSame">astSame</a> - Test if two AST pointers refer to the same Object 
+<ul>
+<li><span class=inv>result = object.same( that  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Set">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSetX">astSet</a> - Set an attribute value for an Object 
+<ul>
+<li><span class=inv> object.set( settings  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="SetRefPos">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSetRefPos">astSetRefPos</a> - Set the reference position in a specified celestial coordinate system 
+<ul>
+<li><span class=inv> specframe.setrefpos(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="ShiftMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astShiftMap">astShiftMap</a> - Create a ShiftMap 
+<ul>
+<li><span class=inv>shiftmap = starlink.Ast.ShiftMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Show">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astShow">astShow</a> - Display a textual representation of an Object on standard output 
+<ul>
+<li><span class=inv> object.show(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Simplify">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSimplify">astSimplify</a> - Simplify a Mapping 
+<ul>
+<li><span class=inv>result = mapping.simplify(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="SkyFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSkyFrame">astSkyFrame</a> - Create a SkyFrame 
+<ul>
+<li><span class=inv>skyframe = starlink.Ast.SkyFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="SkyOffsetMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSkyOffsetMap">astSkyOffsetMap</a> - Returns a Mapping which goes from absolute coordinates to offset coordinates 
+<ul>
+<li><span class=inv> skyframe.skyoffsetmap(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="SpecFluxFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSpecFluxFrame">astSpecFluxFrame</a> - Create a SpecFluxFrame 
+<ul>
+<li><span class=inv>specfluxframe = starlink.Ast.SpecFluxFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="SpecFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSpecFrame">astSpecFrame</a> - Create a SpecFrame 
+<ul>
+<li><span class=inv>specframe = starlink.Ast.SpecFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="SphMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSphMap">astSphMap</a> - Create a SphMap 
+<ul>
+<li><span class=inv>sphmap = starlink.Ast.SphMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="StcsChan">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astStcsChan">astStcsChan</a> - Create an StcsChan 
+<ul>
+<li><span class=inv>stcschan = starlink.Ast.StcsChan(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Test">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTest">astTest</a> - Test if an Object attribute value is set 
+<ul>
+<li><span class=inv>result = object.test( attrib  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TestFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTestFits">astTestFits</a> - See if a named keyword has a defined value in a FitsChan 
+<ul>
+<li><span class=inv> fitschan.testfits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Text">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astText">astText</a> - Draw a text string for a Plot 
+<ul>
+<li><span class=inv> plot.text(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TimeAdd">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTimeAdd">astTimeAdd</a> - Add a time coordinate conversion to a TimeMap 
+<ul>
+<li><span class=inv> timemap.timeadd(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TimeFrame">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTimeFrame">astTimeFrame</a> - Create a TimeFrame 
+<ul>
+<li><span class=inv>timeframe = starlink.Ast.TimeFrame(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="TimeMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTimeMap">astTimeMap</a> - Create a TimeMap 
+<ul>
+<li><span class=inv>timemap = starlink.Ast.TimeMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="TranGrid">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranGrid">astTranGrid</a> - Transform a grid of positions 
+<ul>
+<li><span class=inv>out = mapping.trangrid( lbnd, ubnd, tol, maxpix, forward  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TranMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranMap">astTranMap</a> - Create a TranMap 
+<ul>
+<li><span class=inv>tranmap = starlink.Ast.TranMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="TranN">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranN">astTranN</a> - Transform N-dimensional coordinates 
+<ul>
+<li><span class=inv>out = mapping.trann( in, forward, out=None  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Tune">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTune">astTune</a> - Set or get an integer-valued AST global tuning parameter 
+<ul>
+<li><span class=inv> pyast.tune(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TuneC">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTuneC">astTuneC</a> - Set or get a character-valued AST global tuning parameter 
+<ul>
+<li><span class=inv> pyast.tunec(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Unformat">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astUnformat">astUnformat</a> - Read a formatted coordinate value for a Frame axis 
+<ul>
+<li><span class=inv> frame.unformat(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="UnitMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astUnitMap">astUnitMap</a> - Create a UnitMap 
+<ul>
+<li><span class=inv>unitmap = starlink.Ast.UnitMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Unlock">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astUnlock">astUnlock</a> - Unlock an Object for use by other threads 
+<ul>
+<li><span class=inv> object.unlock( report  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Version">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astVersion">astVersion</a> - Return the version of the AST library being used 
+<ul>
+<li><span class=inv> pyast.version(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="Warnings">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWarnings">astWarnings</a> - Returns any warnings issued by the previous read or write operation 
+<ul>
+<li><span class=inv> channel.warnings(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="WcsMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWcsMap">astWcsMap</a> - Create a WcsMap 
+<ul>
+<li><span class=inv>wcsmap = starlink.Ast.WcsMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="WinMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWinMap">astWinMap</a> - Create a WinMap 
+<ul>
+<li><span class=inv>winmap = starlink.Ast.WinMap(  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="Write">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWrite">astWrite</a> - Write an Object to a Channel 
+<ul>
+<li><span class=inv> channel.write(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="WriteFits">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWriteFits">astWriteFits</a> - Write out all cards in a FitsChan to the sink function 
+<ul>
+<li><span class=inv> fitschan.writefits(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="ZoomMap">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astZoomMap">astZoomMap</a> - Create a ZoomMap 
+<ul>
+<li><span class=inv>zoommap = starlink.Ast.ZoomMap(  )</span></li>
+</ul>
+</div>
+</body>
+</html>

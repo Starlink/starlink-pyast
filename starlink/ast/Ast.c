@@ -257,6 +257,8 @@ static PyTypeObject ObjectType = {
 #undef NAME
 #define NAME CLASS ".clear"
 static PyObject *Object_clear( Object *self, PyObject *args ) {
+/* args: :attrib */
+
    PyObject *result = NULL;
    const char *attrib;
 
@@ -271,6 +273,7 @@ static PyObject *Object_clear( Object *self, PyObject *args ) {
 }
 
 static PyObject *Object_copy( Object *self ) {
+/* args: result: */
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
 
@@ -339,6 +342,13 @@ static PyObject *Object_deepcopy( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".get"
 static PyObject *Object_get( Object *self, PyObject *args ) {
+/* args: result:attrib */
+/* Note: The starlink.Ast.get() method is equivalent to
+   <a href="/star/docs/sun211.htx/#xref_astGetC>astGetC</a>
+   in that it always returns the string representation of the AST
+   attribute value. By contrast, each Python property returns the
+   attribute value using the native data type of the AST attribute
+   (integer, boolean, floating point or string). */
    PyObject *result = NULL;
    const char *attrib;
    const char *value;
@@ -354,6 +364,7 @@ static PyObject *Object_get( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".hasattribute"
 static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
+/* args: result:attrib */
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -369,6 +380,7 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".lock"
 static PyObject *Object_lock( Object *self, PyObject *args ) {
+/* args: :wait */
    PyObject *result = NULL;
    int wait;
    if( PyErr_Occurred() ) return NULL;
@@ -383,6 +395,7 @@ static PyObject *Object_lock( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".same"
 static PyObject *Object_same( Object *self, PyObject *args ) {
+/* args: result:that */
    PyObject *result = NULL;
    Object *other;
    int value;
@@ -399,6 +412,7 @@ static PyObject *Object_same( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".set"
 static PyObject *Object_set( Object *self, PyObject *args ) {
+/* args: :settings */
    PyObject *result = NULL;
    const char *settings;
    if( PyErr_Occurred() ) return NULL;
@@ -412,6 +426,7 @@ static PyObject *Object_set( Object *self, PyObject *args ) {
 
 /* Define the AST methods of the class. */
 static PyObject *Object_show( Object *self ) {
+/* args: : */
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astShow( THIS );
@@ -423,6 +438,7 @@ static PyObject *Object_show( Object *self ) {
 #undef NAME
 #define NAME CLASS ".test"
 static PyObject *Object_test( Object *self, PyObject *args ) {
+/* args: result:attrib */
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -438,6 +454,7 @@ static PyObject *Object_test( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unlock"
 static PyObject *Object_unlock( Object *self, PyObject *args ) {
+/* args: :report */
    PyObject *result = NULL;
    int report;
    if( PyErr_Occurred() ) return NULL;
@@ -555,6 +572,7 @@ static PyTypeObject MappingType = {
 /* Define the class methods */
 
 static PyObject *Mapping_decompose( Mapping *self ) {
+/* args: map1,map2,series,invert1,invert2: */
    PyObject *result = NULL;
    PyObject *map1_object = NULL;
    PyObject *map2_object = NULL;
@@ -584,6 +602,7 @@ static PyObject *Mapping_decompose( Mapping *self ) {
 }
 
 static PyObject *Mapping_invert( Mapping *self ) {
+/* args: : */
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astInvert( THIS );
@@ -595,6 +614,7 @@ static PyObject *Mapping_invert( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".linearapprox"
 static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
+/* args: result,fit:lbnd,ubnd,tol */
    PyObject *result = NULL;
    PyObject *islinear = NULL;
    PyArrayObject *fit = NULL;
@@ -637,6 +657,7 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".mapbox"
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
+/* args: lbnd_out,ubnd_out,xl,xu:lbnd_in,ubnd_in,forward,coord_out */
    PyArrayObject *lbnd_in = NULL;
    PyArrayObject *ubnd_in = NULL;
    PyArrayObject *xl = NULL;
@@ -690,6 +711,7 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".quadapprox"
 static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
+/* args: result,fit,rms:lbnd,ubnd,nx,ny */
    PyObject *result = NULL;
    PyObject *isquad;
    PyArrayObject *fit = NULL;
@@ -734,6 +756,7 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rate"
 static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
+/* args: result:at,ax1,ax2 */
    PyObject *result = NULL;
    PyArrayObject *at = NULL;
    PyObject *at_object = NULL;
@@ -761,6 +784,7 @@ static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebin"
 static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
+/* args: out,out_var:wlim,lbnd_in,ubnd_in,in,in_var,spread,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd */
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -952,6 +976,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebinseq"
 static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
+/* args: nused:wlim,lbnd_in,ubnd_in,in,in_var,spread,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused */
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1173,6 +1198,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".resample"
 static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
+/* args: result,out,out_var:lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd */
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1449,6 +1475,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 }
 
 static PyObject *Mapping_removeregions( Mapping *self ) {
+/* args: result: */
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1470,6 +1497,7 @@ static PyObject *Mapping_removeregions( Mapping *self ) {
 }
 
 static PyObject *Mapping_simplify( Mapping *self ) {
+/* args: result: */
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1493,6 +1521,7 @@ static PyObject *Mapping_simplify( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".trangrid"
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
+/* args: out:lbnd,ubnd,tol,maxpix,forward */
    PyArrayObject *lbnd = NULL;
    PyArrayObject *pout = NULL;
    PyArrayObject *ubnd = NULL;
@@ -1560,6 +1589,7 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".trann"
 static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
+/* args: out:in,forward,out=None */
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
    PyObject *result = NULL;
