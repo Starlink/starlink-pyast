@@ -27,6 +27,9 @@ information about the purpose and parameters of each function, click on
 the "ast..." function name to display the AST reference documentation
 from SUN/211.
 <p>
+For examples of calling these wrappers, see the PyAST test script
+(starlink/ast/test/test.py).
+<p>
 General Notes:
 <ul>
 <li> A returned value of "<code>result</code>" refers to the function value
@@ -101,19 +104,19 @@ that provides the method.
 <div class="implemented" id="Box">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBox">astBox</a> - Create a Box 
 <ul>
-<li><span class=inv>box = starlink.Ast.Box(  )</span></li>
+<li><span class=inv>box = starlink.Ast.Box( frame, form, point1, point2, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Channel">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astChannel">astChannel</a> - Create a Channel 
 <ul>
-<li><span class=inv>channel = starlink.Ast.Channel(  )</span></li>
+<li><span class=inv>channel = starlink.Ast.Channel( source=None, sink=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Circle">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCircle">astCircle</a> - Create a Circle 
 <ul>
-<li><span class=inv>circle = starlink.Ast.Circle(  )</span></li>
+<li><span class=inv>circle = starlink.Ast.Circle( frame, form, centre, point, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Clear">
@@ -133,19 +136,19 @@ that provides the method.
 <div class="implemented" id="CmpFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpFrame">astCmpFrame</a> - Create a CmpFrame 
 <ul>
-<li><span class=inv>cmpframe = starlink.Ast.CmpFrame(  )</span></li>
+<li><span class=inv>cmpframe = starlink.Ast.CmpFrame( frame1, frame2, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="CmpMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpMap">astCmpMap</a> - Create a CmpMap 
 <ul>
-<li><span class=inv>cmpmap = starlink.Ast.CmpMap(  )</span></li>
+<li><span class=inv>cmpmap = starlink.Ast.CmpMap( map1, map2, series=True, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="CmpRegion">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astCmpRegion">astCmpRegion</a> - Create a CmpRegion 
 <ul>
-<li><span class=inv>cmpregion = starlink.Ast.CmpRegion(  )</span></li>
+<li><span class=inv>cmpregion = starlink.Ast.CmpRegion( region1, region2, oper=starlink.Ast.OR, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Convert">
@@ -179,7 +182,7 @@ that provides the method.
 <div class="implemented" id="DSBSpecFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDSBSpecFrame">astDSBSpecFrame</a> - Create a DSBSpecFrame 
 <ul>
-<li><span class=inv>dsbspecframe = starlink.Ast.DSBSpecFrame(  )</span></li>
+<li><span class=inv>dsbspecframe = starlink.Ast.DSBSpecFrame( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Decompose">
@@ -220,7 +223,7 @@ that provides the method.
 <div class="implemented" id="Ellipse">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEllipse">astEllipse</a> - Create a Ellipse 
 <ul>
-<li><span class=inv>ellipse = starlink.Ast.Ellipse(  )</span></li>
+<li><span class=inv>ellipse = starlink.Ast.Ellipse( frame, form, centre, point1, point2, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="EmptyFits">
@@ -254,13 +257,13 @@ that provides the method.
 <div class="implemented" id="FitsChan">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFitsChan">astFitsChan</a> - Create a FitsChan 
 <ul>
-<li><span class=inv>fitschan = starlink.Ast.FitsChan(  )</span></li>
+<li><span class=inv>fitschan = starlink.Ast.FitsChan( source=None, sink=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="FluxFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFluxFrame">astFluxFrame</a> - Create a FluxFrame 
 <ul>
-<li><span class=inv>fluxframe = starlink.Ast.FluxFrame(  )</span></li>
+<li><span class=inv>fluxframe = starlink.Ast.FluxFrame( specval=starlink.Ast.BAD, specfrm=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Format">
@@ -273,13 +276,13 @@ that provides the method.
 <div class="implemented" id="Frame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFrame">astFrame</a> - Create a Frame 
 <ul>
-<li><span class=inv>frame = starlink.Ast.Frame(  )</span></li>
+<li><span class=inv>frame = starlink.Ast.Frame( naxes, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="FrameSet">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFrameSet">astFrameSet</a> - Create a FrameSet 
 <ul>
-<li><span class=inv>frameset = starlink.Ast.FrameSet(  )</span></li>
+<li><span class=inv>frameset = starlink.Ast.FrameSet( frame, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="GenCurve">
@@ -348,7 +351,7 @@ that provides the method.
 <div class="implemented" id="GrismMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGrismMap">astGrismMap</a> - Create a GrismMap 
 <ul>
-<li><span class=inv>grismmap = starlink.Ast.GrismMap(  )</span></li>
+<li><span class=inv>grismmap = starlink.Ast.GrismMap( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="HasAttribute">
@@ -368,7 +371,7 @@ that provides the method.
 <div class="implemented" id="Interval">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astInterval">astInterval</a> - Create a Interval 
 <ul>
-<li><span class=inv>interval = starlink.Ast.Interval(  )</span></li>
+<li><span class=inv>interval = starlink.Ast.Interval( frame, lbnd, ubnd, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Invert">
@@ -381,7 +384,7 @@ that provides the method.
 <div class="implemented" id="KeyMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astKeyMap">astKeyMap</a> - Create a KeyMap 
 <ul>
-<li><span class=inv>keymap = starlink.Ast.KeyMap(  )</span></li>
+<li><span class=inv>keymap = starlink.Ast.KeyMap(   )</span></li>
 </ul>
 </div>
 <div class="implemented" id="LinearApprox">
@@ -394,20 +397,20 @@ that provides the method.
 <div class="implemented" id="Lock">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astLock">astLock</a> - Lock an Object for exclusive use by the calling thread 
 <ul>
-<li><span class=inv> object.lock( wait  )
+<li><span class=inv> object.lock( wait=True  )
 </span></li>
 </ul>
 </div>
 <div class="implemented" id="LutMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astLutMap">astLutMap</a> - Create a LutMap 
 <ul>
-<li><span class=inv>lutmap = starlink.Ast.LutMap(  )</span></li>
+<li><span class=inv>lutmap = starlink.Ast.LutMap( lut, start=0.0, inc=1.0, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="MapBox">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMapBox">astMapBox</a> - Find a bounding box for a Mapping 
 <ul>
-<li><span class=inv>( lbnd_out, ubnd_out, xl, xu ) = mapping.mapbox( lbnd_in, ubnd_in, forward, coord_out  )
+<li><span class=inv>( lbnd_out, ubnd_out, xl, xu ) = mapping.mapbox( lbnd_in, ubnd_in, coord_out, forward=1  )
 </span></li>
 </ul>
 </div>
@@ -428,13 +431,13 @@ that provides the method.
 <div class="implemented" id="MathMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMathMap">astMathMap</a> - Create a MathMap 
 <ul>
-<li><span class=inv>mathmap = starlink.Ast.MathMap(  )</span></li>
+<li><span class=inv>mathmap = starlink.Ast.MathMap( nin, nout, fwd, inv, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="MatrixMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMatrixMap">astMatrixMap</a> - Create a MatrixMap 
 <ul>
-<li><span class=inv>matrixmap = starlink.Ast.MatrixMap(  )</span></li>
+<li><span class=inv>matrixmap = starlink.Ast.MatrixMap( matrix, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Norm">
@@ -447,13 +450,13 @@ that provides the method.
 <div class="implemented" id="NormMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astNormMap">astNormMap</a> - Create a NormMap 
 <ul>
-<li><span class=inv>normmap = starlink.Ast.NormMap(  )</span></li>
+<li><span class=inv>normmap = starlink.Ast.NormMap( frame, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="NullRegion">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astNullRegion">astNullRegion</a> - Create a NullRegion 
 <ul>
-<li><span class=inv>nullregion = starlink.Ast.NullRegion(  )</span></li>
+<li><span class=inv>nullregion = starlink.Ast.NullRegion( frame, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Offset">
@@ -487,7 +490,7 @@ that provides the method.
 <div class="implemented" id="PcdMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPcdMap">astPcdMap</a> - Create a PcdMap 
 <ul>
-<li><span class=inv>pcdmap = starlink.Ast.PcdMap(  )</span></li>
+<li><span class=inv>pcdmap = starlink.Ast.PcdMap( disco, pcdcen, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PermAxes">
@@ -500,7 +503,7 @@ that provides the method.
 <div class="implemented" id="PermMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPermMap">astPermMap</a> - Create a PermMap 
 <ul>
-<li><span class=inv>permmap = starlink.Ast.PermMap(  )</span></li>
+<li><span class=inv>permmap = starlink.Ast.PermMap( inperm, outperm, constant=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PickAxes">
@@ -513,13 +516,13 @@ that provides the method.
 <div class="implemented" id="Plot">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPlot">astPlot</a> - Create a Plot 
 <ul>
-<li><span class=inv>plot = starlink.Ast.Plot(  )</span></li>
+<li><span class=inv>plot = starlink.Ast.Plot( frame, gbox, bbox, grf, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PointList">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPointList">astPointList</a> - Create a PointList 
 <ul>
-<li><span class=inv>pointlist = starlink.Ast.PointList(  )</span></li>
+<li><span class=inv>pointlist = starlink.Ast.PointList( frame, points, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PolyCurve">
@@ -532,7 +535,7 @@ that provides the method.
 <div class="implemented" id="PolyMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolyMap">astPolyMap</a> - Create a PolyMap 
 <ul>
-<li><span class=inv>polymap = starlink.Ast.PolyMap(  )</span></li>
+<li><span class=inv>polymap = starlink.Ast.PolyMap( fcoeff, icoeff=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PolyTran">
@@ -545,13 +548,13 @@ that provides the method.
 <div class="implemented" id="Polygon">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolygon">astPolygon</a> - Create a Polygon 
 <ul>
-<li><span class=inv>polygon = starlink.Ast.Polygon(  )</span></li>
+<li><span class=inv>polygon = starlink.Ast.Polygon( frame, points, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Prism">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPrism">astPrism</a> - Create a Prism 
 <ul>
-<li><span class=inv>prism = starlink.Ast.Prism(  )</span></li>
+<li><span class=inv>prism = starlink.Ast.Prism( region1, region2, unc=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="PurgeWCS">
@@ -585,14 +588,14 @@ that provides the method.
 <div class="implemented" id="Rate">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRate">astRate</a> - Calculate the rate of change of a Mapping output 
 <ul>
-<li><span class=inv>result = mapping.rate( at, ax1, ax2  )
+<li><span class=inv>result = mapping.rate( at, ax1=1, ax2=1  )
 </span></li>
 </ul>
 </div>
 <div class="implemented" id="RateMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRateMap">astRateMap</a> - Create a RateMap 
 <ul>
-<li><span class=inv>ratemap = starlink.Ast.RateMap(  )</span></li>
+<li><span class=inv>ratemap = starlink.Ast.RateMap( map, ax1=1, ax2=1, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Read">
@@ -689,7 +692,7 @@ that provides the method.
 <div class="implemented" id="ShiftMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astShiftMap">astShiftMap</a> - Create a ShiftMap 
 <ul>
-<li><span class=inv>shiftmap = starlink.Ast.ShiftMap(  )</span></li>
+<li><span class=inv>shiftmap = starlink.Ast.ShiftMap( shift, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Show">
@@ -709,7 +712,7 @@ that provides the method.
 <div class="implemented" id="SkyFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSkyFrame">astSkyFrame</a> - Create a SkyFrame 
 <ul>
-<li><span class=inv>skyframe = starlink.Ast.SkyFrame(  )</span></li>
+<li><span class=inv>skyframe = starlink.Ast.SkyFrame( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="SkyOffsetMap">
@@ -722,25 +725,25 @@ that provides the method.
 <div class="implemented" id="SpecFluxFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSpecFluxFrame">astSpecFluxFrame</a> - Create a SpecFluxFrame 
 <ul>
-<li><span class=inv>specfluxframe = starlink.Ast.SpecFluxFrame(  )</span></li>
+<li><span class=inv>specfluxframe = starlink.Ast.SpecFluxFrame( frame1, frame2, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="SpecFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSpecFrame">astSpecFrame</a> - Create a SpecFrame 
 <ul>
-<li><span class=inv>specframe = starlink.Ast.SpecFrame(  )</span></li>
+<li><span class=inv>specframe = starlink.Ast.SpecFrame( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="SphMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astSphMap">astSphMap</a> - Create a SphMap 
 <ul>
-<li><span class=inv>sphmap = starlink.Ast.SphMap(  )</span></li>
+<li><span class=inv>sphmap = starlink.Ast.SphMap( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="StcsChan">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astStcsChan">astStcsChan</a> - Create an StcsChan 
 <ul>
-<li><span class=inv>stcschan = starlink.Ast.StcsChan(  )</span></li>
+<li><span class=inv>stcschan = starlink.Ast.StcsChan( source=None, sink=None, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Test">
@@ -774,32 +777,32 @@ that provides the method.
 <div class="implemented" id="TimeFrame">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTimeFrame">astTimeFrame</a> - Create a TimeFrame 
 <ul>
-<li><span class=inv>timeframe = starlink.Ast.TimeFrame(  )</span></li>
+<li><span class=inv>timeframe = starlink.Ast.TimeFrame( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="TimeMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTimeMap">astTimeMap</a> - Create a TimeMap 
 <ul>
-<li><span class=inv>timemap = starlink.Ast.TimeMap(  )</span></li>
+<li><span class=inv>timemap = starlink.Ast.TimeMap( flags=0, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="TranGrid">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranGrid">astTranGrid</a> - Transform a grid of positions 
 <ul>
-<li><span class=inv>out = mapping.trangrid( lbnd, ubnd, tol, maxpix, forward  )
+<li><span class=inv>out = mapping.trangrid( lbnd, ubnd, tol=0, maxpix=50, forward=True  )
 </span></li>
 </ul>
 </div>
 <div class="implemented" id="TranMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranMap">astTranMap</a> - Create a TranMap 
 <ul>
-<li><span class=inv>tranmap = starlink.Ast.TranMap(  )</span></li>
+<li><span class=inv>tranmap = starlink.Ast.TranMap( map1, map2, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="TranN">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTranN">astTranN</a> - Transform N-dimensional coordinates 
 <ul>
-<li><span class=inv>out = mapping.trann( in, forward, out=None  )
+<li><span class=inv>out = mapping.trann( in, forward=True, out=None  )
 </span></li>
 </ul>
 </div>
@@ -827,13 +830,13 @@ that provides the method.
 <div class="implemented" id="UnitMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astUnitMap">astUnitMap</a> - Create a UnitMap 
 <ul>
-<li><span class=inv>unitmap = starlink.Ast.UnitMap(  )</span></li>
+<li><span class=inv>unitmap = starlink.Ast.UnitMap( ncoord, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Unlock">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astUnlock">astUnlock</a> - Unlock an Object for use by other threads 
 <ul>
-<li><span class=inv> object.unlock( report  )
+<li><span class=inv> object.unlock( report=1  )
 </span></li>
 </ul>
 </div>
@@ -854,13 +857,13 @@ that provides the method.
 <div class="implemented" id="WcsMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWcsMap">astWcsMap</a> - Create a WcsMap 
 <ul>
-<li><span class=inv>wcsmap = starlink.Ast.WcsMap(  )</span></li>
+<li><span class=inv>wcsmap = starlink.Ast.WcsMap( ncoord=2, type=starlink.Ast.TAN, lonax=1, latax=2, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="WinMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWinMap">astWinMap</a> - Create a WinMap 
 <ul>
-<li><span class=inv>winmap = starlink.Ast.WinMap(  )</span></li>
+<li><span class=inv>winmap = starlink.Ast.WinMap( ina, inb, outa, outb, options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Write">
@@ -880,7 +883,7 @@ that provides the method.
 <div class="implemented" id="ZoomMap">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astZoomMap">astZoomMap</a> - Create a ZoomMap 
 <ul>
-<li><span class=inv>zoommap = starlink.Ast.ZoomMap(  )</span></li>
+<li><span class=inv>zoommap = starlink.Ast.ZoomMap( ncoord, zoom, options=None  )</span></li>
 </ul>
 </div>
 </body>

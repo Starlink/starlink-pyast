@@ -1,31 +1,3 @@
-/* Issues:
-
-   - Classes still to be done:
-        DssMap
-        IntraMap
-        Plot3D
-        SelectorMap
-        SlaMap
-        SpecMap
-        Stc
-        StcCatalogEntryLocation
-        StcObsDataLocation
-        StcResourceProfile
-        StcSearchLocation
-        SwitchMap
-        Table
-        XmlChan
-
-   - AST should be included and (optionally?) built with pyast
-   - Should the module be called Ast or pyast?
-   - Should it be in a starlink package or standalone?
-   - providing more base methods (equal, etc)
-   - are there any memory leaks (either in AST or Python)?
-   - is starlink.Ast.BAD (== AST__BAD) implemented in the best way?
-   - needs proper docs
-
-*/
-
 #include <Python.h>
 #include <string.h>
 #include "numpy/arrayobject.h"
@@ -380,11 +352,11 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".lock"
 static PyObject *Object_lock( Object *self, PyObject *args ) {
-/* args: :wait */
+/* args: :wait=True */
    PyObject *result = NULL;
-   int wait;
+   int wait = 1;
    if( PyErr_Occurred() ) return NULL;
-   if( PyArg_ParseTuple( args, "i:" NAME, &wait ) ) {
+   if( PyArg_ParseTuple( args, "|i:" NAME, &wait ) ) {
       astLock( THIS, wait );
       if( astOK ) result = Py_None;
    }
@@ -454,11 +426,11 @@ static PyObject *Object_test( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unlock"
 static PyObject *Object_unlock( Object *self, PyObject *args ) {
-/* args: :report */
+/* args: :report=1 */
    PyObject *result = NULL;
-   int report;
+   int report = 1;
    if( PyErr_Occurred() ) return NULL;
-   if( PyArg_ParseTuple( args, "i:" NAME, &report ) ) {
+   if( PyArg_ParseTuple( args, "|i:" NAME, &report ) ) {
       astUnlock( THIS, report );
       if( astOK ) result = Py_None;
    }
@@ -657,7 +629,7 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".mapbox"
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
-/* args: lbnd_out,ubnd_out,xl,xu:lbnd_in,ubnd_in,forward,coord_out */
+/* args: lbnd_out,ubnd_out,xl,xu:lbnd_in,ubnd_in,coord_out,forward=1 */
    PyArrayObject *lbnd_in = NULL;
    PyArrayObject *ubnd_in = NULL;
    PyArrayObject *xl = NULL;
@@ -668,14 +640,14 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
    double lbnd_out;
    double ubnd_out;
    int coord_out;
-   int forward;
+   int forward=1;
    int ncoord_in;
    npy_intp dims[1];
 
    if( PyErr_Occurred() ) return NULL;
 
-   if( PyArg_ParseTuple( args, "OOii:" NAME, &lbnd_in_object, &ubnd_in_object,
-                         &forward, &coord_out ) && astOK ) {
+   if( PyArg_ParseTuple( args, "OOi|i:" NAME, &lbnd_in_object, &ubnd_in_object,
+                         &coord_out, &forward ) && astOK ) {
 
       if( forward ) {
          ncoord_in = astGetI( THIS, "Nin" );
@@ -756,18 +728,18 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rate"
 static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
-/* args: result:at,ax1,ax2 */
+/* args: result:at,ax1=1,ax2=1 */
    PyObject *result = NULL;
    PyArrayObject *at = NULL;
    PyObject *at_object = NULL;
-   int ax1;
-   int ax2;
+   int ax1 = 1;
+   int ax2 = 1;
    int ncoord_in;
    double value;
 
    if( PyErr_Occurred() ) return NULL;
    ncoord_in = astGetI( THIS, "Nin" );
-   if( PyArg_ParseTuple( args, "Oii:" NAME, &at_object, &ax1, &ax2)
+   if( PyArg_ParseTuple( args, "O|ii:" NAME, &at_object, &ax1, &ax2)
        && astOK ) {
       at = GetArray1D( at_object, &ncoord_in, "at", NAME );
       if( at ) {
@@ -1521,7 +1493,7 @@ static PyObject *Mapping_simplify( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".trangrid"
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
-/* args: out:lbnd,ubnd,tol,maxpix,forward */
+/* args: out:lbnd,ubnd,tol=0,maxpix=50,forward=True */
    PyArrayObject *lbnd = NULL;
    PyArrayObject *pout = NULL;
    PyArrayObject *ubnd = NULL;
@@ -1530,10 +1502,10 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
    PyObject *ubnd_object = NULL;
    const int *lb;
    const int *ub;
-   double tol;
-   int forward;
+   double tol = 0.0;
+   int forward = 1;
    int i;
-   int maxpix;
+   int maxpix = 50;
    int ncoord_in;
    int ncoord_out;
    int outdim;
@@ -1541,7 +1513,7 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 
    if( PyErr_Occurred() ) return NULL;
 
-   if( PyArg_ParseTuple( args, "OOdii:" NAME, &lbnd_object, &ubnd_object,
+   if( PyArg_ParseTuple( args, "OO|dii:" NAME, &lbnd_object, &ubnd_object,
                          &tol, &maxpix, &forward ) && astOK ) {
 
       if( forward ) {
@@ -1589,13 +1561,13 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".trann"
 static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
-/* args: out:in,forward,out=None */
+/* args: out:in,forward=True,out=None */
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
    PyObject *result = NULL;
    PyObject *in_object = NULL;
    PyObject *out_object = NULL;
-   int forward;
+   int forward=1;
    int npoint;
    int ncoord_in;
    int ncoord_out;
@@ -1605,7 +1577,7 @@ static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
 
    if( PyErr_Occurred() ) return NULL;
 
-   if( PyArg_ParseTuple( args, "Oi|O:" NAME, &in_object, &forward,
+   if( PyArg_ParseTuple( args, "O|iO:" NAME, &in_object, &forward,
                          &out_object ) && astOK ) {
 
       if( forward ) {
@@ -1720,6 +1692,7 @@ static PyTypeObject ZoomMapType = {
 
 /* Define the class methods */
 static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
+/* args: :ncoord,zoom,options=None */
    const char *options = " ";
    double zoom;
    int ncoord;
@@ -1806,6 +1779,7 @@ static PyTypeObject MathMapType = {
 
 /* Define the class methods */
 static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
+/* args: :nin,nout,fwd,inv,options=None */
    PyObject *fwd_object = NULL;
    PyObject *inv_object = NULL;
    const char **fwd = NULL;
@@ -1963,6 +1937,7 @@ static PyTypeObject SphMapType = {
 
 /* Define the class methods */
 static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -2058,6 +2033,7 @@ static PyTypeObject GrismMapType = {
 
 /* Define the class methods */
 static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -2141,6 +2117,7 @@ static PyTypeObject PcdMapType = {
 
 /* Define the class methods */
 static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
+/* args: :disco,pcdcen,options=None */
    const char *options = " ";
    int result = -1;
    double disco;
@@ -2242,14 +2219,15 @@ static PyTypeObject WcsMapType = {
 
 /* Define the class methods */
 static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
+/* args: :ncoord=2,type=starlink.Ast.TAN,lonax=1,latax=2,options=None */
    const char *options = " ";
    int result = -1;
-   int ncoord;
-   int type;
-   int lonax;
-   int latax;
+   int ncoord = 2;
+   int type = AST__TAN;
+   int lonax = 1;
+   int latax = 2;
 
-   if( PyArg_ParseTuple(args, "iiii|s:" CLASS, &ncoord,
+   if( PyArg_ParseTuple(args, "|iiiis:" CLASS, &ncoord,
                         &type, &lonax, &latax, &options ) ) {
       AstWcsMap * this = NULL;
       this = astWcsMap( ncoord, type, lonax, latax, options );
@@ -2321,6 +2299,7 @@ static PyTypeObject UnitMapType = {
 
 /* Define the class methods */
 static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
+/* args: :ncoord,options=None */
    const char *options = " ";
    int ncoord;
    int result = -1;
@@ -2402,11 +2381,12 @@ static PyTypeObject TimeMapType = {
 
 /* Define the class methods */
 static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
+/* args: :flags=0,options=None */
    const char *options = " ";
-   int flags;
+   int flags = 0;
    int result = -1;
 
-   if( PyArg_ParseTuple(args, "i|s:" CLASS, &flags, &options ) ) {
+   if( PyArg_ParseTuple(args, "|is:" CLASS, &flags, &options ) ) {
       if (flags != 0) {
          PyErr_SetString( PyExc_ValueError, "The TimeMap flags argument must currently always be zero");
       } else {
@@ -2510,13 +2490,14 @@ static PyTypeObject RateMapType = {
 
 /* Define the class methods */
 static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
+/* args: :map,ax1=1,ax2=1,options=None */
    const char *options = " ";
    Mapping *other;
-   int ax1;
-   int ax2;
+   int ax1 = 1;
+   int ax2 = 1;
    int result = -1;
 
-   if( PyArg_ParseTuple(args, "O!ii|s:" CLASS, &MappingType, (PyObject**)&other,
+   if( PyArg_ParseTuple(args, "O!|iis:" CLASS, &MappingType, (PyObject**)&other,
 			&ax1, &ax2, &options ) ) {
       AstRateMap *this = astRateMap( THAT, ax1, ax2, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
@@ -2587,13 +2568,14 @@ static PyTypeObject CmpMapType = {
 
 /* Define the class methods */
 static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
+/* args: :map1,map2,series=True,options=None */
    const char *options = " ";
    Mapping *other;
    Mapping *another;
-   int series;
+   int series = 1;
    int result = -1;
 
-   if( PyArg_ParseTuple(args, "O!O!i|s:" CLASS, &MappingType, (PyObject**)&other,
+   if( PyArg_ParseTuple(args, "O!O!|is:" CLASS, &MappingType, (PyObject**)&other,
                         &MappingType, (PyObject**)&another, &series, &options ) ) {
       AstCmpMap *this = astCmpMap( THAT, ANOTHER, series, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
@@ -2664,6 +2646,7 @@ static PyTypeObject TranMapType = {
 
 /* Define the class methods */
 static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
+/* args: :map1,map2,options=None */
    const char *options = " ";
    Mapping *other;
    Mapping *another;
@@ -2740,6 +2723,7 @@ static PyTypeObject PermMapType = {
 
 /* Define the class methods */
 static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
+/* args: :inperm,outperm,constant=None,options=None */
    const char *options = " ";
    PyArrayObject * inperm = NULL;
    PyArrayObject * outperm = NULL;
@@ -2845,6 +2829,7 @@ static PyTypeObject ShiftMapType = {
 
 /* Define the class methods */
 static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
+/* args: :shift,options=None */
    const char *options = " ";
    PyArrayObject * shift = NULL;
    PyObject * shift_object = NULL;
@@ -2931,16 +2916,17 @@ static PyTypeObject LutMapType = {
 
 /* Define the class methods */
 static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
+/* args: :lut,start=0.0,inc=1.0,options=None */
    const char *options = " ";
    PyArrayObject * lut = NULL;
    PyObject * lut_object = NULL;
-   double start;
-   double inc;
+   double start = 0.0;
+   double inc = 1.0;
 
    int result = -1;
 
    // We get nin and nout from the arrays themselves
-   if( PyArg_ParseTuple(args, "Odd|s:" CLASS, &lut_object,
+   if( PyArg_ParseTuple(args, "O|dds:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
       lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
                                                          PyArray_DOUBLE, 0, 100);
@@ -3019,6 +3005,7 @@ static PyTypeObject WinMapType = {
 
 /* Define the class methods */
 static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
+/* args: :ina,inb,outa,outb,options=None */
    const char *options = " ";
    PyArrayObject * ina = NULL;
    PyArrayObject * inb = NULL;
@@ -3233,6 +3220,7 @@ static PyTypeObject FrameType = {
 
 /* Define the class methods */
 static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
+/* args: :naxes,options=None */
    const char *options = " ";
    int result = -1;
    int naxes;
@@ -3812,6 +3800,7 @@ static PyTypeObject MatrixMapType = {
 
 /* Define the class methods */
 static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
+/* args: :matrix,options=None */
    const char *options = " ";
    PyObject *matrix_object = NULL;
    AstMatrixMap *this = NULL;
@@ -3926,6 +3915,7 @@ static PyTypeObject PolyMapType = {
 
 /* Define the class methods */
 static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
+/* args: :fcoeff,icoeff=None,options=None */
    PyArrayObject *fcoeff = NULL;
    PyArrayObject *icoeff = NULL;
    PyObject *fcoeff_object = NULL;
@@ -4125,6 +4115,7 @@ static PyTypeObject NormMapType = {
 
 /* Define the class methods */
 static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,options=None */
    const char *options = " ";
    Mapping *other;
    int result = -1;
@@ -4228,6 +4219,7 @@ static PyTypeObject FrameSetType = {
 
 /* Define the class methods */
 static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,options=None */
    const char *options = " ";
    FrameSet *other;
    int result = -1;
@@ -4410,6 +4402,7 @@ static PyTypeObject CmpFrameType = {
 
 /* Define the class methods */
 static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :frame1,frame2,options=None */
    const char *options = " ";
    FrameSet *other;
    FrameSet *another;
@@ -4523,6 +4516,7 @@ static PyTypeObject SkyFrameType = {
 
 /* Define the class methods */
 static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -4654,6 +4648,7 @@ static PyTypeObject SpecFrameType = {
 
 /* Define the class methods */
 static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -4784,6 +4779,7 @@ static PyTypeObject DSBSpecFrameType = {
 
 /* Define the class methods */
 static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -4878,6 +4874,7 @@ static PyTypeObject TimeFrameType = {
 
 /* Define the class methods */
 static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :options=None */
    const char *options = " ";
    int result = -1;
 
@@ -4975,12 +4972,13 @@ static PyTypeObject FluxFrameType = {
 
 /* Define the class methods */
 static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :specval=starlink.Ast.BAD,specfrm=None,options=None */
    const char *options = " ";
    int result = -1;
-   double specval;
-   Object *other;
+   double specval = AST__BAD;
+   Object *other = NULL;
 
-   if( PyArg_ParseTuple(args, "dO!|s:" CLASS, &specval,
+   if( PyArg_ParseTuple(args, "|dO!s:" CLASS, &specval,
 			&SpecFrameType, (PyObject**)&other, &options ) ) {
       AstFluxFrame *this = astFluxFrame( specval, THAT, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
@@ -5051,6 +5049,7 @@ static PyTypeObject SpecFluxFrameType = {
 
 /* Define the class methods */
 static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kwds ){
+/* args: :frame1,frame2,options=None */
    const char *options = " ";
    int result = -1;
    Object *other;
@@ -5275,6 +5274,7 @@ static PyTypeObject BoxType = {
 
 /* Define the class methods */
 static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,form,point1,point2,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5366,6 +5366,7 @@ static PyTypeObject CircleType = {
 
 /* Define the class methods */
 static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,form,centre,point,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5470,6 +5471,7 @@ static PyTypeObject PolygonType = {
 
 /* Define the class methods */
 static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,points,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5595,6 +5597,7 @@ static PyTypeObject PointListType = {
 
 /* Define the class methods */
 static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,points,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5687,6 +5690,7 @@ static PyTypeObject EllipseType = {
 
 /* Define the class methods */
 static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,form,centre,point1,point2,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5785,6 +5789,7 @@ static PyTypeObject IntervalType = {
 
 /* Define the class methods */
 static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,lbnd,ubnd,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5877,6 +5882,7 @@ static PyTypeObject NullRegionType = {
 
 /* Define the class methods */
 static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,unc=None,options=None */
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5957,13 +5963,14 @@ static PyTypeObject CmpRegionType = {
 
 /* Define the class methods */
 static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
+/* args: :region1,region2,oper=starlink.Ast.OR,unc=None,options=None */
    const char *options = " ";
    Region *other;
    Region *another;
    int result = -1;
-   int oper;
+   int oper = AST__OR;
 
-   if( PyArg_ParseTuple(args, "O!O!i|s:" CLASS, &RegionType, (PyObject**)&other,
+   if( PyArg_ParseTuple(args, "O!O!|is:" CLASS, &RegionType, (PyObject**)&other,
                         &RegionType, (PyObject**)&another, &oper, &options ) ) {
       AstCmpRegion *this = astCmpRegion( THAT, ANOTHER, oper, options );
       result = SetProxy( (AstObject *) this, (Object *) self );
@@ -6034,6 +6041,7 @@ static PyTypeObject PrismType = {
 
 /* Define the class methods */
 static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
+/* args: :region1,region2,unc=None,options=None */
    const char *options = " ";
    Region *other;
    Region *another;
@@ -6157,6 +6165,7 @@ static PyTypeObject ChannelType = {
 
 /* Define the class methods */
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
+/* args: :source=None,sink=None,options=None */
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void );
@@ -6582,6 +6591,7 @@ static PyTypeObject FitsChanType = {
 
 
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
+/* args: :source=None,sink=None,options=None */
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void );
@@ -7242,6 +7252,7 @@ static PyTypeObject StcsChanType = {
 
 
 static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
+/* args: :source=None,sink=None,options=None */
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void ) = NULL;
@@ -7943,6 +7954,12 @@ static PyTypeObject PlotType = {
 
 /* Define the class methods */
 static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
+/* args: :frame,gbox,bbox,grf,options=None */
+/* Note: The "grf" argument is a reference to an object that provides
+         primitive drawing fiunctions for the Plot. PyAST provides the
+         starlink.Grf.grf_matplotlib class that implements the required
+         operations using the matplotlib plotting package. Others can be
+         written following the same pattern. */
    const char *options = " ";
    Frame *frame;
    PyObject *bbox_object = NULL;

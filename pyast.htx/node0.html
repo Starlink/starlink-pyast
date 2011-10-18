@@ -167,6 +167,13 @@ list of the C function. If the C function does not return any values via
 C pointers, then the returned Python value will be a single object
 reference rather than a tuple.
 
+<li> In general, the PyAST wrapper for a function will omitarguments that
+are present in the C interface if their values can be derived from other
+arguments. In particular, if an array or list is supplied as an argument,
+the length of the array or list does not need to be supplied using a
+separate parameter, as is done in the C interface.
+
+
 </ul>
 
 </body>

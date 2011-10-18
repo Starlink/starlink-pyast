@@ -353,7 +353,7 @@ class TestAst(unittest.TestCase):
       self.assertTrue( zoommap.TranInverse )
 
       xin = numpy.linspace( -1, 1, 10 )
-      xout = zoommap.trann( xin, True )
+      xout = zoommap.trann( xin )
       d = (1.2*xin - xout)**2
       self.assertEqual( d.sum(), 0.0 )
 
@@ -381,7 +381,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( d.sum(), 0.0 )
       self.assertTrue( islin )
 
-      lb,ub,xl,xu = zoommap.mapbox(  [1,0], [3,2], True, 2 )
+      lb,ub,xl,xu = zoommap.mapbox(  [1,0], [3,2], 2 )
       self.assertEqual( lb, 0 )
       self.assertEqual( ub, 4 )
       self.assertEqual( xl[1], 0 )
@@ -475,13 +475,13 @@ class TestAst(unittest.TestCase):
       self.assertTrue( sphmap.UnitRadius )
 
    def test_RateMap(self):
-      ratemap = starlink.Ast.RateMap( starlink.Ast.UnitMap(2), 1, 2 )
+      ratemap = starlink.Ast.RateMap( starlink.Ast.UnitMap(2) )
       self.assertIsInstance( ratemap, starlink.Ast.RateMap )
       self.assertIsInstance( ratemap, starlink.Ast.Mapping )
       self.assertEqual( ratemap.Nout, 1 )
 
    def test_WcsMap(self):
-      wcsmap = starlink.Ast.WcsMap( 2, starlink.Ast.TAN, 1, 2 )
+      wcsmap = starlink.Ast.WcsMap()
       self.assertIsInstance( wcsmap, starlink.Ast.WcsMap )
       self.assertIsInstance( wcsmap, starlink.Ast.Mapping )
       self.assertEqual( wcsmap.Nout,2 )
@@ -534,7 +534,7 @@ class TestAst(unittest.TestCase):
    def test_TimeMap(self):
       with self.assertRaises(ValueError):
          timemap = starlink.Ast.TimeMap( 1 )
-      timemap = starlink.Ast.TimeMap( 0 )
+      timemap = starlink.Ast.TimeMap( )
       self.assertIsInstance( timemap, starlink.Ast.TimeMap )
       self.assertIsInstance( timemap, starlink.Ast.Mapping )
       self.assertEqual( timemap.Nin, 1 )
@@ -591,7 +591,7 @@ class TestAst(unittest.TestCase):
       self.assertGreater( tframe.currenttime(), 55700.0)
 
    def test_FluxFrame(self):
-      fframe = starlink.Ast.FluxFrame( 52.5, starlink.Ast.SpecFrame() )
+      fframe = starlink.Ast.FluxFrame()
       self.assertIsInstance( fframe, starlink.Ast.Frame )
       self.assertIsInstance( fframe, starlink.Ast.FluxFrame )
 
