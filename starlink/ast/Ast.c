@@ -229,6 +229,7 @@ static PyTypeObject ObjectType = {
 #undef NAME
 #define NAME CLASS ".clear"
 static PyObject *Object_clear( Object *self, PyObject *args ) {
+
 /* args: :attrib */
 
    PyObject *result = NULL;
@@ -245,7 +246,9 @@ static PyObject *Object_clear( Object *self, PyObject *args ) {
 }
 
 static PyObject *Object_copy( Object *self ) {
+
 /* args: result: */
+
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
 
@@ -314,6 +317,7 @@ static PyObject *Object_deepcopy( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".get"
 static PyObject *Object_get( Object *self, PyObject *args ) {
+
 /* args: result:attrib */
 /* Note: The starlink.Ast.get() method is equivalent to
    <a href="/star/docs/sun211.htx/#xref_astGetC>astGetC</a>
@@ -321,6 +325,7 @@ static PyObject *Object_get( Object *self, PyObject *args ) {
    attribute value. By contrast, each Python property returns the
    attribute value using the native data type of the AST attribute
    (integer, boolean, floating point or string). */
+
    PyObject *result = NULL;
    const char *attrib;
    const char *value;
@@ -336,7 +341,9 @@ static PyObject *Object_get( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".hasattribute"
 static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
+
 /* args: result:attrib */
+
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -352,7 +359,9 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".lock"
 static PyObject *Object_lock( Object *self, PyObject *args ) {
+
 /* args: :wait=True */
+
    PyObject *result = NULL;
    int wait = 1;
    if( PyErr_Occurred() ) return NULL;
@@ -367,7 +376,9 @@ static PyObject *Object_lock( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".same"
 static PyObject *Object_same( Object *self, PyObject *args ) {
+
 /* args: result:that */
+
    PyObject *result = NULL;
    Object *other;
    int value;
@@ -384,7 +395,9 @@ static PyObject *Object_same( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".set"
 static PyObject *Object_set( Object *self, PyObject *args ) {
+
 /* args: :settings */
+
    PyObject *result = NULL;
    const char *settings;
    if( PyErr_Occurred() ) return NULL;
@@ -398,7 +411,9 @@ static PyObject *Object_set( Object *self, PyObject *args ) {
 
 /* Define the AST methods of the class. */
 static PyObject *Object_show( Object *self ) {
+
 /* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astShow( THIS );
@@ -410,7 +425,9 @@ static PyObject *Object_show( Object *self ) {
 #undef NAME
 #define NAME CLASS ".test"
 static PyObject *Object_test( Object *self, PyObject *args ) {
+
 /* args: result:attrib */
+
    PyObject *result = NULL;
    const char *attrib;
    int value;
@@ -426,7 +443,9 @@ static PyObject *Object_test( Object *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unlock"
 static PyObject *Object_unlock( Object *self, PyObject *args ) {
+
 /* args: :report=1 */
+
    PyObject *result = NULL;
    int report = 1;
    if( PyErr_Occurred() ) return NULL;
@@ -544,7 +563,9 @@ static PyTypeObject MappingType = {
 /* Define the class methods */
 
 static PyObject *Mapping_decompose( Mapping *self ) {
+
 /* args: map1,map2,series,invert1,invert2: */
+
    PyObject *result = NULL;
    PyObject *map1_object = NULL;
    PyObject *map2_object = NULL;
@@ -574,7 +595,9 @@ static PyObject *Mapping_decompose( Mapping *self ) {
 }
 
 static PyObject *Mapping_invert( Mapping *self ) {
+
 /* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astInvert( THIS );
@@ -586,7 +609,9 @@ static PyObject *Mapping_invert( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".linearapprox"
 static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
+
 /* args: result,fit:lbnd,ubnd,tol */
+
    PyObject *result = NULL;
    PyObject *islinear = NULL;
    PyArrayObject *fit = NULL;
@@ -629,7 +654,9 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".mapbox"
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
+
 /* args: lbnd_out,ubnd_out,xl,xu:lbnd_in,ubnd_in,coord_out,forward=1 */
+
    PyArrayObject *lbnd_in = NULL;
    PyArrayObject *ubnd_in = NULL;
    PyArrayObject *xl = NULL;
@@ -683,7 +710,9 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".quadapprox"
 static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
+
 /* args: result,fit,rms:lbnd,ubnd,nx,ny */
+
    PyObject *result = NULL;
    PyObject *isquad;
    PyArrayObject *fit = NULL;
@@ -728,7 +757,9 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rate"
 static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
+
 /* args: result:at,ax1=1,ax2=1 */
+
    PyObject *result = NULL;
    PyArrayObject *at = NULL;
    PyObject *at_object = NULL;
@@ -756,7 +787,9 @@ static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebin"
 static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
+
 /* args: out,out_var:wlim,lbnd_in,ubnd_in,in,in_var,spread,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd */
+
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -948,7 +981,9 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".rebinseq"
 static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
+
 /* args: nused:wlim,lbnd_in,ubnd_in,in,in_var,spread,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused */
+
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1170,7 +1205,9 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".resample"
 static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
+
 /* args: result,out,out_var:lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd */
+
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
    PyArrayObject *lbnd = NULL;
@@ -1447,7 +1484,9 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 }
 
 static PyObject *Mapping_removeregions( Mapping *self ) {
+
 /* args: result: */
+
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1469,7 +1508,9 @@ static PyObject *Mapping_removeregions( Mapping *self ) {
 }
 
 static PyObject *Mapping_simplify( Mapping *self ) {
+
 /* args: result: */
+
    PyObject *result = NULL;
    PyObject *map_object = NULL;
    AstMapping *map;
@@ -1493,7 +1534,9 @@ static PyObject *Mapping_simplify( Mapping *self ) {
 #undef NAME
 #define NAME CLASS ".trangrid"
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
+
 /* args: out:lbnd,ubnd,tol=0,maxpix=50,forward=True */
+
    PyArrayObject *lbnd = NULL;
    PyArrayObject *pout = NULL;
    PyArrayObject *ubnd = NULL;
@@ -1561,7 +1604,9 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".trann"
 static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
+
 /* args: out:in,forward=True,out=None */
+
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
    PyObject *result = NULL;
@@ -1692,7 +1737,9 @@ static PyTypeObject ZoomMapType = {
 
 /* Define the class methods */
 static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :ncoord,zoom,options=None */
+
    const char *options = " ";
    double zoom;
    int ncoord;
@@ -1779,7 +1826,9 @@ static PyTypeObject MathMapType = {
 
 /* Define the class methods */
 static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :nin,nout,fwd,inv,options=None */
+
    PyObject *fwd_object = NULL;
    PyObject *inv_object = NULL;
    const char **fwd = NULL;
@@ -1937,7 +1986,9 @@ static PyTypeObject SphMapType = {
 
 /* Define the class methods */
 static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -2033,7 +2084,9 @@ static PyTypeObject GrismMapType = {
 
 /* Define the class methods */
 static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -2117,7 +2170,9 @@ static PyTypeObject PcdMapType = {
 
 /* Define the class methods */
 static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :disco,pcdcen,options=None */
+
    const char *options = " ";
    int result = -1;
    double disco;
@@ -2219,7 +2274,9 @@ static PyTypeObject WcsMapType = {
 
 /* Define the class methods */
 static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :ncoord=2,type=starlink.Ast.TAN,lonax=1,latax=2,options=None */
+
    const char *options = " ";
    int result = -1;
    int ncoord = 2;
@@ -2299,7 +2356,9 @@ static PyTypeObject UnitMapType = {
 
 /* Define the class methods */
 static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :ncoord,options=None */
+
    const char *options = " ";
    int ncoord;
    int result = -1;
@@ -2381,7 +2440,9 @@ static PyTypeObject TimeMapType = {
 
 /* Define the class methods */
 static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :flags=0,options=None */
+
    const char *options = " ";
    int flags = 0;
    int result = -1;
@@ -2403,6 +2464,9 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".timeadd"
 static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
+
+/* args: :cvt,args */
+
   PyObject *result = NULL;
   PyArrayObject *astargs = NULL;
   PyObject *astargs_object = NULL;
@@ -2490,7 +2554,9 @@ static PyTypeObject RateMapType = {
 
 /* Define the class methods */
 static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :map,ax1=1,ax2=1,options=None */
+
    const char *options = " ";
    Mapping *other;
    int ax1 = 1;
@@ -2568,7 +2634,9 @@ static PyTypeObject CmpMapType = {
 
 /* Define the class methods */
 static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :map1,map2,series=True,options=None */
+
    const char *options = " ";
    Mapping *other;
    Mapping *another;
@@ -2646,7 +2714,9 @@ static PyTypeObject TranMapType = {
 
 /* Define the class methods */
 static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :map1,map2,options=None */
+
    const char *options = " ";
    Mapping *other;
    Mapping *another;
@@ -2723,7 +2793,9 @@ static PyTypeObject PermMapType = {
 
 /* Define the class methods */
 static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :inperm,outperm,constant=None,options=None */
+
    const char *options = " ";
    PyArrayObject * inperm = NULL;
    PyArrayObject * outperm = NULL;
@@ -2829,7 +2901,9 @@ static PyTypeObject ShiftMapType = {
 
 /* Define the class methods */
 static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :shift,options=None */
+
    const char *options = " ";
    PyArrayObject * shift = NULL;
    PyObject * shift_object = NULL;
@@ -2916,7 +2990,9 @@ static PyTypeObject LutMapType = {
 
 /* Define the class methods */
 static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :lut,start=0.0,inc=1.0,options=None */
+
    const char *options = " ";
    PyArrayObject * lut = NULL;
    PyObject * lut_object = NULL;
@@ -3005,7 +3081,9 @@ static PyTypeObject WinMapType = {
 
 /* Define the class methods */
 static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :ina,inb,outa,outb,options=None */
+
    const char *options = " ";
    PyArrayObject * ina = NULL;
    PyArrayObject * inb = NULL;
@@ -3220,7 +3298,9 @@ static PyTypeObject FrameType = {
 
 /* Define the class methods */
 static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :naxes,options=None */
+
    const char *options = " ";
    int result = -1;
    int naxes;
@@ -3238,6 +3318,9 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".angle"
 static PyObject *Frame_angle( Frame *self, PyObject *args ) {
+
+/* args: result:a,b,c */
+
   PyObject *result = NULL;
   PyArrayObject *a = NULL;
   PyArrayObject *b = NULL;
@@ -3273,6 +3356,9 @@ static PyObject *Frame_angle( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".axangle"
 static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
+
+/* args: result:a,b,axis */
+
   PyObject *result = NULL;
   PyArrayObject *a = NULL;
   PyArrayObject *b = NULL;
@@ -3304,6 +3390,9 @@ static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".axdistance"
 static PyObject *Frame_axdistance( Frame *self, PyObject *args ) {
+
+/* args: result:axis,v1,v2 */
+
   PyObject *result = NULL;
   int axis;
   double v1;
@@ -3323,6 +3412,9 @@ static PyObject *Frame_axdistance( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".axoffset"
 static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
+
+/* args: result:axis,v1,dist */
+
   PyObject *result = NULL;
   int axis;
   double v1;
@@ -3340,6 +3432,9 @@ static PyObject *Frame_axoffset( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".convert"
 static PyObject *Frame_convert( Frame *self, PyObject *args ) {
+
+/* args: result:from,to,domainlist=None */
+
   Object *other = NULL;
   PyObject *result = NULL;
   const char *domainlist = NULL;
@@ -3367,6 +3462,9 @@ static PyObject *Frame_convert( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".distance"
 static PyObject *Frame_distance( Frame *self, PyObject *args ) {
+
+/* args: result:point1,point2 */
+
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3397,6 +3495,9 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".findframe"
 static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
+
+/* args: result:template,domainlist=None */
+
   Object *other = NULL;
   PyObject *result = NULL;
   const char *domainlist = NULL;
@@ -3424,6 +3525,9 @@ static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".format"
 static PyObject *Frame_format( Frame *self, PyObject *args ) {
+
+/* args: result:axis,value */
+
   PyObject *result = NULL;
   int axis;
   double value;
@@ -3442,6 +3546,9 @@ static PyObject *Frame_format( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".intersect"
 static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
+
+/* args: cross:a1,a2,b1,b2 */
+
   PyObject *result = NULL;
   PyArrayObject *a1 = NULL;
   PyArrayObject *a2 = NULL;
@@ -3487,6 +3594,9 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".matchaxes"
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
+
+/* args: axes:frm2 */
+
    PyObject *result = NULL;
    Frame *other;
    npy_intp dims[1];
@@ -3511,6 +3621,9 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".norm"
 static PyObject *Frame_norm( Frame *self, PyObject *args ) {
+
+/* args: value:value */
+
   PyObject *result = NULL;
   PyArrayObject *value = NULL;
   PyArrayObject *axes = NULL;
@@ -3542,6 +3655,9 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".offset"
 static PyObject *Frame_offset( Frame *self, PyObject *args ) {
+
+/* args: point3:point1,point2,offset */
+
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3579,6 +3695,9 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".offset2"
 static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
+
+/* args: result,point2:point1,angle,offset */
+
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3613,6 +3732,9 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".permaxes"
 static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
+
+/* args: :perm */
+
   PyObject *result = NULL;
   PyArrayObject *perm = NULL;
   PyObject *perm_object = NULL;
@@ -3637,6 +3759,9 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".pickaxes"
 static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
+
+/* args: result,map:axes */
+
   PyObject *result = NULL;
   PyArrayObject *axes = NULL;
   PyObject *axes_object = NULL;
@@ -3680,6 +3805,9 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".resolve"
 static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
+
+/* args: point4,d1,d2:point1,point2,point3 */
+
   PyObject *result = NULL;
   PyArrayObject *point1 = NULL;
   PyArrayObject *point2 = NULL;
@@ -3723,6 +3851,9 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".unformat"
 static PyObject *Frame_unformat( Frame *self, PyObject *args ) {
+
+/* args: result,value:axis,string */
+
   PyObject *result = NULL;
   int axis;
   const char * string = NULL;
@@ -3800,7 +3931,9 @@ static PyTypeObject MatrixMapType = {
 
 /* Define the class methods */
 static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :matrix,options=None */
+
    const char *options = " ";
    PyObject *matrix_object = NULL;
    AstMatrixMap *this = NULL;
@@ -3915,7 +4048,9 @@ static PyTypeObject PolyMapType = {
 
 /* Define the class methods */
 static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :fcoeff,icoeff=None,options=None */
+
    PyArrayObject *fcoeff = NULL;
    PyArrayObject *icoeff = NULL;
    PyObject *fcoeff_object = NULL;
@@ -4013,6 +4148,9 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".polytran"
 static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args ) {
+
+/* args: result:forward,acc,maxacc,maxorder,lbnd,ubnd */
+
    PyObject *result = NULL;
    int forward;
    int maxorder;
@@ -4115,7 +4253,9 @@ static PyTypeObject NormMapType = {
 
 /* Define the class methods */
 static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,options=None */
+
    const char *options = " ";
    Mapping *other;
    int result = -1;
@@ -4219,7 +4359,9 @@ static PyTypeObject FrameSetType = {
 
 /* Define the class methods */
 static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,options=None */
+
    const char *options = " ";
    FrameSet *other;
    int result = -1;
@@ -4237,6 +4379,9 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".addframe"
 static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
+
+/* args: :iframe,map,frame */
+
   Object *other = NULL;
   Object *another = NULL;
   PyObject *result = NULL;
@@ -4258,12 +4403,15 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getframe"
 static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
+
+/* args: result:iframe=starlink.Ast.CURRENT */
+
   PyObject *result = NULL;
-  int iframe;
+  int iframe = AST__CURRENT;
 
   if( PyErr_Occurred() ) return NULL;
 
-  if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
+  if( PyArg_ParseTuple(args, "|i:" NAME, &iframe ) && astOK ) {
       AstFrame * frame = astGetFrame( THIS, iframe );
       if( astOK ) {
         PyObject *frame_object = NULL;
@@ -4283,13 +4431,16 @@ static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getmapping"
 static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
+
+/* args: result:iframe1=starlink.Ast.BASE,iframe2=starlink.Ast.CURRENT */
+
   PyObject *result = NULL;
-  int iframe1;
-  int iframe2;
+  int iframe1 = AST__BASE;
+  int iframe2 = AST__CURRENT;
 
   if( PyErr_Occurred() ) return NULL;
 
-  if( PyArg_ParseTuple(args, "ii:" NAME, &iframe1, &iframe2 ) && astOK ) {
+  if( PyArg_ParseTuple(args, "|ii:" NAME, &iframe1, &iframe2 ) && astOK ) {
       AstMapping * mapping = astGetMapping( THIS, iframe1, iframe2 );
       if( astOK ) {
         PyObject *mapping_object = NULL;
@@ -4309,6 +4460,9 @@ static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".remapframe"
 static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
+
+/* args: :iframe,map */
+
   Object *other = NULL;
   PyObject *result = NULL;
   int iframe;
@@ -4328,12 +4482,15 @@ static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".removeframe"
 static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
+
+/* args: :iframe=starlink.Ast.CURRENT */
+
   PyObject *result = NULL;
-  int iframe;
+  int iframe = AST__CURRENT;
 
   if( PyErr_Occurred() ) return NULL;
 
-  if( PyArg_ParseTuple(args, "i:" NAME, &iframe ) && astOK ) {
+  if( PyArg_ParseTuple(args, "|i:" NAME, &iframe ) && astOK ) {
       astRemoveFrame( THIS, iframe );
       if( astOK ) result = Py_None;
    }
@@ -4402,7 +4559,9 @@ static PyTypeObject CmpFrameType = {
 
 /* Define the class methods */
 static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame1,frame2,options=None */
+
    const char *options = " ";
    FrameSet *other;
    FrameSet *another;
@@ -4516,7 +4675,9 @@ static PyTypeObject SkyFrameType = {
 
 /* Define the class methods */
 static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -4533,6 +4694,9 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".skyoffsetmap"
 static PyObject *SkyFrame_skyoffsetmap( SkyFrame *self, PyObject *args ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    AstMapping * mapping = NULL;
 
@@ -4648,7 +4812,9 @@ static PyTypeObject SpecFrameType = {
 
 /* Define the class methods */
 static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -4665,6 +4831,9 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".setrefpos"
 static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
+
+/* args: :frm,lon,lat */
+
   Object *other = NULL;
   PyObject *result = NULL;
   double lon;
@@ -4686,6 +4855,9 @@ static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".getrefpos"
 static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
+
+/* args: lon,lat:frm */
+
   Object *other = NULL;
   PyObject *result = NULL;
   double lon;
@@ -4779,7 +4951,9 @@ static PyTypeObject DSBSpecFrameType = {
 
 /* Define the class methods */
 static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -4874,7 +5048,9 @@ static PyTypeObject TimeFrameType = {
 
 /* Define the class methods */
 static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -4891,6 +5067,9 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".currenttime"
 static PyObject *TimeFrame_currenttime( TimeFrame *self ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
 
    if( PyErr_Occurred() ) return NULL;
@@ -4972,7 +5151,9 @@ static PyTypeObject FluxFrameType = {
 
 /* Define the class methods */
 static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :specval=starlink.Ast.BAD,specfrm=None,options=None */
+
    const char *options = " ";
    int result = -1;
    double specval = AST__BAD;
@@ -5049,7 +5230,9 @@ static PyTypeObject SpecFluxFrameType = {
 
 /* Define the class methods */
 static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame1,frame2,options=None */
+
    const char *options = " ";
    int result = -1;
    Object *other;
@@ -5149,6 +5332,9 @@ static PyTypeObject RegionType = {
 #undef NAME
 #define NAME CLASS ".getregionbounds"
 static PyObject *Region_getregionbounds( Region *self ) {
+
+/* args: lbnd,ubnd: */
+
   PyObject *result = NULL;
   int naxes;
   npy_intp dims[1];
@@ -5176,6 +5362,9 @@ static PyObject *Region_getregionbounds( Region *self ) {
 #undef NAME
 #define NAME CLASS ".getregionframe"
 static PyObject *Region_getregionframe( Region *self ) {
+
+/* args: result: */
+
   PyObject *result = NULL;
   AstFrame * frame = NULL;
 
@@ -5199,6 +5388,9 @@ static PyObject *Region_getregionframe( Region *self ) {
 #undef NAME
 #define NAME CLASS ".overlap"
 static PyObject *Region_overlap( Region *self, PyObject * args ) {
+
+/* args: result:that */
+
   PyObject *result = NULL;
   Region *other = NULL;
 
@@ -5274,7 +5466,9 @@ static PyTypeObject BoxType = {
 
 /* Define the class methods */
 static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,form,point1,point2,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5366,7 +5560,9 @@ static PyTypeObject CircleType = {
 
 /* Define the class methods */
 static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,form,centre,point,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5471,7 +5667,9 @@ static PyTypeObject PolygonType = {
 
 /* Define the class methods */
 static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,points,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5507,6 +5705,9 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
 #undef NAME
 #define NAME CLASS ".downsize"
 static PyObject *Polygon_downsize( Polygon *self, PyObject *args ) {
+
+/* args: result:maxerr,maxvert */
+
    PyObject *result = NULL;
    int maxvert;
    double maxerr;
@@ -5597,7 +5798,9 @@ static PyTypeObject PointListType = {
 
 /* Define the class methods */
 static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,points,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5690,7 +5893,9 @@ static PyTypeObject EllipseType = {
 
 /* Define the class methods */
 static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,form,centre,point1,point2,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5789,7 +5994,9 @@ static PyTypeObject IntervalType = {
 
 /* Define the class methods */
 static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,lbnd,ubnd,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5882,7 +6089,9 @@ static PyTypeObject NullRegionType = {
 
 /* Define the class methods */
 static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,unc=None,options=None */
+
    const char *options = " ";
    Frame *other;
    Region *another = NULL;
@@ -5963,7 +6172,9 @@ static PyTypeObject CmpRegionType = {
 
 /* Define the class methods */
 static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
+
 /* args: :region1,region2,oper=starlink.Ast.OR,unc=None,options=None */
+
    const char *options = " ";
    Region *other;
    Region *another;
@@ -6041,7 +6252,9 @@ static PyTypeObject PrismType = {
 
 /* Define the class methods */
 static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
+
 /* args: :region1,region2,unc=None,options=None */
+
    const char *options = " ";
    Region *other;
    Region *another;
@@ -6165,7 +6378,20 @@ static PyTypeObject ChannelType = {
 
 /* Define the class methods */
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
+
 /* args: :source=None,sink=None,options=None */
+/* Note: If supplied, the "source" argument can either be a reference to an
+         object that provides a method named "source", or a sequence. In the
+         first case, the "source" method should have no mandatory arguments,
+         and should return the next line of text on each invocation, returning
+         None when all text has been read. In the second case, each
+         element of the sequence is converted to a string and used as the
+         next line of text. */
+/* Note: If supplied, the "sink" argument should be a reference to an object that
+         provides a method named "sink". This method is called with each succesive
+         line of text as its only argument, and should store each line in some
+         external data sink. */
+
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void );
@@ -6220,6 +6446,9 @@ static void Channel_dealloc( Channel *self ) {
 }
 
 static PyObject *Channel_warnings( Channel *self ) {
+
+/* args: result: */
+
    AstKeyMap *km;
    PyObject *result = NULL;
 
@@ -6239,6 +6468,9 @@ static PyObject *Channel_warnings( Channel *self ) {
 }
 
 static PyObject *Channel_read( Channel *self ){
+
+/* args: result: */
+
    PyObject *result = NULL;
    PyObject *object = NULL;
    AstObject *obj;
@@ -6265,6 +6497,9 @@ static PyObject *Channel_read( Channel *self ){
 #undef NAME
 #define NAME CLASS ".write"
 static PyObject *Channel_write( Channel *self, PyObject *args ){
+
+/* args: result:object */
+
    Object *other = NULL;
    PyObject *result = NULL;
    int nwrite;
@@ -6591,7 +6826,20 @@ static PyTypeObject FitsChanType = {
 
 
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
+
 /* args: :source=None,sink=None,options=None */
+/* Note: If supplied, the "source" argument can either be a reference to an
+         object that provides a method named "source", or a sequence. In the
+         first case, the "source" method should have no mandatory arguments,
+         and should return the next header card on each invocation, returning
+         None when all cards have been read. In the second case, each
+         element of the sequence is converted to a string and used as the
+         next header card. */
+/* Note: If supplied, the "sink" argument should be a reference to an object that
+         provides a method named "sink". This method is called with each succesive
+         header card as its only argument, and should store each card in some
+         external data sink. */
+
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void );
@@ -6633,7 +6881,6 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    good enough for now. */
 static PyObject *FitsChan_getiter( PyObject *self ) {
    PyObject *result = NULL;
-
    if( PyErr_Occurred() ) return NULL;
 
    astClear( THIS, "Card" );
@@ -6955,6 +7202,9 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* Define the AST methods of the class. */
 static PyObject *FitsChan_delfits( FitsChan *self ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astDelFits( THIS );
@@ -6964,6 +7214,9 @@ static PyObject *FitsChan_delfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_writefits( FitsChan *self ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astWriteFits( THIS );
@@ -6973,6 +7226,9 @@ static PyObject *FitsChan_writefits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_readfits( FitsChan *self ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astReadFits( THIS );
@@ -6982,6 +7238,9 @@ static PyObject *FitsChan_readfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_emptyfits( FitsChan *self ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astEmptyFits( THIS );
@@ -6994,13 +7253,16 @@ static PyObject *FitsChan_emptyfits( FitsChan *self ) {
 #undef NAME
 #define NAME CLASS ".findfits"
 static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
+
+/* args: result,card:name,inc=False */
+
    PyObject *result = NULL;
-   int inc;
+   int inc=0;
    const char *name = NULL;
 
    if( PyErr_Occurred() ) return NULL;
 
-   if ( PyArg_ParseTuple( args, "si:" NAME, &name, &inc ) && astOK ) {
+   if ( PyArg_ParseTuple( args, "s|i:" NAME, &name, &inc ) && astOK ) {
       char card[ 81 ];
       int found = astFindFits( THIS, name, card, inc );
       if( astOK ) {
@@ -7015,6 +7277,12 @@ static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
 #define MAKE_GETFITS(typecode,type,fmt) \
 \
 static PyObject *FitsChan_getfits##typecode( FitsChan *self, PyObject *args ) { \
+\
+/* args: result,value:name */ \
+/* Note: Replace the &lt;X&gt; in the Python function name with one of \
+         F, I, L, S, CN, CF or CI to select the data type of the returned \
+         value. */ \
+\
    PyObject *result = NULL; \
    const char *name = NULL; \
    if( PyErr_Occurred() ) return NULL; \
@@ -7064,6 +7332,9 @@ MAKE_GETFITS(CN,char *,s,value)
 #undef NAME
 #define NAME CLASS ".putcards"
 static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
+
+/* args: :cards */
+
    PyObject *result = NULL;
    const char *cards = NULL;
    if( PyErr_Occurred() ) return NULL;
@@ -7078,13 +7349,16 @@ static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".putfits"
 static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
+
+/* args: :card,overwrite=False */
+
    PyObject *result = NULL;
-   int overwrite;
+   int overwrite = 0;
    const char *card = NULL;
 
    if( PyErr_Occurred() ) return NULL;
 
-   if ( PyArg_ParseTuple( args, "si:" NAME, &card, &overwrite ) && astOK ) {
+   if ( PyArg_ParseTuple( args, "s|i:" NAME, &card, &overwrite ) && astOK ) {
       astPutFits( THIS, card, overwrite );
       if( astOK ) result = Py_None;
    }
@@ -7093,15 +7367,20 @@ static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
 }
 
 #define MAKE_SETFITS(typecode,type,fmt) \
-\
 static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { \
+\
+/* args: :name,value,comment=None,overwrite=False */ \
+/* Note: Replace the &lt;X&gt; in the Python function name with one of \
+         F, I, L, S, CN, CF or CI to indicate the data type of the supplied \
+         value. */ \
+\
    PyObject *result = NULL; \
    const char *name = NULL; \
    const char *comment = NULL; \
-   int overwrite; \
+   int overwrite = 0; \
    type value[2]; \
    if( PyErr_Occurred() ) return NULL; \
-   if ( PyArg_ParseTuple( args, "s" #fmt "si:" NAME ".setfits" #typecode, \
+   if ( PyArg_ParseTuple( args, "s" #fmt "|si:" NAME ".setfits" #typecode, \
                           &name, value, value + 1, &comment, &overwrite) && astOK ) { \
       astSetFits##typecode( THIS, name, value, comment, overwrite ); \
       if( astOK ) result = Py_None; \
@@ -7145,6 +7424,9 @@ MAKE_SETFITS(CN,const char *,s,value)
 #undef NAME
 #define NAME CLASS ".testfits"
 static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args ) {
+
+/* args: result,there:name */
+
    PyObject *result = NULL;
    const char *name;
    if( PyErr_Occurred() ) return NULL;
@@ -7161,6 +7443,9 @@ static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args ) {
 }
 
 static PyObject *FitsChan_retainfits( FitsChan *self ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astRetainFits( THIS );
@@ -7170,6 +7455,9 @@ static PyObject *FitsChan_retainfits( FitsChan *self ) {
 }
 
 static PyObject *FitsChan_purgewcs( FitsChan *self ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astPurgeWCS( THIS );
@@ -7252,7 +7540,20 @@ static PyTypeObject StcsChanType = {
 
 
 static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
+
 /* args: :source=None,sink=None,options=None */
+/* Note: If supplied, the "source" argument can either be a reference to an
+         object that provides a method named "source", or a sequence. In the
+         first case, the "source" method should have no mandatory arguments,
+         and should return the next line of text on each invocation, returning
+         None when all text has been read. In the second case, each
+         element of the sequence is converted to a string and used as the
+         next line of text. */
+/* Note: If supplied, the "sink" argument should be a reference to an object that
+         provides a method named "sink". This method is called with each succesive
+         line of text as its only argument, and should store each line in some
+         external data sink. */
+
    PyObject *source = NULL;
    PyObject *sink = NULL;
    const char *(* source_wrap)( void ) = NULL;
@@ -7391,6 +7692,9 @@ static PyTypeObject KeyMapType = {
 
 /* Define the class methods */
 static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :options=None */
+
    const char *options = " ";
    int result = -1;
 
@@ -7954,12 +8258,14 @@ static PyTypeObject PlotType = {
 
 /* Define the class methods */
 static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
+
 /* args: :frame,gbox,bbox,grf,options=None */
 /* Note: The "grf" argument is a reference to an object that provides
          primitive drawing fiunctions for the Plot. PyAST provides the
          starlink.Grf.grf_matplotlib class that implements the required
          operations using the matplotlib plotting package. Others can be
          written following the same pattern. */
+
    const char *options = " ";
    Frame *frame;
    PyObject *bbox_object = NULL;
@@ -8032,6 +8338,9 @@ static void Plot_dealloc( Plot *self ) {
 #undef NAME
 #define NAME CLASS ".border"
 static PyObject *Plot_border( Plot *self, PyObject *args ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    int border = astBorder( THIS );
@@ -8044,6 +8353,9 @@ static PyObject *Plot_border( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".grid"
 static PyObject *Plot_grid( Plot *self, PyObject *args ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astGrid( THIS );
@@ -8055,6 +8367,9 @@ static PyObject *Plot_grid( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".bbuf"
 static PyObject *Plot_bbuf( Plot *self, PyObject *args ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astBBuf( THIS );
@@ -8066,6 +8381,9 @@ static PyObject *Plot_bbuf( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".boundingbox"
 static PyObject *Plot_boundingbox( Plot *self, PyObject *args ) {
+
+/* args: lbnd,ubnd: */
+
    float flbnd[2], fubnd[2];
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
@@ -8096,6 +8414,9 @@ static PyObject *Plot_boundingbox( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".clip"
 static PyObject *Plot_clip( Plot *self, PyObject *args ) {
+
+/* args: :iframe,lbnd,ubnd */
+
    PyObject *result = NULL;
    PyObject *lbnd_object = NULL;
    PyObject *ubnd_object = NULL;
@@ -8136,6 +8457,9 @@ static PyObject *Plot_clip( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".curve"
 static PyObject *Plot_curve( Plot *self, PyObject *args ) {
+
+/* args: :start,finish */
+
    PyObject *start_object = NULL;
    PyObject *result = NULL;
    PyObject *finish_object = NULL;
@@ -8164,6 +8488,9 @@ static PyObject *Plot_curve( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".gridline"
 static PyObject *Plot_gridline( Plot *self, PyObject *args ) {
+
+/* args: :axis,start,length */
+
    PyObject *start_object = NULL;
    PyObject *result = NULL;
    int naxes;
@@ -8190,6 +8517,9 @@ static PyObject *Plot_gridline( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".ebuf"
 static PyObject *Plot_ebuf( Plot *self, PyObject *args ) {
+
+/* args: : */
+
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astEBuf( THIS );
@@ -8201,6 +8531,9 @@ static PyObject *Plot_ebuf( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".gencurve"
 static PyObject *Plot_gencurve( Plot *self, PyObject *args ){
+
+/* args: :map */
+
    Mapping *map = NULL;
    PyObject *result = NULL;
 
@@ -8217,13 +8550,16 @@ static PyObject *Plot_gencurve( Plot *self, PyObject *args ){
 #undef NAME
 #define NAME CLASS ".mark"
 static PyObject *Plot_mark( Plot *self, PyObject *args ) {
+
+/* args: :in,type=1 */
+
    PyObject *result = NULL;
    PyObject *in_object = NULL;
-   int type;
+   int type = 1;
 
    if( PyErr_Occurred() ) return NULL;
 
-   if( PyArg_ParseTuple( args, "Oi:" NAME, &in_object, &type ) && astOK ) {
+   if( PyArg_ParseTuple( args, "O|i:" NAME, &in_object, &type ) && astOK ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
@@ -8244,6 +8580,9 @@ static PyObject *Plot_mark( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".polycurve"
 static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
+
+/* args: :in */
+
    PyObject *result = NULL;
    PyObject *in_object = NULL;
 
@@ -8270,6 +8609,9 @@ static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
 #undef NAME
 #define NAME CLASS ".text"
 static PyObject *Plot_text( Plot *self, PyObject *args ) {
+
+/* args: :text,pos,up=[0,1],just="CC" */
+
    PyObject *result = NULL;
    PyObject *text_object = NULL;
    PyObject *pos_object = NULL;
@@ -8285,21 +8627,29 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
       PyArrayObject *pos = GetArray1D( pos_object, &dim, "pos", NAME );
 
       dim = 2;
-      PyArrayObject *up = GetArray1D( up_object, &dim, "up", NAME );
+      PyArrayObject *up =  up_object ? GetArray1D( up_object, &dim, "up", NAME ) : NULL;
 
       PyObject *str = PyObject_Str( text_object );
       char *text = GetString( NULL, str );
       Py_XDECREF(str);
 
-      str = PyObject_Str( just_object );
-      char *just = GetString( NULL, str );
-      Py_XDECREF(str);
+      char *just = NULL;
+      if( just_object ) {
+         str = PyObject_Str( just_object );
+         char *just = GetString( NULL, str );
+         Py_XDECREF(str);
+      }
 
-      if( pos && up && text && just ) {
+      if( pos && text ) {
          float fup[2];
-         fup[ 0 ] = ((const double *)up->data)[ 0 ];
-         fup[ 1 ] = ((const double *)up->data)[ 1 ];
-         astText( THIS, text, (const double *)pos->data, fup, just );
+         if( up ) {
+            fup[ 0 ] = ((const double *)up->data)[ 0 ];
+            fup[ 1 ] = ((const double *)up->data)[ 1 ];
+         } else {
+            fup[ 0 ] = 0.0;
+            fup[ 1 ] = 1.0;
+         }
+         astText( THIS, text, (const double *)pos->data, fup, just?just:"CC" );
          if( astOK ) result = Py_None;
       }
 
@@ -8673,6 +9023,9 @@ static PyObject *PyAst_activememory( PyObject *self, PyObject *args );
 #undef NAME
 #define NAME MODULE ".escapes"
 static PyObject *PyAst_escapes( PyObject *self, PyObject *args ) {
+
+/* args: result:newval */
+
    PyObject *result = NULL;
    int newval;
    int value;
@@ -8688,6 +9041,9 @@ static PyObject *PyAst_escapes( PyObject *self, PyObject *args ) {
 #undef NAME
 #define NAME MODULE ".tune"
 static PyObject *PyAst_tune( PyObject *self, PyObject *args ) {
+
+/* args: result:name,value */
+
    PyObject *result = NULL;
    int value;
    int oldval;
@@ -8704,6 +9060,9 @@ static PyObject *PyAst_tune( PyObject *self, PyObject *args ) {
 #undef NAME
 #define NAME MODULE ".tunec"
 static PyObject *PyAst_tunec( PyObject *self, PyObject *args ) {
+
+/* args: buff:name,value */
+
    PyObject *result = NULL;
    const char *name;
    const char *value = NULL;
@@ -8718,6 +9077,9 @@ static PyObject *PyAst_tunec( PyObject *self, PyObject *args ) {
 }
 
 static PyObject *PyAst_version( PyObject *self ) {
+
+/* args: result: */
+
    PyObject *result = NULL;
    int version;
    if( PyErr_Occurred() ) return NULL;
@@ -8730,6 +9092,9 @@ static PyObject *PyAst_version( PyObject *self ) {
 #undef NAME
 #define NAME MODULE ".outline"
 static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
+
+/* args: result:value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix */
+
    PyObject *array_object = NULL;
    PyObject *inside_object = NULL;
    PyObject *lbnd_object = NULL;

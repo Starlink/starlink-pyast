@@ -57,7 +57,7 @@
 > node1.html sun211 astGenCurve
 > node2.html sun211 astGetActiveUnit
 > node2.html sun211 astGetColumnData
-> node2.html sun211 astGetFitsX
+> node1.html sun211 astGetFitsX
 > node1.html sun211 astGetFrame
 > node2.html sun211 astGetGrfContext
 > node1.html sun211 astGetMapping
@@ -170,7 +170,7 @@
 > node2.html sun211 astSetActiveUnit
 > node2.html sun211 astSetFitsCM
 > node2.html sun211 astSetFitsU
-> node2.html sun211 astSetFitsX
+> node1.html sun211 astSetFitsX
 > node1.html sun211 astSetRefPos
 > node2.html sun211 astSetStatus
 > node2.html sun211 astSetUnc
@@ -231,4 +231,5 @@
 t node0.html
 t node1.html
 t node2.html
+t node3.html
 T pyast.html
