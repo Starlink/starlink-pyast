@@ -353,18 +353,18 @@ class TestAst(unittest.TestCase):
       self.assertTrue( zoommap.TranInverse )
 
       xin = numpy.linspace( -1, 1, 10 )
-      xout = zoommap.trann( xin )
+      xout = zoommap.tran( xin )
       d = (1.2*xin - xout)**2
       self.assertEqual( d.sum(), 0.0 )
 
       xa = [ 0., 1., 2., -1., -2., -3., 1., 2., 4., 5. ]
-      zoommap.trann( xa, True, xout )
+      zoommap.tran( xa, True, xout )
       d = (1.2*numpy.array( xa ) - xout)**2
       self.assertEqual( d.sum(), 0.0 )
 
       zoommap = starlink.Ast.ZoomMap( 3, 2.0 )
       pin = numpy.array( [[1.,2.,3], [0.,1.,2], [2.,3.,4]] )
-      pout = zoommap.trann( pin, False )
+      pout = zoommap.tran( pin, False )
       d = (0.5*pin - pout)**2
       self.assertEqual( d.sum(), 0.0 )
 
@@ -1121,7 +1121,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( mm.Nin, 2 )
       self.assertEqual( mm.Nout, 2 )
       pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
-      pout = mm.trann( pin, False )
+      pout = mm.tran( pin, False )
       self.assertEqual( pout[0][0], -1.0 )
       self.assertEqual( pout[0][1], -2.0 )
       self.assertEqual( pout[0][2], -3.0 )
@@ -1134,7 +1134,7 @@ class TestAst(unittest.TestCase):
       self.assertFalse( mm.TranInverse )
       self.assertEqual( mm.Nout, 3 )
       self.assertEqual( mm.Nin, 2 )
-      pout = mm.trann( pin, True )
+      pout = mm.tran( pin, True )
       self.assertEqual( pout[0][0], 0.0 )
       self.assertEqual( pout[0][1], 1.0 )
       self.assertEqual( pout[0][2], 2.0 )
@@ -1158,7 +1158,7 @@ class TestAst(unittest.TestCase):
       self.assertEqual( pm.Nin, 2 )
       self.assertEqual( pm.Nout, 2 )
       pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
-      pout = pm.trann( pin, True )
+      pout = pm.tran( pin, True )
       for (xi,yi,xo,yo) in zip(pin[0],pin[1],pout[0],pout[1]):
          xn = 1.2*xi*xi - 0.5*yi*xi
          yn = yi
@@ -1169,7 +1169,7 @@ class TestAst(unittest.TestCase):
                                         [1.0,2.,0.,1.]])
       self.assertEqual( pm.Nin, 2 )
       self.assertEqual( pm.Nout, 2 )
-      pout = pm.trann( pin, False )
+      pout = pm.tran( pin, False )
       for (xi,yi,xo,yo) in zip(pin[0],pin[1],pout[0],pout[1]):
          xn = 1.2*xi*xi - 0.5*yi*xi
          yn = yi
@@ -1187,8 +1187,8 @@ class TestAst(unittest.TestCase):
 
       self.assertEqual( pm.Nin, 2 )
       self.assertEqual( pm.Nout, 2 )
-      pout = pm.trann( pin, True )
-      pnew = pm.trann( pout, False )
+      pout = pm.tran( pin, True )
+      pnew = pm.tran( pout, False )
 
       for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
          self.assertAlmostEqual( xn, xi )
@@ -1198,8 +1198,8 @@ class TestAst(unittest.TestCase):
       self.assertEqual( pm.TolInverse, 1.0E-6 )
 
       new = pm.polytran( False, 1.0E-8, 0.01, 2, [-1.0, -1.0], [1.0, 1.0] )
-      pout = new.trann( pin, True )
-      pnew = new.trann( pout, False )
+      pout = new.tran( pin, True )
+      pnew = new.tran( pout, False )
       for (xi,yi,xn,yn) in zip(pin[0],pin[1],pnew[0],pnew[1]):
          self.assertAlmostEqual( xn, xi )
          self.assertAlmostEqual( yn, yi )
@@ -1221,12 +1221,12 @@ class TestAst(unittest.TestCase):
       self.assertEqual( mathmap.Nout, 1 )
 
       pin = numpy.array( [[1.,2.,3], [0.,1.,2]] )
-      pout = mathmap.trann( pin, True )
+      pout = mathmap.tran( pin, True )
       for (x,y,r) in zip( pin[0], pin[1], pout[0] ):
          rn = math.sqrt( x*x + y*y )
          self.assertAlmostEqual( rn, r )
 
-      pin2 = mathmap.trann( pout, False )
+      pin2 = mathmap.tran( pout, False )
       for (r,x,y) in zip( pout[0], pin2[0], pin2[1] ):
          self.assertAlmostEqual( x, r )
          self.assertAlmostEqual( y, r )
@@ -1248,7 +1248,7 @@ class TestAst(unittest.TestCase):
       new = starlink.Ast.outline( 1, starlink.Ast.EQ, array, [-1,2], [2,5],
                                   0.0, 4, [0,3], True )
       pin = numpy.array( [[0.,0.,0], [1.9,2.1,4.5]] )
-      pout = new.trann( pin, True )
+      pout = new.tran( pin, True )
       self.assertEqual( pout[0][0], starlink.Ast.BAD )
       self.assertEqual( pout[0][1], 0. )
       self.assertEqual( pout[0][2], starlink.Ast.BAD )

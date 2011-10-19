@@ -248,6 +248,8 @@ static PyObject *Object_clear( Object *self, PyObject *args ) {
 static PyObject *Object_copy( Object *self ) {
 
 /* args: result: */
+/* Note: The "<code>deepcopy</code>" function in the <code>copy</code>
+         module can also be used to create a deep copy of a PyAST object. */
 
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
@@ -320,7 +322,7 @@ static PyObject *Object_get( Object *self, PyObject *args ) {
 
 /* args: result:attrib */
 /* Note: The starlink.Ast.get() method is equivalent to
-   <a href="/star/docs/sun211.htx/#xref_astGetC>astGetC</a>
+   <a href="/star/docs/sun211.htx/#xref_astGetC">astGetC</a>
    in that it always returns the string representation of the AST
    attribute value. By contrast, each Python property returns the
    attribute value using the native data type of the AST attribute
@@ -484,7 +486,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args );
 static PyObject *Mapping_removeregions( Mapping *self );
 static PyObject *Mapping_simplify( Mapping *self );
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args );
-static PyObject *Mapping_trann( Mapping *self, PyObject *args );
+static PyObject *Mapping_tran( Mapping *self, PyObject *args );
 
 /* Describe the methods of the class */
 static PyMethodDef Mapping_methods[] = {
@@ -499,7 +501,7 @@ static PyMethodDef Mapping_methods[] = {
    {"resample", (PyCFunction)Mapping_resample, METH_VARARGS, "Resample a region of a data grid"},
    {"removeregions", (PyCFunction)Mapping_removeregions, METH_NOARGS, "Remove any Regions from a Mapping"},
    {"simplify", (PyCFunction)Mapping_simplify, METH_NOARGS, "Simplify a Mapping"},
-   {"trann", (PyCFunction)Mapping_trann, METH_VARARGS, "Transform N-dimensional coordinates"},
+   {"tran", (PyCFunction)Mapping_tran, METH_VARARGS, "Transform 1, 2, or N-dimensional coordinates"},
    {"trangrid", (PyCFunction)Mapping_trangrid, METH_VARARGS, "Transform a grid of positions"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -1207,6 +1209,8 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 
 /* args: result,out,out_var:lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval_d,lbnd_out,ubnd_out,lbnd,ubnd */
+/* Note: There is no "finterp" argument, and the AST__UKERN1 and AST__UINTERP
+         interpolation schemes are not supported in PyAST. */
 
    PyArrayObject *in = NULL;
    PyArrayObject *in_var = NULL;
@@ -1536,6 +1540,12 @@ static PyObject *Mapping_simplify( Mapping *self ) {
 static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 
 /* args: out:lbnd,ubnd,tol=0,maxpix=50,forward=True */
+/* Note: The "lbnd" and "ubnd" arguments are 1-dimensional numpy arrays of
+         integers, or any sequence (lists, tuples, etc.) that can be
+	 converted to a numpy array. The length of these arrays must
+	 equal the number of inputs for the Mapping. The returned value
+	 (out) is a 2-dimensional numpy array holding the mapping output
+	 values at the grid points. */
 
    PyArrayObject *lbnd = NULL;
    PyArrayObject *pout = NULL;
@@ -1602,10 +1612,27 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
 }
 
 #undef NAME
-#define NAME CLASS ".trann"
-static PyObject *Mapping_trann( Mapping *self, PyObject *args ) {
+#define NAME CLASS ".tran"
+static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
 
 /* args: out:in,forward=True,out=None */
+/* Note: The "<code>tran</code>" method combines the functions of
+         astTran1, astTran2, and astTranN. */
+/* Note: The "in" argument should be a 2-dimensional array with shape
+         (nin,npoint), where "nin" is the number of inputs for the Mapping,
+         and "npoint" is the number of positions to transform. */
+/* Note: If the Mapping has only a single input then a 1-dimensional
+         array may be supplied for "nin" with length (npoint). */
+/* Note: If the "out" argument is supplied, it should be an existing 1-
+         or 2-dimensional numpy array with a shape of (npoint) (if
+	 1-dimensional) or (nout,npoint) (if 2-dimensional), where "nout"
+	 is the number of outputs from the Mapping and "npoint" is the
+	 number of positions being transformed. A 1-dimensional array may
+	 be supplied only if "nout" is 1. If "out" is supplied supplied, the
+         transformed stored are stored in the supplied array. If not supplied,
+         a new array with suitable shape is created to store the transformed
+	 positions. In either case, the value returned by the method is a
+	 new reference to the array storing the transformed values. */
 
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
@@ -3933,6 +3960,16 @@ static PyTypeObject MatrixMapType = {
 static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
 
 /* args: :matrix,options=None */
+/* Note: The supplied array of matrix element values must be either 1- or
+         2- dimensional. If it is 1-dimensional, it is assumed to contain
+	 the values for the diagonal of the (square) matrix, all other
+	 elements being zero. In this case the length of the array
+	 determines the number of inputs and outputs for the Matrixmap.
+	 If the array is 2-dimensional, it should consist of a list in
+	 which each element is a list of values for a single row of the
+	 matrix. For instance, the 2-dimensional array [[1,2,3],[4,2,1]]
+	 specifies a matrix with two rows and three columns. The
+	 resulting MatrixMap would have Nin=3 and Nout=2. */
 
    const char *options = " ";
    PyObject *matrix_object = NULL;
@@ -6382,7 +6419,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
          object that provides a method named "source", or a sequence. In the
-         first case, the "source" method should have no mandatory arguments,
+         first case, the "source" method will be invoked with no arguments,
          and should return the next line of text on each invocation, returning
          None when all text has been read. In the second case, each
          element of the sequence is converted to a string and used as the
@@ -6830,8 +6867,8 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
          object that provides a method named "source", or a sequence. In the
-         first case, the "source" method should have no mandatory arguments,
-         and should return the next header card on each invocation, returning
+         first case, the "source" method is called with no arguments, and
+         should return the next header card on each invocation, returning
          None when all cards have been read. In the second case, each
          element of the sequence is converted to a string and used as the
          next header card. */
@@ -7544,8 +7581,8 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
          object that provides a method named "source", or a sequence. In the
-         first case, the "source" method should have no mandatory arguments,
-         and should return the next line of text on each invocation, returning
+         first case, the "source" method is called with no arguments, and
+         should return the next line of text on each invocation, returning
          None when all text has been read. In the second case, each
          element of the sequence is converted to a string and used as the
          next line of text. */
@@ -8636,7 +8673,7 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
       char *just = NULL;
       if( just_object ) {
          str = PyObject_Str( just_object );
-         char *just = GetString( NULL, str );
+         just = GetString( NULL, str );
          Py_XDECREF(str);
       }
 

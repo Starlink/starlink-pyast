@@ -33,7 +33,7 @@ languages, including Fortran, Java, Perl, and now Python.
 This document does not provide a full description of the facilities of
 AST, or of the AST wrapper functions provided by PyAST. For general
 information about how to use AST, or the specifics of individual
-functions and their parameters, the <a href="/stardev/git/starlink/star/docs/sun211.htx/sun211.html#xref_">
+functions and their parameters, the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/sun211.html?xref_">
 main AST documentation</a> describing the native C interface should be consulted.
 
 <h3 id="s4">Requirements:</h3>
@@ -167,11 +167,24 @@ list of the C function. If the C function does not return any values via
 C pointers, then the returned Python value will be a single object
 reference rather than a tuple.
 
-<li> In general, the PyAST wrapper for a function will omitarguments that
+<li> In general, the PyAST wrapper for a function will omit arguments that
 are present in the C interface if their values can be derived from other
 arguments. In particular, if an array or list is supplied as an argument,
 the length of the array or list does not need to be supplied using a
 separate parameter, as is done in the C interface.
+
+<li>When an array is expected as an argument, a numpy array of floating
+point values, or any sequence (lists, tuples, etc.) that can be converted
+to a numpy array, should be supplied.
+
+<li> Most methods for which AST provides variants for different data
+types (e.g. astRebin, astRebinSeq, astResample, etc) are unified into one
+method in the Python interface. The names of such function are the same
+as the AST names, but without any final letter indicating the data type
+(e.g. astRebinD, astRebinF and astRebinI are replaced by
+starlink.Ast.Mapping.rebin). The data type to use is determined from the
+supplied array containing the input data.
+
 
 
 </ul>

@@ -1,0 +1,34 @@
+Add following methods:
+   CirclePars
+   EllipsePars
+   GetActiveUnit
+   GetRegionMesh
+   GetRegionPoints
+   GetTables
+   GetUnc
+   MapSplit
+   Mask
+   Negate
+   PutTables
+   PutTable
+   SetActiveUnit
+   SetFitsCM
+   SetFitsU
+   SetUnc
+   ShowMesh
+   StripEscapes
+
+Add following classes:
+   FitsTable
+   Plot3D
+   SelectorMap
+   SlaMap
+   SpecMap
+   SwitchMap
+   Table
+   XmlChan
+
+Add high level wrappers for common operations
+
+Improve documentation
+

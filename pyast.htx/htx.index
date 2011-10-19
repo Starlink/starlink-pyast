@@ -56,6 +56,8 @@
 > node2.html sun211 astFromString
 > node1.html sun211 astGenCurve
 > node2.html sun211 astGetActiveUnit
+> node3.html sun211 astGetActiveUnit
+> node1.html sun211 astGetC
 > node2.html sun211 astGetColumnData
 > node1.html sun211 astGetFitsX
 > node1.html sun211 astGetFrame
@@ -168,6 +170,7 @@
 > node1.html sun211 astSame
 > node2.html sun211 astSelectorMap
 > node2.html sun211 astSetActiveUnit
+> node3.html sun211 astSetActiveUnit
 > node2.html sun211 astSetFitsCM
 > node2.html sun211 astSetFitsU
 > node1.html sun211 astSetFitsX
@@ -228,8 +231,16 @@
 > node1.html sun211 astWriteFits
 > node2.html sun211 astXmlChan
 > node1.html sun211 astZoomMap
+> node3.html sun211 Card
+> node3.html sun211 FitsChan
+> node3.html sun211 Frame
+> node4.html sun211 FrameSet
+> node3.html sun211 KeyMap
+> node3.html sun211 Plot
+> node3.html sun211 SortBy
 t node0.html
 t node1.html
 t node2.html
 t node3.html
+t node4.html
 T pyast.html
