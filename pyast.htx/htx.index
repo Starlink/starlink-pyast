@@ -1,4 +1,5 @@
 > node0.html sun211 
+> node4.html sun211 
 > node2.html sun211 astAddColumn
 > node1.html sun211 astAddFrame
 > node2.html sun211 astAddParameter
@@ -234,7 +235,6 @@
 > node3.html sun211 Card
 > node3.html sun211 FitsChan
 > node3.html sun211 Frame
-> node4.html sun211 FrameSet
 > node3.html sun211 KeyMap
 > node3.html sun211 Plot
 > node3.html sun211 SortBy

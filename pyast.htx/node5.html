@@ -1,7 +1,7 @@
 <html>
 <head>
 <style type="text/css">
-span.pycode {display:inline-block;
+pre.pycode {display:inline-block;
              background-color:#FFFFDD;
              padding-top:10px;
              padding-bottom:10px;
@@ -27,9 +27,9 @@ returned. None is returned if WCS information cannot be read from the
 header.
 
 <p>Synopsis:<ul>
-<span class="pycode">
+<pre class="pycode">
 frameset = readfitswcs( ffile, hdu=0 )
-</span>
+</pre>
 <p>
 <dl>
 
@@ -42,15 +42,15 @@ primary HDU).</dd>
 </dl></ul>
 
 <p>Example:<ul>
-<span class="pycode">
->>> import pyfits<br>
->>> import starlink.Atl as Atl<br>
->>><br>
->>> ffile = pyfits.open( 'test.fit' )<br>
->>> frameset = Atl.readfitswcs( ffile )<br>
->>> if frameset == None:<br>
->>> &nbsp;&nbsp;&nbsp;print( "Cannot read WCS from test.fit" )
-</span>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>>
+>>> ffile = pyfits.open( 'test.fit' )
+>>> frameset = Atl.readfitswcs( ffile )
+>>> if frameset == None:
+>>>    print( "Cannot read WCS from test.fit" )
+</pre>
 </ul>
 
 </dd>
@@ -62,9 +62,9 @@ returns a reference to the Plot that was used to draw
 the axes.
 
 <p>Synopsis:<ul>
-<span class="pycode">
+<pre class="pycode">
 plot = plotfitswcs( axes, gbox, ffile, hdu=0, options="" )
-</span>
+</pre>
 <p>
 <dl>
 
@@ -90,16 +90,16 @@ axes.</dd>
 </dl></ul>
 
 <p>Example:<ul>
-<span class="pycode">
->>> import pyfits<br>
->>> import starlink.Atl as Atl<br>
->>> import matplotlib.pyplot<br>
->>><br>
->>> ffile = pyfits.open( 'test.fit' )<br>
->>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),<br>
->>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.1, 0.1, 0.9, 0.9 ], ffile )<br>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import matplotlib.pyplot
+>>>
+>>> ffile = pyfits.open( 'test.fit' )
+>>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
+>>>                  [ 0.1, 0.1, 0.9, 0.9 ], ffile )
 >>> matplotlib.pyplot.show()
-</span>
+</pre>
 </ul>
 
 </dd>
@@ -109,9 +109,9 @@ grid in a matplotlib axes area.The function returns a reference to the
 Plot that was used to draw the axes.
 
 <p>Synopsis:<ul>
-<span class="pycode">
+<pre class="pycode">
 plot =  plotframeset( axes, gbox, bbox, frameset, options="" )
-</span>
+</pre>
 <p>
 <dl>
 
@@ -140,21 +140,21 @@ axes.</dd>
 </dl></ul>
 
 <p>Example:<ul>
-<span class="pycode">
->>> import pyfits<br>
->>> import starlink.Atl as Atl<br>
->>> import matplotlib.pyplot<br>
->>><br>
->>> ffile = pyfits.open( 'test.fit' )<br>
->>> frameset = starlink.Atl.readfitswcs( ffile )<br>
->>> if frameset != None:<br>
->>> &nbsp;&nbsp;&nbsp;naxis1 = ffile[0].header['NAXIS1']<br>
->>> &nbsp;&nbsp;&nbsp;naxis2 = ffile[0].header['NAXIS2']<br>
->>> &nbsp;&nbsp;&nbsp;Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),<br>
->>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.1, 0.1, 0.9, 0.9 ],<br>
->>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )<br>
->>> &nbsp;&nbsp;&nbsp;matplotlib.pyplot.show()
-</span>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import matplotlib.pyplot
+>>>
+>>> ffile = pyfits.open( 'test.fit' )
+>>> frameset = starlink.Atl.readfitswcs( ffile )
+>>> if frameset != None:
+>>>    naxis1 = ffile[0].header['NAXIS1']
+>>>    naxis2 = ffile[0].header['NAXIS2']
+>>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
+>>>                      [ 0.1, 0.1, 0.9, 0.9 ],
+>>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
+>>>    matplotlib.pyplot.show()
+</pre>
 </ul>
 
 </dd>
