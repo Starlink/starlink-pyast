@@ -1,0 +1,164 @@
+<html>
+<head>
+<style type="text/css">
+span.pycode {display:inline-block;
+             background-color:#FFFFDD;
+             padding-top:10px;
+             padding-bottom:10px;
+             padding-left:13px;
+             padding-right:13px;
+             font-family: monospace;
+             border:1px solid #DDD;}
+</style>
+</head>
+<body>
+
+<h2>High level functions</h2>
+The <code>starlink.Atl</code> module within PyAST provides a small number of high
+level functions that wrap up various other PyAST calls to perform
+commonly required operations.
+
+<dl>
+
+<dt><b><big>readfitswcs:</big></b></dt><dd> Reads an AST FrameSet from a FITS
+file. The header from the specified HDU of the specified FITS file is
+read, and an AST FrameSet describing the WCS information in the header is
+returned. None is returned if WCS information cannot be read from the
+header.
+
+<p>Synopsis:<ul>
+<span class="pycode">
+frameset = readfitswcs( ffile, hdu=0 )
+</span>
+<p>
+<dl>
+
+<dt><code>ffile</code></dt><dd>A reference to a FITS file, as returned by
+<code>pyfits.open()</code>.</dd>
+
+<dt><code>hdu</code></dt><dd>The integer index of the required HDU (zero for the
+primary HDU).</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<span class="pycode">
+>>> import pyfits<br>
+>>> import starlink.Atl as Atl<br>
+>>><br>
+>>> ffile = pyfits.open( 'test.fit' )<br>
+>>> frameset = Atl.readfitswcs( ffile )<br>
+>>> if frameset == None:<br>
+>>> &nbsp;&nbsp;&nbsp;print( "Cannot read WCS from test.fit" )
+</span>
+</ul>
+
+</dd>
+
+<dt><b><big>plotfitswcs:</big></b></dt><dd>
+Read WCS from a FITS image and plot an annotated coordinate grid
+in a matplotlib axes area. The grid covers the entire image. The function
+returns a reference to the Plot that was used to draw
+the axes.
+
+<p>Synopsis:<ul>
+<span class="pycode">
+plot = plotfitswcs( axes, gbox, ffile, hdu=0, options="" )
+</span>
+<p>
+<dl>
+
+<dt><code>axes</code></dt><dd>A matplot lib "Axes" object. The annotated axes
+normally produced by matplotlib will be removed, and axes will instead be
+drawn by the AST Plot class</dd>
+
+<dt><code>gbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the matplotlib Axes object. The supplied values
+should be in the order (xleft,ybottom,xright,ytop) and should be given in
+the matplotlib "axes" coordinate system.</dd>
+
+<dt><code>ffile</code></dt><dd>A reference to a FITS file, as returned by
+<code>pyfits.open()</code>.</dd>
+
+<dt><code>hdu</code></dt><dd>The integer index of the required HDU (zero for the
+primary HDU).</dd>
+
+<dt><code>options</code></dt><dd>An optional string holding a comma-separated list of
+Plot attribute settings. These control the appearance of the annotated
+axes.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<span class="pycode">
+>>> import pyfits<br>
+>>> import starlink.Atl as Atl<br>
+>>> import matplotlib.pyplot<br>
+>>><br>
+>>> ffile = pyfits.open( 'test.fit' )<br>
+>>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),<br>
+>>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.1, 0.1, 0.9, 0.9 ], ffile )<br>
+>>> matplotlib.pyplot.show()
+</span>
+</ul>
+
+</dd>
+
+<dt><b><big>plotframeset:</big></b></dt><dd> Plot an annotated coordinate
+grid in a matplotlib axes area.The function returns a reference to the
+Plot that was used to draw the axes.
+
+<p>Synopsis:<ul>
+<span class="pycode">
+plot =  plotframeset( axes, gbox, bbox, frameset, options="" )
+</span>
+<p>
+<dl>
+
+<dt><code>axes</code></dt><dd>A matplot lib "Axes" object. The annotated axes
+normally produced by matplotlib will be removed, and axes will instead be
+drawn by the AST Plot class</dd>
+
+<dt><code>gbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the matplotlib Axes object. The supplied values
+should be in the order (xleft,ybottom,xright,ytop) and should be given in
+the matplotlib "axes" coordinate system.</dd>
+
+<dt><code>bbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the coordinate system represented by the base Frame
+of the supplied FrameSet. The supplied values should be in the order
+(xleft,ybottom,xright,ytop).
+
+<dt><code>frameset</code></dt><dd>An AST FrameSet such as returned by the
+<code>starlink.Atl.readfits</code> function. Its base Frame should be
+2-dimensional.
+
+<dt><code>options</code></dt><dd>An optional string holding a comma-separated list of
+Plot attribute settings. These control the appearance of the annotated
+axes.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<span class="pycode">
+>>> import pyfits<br>
+>>> import starlink.Atl as Atl<br>
+>>> import matplotlib.pyplot<br>
+>>><br>
+>>> ffile = pyfits.open( 'test.fit' )<br>
+>>> frameset = starlink.Atl.readfitswcs( ffile )<br>
+>>> if frameset != None:<br>
+>>> &nbsp;&nbsp;&nbsp;naxis1 = ffile[0].header['NAXIS1']<br>
+>>> &nbsp;&nbsp;&nbsp;naxis2 = ffile[0].header['NAXIS2']<br>
+>>> &nbsp;&nbsp;&nbsp;Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),<br>
+>>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.1, 0.1, 0.9, 0.9 ],<br>
+>>> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )<br>
+>>> &nbsp;&nbsp;&nbsp;matplotlib.pyplot.show()
+</span>
+</ul>
+
+</dd>
+
+</dl>
+</body>
+</html>

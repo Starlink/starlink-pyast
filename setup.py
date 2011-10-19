@@ -37,4 +37,4 @@ setup (name = 'starlink-ast',
        packages =['starlink'],
        package_data = { 'starlink': [os.path.join('include','star','pyast.h')] },
        ext_modules=[Ast],
-       py_modules=['starlink.Grf'])
+       py_modules=['starlink.Grf','starlink.Atl'])
