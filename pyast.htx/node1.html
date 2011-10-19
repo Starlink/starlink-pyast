@@ -622,8 +622,9 @@ that provides the method.
 <div class="implemented" id="Read">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRead">astRead</a> - Read an Object from a Channel 
 <ul>
-<li><span class=inv>result = channel.read(   )
+<li><span class=inv>result = channel.read( rewind=True  )
 </span></li>
+<li class="note">The "rewind" argument indicates if the Channel should be rewound before the read is performed. Currently, this only has any effect if the Channel is an instance of the FitsChan class, in which case it causes the "Card" attribute to be cleared before the read is performed.</li>
 </ul>
 </div>
 <div class="implemented" id="ReadFits">

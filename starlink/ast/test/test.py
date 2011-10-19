@@ -789,7 +789,6 @@ class TestAst(unittest.TestCase):
       for cards in zip(fc,mycards):
          self.assertEqual( cards[0], cards[1] )
 
-      fc.Card = None
       obj = fc.read()
       self.assertIsInstance( obj, starlink.Ast.FrameSet)
       self.assertTrue( obj.isaframeset() )
@@ -886,7 +885,6 @@ class TestAst(unittest.TestCase):
 
       self.assertEqual( len(fc), 10 )
       self.assertEqual( fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
-      fc.Card = None
       obj = fc.read( )
       self.assertEqual( len(fc), 2 )
 

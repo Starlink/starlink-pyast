@@ -6329,7 +6329,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static PyObject *Channel_warnings( Channel *self );
-static PyObject *Channel_read( Channel *self );
+static PyObject *Channel_read( Channel *self, PyObject *args );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
 const char *source_wrapper( void );
@@ -6344,7 +6344,7 @@ static void Channel_dealloc( Channel *self );
 /* Describe the methods of the class */
 static PyMethodDef Channel_methods[] = {
    {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
-   {"read", (PyCFunction)Channel_read, METH_NOARGS, "Read an Object from a Channel."},
+   {"read", (PyCFunction)Channel_read, METH_VARARGS, "Read an Object from a Channel."},
    {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -6504,28 +6504,43 @@ static PyObject *Channel_warnings( Channel *self ) {
    return result;
 }
 
-static PyObject *Channel_read( Channel *self ){
+static PyObject *Channel_read( Channel *self, PyObject *args ){
 
-/* args: result: */
+/* args: result:rewind=True */
+/* Note: The "rewind" argument indicates if the Channel should be rewound
+         before the read is performed. Currently, this only has any
+         effect if the Channel is an instance of the FitsChan class, in
+         which case it causes the "Card" attribute to be cleared before
+         the read is performed. */
 
    PyObject *result = NULL;
    PyObject *object = NULL;
    AstObject *obj;
+   int rewind = 1;
 
    if( PyErr_Occurred() ) return NULL;
 
-   obj = astRead( THIS );
-   self->source_line = astFree( self->source_line );
-   if( astOK ) {
-      if( obj ) {
-         object = NewObject( (AstObject *) obj );
-         if( object ) result = Py_BuildValue( "O", object );
-         Py_XDECREF(object);
-      } else {
-         result = Py_None;
+   if( PyArg_ParseTuple( args, "|i:" NAME, &rewind ) && astOK ) {
+
+      if( rewind && astIsAFitsChan( THIS ) ) {
+         astClear( THIS, "Card" );
       }
+
+      obj = astRead( THIS );
+      self->source_line = astFree( self->source_line );
+      if( astOK ) {
+         if( obj ) {
+            object = NewObject( (AstObject *) obj );
+            if( object ) result = Py_BuildValue( "O", object );
+            Py_XDECREF(object);
+         } else {
+            result = Py_None;
+         }
+      }
+      if( obj ) obj = astAnnul( obj );
+
    }
-   if( obj ) obj = astAnnul( obj );
+
    TIDY;
    return result;
 }

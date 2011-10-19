@@ -20,10 +20,17 @@ This section contains specific notes on individual classes of AST objects.
 
 <h3 id="s2">FitsChan</h3>
 <ul>
-<li>The <a 
-href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">
-FitsChan</a> class is an iterable class. So, for instance, if "fc" is a reference
-to a FitsChan, you can loop round all cards in the FitsChan by doing
+
+<li>When invoking the <code>read</code> method to read an object from a
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">
+FitsChan,</a> the FitsChan's "Card" attribute will be cleared automatically
+before the read is performed. This means it is not necessary to clear
+"Card" explicitly before calling the <code>read</code> method (as is
+required in C and Fortran).<p>
+
+<li>The FitsChan class is an iterable class in Python. So, for instance, if
+"fc" is a reference to a FitsChan, you can loop round all cards in the
+FitsChan by doing
 <p>
 <span class=pycode>
 >>> for card in fc:<br>
