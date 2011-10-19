@@ -9,16 +9,16 @@ to perform commonly used operations. It requires the pyfits and
 matplotlib libraries to be installed.
 """
 
-def readfits( ffile, hdu=0 ):
+def readfitswcs( ffile, hdu=0 ):
 
-   r"""Reads a FrameSet from a FITS file.
-
-       readfits( ffile, hdu=0 )
+   r"""Reads an AST FrameSet from a FITS file.
 
        The header from the specified HDU of the specified FITS file
        is read, and an AST FrameSet describing the WCS information in
        the header is returned. None is returned if WCS information cannot
        be read from the header.
+
+       readfitswcs( ffile, hdu=0 )
 
        "ffile" should be a reference to a FITS file, as returned by
        pyfits.open().
@@ -30,7 +30,7 @@ def readfits( ffile, hdu=0 ):
    >>> import starlink.Atl as Atl
    >>>
    >>> ffile = pyfits.open( 'test.fit' )
-   >>> frameset = Atl.readfits( ffile )
+   >>> frameset = Atl.readfitswcs( ffile )
    >>> if frameset == None:
    >>>    print( "Cannot read WCS from test.fit" )
 
@@ -62,7 +62,7 @@ def plotframeset( axes, gbox, bbox, frameset, options="" ):
        be in the order (xleft,ybottom,xright,ytop).
 
        "frameset" should be an AST FrameSet such as returned by the
-       Atl.readfits function. Its base Frame should be 2-dimensional.
+       Atl.readfitswcs function. Its base Frame should be 2-dimensional.
 
        "options" is an optional string holding a comma-separated list
        of Plot attribute settings. These control the appearance of the
@@ -76,7 +76,7 @@ def plotframeset( axes, gbox, bbox, frameset, options="" ):
    >>> import matplotlib.pyplot
    >>>
    >>> ffile = pyfits.open( 'test.fit' )
-   >>> frameset = starlink.Atl.readfits( ffile )
+   >>> frameset = starlink.Atl.readfitswcs( ffile )
    >>> if frameset != None:
    >>>    naxis1 = ffile[0].header['NAXIS1']
    >>>    naxis2 = ffile[0].header['NAXIS2']
@@ -135,7 +135,7 @@ def plotfitswcs( axes, gbox, ffile, hdu=0, options="" ):
    >>> matplotlib.pyplot.show()
    """
 
-   frameset = readfits( ffile, hdu )
+   frameset = readfitswcs( ffile, hdu )
    naxis1 = ffile[ hdu ].header[ 'NAXIS1' ]
    naxis2 = ffile[ hdu ].header[ 'NAXIS2' ]
    return plotframeset( axes, gbox, [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ],
