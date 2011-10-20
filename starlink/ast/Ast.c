@@ -6418,14 +6418,14 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
 
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
-         object that provides a method named "source", or a sequence. In the
-         first case, the "source" method will be invoked with no arguments,
+         object that provides a method named "astsource", or a sequence. In the
+         first case, the "astsource" method will be invoked with no arguments,
          and should return the next line of text on each invocation, returning
          None when all text has been read. In the second case, each
          element of the sequence is converted to a string and used as the
          next line of text. */
 /* Note: If supplied, the "sink" argument should be a reference to an object that
-         provides a method named "sink". This method is called with each succesive
+         provides a method named "astsink". This method is called with each succesive
          line of text as its only argument, and should store each line in some
          external data sink. */
 
@@ -6587,13 +6587,13 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    *sink_wrap = NULL;
 
 /* If a source object was supplied, we use the local "source_wrapper" function
-   as a C-callable wrapper for the object's "source" method, and store a
+   as a C-callable wrapper for the object's "astsource" method, and store a
    pointer to the source object in the Channel. If the source object is a
    sequence, we store the sequence in the source object in the Channel and
    use srcseq_wrapper as the wrapper, which reads a single item from the
    sequence on each invocation. Otherwise, we use a NULL wrapper. */
    if( source ) {
-      if( PyObject_HasAttrString( source, "source" ) ) {
+      if( PyObject_HasAttrString( source, "astsource" ) ) {
          *source_wrap = source_wrapper;
          self->source = source;
          Py_INCREF( source );
@@ -6612,21 +6612,21 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
       } else if( source != Py_None ){
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'source' "
-                          "object does not have a 'source' method "
+                          "object does not have an 'astsource' method "
                           "and is not a sequence." );
       }
    }
 
 /* Do the same for the sink object (except the sink cannot be a sequence). */
    if( sink ) {
-      if( PyObject_HasAttrString( sink, "sink" ) ) {
+      if( PyObject_HasAttrString( sink, "astsink" ) ) {
          *sink_wrap = sink_wrapper;
          self->sink = sink;
          Py_INCREF( sink );
       } else if( sink != Py_None ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
-                          "object does not have a 'sink' method" );
+                          "object does not have an 'astsink' method" );
       }
    }
 
@@ -6645,7 +6645,7 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 
 const char *source_wrapper( void ){
    Channel *channel = astChannelData;
-   PyObject *pytext = PyObject_CallMethod( channel->source, "source", NULL );
+   PyObject *pytext = PyObject_CallMethod( channel->source, "astsource", NULL );
    channel->source_line = GetString( channel->source_line, pytext );
    Py_XDECREF(pytext);
    return channel->source_line;
@@ -6653,7 +6653,7 @@ const char *source_wrapper( void ){
 
 void sink_wrapper( const char *text ){
    Channel *channel = astChannelData;
-   PyObject *result = PyObject_CallMethod( channel->sink, "sink", "s", text );
+   PyObject *result = PyObject_CallMethod( channel->sink, "astsink", "s", text );
    Py_XDECREF(result);
 }
 
@@ -6881,14 +6881,14 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
-         object that provides a method named "source", or a sequence. In the
-         first case, the "source" method is called with no arguments, and
+         object that provides a method named "astsource", or a sequence. In
+         the first case, the "source" method is called with no arguments, and
          should return the next header card on each invocation, returning
          None when all cards have been read. In the second case, each
          element of the sequence is converted to a string and used as the
          next header card. */
 /* Note: If supplied, the "sink" argument should be a reference to an object that
-         provides a method named "sink". This method is called with each succesive
+         provides a method named "astsink". This method is called with each succesive
          header card as its only argument, and should store each card in some
          external data sink. */
 
@@ -7595,14 +7595,14 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 
 /* args: :source=None,sink=None,options=None */
 /* Note: If supplied, the "source" argument can either be a reference to an
-         object that provides a method named "source", or a sequence. In the
+         object that provides a method named "astsource", or a sequence. In the
          first case, the "source" method is called with no arguments, and
          should return the next line of text on each invocation, returning
          None when all text has been read. In the second case, each
          element of the sequence is converted to a string and used as the
          next line of text. */
 /* Note: If supplied, the "sink" argument should be a reference to an object that
-         provides a method named "sink". This method is called with each succesive
+         provides a method named "astsink". This method is called with each succesive
          line of text as its only argument, and should store each line in some
          external data sink. */
 

@@ -23,10 +23,10 @@ class TextStream():
    def reset_source( self ):
       self.index = 0;
 
-   def sink( self, text ):
+   def astsink( self, text ):
       self.text.append(text)
 
-   def source( self ):
+   def astsource( self ):
       if self.index < len( self.text ):
          result = self.text[ self.index ]
          self.index += 1
@@ -930,8 +930,8 @@ class TestAst(unittest.TestCase):
       self.assertTrue( ch.isastcschan() )
       self.assertTrue( ch.isachannel() )
       self.assertTrue( ch.isaobject() )
-      ss.sink("StartTime 1900-01-01 Circle ICRS 148.9 69.1 2.0")
-      ss.sink("SpeCtralInterval 4000 7000 unit Angstrom")
+      ss.astsink("StartTime 1900-01-01 Circle ICRS 148.9 69.1 2.0")
+      ss.astsink("SpeCtralInterval 4000 7000 unit Angstrom")
       obj = ch.read()
       self.assertIsInstance( obj, starlink.Ast.Prism )
       self.assertEqual( obj.Class, "Prism" )

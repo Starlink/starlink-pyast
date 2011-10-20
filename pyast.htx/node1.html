@@ -114,8 +114,8 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astChannel">astChannel</a> - Create a Channel 
 <ul>
 <li><span class=inv>channel = starlink.Ast.Channel( source=None, sink=None, options=None  )</span></li>
-<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "source", or a sequence. In the first case, the "source" method will be invoked with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
-<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "sink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
+<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "astsource", or a sequence. In the first case, the "astsource" method will be invoked with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
+<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
 </ul>
 </div>
 <div class="implemented" id="Circle">
@@ -265,8 +265,8 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astFitsChan">astFitsChan</a> - Create a FitsChan 
 <ul>
 <li><span class=inv>fitschan = starlink.Ast.FitsChan( source=None, sink=None, options=None  )</span></li>
-<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "source", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next header card on each invocation, returning None when all cards have been read. In the second case, each element of the sequence is converted to a string and used as the next header card.</li>
-<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "sink". This method is called with each succesive header card as its only argument, and should store each card in some external data sink.</li>
+<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "astsource", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next header card on each invocation, returning None when all cards have been read. In the second case, each element of the sequence is converted to a string and used as the next header card.</li>
+<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive header card as its only argument, and should store each card in some external data sink.</li>
 </ul>
 </div>
 <div class="implemented" id="FluxFrame">
@@ -775,8 +775,8 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astStcsChan">astStcsChan</a> - Create an StcsChan 
 <ul>
 <li><span class=inv>stcschan = starlink.Ast.StcsChan( source=None, sink=None, options=None  )</span></li>
-<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "source", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
-<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "sink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
+<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "astsource", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
+<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
 </ul>
 </div>
 <div class="implemented" id="Test">
