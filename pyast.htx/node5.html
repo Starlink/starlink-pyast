@@ -20,7 +20,7 @@ commonly required operations.
 
 <dl>
 
-<dt><b><big>readfitswcs:</big></b></dt><dd> Reads an AST FrameSet from a FITS
+<dt><b><big><code>readfitswcs:</code></big></b></dt><dd> Reads an AST FrameSet from a FITS
 file. The header from the specified HDU of the specified FITS file is
 read, and an AST FrameSet describing the WCS information in the header is
 returned. None is returned if WCS information cannot be read from the
@@ -28,7 +28,7 @@ header.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-frameset = readfitswcs( ffile, hdu=0 )
+frameset = starlink.Atl.readfitswcs( ffile, hdu=0 )
 </pre>
 <p>
 <dl>
@@ -55,7 +55,7 @@ primary HDU).</dd>
 
 </dd>
 
-<dt><b><big>plotfitswcs:</big></b></dt><dd>
+<dt><b><big><code>plotfitswcs:</code></big></b></dt><dd>
 Read WCS from a FITS image and plot an annotated coordinate grid
 in a matplotlib axes area. The grid covers the entire image. The function
 returns a reference to the Plot that was used to draw
@@ -63,7 +63,7 @@ the axes.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-plot = plotfitswcs( axes, gbox, ffile, hdu=0, options="" )
+plot = starlink.Atl.plotfitswcs( axes, gbox, ffile, hdu=0, options="" )
 </pre>
 <p>
 <dl>
@@ -104,13 +104,13 @@ axes.</dd>
 
 </dd>
 
-<dt><b><big>plotframeset:</big></b></dt><dd> Plot an annotated coordinate
+<dt><b><big><code>plotframeset:</code></big></b></dt><dd> Plot an annotated coordinate
 grid in a matplotlib axes area.The function returns a reference to the
 Plot that was used to draw the axes.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-plot =  plotframeset( axes, gbox, bbox, frameset, options="" )
+plot =  starlink.Atl.plotframeset( axes, gbox, bbox, frameset, options="" )
 </pre>
 <p>
 <dl>
@@ -158,6 +158,80 @@ axes.</dd>
 </ul>
 
 </dd>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dt><b><big><code id="pyfitsadapter">PyFITSAdapter:</code></big></b></dt><dd> A class that
+provides an adapter between the <code>starlink.Ast.FitsChan</code> class
+and the header class provided by <a
+href="http://www.stsci.edu/resources/software_hardware/pyfits">PyFITS</a>.
+This allows the <Code>fitschan.read()</code> method to read header cards
+from a PyFITS header, and the <Code>fitschan.write()</code> method to
+write header cards to a PyFITS header. The class provides a public
+constructor, but no public methods.
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu )
+</pre>
+<p>
+<dl>
+
+<dt><code>hdulist</code></dt><dd>An <code>hdulist</code> such as returned
+by "</code>pyfits.open()</code>", or an element of the
+<code>hdulist</code>. If the whole <code>hdulist</code> is provided, then
+element zero (the primary HDU) is used.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import starlink.Ast as Ast
+>>> import matplotlib.pyplot
+>>>
+>>> ffile = pyfits.open( 'test.fit' )
+>>> adapter = Atl.PyFITSAdapter( ffile[ 1 ] )
+>>> fc = Ast.FitsChan( adapter, adapter )
+>>> frameset = fc.read()
+>>> fc.writefits()
+</pre>
+<p>
+This example fills a FitsChan with the headers from the first extension
+in 'test.fit'. It then reads WCS information from the FitsChan. Since
+FitsChan reads are destructive, this causes all the WCS-related keywords
+to be deleted from the FitsChan. The remaining non-WCS keywords are then
+written out to the original PyAST header (the PyAST header is empted
+first). The net effect is to remove all WCS keywords from the PyAST header.
+</ul>
+</dd>
+
+
+
+
+
+
 
 </dl>
 </body>

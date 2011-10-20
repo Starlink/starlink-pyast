@@ -17,9 +17,32 @@ This section contains specific notes on individual classes of AST objects.
 <p>
 
 <h3 id="s1">Channel</h3>
+<ul>
+<li>The <i>source</i> and <i>sink</i> functions are specified by
+supplying two objects: the source object should be an instance of a class
+that provides a method called <code>astsource</code>, and the sink object
+should be an instance of a class that provides a method called
+<code>astsink</code>. The <code>read()</code> method of the Channel class
+calls the <code>astsource</code> method repeatedly with no arguments, and
+expects it to return a string holding the next line of text input to store in the Channel.
+Likewise,  <code>write()</code> method of the Channel class will call the
+<code>astsink</code> method repeatedly with a single argument, the text of
+the next line to store in the external data sink, and will ignore anything
+returned by <code>astsink</code>.
+</ul>
 
 <h3 id="s2">FitsChan</h3>
 <ul>
+
+<li>As with the basic Channel class, the <i>source</i> and <i>sink</i>
+functions are specified by supplying objects that provides methods called
+<code>astsource</code> and <code>astsink</code>. Note, the
+<code>starlink.Atl<module> contains a class,
+<code><a href="node5.html#pyfitsadapter">PyFITSAdapter</a></code>,  that
+can be used to provide such methods for the specific case where the
+external data source is a
+<a href="http://www.stsci.edu/resources/software_hardware/pyfits">PyFITS</a>
+header.
 
 <li>When invoking the <code>read</code> method to read an object from a
 <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">

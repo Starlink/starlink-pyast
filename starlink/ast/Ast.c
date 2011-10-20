@@ -10024,6 +10024,8 @@ static char *GetString( void *mem, PyObject *value ) {
          result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
          Py_DECREF(bytes);
       } else {
+         PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
+                          "function is not a string" );
          result = astFree( mem );
       }
    } else {

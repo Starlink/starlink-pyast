@@ -35,6 +35,7 @@ example.
 <pre class=pycode>
 import pyfits
 import starlink.Ast as Ast
+import starlink.Atl as Atl
 
 #  Open the FITS file using (for instance) pyfits. A list of the HDUs
 #  in the FITS file is returned.
@@ -42,13 +43,13 @@ hdu_list = pyfits.open( 'test.fit' )
 
 #  Create a FitsChan and fill it with the FITS header cards in the
 #  primary HDU (element zero of the list returned by pyfits.open).
-fitschan = Ast.FitsChan( hdu_list[ 0 ].header.ascardlist() )
+fitschan = Ast.FitsChan( Atl.PyFITSAdapter(hdu_list[ 0 ]) )
 
 #  Note which encoding has been used for the WCS information. This is only
 #  necessary if you later wish to write modified headers out using the
 #  same encoding. See section "...Write a Modified WCS Calibration to a
 #  Dataset" below.
-encode = fitschan.Encoding
+encoding = fitschan.Encoding
 
 #  Read WCS information from the FitsChan. Additionally, this removes all
 #  WCS information from the FitsChan.
