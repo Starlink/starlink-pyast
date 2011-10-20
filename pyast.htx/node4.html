@@ -44,7 +44,14 @@ hdu_list = pyfits.open( 'test.fit' )
 #  primary HDU (element zero of the list returned by pyfits.open).
 fitschan = Ast.FitsChan( hdu_list[ 0 ].header.ascardlist() )
 
-#  Read WCS information from the FitsChan.
+#  Note which encoding has been used for the WCS information. This is only
+#  necessary if you later wish to write modified headers out using the
+#  same encoding. See section "...Write a Modified WCS Calibration to a
+#  Dataset" below.
+encode = fitschan.Encoding
+
+#  Read WCS information from the FitsChan. Additionally, this removes all
+#  WCS information from the FitsChan.
 wcsinfo = fitschan.read()
 
 </pre>
@@ -166,43 +173,94 @@ else:
 
 #  Loop to read each line of input text, in this case from the
 #  standard input stream.
+   pos = []
    while True:
       text = input( "Coords: " )
       if text == "":
          break
-      else:
 
 #  Attempt to read a coordinate for each axis.
-         start = 0
-         end = len( text )
-         for iaxis in range( 1, naxes ):
-            ( n, axis_value ) = wcsinfo.unformat( iaxis, text[ start ] )
+      start = 0
+      end = len( text )
+      for iaxis in range( 1, naxes + 1 ):
+         ( n, axis_value ) = wcsinfo.unformat( iaxis, text[ start: ] )
 
 #  If nothing was read and this is not the first axis or the end-of-string,
 #  try stepping over a separator and reading again.
-            if n == 0 and ( iaxis > 1 ) && ( start < end ):
-               start += 1
-               ( n, axis_value ) = wcsinfo.unformat( iaxis, text[ start ] )
+         if n == 0 and ( iaxis > 1 ) and ( start < end ):
+            start += 1
+            ( n, axis_value ) = wcsinfo.unformat( iaxis, text[ start: ] )
 
 #  Quit if nothing was read, otherwise move on to the next coordinate. */
-            if n == 0 :
-               break
-            start += n
+         if n == 0 :
+            break
+         start += n
 
 #  Store axis value
-            pos.append( axis_value )
+         pos.append( axis_value )
 
 #  Error in input data at character text[n]. */
-         if start < end or n == 0:
-            print( "Could not read supplied coordinates")
-            break
+      if start < end or n == 0:
+         break
 
 #  Coordinates were read OK.
-         else:
-            print( pos )
+      else:
+         print( pos )
+         pos = []
 
 </pre>
 
+
+
+
+<h4>...Modify a WCS Calibration</h4>
+<pre class=pycode>
+
+#  The MatrixMap may be constructed directly from the matrix "m", which
+#  in this particular case describes a 30 degree rotation.
+   m = [ [ 0.866, 0.5 ], [-0.5, 0.866] ]
+   matrixmap = Ast.MatrixMap( m )
+
+#  Here we take the simpler option of using a ShiftMap rather than a
+#  WinMap. The "z" list specifies the shifts.
+   z = [ -1.0, 1.0 ]
+   shiftmap = Ast.ShiftMap( z )
+
+#  Join the two Mappings together, so that they are applied one after
+#  the other.
+   newmap = Ast.CmpMap( matrixmap, shiftmap )
+
+#  If necessary, make a copy of the WCS calibration, since we are
+#  about to alter it.
+   wcsinfo2 = wcsinfo.copy()
+
+#  Re-map the base Frame so that it refers to the new data grid
+#  instead of the old one.
+   wcsinfo2.remapframe( Ast.BASE, newmap )
+
+</pre>
+
+
+
+<h4>...Modify a WCS Calibration</h4>
+<pre class=pycode>
+
+#  Ensure we create FITS keywords that use the same WCS encoding that was
+#  used by the original FITS file.
+   fitschan.Encoding = encoding
+
+#  Attempt to write the output WCS information to the FitsChan (i.e.
+#  convert the FrameSet to a set of FITS header cards stored in the FitsChan).
+   if fitschan.write( wcsinfo2 ) == 0 :
+
+#  If this didn't work (the WCS FrameSet has become too complex to be
+#  represented using the original WCS encoding), then use the native AST
+#  encoding instead.
+      fitschan.Encoding = "NATIVE"
+      fitschan.write( wcsinfo2 )
+
+
+</pre>
 
 </body>
 </html>
