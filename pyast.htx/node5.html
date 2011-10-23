@@ -14,30 +14,66 @@ pre.pycode {display:inline-block;
 <body>
 
 <h2>High level functions</h2>
-The <code>starlink.Atl</code> module within PyAST provides a small number of high
-level functions that wrap up various other PyAST calls to perform
-commonly required operations.
+The <code>starlink.Atl</code> module within PyAST provides a small number
+of high level functions and classes that wrap up various other PyAST
+calls to perform commonly required operations.
 
+<ul>
+- <a href="#funs">Utility functions</a><br>
+<ul>
+<li><a href="#readfitswcs">readfitswcs: Reads an AST FrameSet from a FITS header.</a>
+<li><a href="#writefitswcs">writefitswcs: Write an AST FrameSet to a FITS file.</a>
+<li><a href="#plotframeset">plotframeset: Plot an annotated coordinate grid in a matplotlib axes area.</a>
+<li><a href="#plotfitswcs">plotfitswcs: Read WCS from a PyFITS HDU and
+       plot an annotated coordinate grid in a matplotlib axes area.</a>
+</ul>
+
+- <a href="#cls">Utility classes</a>
+
+<ul>
+<li><a href="#pyfitsadapter">PyFITSAdapter: Allows PyAST FitsChan objects
+to read and write headers to and from a PyFITS HDU. </a>
+</ul>
+
+</ul>
 <dl>
 
-<dt><b><big><code>readfitswcs:</code></big></b></dt><dd> Reads an AST FrameSet from a FITS
-file. The header from the specified HDU of the specified FITS file is
-read, and an AST FrameSet describing the WCS information in the header is
-returned. None is returned if WCS information cannot be read from the
-header.
+<hr><h4 id="funs">Utility functions</h4>
+
+<dt><big><code id="readfitswcs">readfitswcs:</code></big></dt><dd>
+Reads an AST FrameSet from a FITS header.
+<p>
+The header from the specified <a
+href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU is read, and an AST
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing the WCS
+information in the header is returned. <code>None</code> is returned instead of a
+FrameSet if WCS information cannot be read from the header. A string
+identifying the scheme used to describe WCS information in the header
+(the encoding) is also returned.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-frameset = starlink.Atl.readfitswcs( ffile, hdu=0 )
+(frameset,encoding) = starlink.Atl.readfitswcs( hdu )
 </pre>
 <p>
 <dl>
 
-<dt><code>ffile</code></dt><dd>A reference to a FITS file, as returned by
-<code>pyfits.open()</code>.</dd>
+<dt><code>hdu</code></dt><dd>
+An element of the hdulist associated with a FITS file opened using
+<code>pyfits.open()</code>. If the entire hdulist is supplied, rather than
+an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
 
-<dt><code>hdu</code></dt><dd>The integer index of the required HDU (zero for the
-primary HDU).</dd>
+<dt><code>frameset</code></dt><dd>
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing
+the pixel and world coordinate systems read from the FITS header, or <code>None</code>
+if no WCS could be read.</dd>
+
+<dt><code>encoding</code></dt><dd>
+Indicates how the WCS information was encoded in the header. For possible
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
+Encoding</a>" attribute in SUN/211.
 
 </dl></ul>
 
@@ -46,8 +82,8 @@ primary HDU).</dd>
 >>> import pyfits
 >>> import starlink.Atl as Atl
 >>>
->>> ffile = pyfits.open( 'test.fit' )
->>> frameset = Atl.readfitswcs( ffile )
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> frameset = Atl.readfitswcs( hdulist )
 >>> if frameset == None:
 >>>    print( "Cannot read WCS from test.fit" )
 </pre>
@@ -55,15 +91,16 @@ primary HDU).</dd>
 
 </dd>
 
-<dt><b><big><code>plotfitswcs:</code></big></b></dt><dd>
-Read WCS from a FITS image and plot an annotated coordinate grid
-in a matplotlib axes area. The grid covers the entire image. The function
-returns a reference to the Plot that was used to draw
-the axes.
+<dt><big><code id="plotfitswcs">plotfitswcs:</code></big></dt><dd>
+Read WCS from a <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU and plot an annotated coordinate grid
+in a <a href="http://matplotlib.sourceforge.net/">matplotlib</A> axes
+area. The grid covers the entire image. The function returns a reference to
+the Plot that was used to draw the axes.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-plot = starlink.Atl.plotfitswcs( axes, gbox, ffile, hdu=0, options="" )
+plot = starlink.Atl.plotfitswcs( axes, gbox, hdu, options="" )
 </pre>
 <p>
 <dl>
@@ -77,15 +114,18 @@ annotated axes within the matplotlib Axes object. The supplied values
 should be in the order (xleft,ybottom,xright,ytop) and should be given in
 the matplotlib "axes" coordinate system.</dd>
 
-<dt><code>ffile</code></dt><dd>A reference to a FITS file, as returned by
-<code>pyfits.open()</code>.</dd>
-
-<dt><code>hdu</code></dt><dd>The integer index of the required HDU (zero for the
-primary HDU).</dd>
+<dt><code>hdu</code></dt><dd>
+An element of the hdulist associated with a FITS file opened using
+<code>pyfits.open()</code>. If the entire hdulist is supplied, rather than
+an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
 
 <dt><code>options</code></dt><dd>An optional string holding a comma-separated list of
 Plot attribute settings. These control the appearance of the annotated
 axes.</dd>
+
+<dt><code>plot</code></dt><dd>A reference to the Ast.Plot that was used to
+draw the axes.</dd>
 
 </dl></ul>
 
@@ -95,18 +135,20 @@ axes.</dd>
 >>> import starlink.Atl as Atl
 >>> import matplotlib.pyplot
 >>>
->>> ffile = pyfits.open( 'test.fit' )
+>>> hdulist = pyfits.open( 'test.fit' )
 >>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
->>>                  [ 0.1, 0.1, 0.9, 0.9 ], ffile )
+>>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
 >>> matplotlib.pyplot.show()
 </pre>
 </ul>
 
 </dd>
 
-<dt><b><big><code>plotframeset:</code></big></b></dt><dd> Plot an annotated coordinate
-grid in a matplotlib axes area.The function returns a reference to the
-Plot that was used to draw the axes.
+<dt><big><code id="plotframeset">plotframeset:</code></big></dt><dd>
+Plot an annotated coordinate
+grid in a <a href="http://matplotlib.sourceforge.net/">matplotlib</A> axes area.The function returns a reference to the
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Plot">Plot</a> that was used to draw the
+axes.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
@@ -115,7 +157,7 @@ plot =  starlink.Atl.plotframeset( axes, gbox, bbox, frameset, options="" )
 <p>
 <dl>
 
-<dt><code>axes</code></dt><dd>A matplot lib "Axes" object. The annotated axes
+<dt><code>axes</code></dt><dd>A matplotlib "Axes" object. The annotated axes
 normally produced by matplotlib will be removed, and axes will instead be
 drawn by the AST Plot class</dd>
 
@@ -137,6 +179,9 @@ of the supplied FrameSet. The supplied values should be in the order
 Plot attribute settings. These control the appearance of the annotated
 axes.</dd>
 
+<dt><code>plot</code></dt><dd>A reference to the Ast.Plot that was used to
+draw the axes.</dd>
+
 </dl></ul>
 
 <p>Example:<ul>
@@ -145,15 +190,68 @@ axes.</dd>
 >>> import starlink.Atl as Atl
 >>> import matplotlib.pyplot
 >>>
->>> ffile = pyfits.open( 'test.fit' )
->>> frameset = starlink.Atl.readfitswcs( ffile )
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> frameset = starlink.Atl.readfitswcs( hdulist )
 >>> if frameset != None:
->>>    naxis1 = ffile[0].header['NAXIS1']
->>>    naxis2 = ffile[0].header['NAXIS2']
+>>>    naxis1 = hdulist[0].header['NAXIS1']
+>>>    naxis2 = hdulist[0].header['NAXIS2']
 >>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
 >>>                      [ 0.1, 0.1, 0.9, 0.9 ],
 >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
 >>>    matplotlib.pyplot.show()
+</pre>
+</ul>
+
+</dd>
+
+
+
+<dt><big><code id="writefitswcs">writefitswcs:</code></big></dt><dd>
+Writes an AST FrameSet to a FITS header.
+<p>
+The WCS information described by the supplied <a 
+href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> is converted
+into a set of FITS header cards which are stored in the supplied
+<a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU (all cards in the header are first removed).
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
+</pre>
+<p>
+<dl>
+
+<dt><code>frameset</code></dt><dd>
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a>
+to be written out to the FITS header.
+
+<dt><code>hdu</code></dt><dd>
+An element of the PyFITS hdulist associated with a FITS file. The header
+cards generated from the FrameSet are stored in the header associated with
+this HDU. All cards are first removed from the header. If the entire
+hdulist is supplied, rather than an element of the hdulist, then the
+primary HDU (element zero) will be used.</dd>
+
+<dt><code>encoding</code></dt><dd>
+Indicates how the WCS information is to be encoded in the header. For possible
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
+Encoding</a>" attribute in SUN/211.
+
+<dt><code>nobj</code></dt><dd>
+Returned equal to 1 if the FrameSet was converted successfully to FITS
+headers using the requested encoding, and zero otherwise.
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import starlink.Atl as Atl
+>>>
+>>> (frameset,encoding) = Atl.readfitswcs( hdu1 )
+>>> if Atl.writefitswcs( frameset, hdu2, encoding="FITS-AIPS" ) == 0:
+>>> if frameset == None:
+>>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
 </pre>
 </ul>
 
@@ -179,16 +277,31 @@ axes.</dd>
 
 
 
+<hr><h4 id="cls">Utility classes</h4>
 
+<dt><big><code id="pyfitsadapter">PyFITSAdapter:</code></big></dt><dd>
 
-<dt><b><big><code id="pyfitsadapter">PyFITSAdapter:</code></big></b></dt><dd> A class that
-provides an adapter between the <code>starlink.Ast.FitsChan</code> class
-and the header class provided by <a
-href="http://www.stsci.edu/resources/software_hardware/pyfits">PyFITS</a>.
-This allows the <Code>fitschan.read()</code> method to read header cards
-from a PyFITS header, and the <Code>fitschan.write()</code> method to
-write header cards to a PyFITS header. The class provides a public
-constructor, but no public methods.
+This class allows a
+<a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU to be used as the source or sink object with a
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">FitsChan</a>.
+<p>
+When used as a FitsChan source, the PyFITSAdapter will allow the
+FitsChan to read each of the cards in the associated PyFITS header,
+thus allowing the cards to be copied into the FitsChan. This happens
+when the newly created, empty FitsChan is used for the first time
+(i.e. when any of its methods is invoked), and subsequently whenever
+the <code>FitsChan.readfits()</code> method is invoked.
+<p>
+When used as a FitsChan sink, the PyFITSAdapter will allow the FitsChan
+to copy its own header cards into the PyFITS header. This happens when
+the FitsChan is deleted or when the <code>FitsChan.writefits()</code>
+method is invoked. Each FitsChan card replaces any existing card in the
+PyFITS header that refers to the same keyword. If there is no card for
+the keyword already in the PyFITS header, the FitsChan card will be
+appended to the end of the header.
+<p>
+The class provides a public constructor, but no public methods.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
@@ -197,10 +310,11 @@ pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu )
 <p>
 <dl>
 
-<dt><code>hdulist</code></dt><dd>An <code>hdulist</code> such as returned
-by "</code>pyfits.open()</code>", or an element of the
-<code>hdulist</code>. If the whole <code>hdulist</code> is provided, then
-element zero (the primary HDU) is used.</dd>
+<dt><code>hdu</code></dt>
+<dd>An element of the <code>hdulist</code> associated with a FITS file opened
+using "</code>pyfits.open()</code>". If the entire hdulist is supplied, rather
+than an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
 
 </dl></ul>
 
@@ -209,10 +323,9 @@ element zero (the primary HDU) is used.</dd>
 >>> import pyfits
 >>> import starlink.Atl as Atl
 >>> import starlink.Ast as Ast
->>> import matplotlib.pyplot
 >>>
->>> ffile = pyfits.open( 'test.fit' )
->>> adapter = Atl.PyFITSAdapter( ffile[ 1 ] )
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> adapter = Atl.PyFITSAdapter( hdulist[ 1 ] )
 >>> fc = Ast.FitsChan( adapter, adapter )
 >>> frameset = fc.read()
 >>> fc.writefits()

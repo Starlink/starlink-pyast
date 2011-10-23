@@ -125,7 +125,7 @@ else:
    issky = isinstance( frame, Ast.SkyFrame )
 
 #  Or equivalently.
-   issky = frame.issskyframe()
+   issky = frame.isaskyframe()
 
 </pre>
 
@@ -243,23 +243,39 @@ else:
 
 
 
-<h4>...Modify a WCS Calibration</h4>
+<h4>...Write a Modified WCS Calibration to a Dataset</h4>
 <pre class=pycode>
 
-#  Ensure we create FITS keywords that use the same WCS encoding that was
-#  used by the original FITS file.
-   fitschan.Encoding = encoding
+#  Create an empty FitsChan to contain the output WCS information. Use a
+#  PyFITSAdapter (defined in the Atl module) to provide the sink function
+#  that FitsChan uses to write FITS header cards to a PyFITS HDU. Note,
+#  doing it this way will mean the FITS file does not inherit the non-WCS
+#  keywords from the input FITS file. If this is a problem, then the
+#  FitsChan that was used for reading the WCS should also be used for
+#  writing the WCS. This will retain non-WCS keywords in the output FITS
+#  file.
+   fitschan2 = Ast.FitsChan( None, Atl.PyFITSAdapter(hdu_list[ 0 ]) )
+
+#  Ensure the FitsChan will create FITS keywords that use the same WCS
+#  encoding that was used by the original FITS file.
+   fitschan2.Encoding = encoding
 
 #  Attempt to write the output WCS information to the FitsChan (i.e.
 #  convert the FrameSet to a set of FITS header cards stored in the FitsChan).
-   if fitschan.write( wcsinfo2 ) == 0 :
+   if fitschan2.write( wcsinfo2 ) == 0 :
 
 #  If this didn't work (the WCS FrameSet has become too complex to be
 #  represented using the original WCS encoding), then use the native AST
 #  encoding instead.
-      fitschan.Encoding = "NATIVE"
-      fitschan.write( wcsinfo2 )
+      fitschan2.Encoding = "NATIVE"
+      fitschan2.write( wcsinfo2 )
 
+#  The cards are currently stored in the FitsChan. They will be written
+#  to the PyFITS HDU when the FitsChan is deleted. But in Python, object
+#  deletion can happen at unexpected times, so to be in complete control,
+#  we ensure the cards are written out now by invoking the writefits method
+#  now.
+   fitschan2.writefits()
 
 </pre>
 

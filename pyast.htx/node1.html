@@ -83,13 +83,6 @@ that provides the method.
 </span></li>
 </ul>
 </div>
-<div class="implemented" id="BBuf">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBBuf">astBBuf</a> - Begin a new graphical buffering context 
-<ul>
-<li><span class=inv> plot.bbuf(   )
-</span></li>
-</ul>
-</div>
 <div class="implemented" id="Border">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astBorder">astBorder</a> - Draw a border around valid regions of a Plot 
 <ul>
@@ -216,13 +209,6 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astDownsize">astDownsize</a> - Reduce the number of vertices in a Polygon 
 <ul>
 <li><span class=inv>result = polygon.downsize( maxerr, maxvert  )
-</span></li>
-</ul>
-</div>
-<div class="implemented" id="EBuf">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astEBuf">astEBuf</a> - End the current graphical buffering context 
-<ul>
-<li><span class=inv> plot.ebuf(   )
 </span></li>
 </ul>
 </div>
@@ -559,13 +545,6 @@ that provides the method.
 <li><span class=inv>polymap = starlink.Ast.PolyMap( fcoeff, icoeff=None, options=None  )</span></li>
 </ul>
 </div>
-<div class="implemented" id="PolyTran">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolyTran">astPolyTran</a> - Fit a PolyMap inverse or forward transformation 
-<ul>
-<li><span class=inv>result = polymap.polytran( forward, acc, maxacc, maxorder, lbnd, ubnd  )
-</span></li>
-</ul>
-</div>
 <div class="implemented" id="Polygon">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astPolygon">astPolygon</a> - Create a Polygon 
 <ul>
@@ -625,13 +604,6 @@ that provides the method.
 <li><span class=inv>result = channel.read( rewind=True  )
 </span></li>
 <li class="note">The "rewind" argument indicates if the Channel should be rewound before the read is performed. Currently, this only has any effect if the Channel is an instance of the FitsChan class, in which case it causes the "Card" attribute to be cleared before the read is performed.</li>
-</ul>
-</div>
-<div class="implemented" id="ReadFits">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astReadFits">astReadFits</a> - Read cards into a FitsChan from the source function 
-<ul>
-<li><span class=inv>result = fitschan.readfits(   )
-</span></li>
 </ul>
 </div>
 <div class="implemented" id="Rebin">
@@ -845,17 +817,9 @@ that provides the method.
 </ul>
 </div>
 <div class="implemented" id="Tune">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTune">astTune</a> - Set or get an integer-valued AST global tuning parameter 
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTune">astTune</a> - Set or get an AST global tuning parameter 
 <ul>
 <li><span class=inv>result = starlink.Ast.tune( name, value  )
-</span></li>
-<li class="note">This is a static module function.</li>
-</ul>
-</div>
-<div class="implemented" id="TuneC">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTuneC">astTuneC</a> - Set or get a character-valued AST global tuning parameter 
-<ul>
-<li><span class=inv>buff = starlink.Ast.tunec( name, value  )
 </span></li>
 <li class="note">This is a static module function.</li>
 </ul>
@@ -911,13 +875,6 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWrite">astWrite</a> - Write an Object to a Channel 
 <ul>
 <li><span class=inv>result = channel.write( object  )
-</span></li>
-</ul>
-</div>
-<div class="implemented" id="WriteFits">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astWriteFits">astWriteFits</a> - Write out all cards in a FitsChan to the sink function 
-<ul>
-<li><span class=inv>result = fitschan.writefits(   )
 </span></li>
 </ul>
 </div>
