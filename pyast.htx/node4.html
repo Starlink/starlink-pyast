@@ -34,8 +34,10 @@ example.
 <h4>...Read a WCS Calibration from a Dataset</h4>
 <pre class=pycode>
 import pyfits
+import starlink.Grf as Grf
 import starlink.Ast as Ast
 import starlink.Atl as Atl
+import matplotlib.pyplot
 
 #  Open the FITS file using (for instance) pyfits. A list of the HDUs
 #  in the FITS file is returned.
@@ -278,6 +280,70 @@ else:
    fitschan2.writefits()
 
 </pre>
+
+
+<h4>...Display a Graphical Coordinate Grid</h4>
+<pre class=pycode>
+
+#  Create a matplotlib plotting region. Ensure that the matplotlib axis
+#  annotations are not drawn.
+   dx=12.0
+   dy=9.0
+   fig = matplotlib.pyplot.figure( figsize=(dx,dy) )
+   ax = fig.add_axes( ( 0, 0, 1, 1 ) )
+   ax.xaxis.set_visible( False )
+   ax.yaxis.set_visible( False )
+
+#  We map the entire FITS pixel grid onto this box. So get the bounds
+#  of the pixel grid from the FitsChan. If the NAXIS1/2 keywords are
+#  not in the FitsChan, use defaults of 500.
+   if "NAXIS1" in fitschan:
+      naxis1 = fitschan["NAXIS1"]
+   else:
+      naxis1 = 500
+
+   if "NAXIS2" in fitschan:
+      naxis2 = fitschan["NAXIS2"]
+   else:
+      naxis2 = 500
+   bbox = ( 0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5 )
+
+#  Set the bounds (in matplotlib data coordinates) of the largest rectangle
+#  that can be drawn on the matplotlib plotting area that has the same
+#  aspect ratio as the FITS array. Shrink the box to leave room for axis
+#  annotation.
+   fits_aspect_ratio = ( bbox[3] - bbox[1] )/( bbox[2] - bbox[0] )
+   grf_aspect_ratio = dy/dx
+   if grf_aspect_ratio > fits_aspect_ratio :
+      hx = 0.5
+      hy = 0.5*fits_aspect_ratio/grf_aspect_ratio
+   else:
+      hx = 0.5*grf_aspect_ratio/fits_aspect_ratio
+      hy = 0.5
+
+   hx *= 0.7
+   hy *= 0.7
+
+   gbox = ( 0.5 - hx, 0.5 - hy, 0.5 + hx, 0.5 + hy )
+
+#  Create a drawing object that knows how to draw primitives (lines,
+#  marks and strings) into the matplotlib plotting region.
+   grf = Grf.grf_matplotlib( ax )
+
+#  Create the AST Plot, using the above object to draw the primitives. The
+#  Plot is based on the FrameSet that describes the WCS read from the FITS
+#  headers, so the plot knows how to convert from WCS coords to pixel
+#  coords, and then to matplotlib data coords.
+   plot = Ast.Plot( wcsinfo, gbox, bbox, grf )
+
+#  And finally, draw the annotated WCS axes and any coordinate grid
+#  requested in the plotting attributes.
+   plot.grid()
+
+#  Make the matplotlib plotting area visible
+   matplotlib.pyplot.show()
+
+
 
 </body>
 </html>
