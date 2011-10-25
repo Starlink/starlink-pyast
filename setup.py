@@ -36,11 +36,10 @@ ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
 	  'object.c', 'pal.c', 'pcdmap.c', 'permmap.c', 'plot.c',
 	  'pointlist.c', 'pointset.c', 'polygon.c', 'polymap.c',
 	  'prism.c', 'proj.c', 'ratemap.c', 'region.c', 'shiftmap.c',
-	  'skyaxis.c', 'skyframe.c', 'slamap.c', 'specfluxframe.c',
-	  'specframe.c', 'specmap.c', 'sphmap.c', 'stcschan.c',
-	  'timeframe.c', 'timemap.c', 'tpn.c', 'tranmap.c', 'unit.c',
-	  'unitmap.c', 'wcsmap.c', 'wcstrig.c', 'winmap.c', 'xml.c',
-	  'xmlchan.c', 'zoommap.c')
+	  'skyaxis.c', 'skyframe.c', 'specfluxframe.c', 'specframe.c',
+	  'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
+	  'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
+	  'winmap.c', 'xml.c', 'zoommap.c')
 
 #  List the C source files for unimplemeneted AST classes:
 ast_c_extra = ( 'fitstable.c', 'plot3d.c', 'selectormap.c', 'slamap.c',
