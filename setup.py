@@ -42,8 +42,11 @@ ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
 	  'winmap.c', 'xml.c', 'zoommap.c')
 
 #  List the C source files for unimplemeneted AST classes:
-ast_c_extra = ( 'fitstable.c', 'plot3d.c', 'selectormap.c', 'slamap.c',
-                'specmap.c', 'switchmap.c', 'table.c', 'xmlchan.c')
+ast_c_extra = ( 'fitstable.c', 'intramap.c', 'plot3d.c', 'selectormap.c',
+                'slamap.c', 'specmap.c', 'stccatalogentrylocation.c',
+		'stc.c', 'stcobsdatalocation.c', 'stcresourceprofile.c',
+		'stcsearchlocation.c', 'switchmap.c', 'table.c',
+		'xmlchan.c')
 
 #  Initialise the list of sources files needed to build the starlink.Ast
 #  module.
