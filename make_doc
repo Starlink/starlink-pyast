@@ -1,0 +1,319 @@
+#!/usr/bin/perl
+
+#  Name:
+#    make_doc
+
+#  Purpose:
+#    Produce the HTML docs for starlink.Ast
+
+#  Description:
+#    This script is not intended to be distributed to PyAST users. It
+#    auto-generates some of the docs files from the C source code, which
+#    are committed in the repository as separate items and are distributed
+#    to pyast users.
+#
+#    It should probably be re-written in Python, but since it is not
+#    distributed, the langiage is not too important.
+#
+#    It gets a list of all public AST functions by scanning
+#    /star/docs/sun211.tex. It then scans starlink/ast/Ast.c to see
+#    which of these functions are implemented. It then produces the
+#    following output HTML files:
+#
+#       pyast.htx/node1.html - A list of the implemented functions with
+#       their Python API and links to the corresponding section of SUN/211
+#
+#       pyast.htx/node2.html - A list of the unimplemented functions with
+#       links to the corresponding section of SUN/211.
+#
+#    The contents of dochead.html and doctail.html are copied to the start
+#    and end of pyast.htx/pyast.html. The middle is generated automatically
+#    and is a collection of links to fragments of node1.html that describe
+#    all the implemented functions.
+
+
+open( IN, "</star/docs/sun211.tex" );
+$state = 0;
+$iline = 0;
+$pur = "";
+while( $line = <IN> ){
+   chomp($line);
+   $iline++;
+
+   if( $state == 0 ) {
+      if( $line =~ /^\\section\{.*AST Function Descriptions.*\}$/ ) {
+         $state = 1;
+      }
+
+   } elsif( $state == 1 ) {
+      if( $line =~ /^\\section/ ) {
+         last;
+      } elsif( $line =~ /^\\sstroutine *\{/ ) {
+         $state = 2;
+      }
+
+   } elsif( $state == 2 ) {
+      if( $line =~ / *ast(\w+)(\$.*\$)?\\sstlabel\{(.+)\}/ ) {
+         $funcname = $1;
+         $xref = $3;
+      }
+      $state = 3;
+
+   } elsif( $state == 3 ) {
+      if( $line =~ /\}\{/ ) {
+         $state = 4;
+      } else {
+         print("Unexpected text at line $iline:\n$line");
+         exit;
+      }
+
+   } elsif( $state == 4 ) {
+      if( $line =~ /\}\{/ ) {
+
+         if( $funcname eq "TranN" ) {
+            $meth = "tran";
+         } else {
+            $meth = lc($funcname);
+         }
+         $method_pat = "^static .* +\\*?(\\w+)_$meth\\(.*\\{";
+         $method_gpat = "^static .* +\\*?(\\w+)_$meth##\\w+\\(.*\\{";
+         $constructor_pat = "^static +int +".$funcname."_init\\(.*\\{";
+
+         open( IN2, "<starlink/ast/Ast.c" );
+         $found = 0;
+         $isgeneric = 0;
+         $isstatic = 0;
+         $got_args = 0;
+         $outlist = ' ';
+         $inlist = ' ';
+         $note = ' ';
+         @items = ();
+         while( $line2 = <IN2> ){
+            chomp($line2);
+            $line2 =~ s/ *\\ *$//;
+
+            if( !$found ) {
+               if( $line2 =~ /$method_pat/ ) {
+                  $iscon = 0;
+                  $class = lc($1);
+                  if( lc($class) eq "pyast" ) {
+                     $class = "starlink.Ast";
+                     $isstatic = 1;
+                  }
+                  $found = 1;
+               } elsif( $line2 =~ /$method_gpat/ ) {
+                  $isgeneric = 1;
+                  $iscon = 0;
+                  $class = lc($1);
+                  $found = 1;
+               } elsif( $line2 =~ /$constructor_pat/ ) {
+                  $iscon = 1;
+                  $class = $funcname;
+                  $found = 1;
+               }
+
+            } elsif ( $line2 =~ /\/\* +args: (.*):(.*) *\*\//i ) {
+               $got_args = 1;
+               @outs = split( / *, */, $1 );
+               if ( @outs == 1 ) {
+                  $outlist = $outs[0]." = ";
+               } elsif( @outs > 1 ) {
+                  $outlist = "( ".join( ', ', split( / *, */, $1 ) )." ) = ";
+               }
+               $inlist = join( ', ', split( / *, */, $2 ) );
+
+            } elsif ( $line2 =~ /\/\* +Note: *(.*)$/i ) {
+               $note = $1;
+
+            } elsif( $line2 =~ /PyObject/ ){
+               if( !$got_args ) {
+                  print("No args list found for $funcname\n");
+               }
+               last;
+
+            } elsif ( $note ne ' ' ){
+               $note .= " ".$line2;
+            }
+
+            if ( $note =~ /(.*)\*\// ){
+               $note = join( ' ', split( /\s+/, $1 ) );
+               push( @items, $note );
+               $note = ' ';
+            }
+         }
+         close(IN2);
+
+
+         if( $found ) {
+            if( $iscon ) {
+               $invokes{$funcname} = "$meth = starlink.Ast.$class( $inlist )";
+            } elsif( $isgeneric ){
+               $funcname .= "&lt;X&gt;";
+               $invokes{$funcname} = $outlist.$class.".$meth&lt;X&gt;( $inlist )\n";
+            } else {
+               $invokes{$funcname} = $outlist.$class.".$meth( $inlist )\n";
+            }
+            $isstat{$funcname} = $isstatic;
+            if( @items > 0 ) {
+               $notes{$funcname} = join( 'zzz', @items );
+            }
+         }
+
+         $purposes{$funcname} = $pur;
+         $xrefs{$funcname} = $xref;
+         $pur = "";
+         $state = 1;
+
+      } elsif( $line =~ /^ *(.*) *$/ ) {
+         $pur .= "$1 ";
+      } else {
+         print("Unexpected text at line $iline:\n$line");
+         exit;
+      }
+   }
+}
+
+
+
+open( OUT, ">pyast.htx/node1.html" );
+
+print OUT <<EOF;
+<html>
+<head>
+<style type="text/css">
+div.implemented {position:relative;
+                 left:30px;
+                 margin-top:40px;
+                 margin-bottom:40px}
+
+div.implemented ul {list-style-type:none;padding-top:0px;margin-top:15px}
+li.note {margin-top:10px;
+         margin-left:30px;
+         margin-right:80px;
+         list-style-type:circle;}
+span.inv {background-color:#FFFFDD;
+          padding-top:3px;
+          padding-bottom:3px;
+          padding-left:13px;
+          padding-right:13px;
+          font-family: monospace;
+          border:1px solid #DDD;}
+</style>
+</head>
+<body>
+<h2>Implemented AST functions</h2>
+
+The starlink.Ast module provides Python wrappers for the following AST
+functions. For each function, the corresponding Python API is displayed
+on a yellow background, together with any explanatory notes. For
+information about the purpose and parameters of each function, click on
+the "ast..." function name to display the AST reference documentation
+from SUN/211.
+<p>
+For examples of calling these wrappers, see the PyAST test script
+(starlink/ast/test/test.py).
+<p>
+General Notes:
+<ul>
+<li> A returned value of "<code>result</code>" refers to the function value
+returned by the corresponding C function.
+<li> When the C documentation refers to a <i>NULL</i> pointer, "<code>None</code>" should be
+used instead.
+<li> Parameters that are optional in the Python API are indicated by
+strings of the form "<code>name=default</code>".
+<li> Constructors are shown preceeded by the full module name
+"<code>starlink.Ast</code>".
+<li> Methods are shown preceeded by a reference with name equal to the class
+that provides the method.
+</ul>
+<hr>
+<p>
+EOF
+
+foreach $key (sort keys %purposes) {
+   if( $invokes{$key} ) {
+      print OUT "<div class=\"implemented\" id=\"$key\">\n";
+      print OUT "&#149; &nbsp; <a href=\"/star/docs/sun211.htx/#xref_$xrefs{$key}\">ast$key</a> - $purposes{$key}\n";
+      print OUT "<ul>\n";
+      print OUT "<li><span class=inv>$invokes{$key}</span></li>\n";
+      if( $isstat{$key} ) {
+         print OUT "<li class=\"note\">This is a static module function.</li>\n";
+      }
+      foreach $note (split /zzz/, $notes{$key} ) {
+         print OUT "<li class=\"note\">$note</li>\n";
+      }
+      print OUT "</ul>\n";
+      print OUT "</div>\n";
+   }
+}
+
+print OUT <<EOF;
+</body>
+</html>
+EOF
+
+close( OUT );
+
+open( OUT, ">pyast.htx/node2.html" );
+
+print OUT <<EOF;
+<html>
+<head>
+</head>
+<body>
+<h2>AST functions with no python wrapper</h2>
+The following AST functions cannot currently be used in python.
+<p><ul>
+EOF
+
+foreach $key (sort keys %purposes) {
+   if( ! $invokes{$key} ) {
+
+      if( $key eq "Tran1" || $key eq "Tran2" ) {
+         $extra = " (now covered by astTranN)";
+      } else {
+         $extra = '';
+      }
+      print OUT "<div class=\"unimplemented\">\n";
+      print OUT "<a href=\"/star/docs/sun211.htx/#xref_$xrefs{$key}\">ast$key - $purposes{$key}</a>$extra<br>\n";
+      print OUT "</div>\n";
+   }
+}
+
+print OUT <<EOF;
+</ul></body>
+</html>
+EOF
+
+close( OUT );
+
+
+open( OUT, ">pyast.htx/pyast.html" );
+open( IN, "<dochead.html" );
+while(<IN>){
+   print OUT;
+}
+close( IN );
+
+print OUT "<li><A href=\"node2.html\">Unimplemented AST functions</A>\n";
+print OUT "<li><A href=\"node1.html\">Implemented AST functions</A>\n";
+print OUT "<ul>\n";
+foreach $key (sort keys %purposes) {
+   if( $invokes{$key} ) {
+      print OUT "<li><a href=\"node1.html#$key\">ast$key - $purposes{$key}</a>\n";
+   }
+}
+print OUT "</ul>\n";
+
+
+open( IN, "<doctail.html" );
+while(<IN>){
+   print OUT;
+}
+close( IN );
+close( OUT );
+
+
+unlink("pyast.htx/htx.index");
+unlink("htx.log");
+system( "/star/bin/hlink ." );
