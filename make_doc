@@ -333,8 +333,6 @@ if( $ans eq "Y" || $ans eq "y" ) {
 }
 
 
-system( "ls" );
-
 unlink("pyast.htx/htx.index");
 unlink("htx.log");
 system( "/star/bin/hlink ." );
