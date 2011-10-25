@@ -314,6 +314,34 @@ close( IN );
 close( OUT );
 
 
+
+$ENV{HTX_PATH} = " ";
+
+print( "Enter Y to create docs for web or N to create docs for distribution: " );
+$ans = <STDIN>;
+chomp($ans);
+if( $ans eq "Y" || $ans eq "y" ) {
+   print("Renaming sun211.htx\n");
+   rename( "sun211.htx", "sun211.tmp" );
+
+} elsif( $ans eq "N" || $ans eq "n" ) {
+   $ENV{HTX_PATH} = $ENV{PWD};
+
+} else {
+   print( "Answer Y or N - not $ans \n" );
+   exit
+}
+
+
+system( "ls" );
+
 unlink("pyast.htx/htx.index");
 unlink("htx.log");
 system( "/star/bin/hlink ." );
+
+
+if( $ans eq "Y" || $ans eq "y" ) {
+   print("Renaming sun211.htx\n");
+   rename( "sun211.tmp", "sun211.htx" );
+}
+
