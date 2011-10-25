@@ -68,8 +68,8 @@ static PyObject *AstError_err;
     errcodes = []
     for line in open(errfile,"r", encoding="ascii"):
         words = line.split()
-        if words and words[0] == "enum" and words[1] == "{" and words[2][:5] == "AST__":
-            errcodes.append( words[2][6:] )
+        if words and words[0] == "enum" and words[2][:5] == "AST__" and words[2][5:6].isalpha():
+            errcodes.append( words[2][5:] )
 
     if not errcodes:
         print("Could not find any error codes. Aborting")
