@@ -15,15 +15,17 @@ os.environ[ "AST_SOURCE" ] = os.path.join( os.getcwd(), 'ast' )
 make_exceptions.make_exceptions( os.path.join('starlink','ast') )
 make_attributes.make_attributes( os.path.join('starlink','ast') )
 
-#  Configure the AST source code.
-subprocess.call( os.path.join('.','configure'), cwd='ast' )
+#  If not already done, configure the AST source code.
+if not os.path.exists( os.path.join('ast','config.h') ):
+   subprocess.call( os.path.join('.','configure'), cwd='ast' )
 
-#  Extract teh AST documentation
-tar = tarfile.open('ast/sun211.htx_tar')
-tar.extractall()
-tar.close()
+#  Extract the AST documentation
+if not os.path.exists( 'sun211.htx'):
+   tar = tarfile.open('ast/sun211.htx_tar')
+   tar.extractall()
+   tar.close()
 
-#  List the C source files needed to build the AST library locally.
+#  List the C source files for implemeneted AST classes:
 ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
           'cmpmap.c', 'cmpregion.c', 'dsbspecframe.c', 'dssmap.c',
 	  'ellipse.c', 'error.c', 'fitschan.c', 'fluxframe.c', 'frame.c',
@@ -40,12 +42,18 @@ ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
 	  'unitmap.c', 'wcsmap.c', 'wcstrig.c', 'winmap.c', 'xml.c',
 	  'xmlchan.c', 'zoommap.c')
 
+#  List the C source files for unimplemeneted AST classes:
+ast_c_extra = ( 'fitstable.c', 'plot3d.c', 'selectormap.c', 'slamap.c',
+                'specmap.c', 'switchmap.c', 'table.c', 'xmlchan.c')
+
 #  Initialise the list of sources files needed to build the starlink.Ast
 #  module.
 sources = [os.path.join('starlink', 'ast', 'Ast.c')]
 
 #  Append all the .c and .h files needed to build the AST library locally.
 for cfile in ast_c:
+   sources.append( os.path.join( 'ast', cfile ) )
+for cfile in ast_c_extra:
    sources.append( os.path.join( 'ast', cfile ) )
 
 #  Create the description of the starlink.Ast module.
