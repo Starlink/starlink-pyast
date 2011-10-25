@@ -1,5 +1,5 @@
 from distutils.core import setup, Extension
-import os, subprocess, numpy
+import os, subprocess, numpy, tarfile
 from tools import make_exceptions, make_attributes
 
 include_dirs = []
@@ -17,6 +17,11 @@ make_attributes.make_attributes( os.path.join('starlink','ast') )
 
 #  Configure the AST source code.
 subprocess.call( os.path.join('.','configure'), cwd='ast' )
+
+#  Extract teh AST documentation
+tar = tarfile.open('ast/sun211.htx_tar')
+tar.extractall()
+tar.close()
 
 #  List the C source files needed to build the AST library locally.
 ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',

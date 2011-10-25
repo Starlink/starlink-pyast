@@ -33,16 +33,31 @@ languages, including Fortran, Java, Perl, and now Python.
 This document does not provide a full description of the facilities of
 AST, or of the AST wrapper functions provided by PyAST. For general
 information about how to use AST, or the specifics of individual
-functions and their parameters, the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/sun211.html?xref_">
+functions and their parameters, the <a href="../sun211.htx/sun211.html#xref_">
 main AST documentation</a> describing the native C interface should be consulted.
 
 <h3 id="s4">Requirements:</h3>
-PyAST requires Python version 3 to be installed, and to produce graphics
-<a href="http://matplotlib.sourceforge.net/">matplotlib</a> must be
-available. It has no other dependencies. PyAST comes with its own copy of
-the AST library, but you can choose to use a locally installed copy
-instead if you so choose (PyAST version 1.0 requires at least AST version
-6.0).  [xxx Need details]
+PyAST requires Python version 3 to be installed. It has no other
+dependencies (a copy of the AST library itself is bundled with PyAST).
+However, PyAST includes <a href="node5.html">extra optional
+facilities</a> that assume the presence of other python libraries:
+<ul>
+
+<li> If the <a href="http://matplotlib.sourceforge.net/">matplotlib</A>
+graphics library is available, then the
+<code>starlink.Grf.grf_matplotlib</code> "GRF module" can be used with
+the PyAST <code>starlink.Ast.Plot</code> class to produce annotated
+coordinate grids, etc. To use any other graphics system, an equivalent
+GRF module must be written.
+
+<li> If the <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> library is available, then the
+<code>starlink.Atl.PyFITSAdapter</code> class provides a simple means of
+transferring FITS header cards bwteeen PyFITS headers and the PyAST
+<code>FitsChan</code> class.
+
+</ul>
+
 
 <h3 id="s5">Obtaining and installing PyAST:</h3>
 The <a href="https://github.com/timj/starlink-pyast/tarball/master">current
