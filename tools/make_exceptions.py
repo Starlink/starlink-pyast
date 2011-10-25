@@ -19,9 +19,9 @@ def make_exceptions( dirname=None ):
         exit(1)
 
     # ensure that we have the error codes file
-    msgfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.msg")
-    if not os.path.exists(msgfile):
-        print("Could not find the ast_err.msg file in directory "+os.environ['AST_SOURCE'])
+    errfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.h")
+    if not os.path.exists(errfile):
+        print("Could not find the ast_err.h file in directory "+os.environ['AST_SOURCE'])
         exit(1)
 
     # Open an output C file
@@ -40,7 +40,7 @@ def make_exceptions( dirname=None ):
 *     Raise a Python exception when AST reports an error.
 
 *  Description:
-*     For each AST error code defined in ast_err.msg, this file creates
+*     For each AST error code defined in ast_err.h, this file creates
 *     a singleton instance of a corresponding Python Exception class. It
 *     also provides an implementation of the astPutErr function that AST
 *     uses to report errors. This implementation raises the corresponding
@@ -62,14 +62,14 @@ static PyObject *AstError_err;
 /* For each AST error code, declare a static variable to hold an instance
    of the corresponding Python Exception. */""", file=cfile)
 
-    # Now read the MSG file and create extract all the error codes
+    # Now read the ast_err.h file and create extract all the error codes
     # Note that AST__3DFSET is not currently supported because a
     # variable can not start with a number
     errcodes = []
-    for line in open(msgfile,"r", encoding="ascii"):
+    for line in open(errfile,"r", encoding="ascii"):
         words = line.split()
-        if words and words[0].isalnum() and words[0].isupper() and not words[0][0].isdigit():
-            errcodes.append( words[0] )
+        if words and words[0] == "enum" and words[1] == "{" and words[2][:5] == "AST__":
+            errcodes.append( words[2][6:] )
 
     if not errcodes:
         print("Could not find any error codes. Aborting")
