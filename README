@@ -1,17 +1,19 @@
-PyAST is a Python extension that provides an interface to the
-Starlink AST library. To install the module AST source directory must
-be available on the system via the AST_SOURCE environment variable.
-Then ensure the environment variable STARLINK_DIR is
-defined and do:
+PyAST is a Python3 extension that provides an interface
+to the Starlink AST library. To install, do:
 
 python3 setup.py install
 
 or
 
-python3 setup.py install --prefix=<your specific installation directory>
+python3 setup.py install --prefix=<installation directory>
 
-To test it, do
+To test it, do:
 
 python3 starlink/ast/test/test.py
+
+To view documentation, open pyast.htx/pyast.html in
+your favourite browser, or view the docs online at
+http://dsberry.github.com/starlink/pyast.html
+
 
 
