@@ -1,5 +1,7 @@
 PyAST is a Python3 extension that provides an interface
-to the Starlink AST library. To install, do:
+to the Starlink AST library. It can be obtained from
+https://github.com/timj/starlink-pyast/downloads. To
+install, do:
 
 python3 setup.py install
 
