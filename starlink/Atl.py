@@ -29,14 +29,18 @@ class PyFITSAdapter:
    When used as a FitsChan sink, the PyFITSAdapter will allow the
    FitsChan to copy its own header cards into the PyFITS header. This
    happens when the FitsChan is deleted or when the FitsChan.writefits()
-   method is invoked. Each FitsChan card replaces any existing card in
-   the PyFITS header that refers to the same keyword. If there is no card
+   method is invoked. If the PyFITSAdapter.Clear property is true, then
+   the PyFITS header is first emptied of all existing headers, and the
+   contents of the FitsChan are then stored in the PyFITS header.  If the
+   PyFITSAdapter.Clear property is False, the original contents of the
+   PyFITS header are retained. In this case each FitsChan card replaces any
+   existing card that refers to the same keyword (if there is no card
    for the keyword already in the PyFITS header, the FitsChan card will
-   be appended to the end of the header.
+   be appended to the end of the header).
 
    """
 
-   def __init__(self,hdu):
+   def __init__(self,hdu,clear=True):
       """
       Construct a PyFITSAdapter for a specified PyFITS HDU.
 
@@ -45,6 +49,13 @@ class PyFITSAdapter:
             opened using pyfits.open(). If the entire hdulist is supplied,
             rather than an element of the hdulist, then the primary HDU
             (element zero) will be used.
+         clear: This value is only used when using the PyFITSAdapter as
+            a sink function with a FitsChan. If "clear" is True, the
+	    original contents of the PyFITS header are deleted
+	    immediately before the first FitsChan card is copied into the
+	    PyFITS header. If "clear" is False, the original contents of
+	    the PyFITS heasder are retained, with the FitsChan keywords
+	    over-writing any existing values for the same keywords.
 
       Examples:
          - To read WCS from the 'DATA' extension in FITS file 'test.fit':
@@ -58,7 +69,8 @@ class PyFITSAdapter:
          >>> framset = fc.read()
 
          - To write a FrameSet to the primary HDU in FITS file 'old.fit',
-         using standard FITS-WCS keywords:
+         using standard FITS-WCS keywords, emptying the primtary HDU
+         header first:
 
          >>> import pyfits
          >>> import starlink.Ast as Ast
@@ -79,6 +91,10 @@ class PyFITSAdapter:
 
 #  Initialise the index of the next card to read or write.
       self.index = 0
+
+#  Record whether the PyFITS header should be emptied before writing to
+#  it for the first time
+      self.clear = clear
 
 
 # -----------------------------------------------------------------
@@ -105,14 +121,19 @@ class PyFITSAdapter:
 
       """
       This method is called by the FitsChan to store a single 80-character
-      FITS header card. If the header already contains a card for
-      the keyword, the existing card is replaced with the new card.
-      Otherwise, the new card is stored at the end of the header.
+      FITS header card. On the first invocation all cards will be deleted
+      form the header if the "clear" property is true. Otherwise, if the
+      header already contains a card for the keyword, the existing card
+      is replaced with the new card. Otherwise, the new card is stored at
+      the end of the header.
       """
+
+      if self.index == 0 and self.clear:
+         self.hdu.header = pyfits.Header()
 
       card = pyfits.core.Card.fromstring(card)
       self.hdu.header.update( card.key, card.value, card.comment )
-
+      self.index += 1
 
 
 # ======================================================================

@@ -209,7 +209,7 @@ draw the axes.</dd>
 <dt><big><code id="writefitswcs">writefitswcs:</code></big></dt><dd>
 Writes an AST FrameSet to a FITS header.
 <p>
-The WCS information described by the supplied <a 
+The WCS information described by the supplied <a
 href="../sun211.htx/node652.html#xref_FrameSet">FrameSet</a> is converted
 into a set of FITS header cards which are stored in the supplied
 <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
@@ -293,19 +293,23 @@ when the newly created, empty FitsChan is used for the first time
 (i.e. when any of its methods is invoked), and subsequently whenever
 the <code>FitsChan.readfits()</code> method is invoked.
 <p>
-When used as a FitsChan sink, the PyFITSAdapter will allow the FitsChan
-to copy its own header cards into the PyFITS header. This happens when
-the FitsChan is deleted or when the <code>FitsChan.writefits()</code>
-method is invoked. Each FitsChan card replaces any existing card in the
-PyFITS header that refers to the same keyword. If there is no card for
-the keyword already in the PyFITS header, the FitsChan card will be
-appended to the end of the header.
+When used as a FitsChan sink, the PyFITSAdapter will allow the
+FitsChan to copy its own header cards into the PyFITS header. This
+happens when the FitsChan is deleted or when the <code>FitsChan.writefits()</code>
+method is invoked. If the PyFITSAdapter.clear property is true, then
+the PyFITS header is first emptied of all existing headers, and the
+contents of the FitsChan are then stored in the PyFITS header.  If the
+PyFITSAdapter.clear property is False, the original contents of the
+PyFITS header are retained. In this case each FitsChan card replaces any
+existing card that refers to the same keyword (if there is no card
+for the keyword already in the PyFITS header, the FitsChan card will
+be appended to the end of the header).
 <p>
 The class provides a public constructor, but no public methods.
 
 <p>Synopsis:<ul>
 <pre class="pycode">
-pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu )
+pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu, clear=True )
 </pre>
 <p>
 <dl>
@@ -315,6 +319,14 @@ pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu )
 using "</code>pyfits.open()</code>". If the entire hdulist is supplied, rather
 than an element of the hdulist, then the primary HDU (element zero) will be
 used.</dd>
+
+<dt><code>clear</code></dt>
+<dd> This value is only used when using the PyFITSAdapter as a sink
+function with a FitsChan. If "clear" is True, the original contents of
+the PyFITS header are deleted immediately before the first FitsChan card
+is copied into the PyFITS header. If "clear" is False, the original
+contents of the PyFITS heasder are retained, with the FitsChan keywords
+over-writing any existing values for the same keywords.</dd>
 
 </dl></ul>
 
