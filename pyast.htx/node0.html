@@ -19,7 +19,7 @@ It does not give details of the AST library itself.
 <h3 id="s1">What is PyAST?</h3>
 PyAST is a collection of modules that allows the facilities of the
 <a href="http://www.starlink.ac.uk">Starlink</a> AST library to be used
-within Python (version 3) scripts.
+within Python (version 2.7 or later) scripts.
 
 <h3 id="s1">What is AST?</h3>
 The <a href="http://www.starlink.ac.uk/ast">AST
@@ -37,7 +37,7 @@ functions and their parameters, the <a href="../sun211.htx/sun211.html#xref_">
 main AST documentation</a> describing the native C interface should be consulted.
 
 <h3 id="s4">Requirements:</h3>
-PyAST requires Python version 3 to be installed, and requires the
+PyAST requires Python version 2.7 or later to be installed, and requires the
 <a href="http://numpy.scipy.org/">numpy</a> package.It has no other
 dependencies (a copy of the AST library itself is bundled with PyAST).
 However, PyAST includes <a href="node5.html">extra optional
@@ -51,7 +51,7 @@ the PyAST <code>starlink.Ast.Plot</code> class to produce annotated
 coordinate grids, etc. To use any other graphics system, an equivalent
 GRF module must be written.
 <p>
-Note, since PyAST requires Python version 3, it is necessary to use the
+Note, if using PyAST with Python version 3, it is necessary to use the
 "<a href="https://github.com/matplotlib/matplotlib-py3">matplotlib for Python
  3</a>" branch.
 
@@ -70,13 +70,13 @@ The current version of PyAST can be downloaded from
 github</a>. To build it, unpack the tar file and then do:
 <p>
 <code>
-% python3 setup.py install
+% python setup.py install
 </code>
 <p>
 To test it, do:
 <p>
 <code>
-% python3 starlink/ast/test/test.py
+% python starlink/ast/test/test.py
 </code>
 
 <h3 id="s6">Using PyAST:</h3>

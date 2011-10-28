@@ -12,6 +12,8 @@ the attribute values.
 setters that need to be included in th Python TypeObject for the class.
 """
 
+from __future__ import print_function
+
 import os
 import os.path
 import glob
@@ -26,7 +28,7 @@ def make_attributes( dirname=None ):
    if dirname is not None:
       file = os.path.join( dirname, file )
 
-   infile = open(file, "r", encoding="ascii" )
+   infile = open( file, "r" )
 
 #  Read the input file.
    for line in infile:
@@ -87,7 +89,7 @@ def make_attributes( dirname=None ):
       cfilename = attname + "_def.c"
       if dirname is not None:
          cfilename = os.path.join( dirname, cfilename )
-      cfile = open(cfilename, "w", encoding="ascii")
+      cfile = open( cfilename, "w" )
 
 # Write out a prologue for the C file
       print(r"""/*
@@ -120,7 +122,7 @@ def make_attributes( dirname=None ):
       cfilename = attname + "_desc.c"
       if dirname is not None:
          cfilename = os.path.join( dirname, cfilename )
-      cfile = open(cfilename, "w", encoding="ascii")
+      cfile = open( cfilename, "w" )
 
 # Write out a prologue for the C file
       print(r"""/*

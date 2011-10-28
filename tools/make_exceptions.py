@@ -9,6 +9,8 @@ the folder containing the source distribution for the AST
 library.
 """
 
+from __future__ import print_function
+
 import os
 import os.path
 
@@ -29,7 +31,7 @@ def make_exceptions( dirname=None ):
     if dirname is not None:
         cfilename = os.path.join( dirname, cfilename )
 
-    cfile = open(cfilename, "w", encoding="ascii")
+    cfile = open( cfilename, "w" )
 
     # Need a C header
     print(r"""/*
@@ -66,7 +68,7 @@ static PyObject *AstError_err;
     # Note that AST__3DFSET is not currently supported because a
     # variable can not start with a number
     errcodes = []
-    for line in open(errfile,"r", encoding="ascii"):
+    for line in open( errfile,"r" ):
         words = line.split()
         if words and words[0] == "enum" and words[2][:5] == "AST__" and words[2][5:6].isalpha():
             errcodes.append( words[2][5:] )

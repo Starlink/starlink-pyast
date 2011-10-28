@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import pyfits
 import starlink.Atl as Atl
 import starlink.Ast as Ast

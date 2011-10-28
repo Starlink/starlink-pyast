@@ -4,6 +4,29 @@
 #include "ast.h"
 #include "grf.h"
 
+/* Define macros for things that changed between Python V2.7 and V3.2 */
+#if PY_MAJOR_VERSION >= 3
+#define PYTYPEOBJECT_HEAD PyVarObject_HEAD_INIT(NULL,0)
+#define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+#define RETURN(value) return value
+#define STRING_CHECK(value) PyUnicode_Check(value)
+#define LONG_CHECK(value) PyLong_Check(value)
+#else
+#define PYTYPEOBJECT_HEAD PyObject_HEAD_INIT(NULL) 0,
+#define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
+#define RETURN(value) return
+#define STRING_CHECK(value) (PyString_Check(value)||PyUnicode_Check(value))
+#define LONG_CHECK(value) (PyInt_Check(value)||PyLong_Check(value))
+
+/* A pointer to the python module structure. This is needed to provide
+   support for Python V2.7, since in Python V2.7 module function do not
+   receive a pointer to the module object as their first argument (i.e. the
+   "self" argument for module functions is always NULL in V2.7). */
+static PyObject *pyast_module = NULL;
+
+#endif
+
+
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
 #define MODULE "starlink.Ast"
@@ -29,6 +52,7 @@ static void Sinka( const char *text );
 /* Include code that intercepts error reports issued by AST and raises
    appropriate Python exceptions instead. */
 #include "exceptions.c"
+
 
 /* Object */
 /* ====== */
@@ -192,7 +216,7 @@ static PyGetSetDef Object_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ObjectType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Object),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -529,7 +553,7 @@ static PyGetSetDef Mapping_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MappingType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Mapping),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -1721,7 +1745,7 @@ static PyGetSetDef ZoomMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ZoomMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(ZoomMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -1810,7 +1834,7 @@ static PyGetSetDef MathMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MathMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(MathMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -1873,7 +1897,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple( args, "iiOO|s:" CLASS, &nin, &nout, &fwd_object,
                          &inv_object, &options ) ) {
 
-      if( PyUnicode_Check( fwd_object ) ) {
+      if( STRING_CHECK( fwd_object ) ) {
          nfwd = 1;
          fwd = astMalloc( sizeof(*fwd) );
          if( astOK ) fwd[0] = GetString( NULL, fwd_object );
@@ -1884,7 +1908,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
          if( astOK ) {
             for( i = 0; i < nfwd; i++ ) {
                PyObject *o = PySequence_GetItem( fwd_object, (Py_ssize_t) i );
-               if( PyUnicode_Check( o ) ) {
+               if( STRING_CHECK( o ) ) {
                   fwd[ i ] = GetString( NULL, o );
                } else {
                   PyErr_SetString( PyExc_TypeError, "The MathMap fwd argument must "
@@ -1901,7 +1925,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
                           "be a string or a sequence of strings");
       }
 
-      if( PyUnicode_Check( inv_object ) ) {
+      if( STRING_CHECK( inv_object ) ) {
          ninv = 1;
          inv = astMalloc( sizeof(*inv) );
          if( astOK ) inv[0] = GetString( NULL, inv_object );
@@ -1912,7 +1936,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
          if( astOK ) {
             for( i = 0; i < ninv; i++ ) {
                PyObject *o = PySequence_GetItem( inv_object, (Py_ssize_t) i );
-               if( PyUnicode_Check( o ) ) {
+               if( STRING_CHECK( o ) ) {
                   inv[ i ] = GetString( NULL, o );
                } else {
                   PyErr_SetString( PyExc_TypeError, "The MathMap inv argument must "
@@ -1970,7 +1994,7 @@ static PyGetSetDef SphMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SphMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(SphMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2068,7 +2092,7 @@ static PyGetSetDef GrismMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject GrismMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(GrismMap),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2154,7 +2178,7 @@ static PyGetSetDef PcdMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PcdMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(PcdMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2258,7 +2282,7 @@ static PyGetSetDef WcsMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject WcsMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(WcsMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2340,7 +2364,7 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject UnitMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(UnitMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2424,7 +2448,7 @@ static PyMethodDef TimeMap_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject TimeMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(TimeMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2538,7 +2562,7 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject RateMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(RateMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2618,7 +2642,7 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(CmpMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2698,7 +2722,7 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject TranMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(TranMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2777,7 +2801,7 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject PermMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(PermMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2885,7 +2909,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject ShiftMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(ShiftMap),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -2974,7 +2998,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject LutMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(LutMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -3065,7 +3089,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject WinMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(WinMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -3282,7 +3306,7 @@ static PyGetSetDef Frame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Frame),             /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -3915,7 +3939,7 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject MatrixMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(MatrixMap),         /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4042,7 +4066,7 @@ static PyGetSetDef PolyMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PolyMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(PolyMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4247,7 +4271,7 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject NormMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(NormMap),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4353,7 +4377,7 @@ static PyGetSetDef FrameSet_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FrameSetType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(FrameSet),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4553,7 +4577,7 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(CmpFrame),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4669,7 +4693,7 @@ static PyGetSetDef SkyFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SkyFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(SkyFrame),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4806,7 +4830,7 @@ static PyGetSetDef SpecFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SpecFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(SpecFrame),         /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -4945,7 +4969,7 @@ static PyGetSetDef DSBSpecFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject DSBSpecFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(DSBSpecFrame),      /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5042,7 +5066,7 @@ static PyGetSetDef TimeFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject TimeFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(TimeFrame),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5145,7 +5169,7 @@ static PyGetSetDef FluxFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FluxFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(FluxFrame),         /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5224,7 +5248,7 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 
 /* Define the class Python type structure */
 static PyTypeObject SpecFluxFrameType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(SpecFluxFrame),     /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5332,7 +5356,7 @@ static PyMethodDef Region_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject RegionType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Region),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5460,7 +5484,7 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject BoxType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Box),               /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5554,7 +5578,7 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CircleType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Circle),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5661,7 +5685,7 @@ static PyMethodDef Polygon_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PolygonType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Polygon),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5792,7 +5816,7 @@ static PyGetSetDef PointList_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PointListType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(PointList),         /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5887,7 +5911,7 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject EllipseType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Ellipse),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -5988,7 +6012,7 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject IntervalType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Interval),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6083,7 +6107,7 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject NullRegionType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(NullRegion),        /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6166,7 +6190,7 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpRegionType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(CmpRegion),         /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6246,7 +6270,7 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject PrismType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Prism),             /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6372,7 +6396,7 @@ static PyGetSetDef Channel_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ChannelType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Channel),           /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6598,7 +6622,7 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
          self->source = source;
          Py_INCREF( source );
 
-      } else if( PyUnicode_Check( source ) ) {
+      } else if( STRING_CHECK( source ) ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "No 'source' object "
                        "supplied." );
@@ -6646,7 +6670,15 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 const char *source_wrapper( void ){
    Channel *channel = astChannelData;
    PyObject *pytext = PyObject_CallMethod( channel->source, "astsource", NULL );
-   channel->source_line = GetString( channel->source_line, pytext );
+   if( pytext && pytext != Py_None ) {
+      channel->source_line = GetString( channel->source_line, pytext );
+      if( !channel->source_line ) {
+         PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
+                          "function is not a string" );
+      }
+   } else {
+      channel->source_line = astFree( channel->source_line );
+   }
    Py_XDECREF(pytext);
    return channel->source_line;
 }
@@ -6836,7 +6868,7 @@ static PySequenceMethods FitsChanAsSequence = {
 
 /* Define the class Python type structure */
 static PyTypeObject FitsChanType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(FitsChan),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -6971,7 +7003,7 @@ static int FitsChan_contains( PyObject *self, PyObject *index ) {
 /* If the index is actually an integer, treat it as the Card index. The
    card exists if the (zero based) card index is less than the number of
    cards in the FitsChan (NCard). */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
       if( (long int) val != lval ) {
@@ -6981,7 +7013,7 @@ static int FitsChan_contains( PyObject *self, PyObject *index ) {
       }
 
 /* Otherwise, if it is a string, just test for the supplied index string. */
-   } else if( PyUnicode_Check( index ) ) {
+   } else if( STRING_CHECK( index ) ) {
       char *keyw = GetString( NULL, index );
 
 /* Save the current card index, and then rewind the FitsChan. */
@@ -7038,7 +7070,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 /* If the index is actually an integer, treat it as the Card index. Set
    the Card attribute in the FitsChan, and then get the current card.
    Change from python zero-based index to ATS one-based index. */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       char card[ 81 ];
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
@@ -7150,7 +7182,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the supplied index is an integer, overwrite the card with the
    corresponding index. */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
       if( (long int) val != lval ) {
@@ -7203,7 +7235,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
             /* Do nothing if no value supplied - the current card will be
                deleted later */
 
-         } else if( PyLong_Check( value ) ) {
+         } else if( LONG_CHECK( value ) ) {
             long int lval = PyLong_AsLong( value );
             int val = (int) lval;
             if( (long int) val != lval ) {
@@ -7550,7 +7582,7 @@ static PyGetSetDef StcsChan_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject StcsChanType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(StcsChan),          /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -7703,7 +7735,7 @@ static PySequenceMethods KeyMapAsSequence = {
 
 /* Define the class Python type structure */
 static PyTypeObject KeyMapType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(KeyMap),            /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -7802,7 +7834,7 @@ static int KeyMap_contains( PyObject *self, PyObject *index ) {
 
 /* If the index is actually an integer, the key exists if the (zero-based)
    index is less than the number of entries in the KeyMap. */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) {
@@ -7812,7 +7844,7 @@ static int KeyMap_contains( PyObject *self, PyObject *index ) {
       }
 
 /* Otherwise, if it is a string, just test the supplied key. */
-   } else if( PyUnicode_Check( index ) ) {
+   } else if( STRING_CHECK( index ) ) {
       char *key = GetString( NULL, index );
       result = astMapHasKey( THIS, key );
       key = astFree( key );
@@ -7850,7 +7882,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 
 /* If the index is actually an integer, get the corresponding key using
    astMapKey, and return a tuple containing the key and value. */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) ikey = INT_MAX;
@@ -7859,7 +7891,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
       return_key = 1;
 
 /* Otherwise, if it is a string, just use the supplied key. */
-   } else if( PyUnicode_Check( index ) ) {
+   } else if( STRING_CHECK( index ) ) {
       key = GetString( NULL, index );
 
 /* Report an error for other index data types. */
@@ -8009,7 +8041,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the index is actually an integer, get the corresponding key using
    astMapKey. */
-   if( PyLong_Check( index ) ) {
+   if( LONG_CHECK( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) ikey = INT_MAX;
@@ -8017,7 +8049,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
       if( astOK ) key = astStore( NULL, key, strlen( key ) + 1 );
 
 /* Otherwise, if it is a string, just use the supplied key. */
-   } else if( PyUnicode_Check( index ) ) {
+   } else if( STRING_CHECK( index ) ) {
       key = GetString( NULL, index );
 
 /* Report an error for other index data types. */
@@ -8056,7 +8088,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the value(s) are integers, get the integer values and store then in
    the keymap. */
-         if( PyLong_Check( vals[ 0 ] ) ) {
+         if( LONG_CHECK( vals[ 0 ] ) ) {
             int *buf = astMalloc( nval*sizeof( *buf ) );
             if( astOK ) {
                for( ival = 0; ival < nval; ival++ ) {
@@ -8086,7 +8118,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
             buf = astFree( buf );
 
 /* Do the same for string values. */
-         } else if( PyUnicode_Check( vals[ 0 ] ) ) {
+         } else if( STRING_CHECK( vals[ 0 ] ) ) {
             char **buf = astCalloc( nval, sizeof( *buf ) );
             if( astOK ) {
                for( ival = 0; ival < nval; ival++ ) {
@@ -8267,7 +8299,7 @@ static PyGetSetDef Plot_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PlotType = {
-   PyVarObject_HEAD_INIT(NULL, 0)
+   PYTYPEOBJECT_HEAD
    CLASS,                     /* tp_name */
    sizeof(Plot),              /* tp_basicsize */
    0,                         /* tp_itemsize */
@@ -8942,7 +8974,7 @@ static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh ){
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' method"
                           " returns a tuple of length %d, should be 2.",
-                          PyTuple_Size( result ) );
+                          (int) PyTuple_Size( result ) );
          } else {
             PyObject *pyitem;
             if( chv ) {
@@ -8975,7 +9007,7 @@ static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta ){
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' method"
                           " returns a tuple of length %d, should be 2.",
-                          PyTuple_Size( result ) );
+                          (int) PyTuple_Size( result ) );
          } else {
             PyObject *pyitem;
             if( alpha ) {
@@ -9028,7 +9060,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
          } else if( (int) PyTuple_Size( result ) != 8 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' method"
                           " returns a tuple of length %d, should be 8.",
-                          PyTuple_Size( result ) );
+                          (int) PyTuple_Size( result ) );
          } else {
             PyObject *pyitem;
             int i;
@@ -9355,6 +9387,14 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 /* Check no error has occurred already. */
    if( PyErr_Occurred() ) return result;
 
+#if PY_MAJOR_VERSION < 3
+
+/* In Python V2.7, the "self" argument is always NULL, so use a global copy
+   of the module pointer stored when the module was initialised. */
+   self = pyast_module;
+
+#endif
+
 /* Get a string holding the full path to the pyast sharable library. */
    str = PyObject_GetAttrString( self, "__file__" );
    buff = GetString( NULL, str );
@@ -9370,13 +9410,16 @@ static PyObject *PyAst_get_include( PyObject *self ) {
          nc = c - buff + 1;
          buff = astAppendString( buff, &nc, "include" );
          if( astOK ) result = Py_BuildValue( "s", buff );
-
-      } else {
-         PyErr_SetString( INTER_err, "Cannot determine the path to the "
-                          "pyast header file" );
       }
       buff = astFree( buff );
    }
+
+/* Report an error if the include file was not obtained. */
+   if( !result && !PyErr_Occurred() ) {
+      PyErr_SetString( INTER_err, "Cannot determine the path to the "
+                       "pyast header file" );
+   }
+
    return result;
 }
 
@@ -9396,6 +9439,7 @@ static PyMethodDef PyAst_methods[] = {
 };
 
 /* Describe the properties of the module. */
+#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef astmodule = {
    PyModuleDef_HEAD_INIT,
    "Ast",
@@ -9404,11 +9448,11 @@ static struct PyModuleDef astmodule = {
    PyAst_methods,
    NULL, NULL, NULL, NULL
 };
-
+#endif
 
 /* Tell the python interpreter about this module. This includes telling
    the interpreter about each of the types defined by this module. */
-PyMODINIT_FUNC PyInit_Ast(void) {
+MOD_INIT(Ast) {
    static void *PyAst_API[ PyAst_API_pointers ];
    PyObject *c_api_object, *m;
 
@@ -9424,17 +9468,22 @@ PyMODINIT_FUNC PyInit_Ast(void) {
                     "at least version 6.0 of the AST library to be "
                     "available, but version %d.%d-%d was found.", maj, min,
                     rel );
-      return NULL;
+      RETURN( NULL );
    }
 
+#if PY_MAJOR_VERSION >= 3
    m = PyModule_Create(&astmodule);
-   if( m == NULL ) return NULL;
+#else
+   m = Py_InitModule3( "Ast", PyAst_methods, "AST Python interface." );
+#endif
+
+   if( m == NULL ) RETURN( NULL );
 
 /* Create singleton instances of the AST Exception classes. The
    RegisterErrors function is defined within file exceptions.c (generated
    automatically by the make_exceptions.py script on the basis of the ast_err.msg
    file). */
-   if( !RegisterErrors( m ) ) return NULL;
+   if( !RegisterErrors( m ) ) RETURN( NULL );
 
 /* Pointers to functions for use by other extension modules. */
    PyAst_API[PyAst_ToString_NUM] = (void *)PyAst_ToString;
@@ -9445,264 +9494,264 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    if( c_api_object ) PyModule_AddObject( m, "_C_API", c_api_object );
 
 /* The types provided by this module. */
-   if( PyType_Ready(&ObjectType) < 0) return NULL;
+   if( PyType_Ready(&ObjectType) < 0) RETURN( NULL );
    Py_INCREF(&ObjectType);
    PyModule_AddObject( m, "Object", (PyObject *)&ObjectType);
 
    MappingType.tp_base = &ObjectType;
-   if( PyType_Ready(&MappingType) < 0) return NULL;
+   if( PyType_Ready(&MappingType) < 0) RETURN( NULL );
    Py_INCREF(&MappingType);
    PyModule_AddObject( m, "Mapping", (PyObject *)&MappingType);
 
    ZoomMapType.tp_new = PyType_GenericNew;
    ZoomMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ZoomMapType) < 0) return NULL;
+   if( PyType_Ready(&ZoomMapType) < 0) RETURN( NULL );
    Py_INCREF(&ZoomMapType);
    PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
 
    MathMapType.tp_new = PyType_GenericNew;
    MathMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MathMapType) < 0) return NULL;
+   if( PyType_Ready(&MathMapType) < 0) RETURN( NULL );
    Py_INCREF(&MathMapType);
    PyModule_AddObject( m, "MathMap", (PyObject *)&MathMapType);
 
    SphMapType.tp_new = PyType_GenericNew;
    SphMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SphMapType) < 0) return NULL;
+   if( PyType_Ready(&SphMapType) < 0) RETURN( NULL );
    Py_INCREF(&SphMapType);
    PyModule_AddObject( m, "SphMap", (PyObject *)&SphMapType);
 
    GrismMapType.tp_new = PyType_GenericNew;
    GrismMapType.tp_base = &MappingType;
-   if( PyType_Ready(&GrismMapType) < 0) return NULL;
+   if( PyType_Ready(&GrismMapType) < 0) RETURN( NULL );
    Py_INCREF(&GrismMapType);
    PyModule_AddObject( m, "GrismMap", (PyObject *)&GrismMapType);
 
    PcdMapType.tp_new = PyType_GenericNew;
    PcdMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PcdMapType) < 0) return NULL;
+   if( PyType_Ready(&PcdMapType) < 0) RETURN( NULL );
    Py_INCREF(&PcdMapType);
    PyModule_AddObject( m, "PcdMap", (PyObject *)&PcdMapType);
 
    WcsMapType.tp_new = PyType_GenericNew;
    WcsMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WcsMapType) < 0) return NULL;
+   if( PyType_Ready(&WcsMapType) < 0) RETURN( NULL );
    Py_INCREF(&WcsMapType);
    PyModule_AddObject( m, "WcsMap", (PyObject *)&WcsMapType);
 
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
-   if( PyType_Ready(&UnitMapType) < 0) return NULL;
+   if( PyType_Ready(&UnitMapType) < 0) RETURN( NULL );
    Py_INCREF(&UnitMapType);
    PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
 
    TimeMapType.tp_new = PyType_GenericNew;
    TimeMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TimeMapType) < 0) return NULL;
+   if( PyType_Ready(&TimeMapType) < 0) RETURN( NULL );
    Py_INCREF(&TimeMapType);
    PyModule_AddObject( m, "TimeMap", (PyObject *)&TimeMapType);
 
    RateMapType.tp_new = PyType_GenericNew;
    RateMapType.tp_base = &MappingType;
-   if( PyType_Ready(&RateMapType) < 0) return NULL;
+   if( PyType_Ready(&RateMapType) < 0) RETURN( NULL );
    Py_INCREF(&RateMapType);
    PyModule_AddObject( m, "RateMap", (PyObject *)&RateMapType);
 
    CmpMapType.tp_new = PyType_GenericNew;
    CmpMapType.tp_base = &MappingType;
-   if( PyType_Ready(&CmpMapType) < 0) return NULL;
+   if( PyType_Ready(&CmpMapType) < 0) RETURN( NULL );
    Py_INCREF(&CmpMapType);
    PyModule_AddObject( m, "CmpMap", (PyObject *)&CmpMapType);
 
    TranMapType.tp_new = PyType_GenericNew;
    TranMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TranMapType) < 0) return NULL;
+   if( PyType_Ready(&TranMapType) < 0) RETURN( NULL );
    Py_INCREF(&TranMapType);
    PyModule_AddObject( m, "TranMap", (PyObject *)&TranMapType);
 
    NormMapType.tp_new = PyType_GenericNew;
    NormMapType.tp_base = &MappingType;
-   if( PyType_Ready(&NormMapType) < 0) return NULL;
+   if( PyType_Ready(&NormMapType) < 0) RETURN( NULL );
    Py_INCREF(&NormMapType);
    PyModule_AddObject( m, "NormMap", (PyObject *)&NormMapType);
 
    PermMapType.tp_new = PyType_GenericNew;
    PermMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PermMapType) < 0) return NULL;
+   if( PyType_Ready(&PermMapType) < 0) RETURN( NULL );
    Py_INCREF(&PermMapType);
    PyModule_AddObject( m, "PermMap", (PyObject *)&PermMapType);
 
    ShiftMapType.tp_new = PyType_GenericNew;
    ShiftMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ShiftMapType) < 0) return NULL;
+   if( PyType_Ready(&ShiftMapType) < 0) RETURN( NULL );
    Py_INCREF(&ShiftMapType);
    PyModule_AddObject( m, "ShiftMap", (PyObject *)&ShiftMapType);
 
    LutMapType.tp_new = PyType_GenericNew;
    LutMapType.tp_base = &MappingType;
-   if( PyType_Ready(&LutMapType) < 0) return NULL;
+   if( PyType_Ready(&LutMapType) < 0) RETURN( NULL );
    Py_INCREF(&LutMapType);
    PyModule_AddObject( m, "LutMap", (PyObject *)&LutMapType);
 
    WinMapType.tp_new = PyType_GenericNew;
    WinMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WinMapType) < 0) return NULL;
+   if( PyType_Ready(&WinMapType) < 0) RETURN( NULL );
    Py_INCREF(&WinMapType);
    PyModule_AddObject( m, "WinMap", (PyObject *)&WinMapType);
 
    MatrixMapType.tp_new = PyType_GenericNew;
    MatrixMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MatrixMapType) < 0) return NULL;
+   if( PyType_Ready(&MatrixMapType) < 0) RETURN( NULL );
    Py_INCREF(&MatrixMapType);
    PyModule_AddObject( m, "MatrixMap", (PyObject *)&MatrixMapType);
 
    PolyMapType.tp_new = PyType_GenericNew;
    PolyMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PolyMapType) < 0) return NULL;
+   if( PyType_Ready(&PolyMapType) < 0) RETURN( NULL );
    Py_INCREF(&PolyMapType);
    PyModule_AddObject( m, "PolyMap", (PyObject *)&PolyMapType);
 
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
-   if( PyType_Ready(&FrameType) < 0) return NULL;
+   if( PyType_Ready(&FrameType) < 0) RETURN( NULL );
    Py_INCREF(&FrameType);
    PyModule_AddObject( m, "Frame", (PyObject *)&FrameType);
 
    FrameSetType.tp_new = PyType_GenericNew;
    FrameSetType.tp_base = &FrameType;
-   if( PyType_Ready(&FrameSetType) < 0) return NULL;
+   if( PyType_Ready(&FrameSetType) < 0) RETURN( NULL );
    Py_INCREF(&FrameSetType);
    PyModule_AddObject( m, "FrameSet", (PyObject *)&FrameSetType);
 
    PlotType.tp_new = PyType_GenericNew;
    PlotType.tp_base = &FrameSetType;
-   if( PyType_Ready(&PlotType) < 0) return NULL;
+   if( PyType_Ready(&PlotType) < 0) RETURN( NULL );
    Py_INCREF(&PlotType);
    PyModule_AddObject( m, "Plot", (PyObject *)&PlotType);
 
    CmpFrameType.tp_new = PyType_GenericNew;
    CmpFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&CmpFrameType) < 0) return NULL;
+   if( PyType_Ready(&CmpFrameType) < 0) RETURN( NULL );
    Py_INCREF(&CmpFrameType);
    PyModule_AddObject( m, "CmpFrame", (PyObject *)&CmpFrameType);
 
    SpecFrameType.tp_new = PyType_GenericNew;
    SpecFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SpecFrameType) < 0) return NULL;
+   if( PyType_Ready(&SpecFrameType) < 0) RETURN( NULL );
    Py_INCREF(&SpecFrameType);
    PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
 
    DSBSpecFrameType.tp_new = PyType_GenericNew;
    DSBSpecFrameType.tp_base = &SpecFrameType;
-   if( PyType_Ready(&DSBSpecFrameType) < 0) return NULL;
+   if( PyType_Ready(&DSBSpecFrameType) < 0) RETURN( NULL );
    Py_INCREF(&DSBSpecFrameType);
    PyModule_AddObject( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType);
 
    SkyFrameType.tp_new = PyType_GenericNew;
    SkyFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SkyFrameType) < 0) return NULL;
+   if( PyType_Ready(&SkyFrameType) < 0) RETURN( NULL );
    Py_INCREF(&SkyFrameType);
    PyModule_AddObject( m, "SkyFrame", (PyObject *)&SkyFrameType);
 
    TimeFrameType.tp_new = PyType_GenericNew;
    TimeFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&TimeFrameType) < 0) return NULL;
+   if( PyType_Ready(&TimeFrameType) < 0) RETURN( NULL );
    Py_INCREF(&TimeFrameType);
    PyModule_AddObject( m, "TimeFrame", (PyObject *)&TimeFrameType);
 
    FluxFrameType.tp_new = PyType_GenericNew;
    FluxFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&FluxFrameType) < 0) return NULL;
+   if( PyType_Ready(&FluxFrameType) < 0) RETURN( NULL );
    Py_INCREF(&FluxFrameType);
    PyModule_AddObject( m, "FluxFrame", (PyObject *)&FluxFrameType);
 
    SpecFluxFrameType.tp_new = PyType_GenericNew;
    SpecFluxFrameType.tp_base = &CmpFrameType;
-   if( PyType_Ready(&SpecFluxFrameType) < 0) return NULL;
+   if( PyType_Ready(&SpecFluxFrameType) < 0) RETURN( NULL );
    Py_INCREF(&SpecFluxFrameType);
    PyModule_AddObject( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType);
 
    RegionType.tp_new = PyType_GenericNew;
    RegionType.tp_base = &FrameType;
-   if( PyType_Ready(&RegionType) < 0) return NULL;
+   if( PyType_Ready(&RegionType) < 0) RETURN( NULL );
    Py_INCREF(&RegionType);
    PyModule_AddObject( m, "Region", (PyObject *)&RegionType);
 
    BoxType.tp_new = PyType_GenericNew;
    BoxType.tp_base = &RegionType;
-   if( PyType_Ready(&BoxType) < 0) return NULL;
+   if( PyType_Ready(&BoxType) < 0) RETURN( NULL );
    Py_INCREF(&BoxType);
    PyModule_AddObject( m, "Box", (PyObject *)&BoxType);
 
    CircleType.tp_new = PyType_GenericNew;
    CircleType.tp_base = &RegionType;
-   if( PyType_Ready(&CircleType) < 0) return NULL;
+   if( PyType_Ready(&CircleType) < 0) RETURN( NULL );
    Py_INCREF(&CircleType);
    PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
 
    PointListType.tp_new = PyType_GenericNew;
    PointListType.tp_base = &RegionType;
-   if( PyType_Ready(&PointListType) < 0) return NULL;
+   if( PyType_Ready(&PointListType) < 0) RETURN( NULL );
    Py_INCREF(&PointListType);
    PyModule_AddObject( m, "PointList", (PyObject *)&PointListType);
 
    PolygonType.tp_new = PyType_GenericNew;
    PolygonType.tp_base = &RegionType;
-   if( PyType_Ready(&PolygonType) < 0) return NULL;
+   if( PyType_Ready(&PolygonType) < 0) RETURN( NULL );
    Py_INCREF(&PolygonType);
    PyModule_AddObject( m, "Polygon", (PyObject *)&PolygonType);
 
    EllipseType.tp_new = PyType_GenericNew;
    EllipseType.tp_base = &RegionType;
-   if( PyType_Ready(&EllipseType) < 0) return NULL;
+   if( PyType_Ready(&EllipseType) < 0) RETURN( NULL );
    Py_INCREF(&EllipseType);
    PyModule_AddObject( m, "Ellipse", (PyObject *)&EllipseType);
 
    IntervalType.tp_new = PyType_GenericNew;
    IntervalType.tp_base = &RegionType;
-   if( PyType_Ready(&IntervalType) < 0) return NULL;
+   if( PyType_Ready(&IntervalType) < 0) RETURN( NULL );
    Py_INCREF(&IntervalType);
    PyModule_AddObject( m, "Interval", (PyObject *)&IntervalType);
 
    NullRegionType.tp_new = PyType_GenericNew;
    NullRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&NullRegionType) < 0) return NULL;
+   if( PyType_Ready(&NullRegionType) < 0) RETURN( NULL );
    Py_INCREF(&NullRegionType);
    PyModule_AddObject( m, "NullRegion", (PyObject *)&NullRegionType);
 
    CmpRegionType.tp_new = PyType_GenericNew;
    CmpRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&CmpRegionType) < 0) return NULL;
+   if( PyType_Ready(&CmpRegionType) < 0) RETURN( NULL );
    Py_INCREF(&CmpRegionType);
    PyModule_AddObject( m, "CmpRegion", (PyObject *)&CmpRegionType);
 
    PrismType.tp_new = PyType_GenericNew;
    PrismType.tp_base = &RegionType;
-   if( PyType_Ready(&PrismType) < 0) return NULL;
+   if( PyType_Ready(&PrismType) < 0) RETURN( NULL );
    Py_INCREF(&PrismType);
    PyModule_AddObject( m, "Prism", (PyObject *)&PrismType);
 
    ChannelType.tp_new = PyType_GenericNew;
    ChannelType.tp_base = &ObjectType;
-   if( PyType_Ready(&ChannelType) < 0) return NULL;
+   if( PyType_Ready(&ChannelType) < 0) RETURN( NULL );
    Py_INCREF(&ChannelType);
    PyModule_AddObject( m, "Channel", (PyObject *)&ChannelType);
 
    FitsChanType.tp_new = PyType_GenericNew;
    FitsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&FitsChanType) < 0) return NULL;
+   if( PyType_Ready(&FitsChanType) < 0) RETURN( NULL );
    Py_INCREF(&FitsChanType);
    PyModule_AddObject( m, "FitsChan", (PyObject *)&FitsChanType);
 
    StcsChanType.tp_new = PyType_GenericNew;
    StcsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&StcsChanType) < 0) return NULL;
+   if( PyType_Ready(&StcsChanType) < 0) RETURN( NULL );
    Py_INCREF(&StcsChanType);
    PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
 
    KeyMapType.tp_new = PyType_GenericNew;
    KeyMapType.tp_base = &ObjectType;
-   if( PyType_Ready(&KeyMapType) < 0) return NULL;
+   if( PyType_Ready(&KeyMapType) < 0) RETURN( NULL );
    Py_INCREF(&KeyMapType);
    PyModule_AddObject( m, "KeyMap", (PyObject *)&KeyMapType);
 
@@ -9902,7 +9951,20 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 /* Initialise the numpi module */
    import_array();
 
-   return m;
+
+
+#if PY_MAJOR_VERSION < 3
+
+/* Save a pointer to the module so that module functions can get at it
+   (in Python 2.7 module functions always receive NULL for the first argument
+   - "self"). */
+   pyast_module = m;
+   Py_INCREF(m);
+
+#endif
+
+
+   RETURN( m );
 }
 
 
@@ -10018,14 +10080,25 @@ static char *GetString( void *mem, PyObject *value ) {
 */
    char *result = NULL;
    if( value && value != Py_None ) {
-      PyObject *bytes = PyUnicode_AsASCIIString(value);
-      if( bytes ) {
-         const char *bytestr =  PyBytes_AS_STRING(bytes);
-         result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
-         Py_DECREF(bytes);
+
+
+      if( PyUnicode_Check( value ) ) {
+         PyObject *bytes = PyUnicode_AsASCIIString(value);
+         if( bytes ) {
+            const char *bytestr =  PyBytes_AS_STRING(bytes);
+            result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
+            Py_DECREF(bytes);
+         }
+
+#if PY_MAJOR_VERSION < 3
+      } else if( PyString_Check( value ) ) {
+         const char *bytestr =  PyString_AsString(value);
+         if( bytestr ) {
+            result = astStore( mem, bytestr, strlen( bytestr ) + 1 );
+         }
+#endif
+
       } else {
-         PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
-                          "function is not a string" );
          result = astFree( mem );
       }
    } else {
