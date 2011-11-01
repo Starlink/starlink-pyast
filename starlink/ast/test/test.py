@@ -1268,6 +1268,26 @@ class TestAst(unittest.TestCase):
       self.assertEqual( overlap, 5 )
       self.assertEqual( pointlist.ListSize, 3 )
 
+   def test_Table(self):
+      table = starlink.Ast.Table()
+      self.assertIsInstance( table, starlink.Ast.Table )
+      self.assertIsInstance( table, starlink.Ast.KeyMap )
+      with self.assertRaises(starlink.Ast.BADKEY):
+         table['Fred'] = 123
+      dims = [5,2]
+      table.addcolumn( 'Fred', starlink.Ast.DOUBLETYPE, dims )
+      self.assertEqual( table.Ncolumn, 1 )
+      self.assertEqual( table.columnname(1), 'FRED' )
+      self.assertEqual( int(table.get( 'ColumnType(Fred)' )), starlink.Ast.DOUBLETYPE )
+      dims = table.columnshape( 'Fred' )
+      self.assertEqual( dims[0], 5 )
+      self.assertEqual( dims[1], 2 )
+      self.assertEqual( table.get( 'ColumnUnit(Fred)' ), '' )
+      with self.assertRaises(starlink.Ast.BADTYP):
+         table['Fred(2)'] = 123
+      with self.assertRaises(starlink.Ast.BADTYP):
+         table['Fred(2)'] = 123.0
+      table['Fred(2)'] = numpy.linspace( 1.0, 10.0, 10.0 )
 
 
 if __name__ == "__main__":

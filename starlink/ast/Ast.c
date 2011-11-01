@@ -126,6 +126,7 @@ MAKE_ISA(SpecFluxFrame)
 MAKE_ISA(SpecFrame)
 MAKE_ISA(SphMap)
 MAKE_ISA(StcsChan)
+MAKE_ISA(Table)
 MAKE_ISA(TimeFrame)
 MAKE_ISA(TimeMap)
 MAKE_ISA(TranMap)
@@ -173,6 +174,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(SpecFrame,specframe),
    DEF_ISA(SphMap,sphmap),
    DEF_ISA(StcsChan,stcschan),
+   DEF_ISA(Table,table),
    DEF_ISA(TimeFrame,timeframe),
    DEF_ISA(TimeMap,timemap),
    DEF_ISA(TranMap,tranmap),
@@ -8066,13 +8068,14 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
          astMapRemove( THIS, key );
          nval = 0;
 
-/* If a Tuple was supplied, extract the PyObjects from it. */
-      } else if( PyTuple_Check( value ) ) {
-         nval = (int) PyTuple_Size( value );
+/* If a non-string Sequence was supplied, extract the PyObjects from it. */
+      } else if( PySequence_Check( value ) &&
+                 !STRING_CHECK( value ) ) {
+         nval = (int) PySequence_Size( value );
          vals = astMalloc( nval*sizeof( *vals ) );
          if( astOK ) {
             for( ival = 0; ival < nval; ival++ ) {
-               vals[ ival ] = PyTuple_GET_ITEM( value,  (Py_ssize_t) ival );
+               vals[ ival ] = PySequence_GetItem( value,  (Py_ssize_t) ival );
             }
          }
 
@@ -8139,6 +8142,36 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
                astMapPut1A( THIS, key, nval, buf, NULL );
             }
             buf = astFree( buf );
+
+
+/* If an array was supplied, store it as a 1D vector without conversion. */
+      } else if( PyArray_Check( vals[ 0 ] ) && nval == 1 ) {
+         PyArrayObject *array = (PyArrayObject *) vals[ 0 ];
+         int type = array->descr->type_num;
+         nval = 1;
+         int i;
+         for( i = 0; i < array->nd; i++ ) {
+            nval *= (array->dimensions)[ i ];
+         }
+         if( type == PyArray_DOUBLE ) {
+            astMapPut1D( THIS, key, nval, (const double *) array->data, NULL );
+
+         } else if( type == PyArray_FLOAT ) {
+            astMapPut1F( THIS, key, nval, (const float *) array->data, NULL );
+
+         } else if( type == PyArray_INT ) {
+            astMapPut1I( THIS, key, nval, (const int *) array->data, NULL );
+
+         } else if( type == PyArray_SHORT ) {
+            astMapPut1S( THIS, key, nval, (const short int *) array->data, NULL );
+
+         } else if( type == PyArray_UBYTE ) {
+            astMapPut1B( THIS, key, nval, (const unsigned char *) array->data, NULL );
+
+         } else {
+            PyErr_SetString( PyExc_ValueError, "Cannot store given data "
+                             "type in a KeyMap");
+         }
 
 /* For other C pointers, assume they are pointers to PyObjects and just store
    them as supplied. */
@@ -9087,6 +9120,357 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
 
 
 
+/* Table */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Table"
+
+/* Define the class structure */
+typedef struct {
+   KeyMap parent;
+} Table;
+
+/* Prototypes for class functions */
+static int Table_init( Table *self, PyObject *args, PyObject *kwds );
+static PyObject *Table_addcolumn( Table *self, PyObject *args );
+static PyObject *Table_addparameter( Table *self, PyObject *args );
+static PyObject *Table_columnname( Table *self, PyObject *args );
+static PyObject *Table_columnshape( Table *self, PyObject *args );
+static PyObject *Table_hascolumn( Table *self, PyObject *args );
+static PyObject *Table_hasparameter( Table *self, PyObject *args );
+static PyObject *Table_parametername( Table *self, PyObject *args );
+static PyObject *Table_purgerows( Table *self );
+static PyObject *Table_removecolumn( Table *self, PyObject *args );
+static PyObject *Table_removeparameter( Table *self, PyObject *args );
+static PyObject *Table_removerow( Table *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef Table_methods[] = {
+   {"addcolumn", (PyCFunction)Table_addcolumn, METH_VARARGS, "Add a new column definition to a Table"},
+   {"addparameter", (PyCFunction)Table_addparameter, METH_VARARGS, "Add a new global parameter definition to a Table"},
+   {"columnname", (PyCFunction)Table_columnname, METH_VARARGS, "Return the name of the column with a given index"},
+   {"columnshape", (PyCFunction)Table_columnshape, METH_VARARGS, "Return the shape of the values in a named column"},
+   {"hascolumn", (PyCFunction)Table_hascolumn, METH_VARARGS, "Checks if a column exists in a Table"},
+   {"hasparameter", (PyCFunction)Table_hasparameter, METH_VARARGS, "Checks if a global parameter exists in a Table"},
+   {"parametername", (PyCFunction)Table_parametername, METH_VARARGS, "Return the name of the parameter with a given index"},
+   {"purgerows", (PyCFunction)Table_purgerows, METH_NOARGS, "Remove all empty rows from a Table"},
+   {"removecolumn", (PyCFunction)Table_removecolumn, METH_VARARGS, "Remove a column from a Table"},
+   {"removeparameter", (PyCFunction)Table_removeparameter, METH_VARARGS, "Remove a global parameter from a Table"},
+   {"removerow", (PyCFunction)Table_removerow, METH_VARARGS, "Remove a row from a Table"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the AST attributes of the class */
+MAKE_GETROI(Table,Ncolumn)
+MAKE_GETROI(Table,Nrow)
+MAKE_GETROI(Table,Nparameter)
+static PyGetSetDef Table_getseters[] = {
+   DEFATT(Ncolumn,"The number of columns currently in the Table"),
+   DEFATT(Nrow,"The number of rows currently in the Table"),
+   DEFATT(Nparameter,"The number of global parameters currently in the Table"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject TableType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(Table),             /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST Table",               /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Table_methods,             /* tp_methods */
+   0,                         /* tp_members */
+   Table_getseters,           /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Table_init,      /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Table_init( Table *self, PyObject *args, PyObject *kwds ){
+
+/* args: :options=None */
+
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstTable *this = astTable( options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addcolumn"
+static PyObject *Table_addcolumn( Table *self, PyObject *args ) {
+
+/* args: :name,type,dims=None,unit="" */
+
+   PyObject *dims_object = NULL;
+   PyObject *result = NULL;
+   const char *name;
+   const char *unit = "";
+   int type;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "si|Os:" NAME, &name, &type, &dims_object,
+                       &unit ) && astOK ) {
+      int ndim = 0;
+      PyArrayObject *dims = GetArray1I( dims_object, &ndim, "dims", NAME );
+      if( dims ) {
+         astAddColumn( THIS, name, type, ndim, (int *) dims->data, unit );
+         if( astOK ) result = Py_None;
+         Py_DECREF( dims );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addparameter"
+static PyObject *Table_addparameter( Table *self, PyObject *args ) {
+
+/* args: :name */
+
+   PyObject *result = NULL;
+   const char *name;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "s:" NAME, &name ) && astOK ) {
+      astAddParameter( THIS, name );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".columnname"
+static PyObject *Table_columnname( Table *self, PyObject *args ) {
+
+/* args: result:index */
+
+   PyObject *result = NULL;
+   int index;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "i:" NAME, &index ) && astOK ) {
+      const char *name = astColumnName( THIS, index );
+      if( astOK ) result = Py_BuildValue( "s", name );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".columnshape"
+static PyObject *Table_columnshape( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+   npy_intp dims[1];
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      int ndim;
+      char buf[100];
+      sprintf( buf, "ColumnNdim(%s)", column );
+      ndim = astGetI( THIS, buf );
+      dims[ 0 ] = ndim;
+      PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+      if( dims_array ) {
+         astColumnShape( THIS, column, ndim, &ndim, (int *) dims_array->data );
+         if( astOK ) {
+            result = (PyObject *) dims_array;
+         } else {
+            Py_DECREF( dims_array );
+         }
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".hascolumn"
+static PyObject *Table_hascolumn( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      int there = astHasColumn( THIS, column );
+      if( astOK ) result = Py_BuildValue( "O", (there ?  Py_True : Py_False));
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".hasparameter"
+static PyObject *Table_hasparameter( Table *self, PyObject *args ) {
+
+/* args: result:parameter */
+
+   PyObject *result = NULL;
+   const char *parameter;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &parameter ) && astOK ) {
+      int there = astHasParameter( THIS, parameter );
+      if( astOK ) result = Py_BuildValue( "O", (there ?  Py_True : Py_False));
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".parametername"
+static PyObject *Table_parametername( Table *self, PyObject *args ) {
+
+/* args: result:index */
+
+   PyObject *result = NULL;
+   int index;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "i:" NAME, &index ) && astOK ) {
+      const char *name = astParameterName( THIS, index );
+      if( astOK ) result = Py_BuildValue( "s", name );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+static PyObject *Table_purgerows( Table *self ) {
+
+/* args: : */
+
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return NULL;
+   astPurgeRows( THIS );
+   if( astOK ) result = Py_None;
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".removecolumn"
+static PyObject *Table_removecolumn( Table *self, PyObject *args ) {
+
+/* args: :column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      astRemoveColumn( THIS, column );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".removeparameter"
+static PyObject *Table_removeparameter( Table *self, PyObject *args ) {
+
+/* args: :name */
+
+   PyObject *result = NULL;
+   const char *name;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &name ) && astOK ) {
+      astRemoveParameter( THIS, name );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".removerow"
+static PyObject *Table_removerow( Table *self, PyObject *args ) {
+
+/* args: :index */
+
+   PyObject *result = NULL;
+   int index;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "i:" NAME, &index ) && astOK ) {
+      astRemoveRow( THIS, index );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
 
 
 
@@ -9755,6 +10139,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&KeyMapType);
    PyModule_AddObject( m, "KeyMap", (PyObject *)&KeyMapType);
 
+   TableType.tp_new = PyType_GenericNew;
+   TableType.tp_base = &KeyMapType;
+   if( PyType_Ready(&TableType) < 0) RETURN( NULL );
+   Py_INCREF(&TableType);
+   PyModule_AddObject( m, "Table", (PyObject *)&TableType);
+
 /* The constants provided by this module. */
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
@@ -10284,6 +10674,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &StcsChanType;
       } else if( !strcmp( class, "KeyMap" ) ) {
          result = (PyTypeObject *) &KeyMapType;
+      } else if( !strcmp( class, "Table" ) ) {
+         result = (PyTypeObject *) &TableType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

@@ -48,10 +48,24 @@ that provides the method.
 </ul>
 <hr>
 <p>
+<div class="implemented" id="AddColumn">
+&#149; &nbsp; <a href="../sun211.htx/node217.html#xref_astAddColumn">astAddColumn</a> - Add a new column definition to a table 
+<ul>
+<li><span class=inv> table.addcolumn( name, type, dims=None, unit=""  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="AddFrame">
 &#149; &nbsp; <a href="../sun211.htx/node218.html#xref_astAddFrame">astAddFrame</a> - Add a Frame to a FrameSet to define a new coordinate system 
 <ul>
 <li><span class=inv> frameset.addframe( iframe, map, frame  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AddParameter">
+&#149; &nbsp; <a href="../sun211.htx/node219.html#xref_astAddParameter">astAddParameter</a> - Add a new global parameter definition to a table 
+<ul>
+<li><span class=inv> table.addparameter( name  )
 </span></li>
 </ul>
 </div>
@@ -154,6 +168,20 @@ that provides the method.
 &#149; &nbsp; <a href="../sun211.htx/node240.html#xref_astCmpRegion">astCmpRegion</a> - Create a CmpRegion 
 <ul>
 <li><span class=inv>cmpregion = starlink.Ast.CmpRegion( region1, region2, oper=starlink.Ast.OR, unc=None, options=None  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="ColumnName">
+&#149; &nbsp; <a href="../sun211.htx/node241.html#xref_astColumnName">astColumnName</a> - Get the name of the column at a given index within the Table 
+<ul>
+<li><span class=inv>result = table.columnname( index  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="ColumnShape">
+&#149; &nbsp; <a href="../sun211.htx/node243.html#xref_astColumnShape">astColumnShape</a> - Returns the shape of the values in a named column 
+<ul>
+<li><span class=inv>result = table.columnshape( column  )
+</span></li>
 </ul>
 </div>
 <div class="implemented" id="Convert">
@@ -379,6 +407,20 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="HasColumn">
+&#149; &nbsp; <a href="../sun211.htx/node298.html#xref_astHasColumn">astHasColumn</a> - Returns a flag indicating if a column is present in a Table 
+<ul>
+<li><span class=inv>result = table.hascolumn( column  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="HasParameter">
+&#149; &nbsp; <a href="../sun211.htx/node299.html#xref_astHasParameter">astHasParameter</a> - Returns a flag indicating if a named global parameter is present in a Table 
+<ul>
+<li><span class=inv>result = table.hasparameter( parameter  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="Intersect">
 &#149; &nbsp; <a href="../sun211.htx/node301.html#xref_astIntersect">astIntersect</a> - Find the point of intersection between two geodesic curves 
 <ul>
@@ -507,6 +549,13 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="ParameterName">
+&#149; &nbsp; <a href="../sun211.htx/node344.html#xref_astParameterName">astParameterName</a> - Get the name of the global parameter at a given index within the Table 
+<ul>
+<li><span class=inv>result = table.parametername( index  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="PcdMap">
 &#149; &nbsp; <a href="../sun211.htx/node345.html#xref_astPcdMap">astPcdMap</a> - Create a PcdMap 
 <ul>
@@ -576,6 +625,13 @@ that provides the method.
 &#149; &nbsp; <a href="../sun211.htx/node356.html#xref_astPrism">astPrism</a> - Create a Prism 
 <ul>
 <li><span class=inv>prism = starlink.Ast.Prism( region1, region2, unc=None, options=None  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="PurgeRows">
+&#149; &nbsp; <a href="../sun211.htx/node357.html#xref_astPurgeRows">astPurgeRows</a> - Remove all empty rows from a table 
+<ul>
+<li><span class=inv> table.purgerows(   )
+</span></li>
 </ul>
 </div>
 <div class="implemented" id="PurgeWCS">
@@ -655,6 +711,13 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="RemoveColumn">
+&#149; &nbsp; <a href="../sun211.htx/node374.html#xref_astRemoveColumn">astRemoveColumn</a> - Remove a column from a table 
+<ul>
+<li><span class=inv> table.removecolumn( column  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="RemoveFrame">
 &#149; &nbsp; <a href="../sun211.htx/node375.html#xref_astRemoveFrame">astRemoveFrame</a> - Remove a Frame from a FrameSet 
 <ul>
@@ -662,10 +725,24 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="RemoveParameter">
+&#149; &nbsp; <a href="../sun211.htx/node376.html#xref_astRemoveParameter">astRemoveParameter</a> - Remove a global parameter from a table 
+<ul>
+<li><span class=inv> table.removeparameter( name  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="RemoveRegions">
 &#149; &nbsp; <a href="../sun211.htx/node377.html#xref_astRemoveRegions">astRemoveRegions</a> - Remove any Regions from a Mapping 
 <ul>
 <li><span class=inv>result = mapping.removeregions(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="RemoveRow">
+&#149; &nbsp; <a href="../sun211.htx/node378.html#xref_astRemoveRow">astRemoveRow</a> - Remove a row from a table 
+<ul>
+<li><span class=inv> table.removerow( index  )
 </span></li>
 </ul>
 </div>
@@ -777,6 +854,12 @@ that provides the method.
 <li><span class=inv>stcschan = starlink.Ast.StcsChan( source=None, sink=None, options=None  )</span></li>
 <li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "astsource", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
 <li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
+</ul>
+</div>
+<div class="implemented" id="Table">
+&#149; &nbsp; <a href="../sun211.htx/node415.html#xref_astTable">astTable</a> - Create a Table 
+<ul>
+<li><span class=inv>table = starlink.Ast.Table( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Test">
