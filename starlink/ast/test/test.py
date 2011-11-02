@@ -1288,6 +1288,9 @@ class TestAst(unittest.TestCase):
       with self.assertRaises(starlink.Ast.BADTYP):
          table['Fred(2)'] = 123.0
       table['Fred(2)'] = numpy.linspace( 1.0, 10.0, 10.0 )
+      self.assertEqual( table.columnlength('Fred'), 10 )
+      self.assertEqual( table.columnndim('Fred'), 2 )
+      self.assertEqual( table.columnunit('Fred'), '' )
 
 
 if __name__ == "__main__":

@@ -202,6 +202,30 @@ file in the AST source distribution).
 
 </ul>
 
+<h3 id="s5">Table</h3>
+<ul>
+<li>The following AST attributes have no corresponding Python properties
+due to the fact that the names are not static. Instead, they attribute
+values can be accessed using methods with the same names.
+
+<ul>
+<li> ColumnLenC
+<li> ColumnLength
+<li> ColumnType
+<li> ColumnNdim
+<li> ColumnUnit
+</ul>
+
+For instance, to print the value of the AST attribute
+"ColumnLength(BValues)", you should do:
+<span class=pycode>
+>>> print( table.columnlength( 'BValues' ) )
+</span>
+
+</ul>
+
+
+
 </body>
 </html>
 

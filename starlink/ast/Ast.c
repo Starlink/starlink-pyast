@@ -9145,6 +9145,11 @@ static PyObject *Table_purgerows( Table *self );
 static PyObject *Table_removecolumn( Table *self, PyObject *args );
 static PyObject *Table_removeparameter( Table *self, PyObject *args );
 static PyObject *Table_removerow( Table *self, PyObject *args );
+static PyObject *Table_columnlenc( Table *self, PyObject *args );
+static PyObject *Table_columnlength( Table *self, PyObject *args );
+static PyObject *Table_columnndim( Table *self, PyObject *args );
+static PyObject *Table_columntype( Table *self, PyObject *args );
+static PyObject *Table_columnunit( Table *self, PyObject *args );
 
 /* Describe the methods of the class */
 static PyMethodDef Table_methods[] = {
@@ -9159,6 +9164,11 @@ static PyMethodDef Table_methods[] = {
    {"removecolumn", (PyCFunction)Table_removecolumn, METH_VARARGS, "Remove a column from a Table"},
    {"removeparameter", (PyCFunction)Table_removeparameter, METH_VARARGS, "Remove a global parameter from a Table"},
    {"removerow", (PyCFunction)Table_removerow, METH_VARARGS, "Remove a row from a Table"},
+   {"columnlenc", (PyCFunction)Table_columnlenc, METH_VARARGS, "Return the value of the ColumnLenC attribute of a Table column"},
+   {"columnlength", (PyCFunction)Table_columnlength, METH_VARARGS, "Return the value of the ColumnLength attribute of a Table column"},
+   {"columnndim", (PyCFunction)Table_columnndim, METH_VARARGS, "Return the value of the ColumnNdim attribute of a Table column"},
+   {"columntype", (PyCFunction)Table_columntype, METH_VARARGS, "Return the value of the ColumnType attribute of a Table column"},
+   {"columnunit", (PyCFunction)Table_columnunit, METH_VARARGS, "Return the value of the ColumnUnit attribute of a Table column"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -9471,6 +9481,118 @@ static PyObject *Table_removerow( Table *self, PyObject *args ) {
    return result;
 }
 
+#undef NAME
+#define NAME CLASS ".columnlenc"
+static PyObject *Table_columnlenc( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      char buff[200];
+      sprintf( buff, "ColumnLenC(%s)", column );
+      int value = astGetI( THIS, buff );
+      if( astOK ) result = Py_BuildValue( "i", value );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".columnlength"
+static PyObject *Table_columnlength( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      char buff[200];
+      sprintf( buff, "ColumnLength(%s)", column );
+      int value = astGetI( THIS, buff );
+      if( astOK ) result = Py_BuildValue( "i", value );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".columnndim"
+static PyObject *Table_columnndim( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      char buff[200];
+      sprintf( buff, "ColumnNdim(%s)", column );
+      int value = astGetI( THIS, buff );
+      if( astOK ) result = Py_BuildValue( "i", value );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".columntype"
+static PyObject *Table_columntype( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      char buff[200];
+      sprintf( buff, "ColumnType(%s)", column );
+      int value = astGetI( THIS, buff );
+      if( astOK ) result = Py_BuildValue( "i", value );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".columnunit"
+static PyObject *Table_columnunit( Table *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      char buff[200];
+      sprintf( buff, "ColumnUnit(%s)", column );
+      const char *value = astGetC( THIS, buff );
+      if( astOK ) result = Py_BuildValue( "s", value );
+   }
+
+   TIDY;
+   return result;
+}
 
 
 
