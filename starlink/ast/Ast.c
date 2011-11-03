@@ -54,6 +54,7 @@ static void Sinka( const char *text );
 #include "exceptions.c"
 
 
+
 /* Object */
 /* ====== */
 
@@ -6769,13 +6770,13 @@ static PyObject *FitsChan_writefits( FitsChan *self );
 static Py_ssize_t FitsChan_length( PyObject *self );
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
 static int FitsChan_setitem( PyObject *self, PyObject *keyword, PyObject *value );
-/* TBD static PyObject *FitsChan_gettables( FitsChan *self ); */
+static PyObject *FitsChan_gettables( FitsChan *self );
 static PyObject *FitsChan_purgewcs( FitsChan *self );
 static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args );
-/* TBD static PyObject *FitsChan_puttable( FitsChan *self, PyObject *args ); */
-/* TBD static PyObject *FitsChan_puttables( FitsChan *self, PyObject *args ); */
-/* TBD static PyObject *FitsChan_removetables( FitsChan *self, PyObject *args ); */
+static PyObject *FitsChan_puttable( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_puttables( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_removetables( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_retainfits( FitsChan *self );
 static PyObject *FitsChan_setfitsCF( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsCI( FitsChan *self, PyObject *args );
@@ -6798,11 +6799,15 @@ static PyMethodDef FitsChan_methods[] = {
    {"getfitsL", (PyCFunction)FitsChan_getfitsL, METH_VARARGS, "Get an integer value from a FitsChan."},
    {"getfitsS", (PyCFunction)FitsChan_getfitsS, METH_VARARGS, "Get a string keyword value from a FitsChan."},
    {"getfitsCN", (PyCFunction)FitsChan_getfitsCN, METH_VARARGS, "Get a string keyword value from a FitsChan."},
+   {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve any FitsTables currently in a FitsChan"},
    {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
    {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
    {"putfits", (PyCFunction)FitsChan_putfits, METH_VARARGS, "Store a FITS header card in a FitsChan."},
+   {"puttable", (PyCFunction)FitsChan_puttable, METH_VARARGS, "Store a single FitsTable in a FitsChan"},
+   {"puttables", (PyCFunction)FitsChan_puttables, METH_VARARGS, "Store one or more FitsTables in a FitsChan"},
    {"readfits", (PyCFunction)FitsChan_readfits, METH_NOARGS, "Read cards from the external source of a FitsChan."},
    {"retainfits", (PyCFunction)FitsChan_retainfits, METH_NOARGS, "Ensure current card is retained in a FitsChan."},
+   {"removetables", (PyCFunction)FitsChan_removetables, METH_VARARGS, "Remove one or more tables from a FitsChan"},
    {"setfitsCF", (PyCFunction)FitsChan_setfitsCF, METH_VARARGS, "Store a new complex floating point keyword value in a FitsChan."},
    {"setfitsCI", (PyCFunction)FitsChan_setfitsCI, METH_VARARGS, "Store a new complex integer keyword value in a FitsChan."},
    {"setfitsF", (PyCFunction)FitsChan_setfitsF, METH_VARARGS, "Store a new floating point keyword value in a FitsChan."},
@@ -7694,10 +7699,12 @@ static Py_ssize_t KeyMap_length( PyObject *self );
 static int KeyMap_setitem( PyObject *self, PyObject *keyword, PyObject *value );
 static PyObject *KeyMap_getiter( PyObject *self );
 static PyObject *KeyMap_next( PyObject *self );
+static PyObject *KeyMap_keys( PyObject *self );
 static int KeyMap_contains( PyObject *self, PyObject *key );
 
 /* Describe the methods of the class */
 static PyMethodDef KeyMap_methods[] = {
+   {"keys", (PyCFunction)KeyMap_keys, METH_NOARGS, "Return all keys in a KeyMap."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -7822,6 +7829,24 @@ static PyObject *KeyMap_next( PyObject *self ) {
 
    } else {
       PyErr_SetString( PyExc_StopIteration, "No more elements in in the supplied AST KeyMap" );
+   }
+   TIDY;
+   return result;
+}
+
+/* Return a list of the keys in a KeyMap. */
+static PyObject *KeyMap_keys( PyObject *self ) {
+   PyObject *result = NULL;
+   int i;
+
+   if( PyErr_Occurred() ) return result;
+
+   int nkey = astMapSize( THIS );
+   result = PyList_New( (Py_ssize_t) nkey );
+   for( i = 0; i < nkey; i++ ) {
+      const char *key = astMapKey( THIS, i );
+      PyObject *pykey = Py_BuildValue( "s", key );
+      PyList_SetItem( result, (Py_ssize_t) i, pykey );
    }
    TIDY;
    return result;
@@ -9774,6 +9799,87 @@ static PyObject *FitsTable_puttableheader( FitsTable *self, PyObject *args ) {
       astPutTableHeader( THIS, LAST(header) );
       if( astOK ) result = Py_None;
    }
+   TIDY;
+   return result;
+}
+
+/* The following FitsChan wrappers must be here since they refer to
+   FitsTableType which has only just been declared. */
+
+static PyObject *FitsChan_gettables( FitsChan *self ) {
+
+/* args: result: */
+
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   AstObject *new = astGetTables( THIS );
+   if( astOK ) {
+      result = NewObject( new );
+      new = astAnnul( new );
+   }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".puttable"
+static PyObject *FitsChan_puttable( FitsChan  *self, PyObject *args ) {
+
+/* args: :table,extnam */
+
+   PyObject *table = NULL;
+   const char *extnam = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O!s:" NAME, &FitsTableType, &table, &extnam ) && astOK ) {
+      astPutTable( THIS, LAST(table), extnam );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".puttables"
+static PyObject *FitsChan_puttables( FitsChan  *self, PyObject *args ) {
+
+/* args: :tables */
+
+   PyObject *tables = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O!:" NAME, &KeyMapType, &tables ) && astOK ) {
+      astPutTables( THIS, LAST(tables) );
+      if( astOK ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".removetables"
+static PyObject *FitsChan_removetables( FitsChan  *self, PyObject *args ) {
+
+/* args: :key */
+
+   const char *key = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "s:" NAME, &key ) && astOK ) {
+      astRemoveTables( THIS, key );
+      if( astOK ) result = Py_None;
+   }
+
    TIDY;
    return result;
 }

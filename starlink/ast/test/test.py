@@ -1297,6 +1297,12 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( table, starlink.Ast.FitsTable )
       self.assertIsInstance( table, starlink.Ast.Table )
       self.assertIsInstance( table, starlink.Ast.KeyMap )
+      fc = starlink.Ast.FitsChan()
+      fc.puttable( table, "Fred" )
+      tables = fc.gettables()
+      self.assertEqual(len(tables),1)
+      keys = tables.keys()
+      self.assertEqual( keys[0], 'Fred' )
 
 
 if __name__ == "__main__":
