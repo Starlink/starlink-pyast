@@ -98,6 +98,7 @@ MAKE_ISA(CmpRegion)
 MAKE_ISA(DSBSpecFrame)
 MAKE_ISA(Ellipse)
 MAKE_ISA(FitsChan)
+MAKE_ISA(FitsTable)
 MAKE_ISA(FluxFrame)
 MAKE_ISA(Frame)
 MAKE_ISA(FrameSet)
@@ -146,6 +147,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(DSBSpecFrame,dsbspecframe),
    DEF_ISA(Ellipse,ellipse),
    DEF_ISA(FitsChan,fitschan),
+   DEF_ISA(FitsTable,fitstable),
    DEF_ISA(FluxFrame,fluxframe),
    DEF_ISA(Frame,frame),
    DEF_ISA(FrameSet,frameset),
@@ -9121,7 +9123,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
 
 
 /* Table */
-/* ======== */
+/* ===== */
 
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
@@ -9590,6 +9592,188 @@ static PyObject *Table_columnunit( Table *self, PyObject *args ) {
       if( astOK ) result = Py_BuildValue( "s", value );
    }
 
+   TIDY;
+   return result;
+}
+
+
+/* FitsTable */
+/* ========= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".FitsTable"
+
+/* Define the class structure */
+typedef struct {
+   Table parent;
+} FitsTable;
+
+/* Prototypes for class functions */
+static int FitsTable_init( FitsTable *self, PyObject *args, PyObject *kwds );
+static PyObject *FitsTable_columnnull( FitsTable *self, PyObject *args );
+static PyObject *FitsTable_columnsize( FitsTable *self, PyObject *args );
+static PyObject *FitsTable_gettableheader( FitsTable *self, PyObject *args );
+static PyObject *FitsTable_puttableheader( FitsTable *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef FitsTable_methods[] = {
+   {"columnnull", (PyCFunction)FitsTable_columnnull, METH_VARARGS, "Get/set the null value for a column of a FitsTable"},
+   {"columnsize", (PyCFunction)FitsTable_columnsize, METH_VARARGS, "Get number of bytes needed to hold a full column of data"},
+   {"gettableheader", (PyCFunction)FitsTable_gettableheader, METH_VARARGS, "Get the FITS headers from a FitsTable"},
+   {"puttableheader", (PyCFunction)FitsTable_puttableheader, METH_VARARGS, "Store FITS headers within a FitsTable"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject FitsTableType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(FitsTable),         /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST FitsTable",           /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   FitsTable_methods,         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)FitsTable_init,  /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int FitsTable_init( FitsTable *self, PyObject *args, PyObject *kwds ){
+
+/* args: :header=None,options=None */
+
+   PyObject *header = Py_None;
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|O!s:" CLASS, &FitsChanType, &header, &options ) ) {
+      AstFitsTable *this = astFitsTable( (header != Py_None) ? LAST(header) : NULL,
+                                         options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".columnnull"
+static PyObject *FitsTable_columnnull( FitsTable *self, PyObject *args ) {
+
+/* args: result,wassset,hasnull:name,set=0,newval=0 */
+
+   PyObject *result = NULL;
+   const char *column;
+   int hasnull;
+   int newval = 0;
+   int set = 0;
+   int wasset;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "s|i:" NAME, &column, &set, &newval ) && astOK ) {
+      int oldval = astColumnNull( THIS, column, set, newval, &wasset, &hasnull );
+      if( astOK ) {
+         result = Py_BuildValue( "iii", (oldval?Py_True:Py_False),
+                                 (wasset?Py_True:Py_False), (hasnull?Py_True:Py_False) );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".columnsize"
+static PyObject *FitsTable_columnsize( FitsTable *self, PyObject *args ) {
+
+/* args: result:column */
+
+   PyObject *result = NULL;
+   const char *column;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
+      size_t size = astColumnSize( THIS, column );
+      if( astOK ) result = Py_BuildValue( "k", (unsigned long) size );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".gettableheader"
+static PyObject *FitsTable_gettableheader( FitsTable *self, PyObject *args ) {
+
+/* args: result: */
+
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   AstFitsChan *header = astGetTableHeader( THIS );
+   if( header ) {
+      PyObject *header_object = NewObject( (AstObject *) header );
+      if( header_object ) {
+         result = Py_BuildValue( "O", header_object );
+         Py_DECREF( header_object );
+      }
+      header = astAnnul( header );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".puttableheader"
+static PyObject *FitsTable_puttableheader( FitsTable *self, PyObject *args ) {
+
+/* args: :header */
+
+   PyObject *header = NULL;
+   PyObject *result = NULL;
+   if( PyErr_Occurred() ) return NULL;
+   if( PyArg_ParseTuple(args, "O!:" NAME, &FitsChanType, &header ) && astOK ) {
+      astPutTableHeader( THIS, LAST(header) );
+      if( astOK ) result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -10267,6 +10451,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&TableType);
    PyModule_AddObject( m, "Table", (PyObject *)&TableType);
 
+   FitsTableType.tp_new = PyType_GenericNew;
+   FitsTableType.tp_base = &TableType;
+   if( PyType_Ready(&FitsTableType) < 0) RETURN( NULL );
+   Py_INCREF(&FitsTableType);
+   PyModule_AddObject( m, "FitsTable", (PyObject *)&FitsTableType);
+
 /* The constants provided by this module. */
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
@@ -10798,6 +10988,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &KeyMapType;
       } else if( !strcmp( class, "Table" ) ) {
          result = (PyTypeObject *) &TableType;
+      } else if( !strcmp( class, "FitsTable" ) ) {
+         result = (PyTypeObject *) &FitsTableType;
       } else {
          char buff[ 200 ];
          sprintf( buff, "Python AST function GetType does not yet "

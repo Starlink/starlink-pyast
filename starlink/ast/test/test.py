@@ -1292,6 +1292,12 @@ class TestAst(unittest.TestCase):
       self.assertEqual( table.columnndim('Fred'), 2 )
       self.assertEqual( table.columnunit('Fred'), '' )
 
+   def test_FitsTable(self):
+      table = starlink.Ast.FitsTable()
+      self.assertIsInstance( table, starlink.Ast.FitsTable )
+      self.assertIsInstance( table, starlink.Ast.Table )
+      self.assertIsInstance( table, starlink.Ast.KeyMap )
+
 
 if __name__ == "__main__":
 #    starlink.Ast.watchmemory(10914)

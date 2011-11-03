@@ -177,10 +177,24 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="ColumnNull">
+&#149; &nbsp; <a href="../sun211.htx/node242.html#xref_astColumnNull">astColumnNull</a> - Get or set the null value for an integer column of a FITS table 
+<ul>
+<li><span class=inv>( result, wassset, hasnull ) = fitstable.columnnull( name, set=0, newval=0  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="ColumnShape">
 &#149; &nbsp; <a href="../sun211.htx/node243.html#xref_astColumnShape">astColumnShape</a> - Returns the shape of the values in a named column 
 <ul>
 <li><span class=inv>result = table.columnshape( column  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="ColumnSize">
+&#149; &nbsp; <a href="../sun211.htx/node244.html#xref_astColumnSize">astColumnSize</a> - Get the number of bytes needed to hold a full column of data 
+<ul>
+<li><span class=inv>result = fitstable.columnsize( column  )
 </span></li>
 </ul>
 </div>
@@ -297,6 +311,12 @@ that provides the method.
 <li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive header card as its only argument, and should store each card in some external data sink.</li>
 </ul>
 </div>
+<div class="implemented" id="FitsTable">
+&#149; &nbsp; <a href="../sun211.htx/node266.html#xref_astFitsTable">astFitsTable</a> - Create a FitsTable 
+<ul>
+<li><span class=inv>fitstable = starlink.Ast.FitsTable( header=None, options=None  )</span></li>
+</ul>
+</div>
 <div class="implemented" id="FluxFrame">
 &#149; &nbsp; <a href="../sun211.htx/node267.html#xref_astFluxFrame">astFluxFrame</a> - Create a FluxFrame 
 <ul>
@@ -377,6 +397,13 @@ that provides the method.
 &#149; &nbsp; <a href="../sun211.htx/node282.html#xref_astGetRegionFrame">astGetRegionFrame</a> - Obtain a pointer to the encapsulated Frame within a Region 
 <ul>
 <li><span class=inv>result = region.getregionframe(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetTableHeader">
+&#149; &nbsp; <a href="../sun211.htx/node288.html#xref_astGetTableHeader">astGetTableHeader</a> - Get the FITS headers from a FitsTable 
+<ul>
+<li><span class=inv>result = fitstable.gettableheader(   )
 </span></li>
 </ul>
 </div>
@@ -652,6 +679,13 @@ that provides the method.
 &#149; &nbsp; <a href="../sun211.htx/node362.html#xref_astPutFits">astPutFits</a> - Store a FITS header card in a FitsChan 
 <ul>
 <li><span class=inv> fitschan.putfits( card, overwrite=False  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="PutTableHeader">
+&#149; &nbsp; <a href="../sun211.htx/node364.html#xref_astPutTableHeader">astPutTableHeader</a> - Store new FITS headers in a FitsTable 
+<ul>
+<li><span class=inv> fitstable.puttableheader( header  )
 </span></li>
 </ul>
 </div>
