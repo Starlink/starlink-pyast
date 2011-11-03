@@ -6748,6 +6748,7 @@ const char *srcseq_wrapper( void ){
 /* Define the class structure */
 typedef struct {
    Channel parent;
+   PyObject *tabsource;
 } FitsChan;
 
 /* Prototypes for class functions */
@@ -6785,7 +6786,10 @@ static PyObject *FitsChan_setfitsI( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsL( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsS( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_setfitsCN( FitsChan *self, PyObject *args );
+static PyObject *FitsChan_tablesource( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args );
+static void FitsChan_dealloc( FitsChan *self );
+void tabsource_wrapper( AstFitsChan *, const char *, int, int, int * );
 
 /* Describe the methods of the class */
 static PyMethodDef FitsChan_methods[] = {
@@ -6816,6 +6820,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"setfitsS", (PyCFunction)FitsChan_setfitsS, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
    {"setfitsCN", (PyCFunction)FitsChan_setfitsCN, METH_VARARGS, "Store a new string keyword value in a FitsChan."},
    {"testfits", (PyCFunction)FitsChan_testfits, METH_VARARGS, "Test if a keyword has a defined value in a FitsChan."},
+   {"tablesource", (PyCFunction)FitsChan_tablesource, METH_VARARGS, "Register a source function for accessing tables in FITS files."},
    {"writefits", (PyCFunction)FitsChan_writefits, METH_NOARGS, "Write out all cards to the external sink of a FitsChan."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -6881,7 +6886,7 @@ static PyTypeObject FitsChanType = {
    CLASS,                     /* tp_name */
    sizeof(FitsChan),          /* tp_basicsize */
    0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
+   (destructor)FitsChan_dealloc,/* tp_dealloc */
    0,                         /* tp_print */
    0,                         /* tp_getattr */
    0,                         /* tp_setattr */
@@ -6957,6 +6962,9 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 /* Store self as the Python proxy for the AST FitsChan. */
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
+
+/* No table source function as yet. */
+         self->tabsource = NULL;
       }
    }
 
@@ -6964,6 +6972,25 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+
+static void FitsChan_dealloc( FitsChan *self ) {
+   if( self ) {
+
+/* Save references to resources used by the FitsChan, since the following
+   call to deallocate the parent Channel structure may wipe the whole
+   FitsChan structure. We cannot free these resources yet since they may
+   be needed by the code that deallocates the parent. */
+      PyObject *tabsource = self->tabsource;
+
+/* Now deallocate the parent. This may use the above resources, and may
+   then additionally wipe the FitsChan memory structure. */
+      Channel_dealloc( (Channel *) self );
+
+/* Free the resources used by the FitsChan. */
+      Py_XDECREF( tabsource );
+   }
+   TIDY;
+}
 
 /* A function that returns a Python iterator for a FitsChan. In this
    case, the iterator is just the FitsChan itself, but the Card attribute
@@ -9806,6 +9833,11 @@ static PyObject *FitsTable_puttableheader( FitsTable *self, PyObject *args ) {
 /* The following FitsChan wrappers must be here since they refer to
    FitsTableType which has only just been declared. */
 
+#undef CLASS
+#define CLASS MODULE ".FitsChan"
+
+#undef NAME
+#define NAME CLASS ".gettables"
 static PyObject *FitsChan_gettables( FitsChan *self ) {
 
 /* args: result: */
@@ -9882,6 +9914,63 @@ static PyObject *FitsChan_removetables( FitsChan  *self, PyObject *args ) {
 
    TIDY;
    return result;
+}
+
+#undef NAME
+#define NAME CLASS ".tablesource"
+static PyObject *FitsChan_tablesource( FitsChan  *self, PyObject *args ) {
+
+/* args: :tabsource */
+/* Note: If supplied, the "tabsource" argument should be a reference to
+         an object that provides a method named "asttablesource". This
+         method will be invoked with arguments (fc,extname,extver,extlevel),
+         where "fc" is a reference to the FitsChan. Any returned value
+         will be  ignored. See the documentation for astTableSource for
+         more information. */
+
+   PyObject *tabsource = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O:" NAME, &tabsource ) && astOK ) {
+
+      if( tabsource && tabsource != Py_None ) {
+
+         if( PyObject_HasAttrString( tabsource, "asttablesource" ) ) {
+            astTableSource( THIS, tabsource_wrapper );
+            self->tabsource = tabsource;
+            Py_INCREF( tabsource );
+
+         } else {
+            PyErr_SetString( PyExc_TypeError, "The supplied 'tabsource' "
+                             "object does not have an 'asttablesource' method." );
+         }
+
+      } else {
+         astTableSource( THIS, NULL );
+         Py_XDECREF( self->tabsource );
+         self->tabsource = NULL;
+      }
+
+      if( astOK && !PyErr_Occurred() ) result = Py_None;
+   }
+
+   TIDY;
+   return result;
+}
+
+/* Table source function which are called by the AST FitsChan C code.
+   This invokes the asttablesource method on the Python Object associated
+   with the FitsChan. Note, this cannot be static as it is called from
+   within AST. */
+
+void tabsource_wrapper( AstFitsChan *this, const char *extname,
+                        int extver, int extlevel, int *status ) {
+   FitsChan *self = astGetProxy( this );
+   PyObject_CallMethod( self->tabsource, "asttablesource", "Osii",
+                        self, extname, extver, extlevel );
+   if( PyErr_Occurred() ) *status = AST__NOTAB;
 }
 
 
