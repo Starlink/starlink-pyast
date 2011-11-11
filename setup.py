@@ -1,5 +1,8 @@
+
+from __future__ import print_function
+
 from distutils.core import setup, Extension
-import os, subprocess, numpy, tarfile
+import sys, os, subprocess, numpy, tarfile
 from tools import make_exceptions, make_attributes
 
 include_dirs = []
@@ -61,7 +64,18 @@ for cfile in ast_c_extra:
 #  Create the description of the starlink.Ast module.
 Ast = Extension('starlink.Ast',
                 include_dirs  = include_dirs,
+                extra_link_args = ["-exported_symbols_list","osx.exp"],
                 sources       = sources )
+
+# OSX needs to hide all the normal AST symbols to prevent
+# name clashes when loaded alongside libast itself (eg from pyndf)
+if sys.platform.startswith("darwin"):
+   symbol_list = "public_symbols.txt"
+   symfile = open( symbol_list, "w" )
+   print("_PyInit_Ast",file=symfile)
+   symfile.close()
+   Ast.extra_link_args = [ "-exported_symbols_list", symbol_list]
+
 
 setup (name = 'starlink-ast',
        version = '1.0',
