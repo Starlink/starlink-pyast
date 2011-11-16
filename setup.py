@@ -64,7 +64,6 @@ for cfile in ast_c_extra:
 #  Create the description of the starlink.Ast module.
 Ast = Extension('starlink.Ast',
                 include_dirs  = include_dirs,
-                extra_link_args = ["-exported_symbols_list","osx.exp"],
                 sources       = sources )
 
 # OSX needs to hide all the normal AST symbols to prevent
