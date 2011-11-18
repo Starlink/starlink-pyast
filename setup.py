@@ -71,7 +71,11 @@ Ast = Extension('starlink.Ast',
 if sys.platform.startswith("darwin"):
    symbol_list = "public_symbols.txt"
    symfile = open( symbol_list, "w" )
-   print("_PyInit_Ast",file=symfile)
+   if sys.version_info[0] > 2:
+      symname = "_PyInit_Ast"
+   else:
+      symname = "_initAst"
+   print(symname,file=symfile)
    symfile.close()
    Ast.extra_link_args = [ "-exported_symbols_list", symbol_list]
 
