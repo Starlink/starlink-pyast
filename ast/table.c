@@ -109,8 +109,8 @@ f     - AST_REMOVEROW: Remove a row from a Table
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     DSB: David S. Berry (Starlink)
@@ -928,7 +928,7 @@ f     AST_COLUMNSHAPE
 *  Synopsis:
 c     #include "table.h"
 c     void astColumnShape( AstTable *this, const char *column, int mxdim,
-c                          int *ndim, int *dims, int *status )
+c                          int *ndim, int *dims )
 f     CALL AST_COLUMNSHAPE( THIS, COLUMN, MXDIM, NDIM, DIMS, STATUS )
 
 *  Class Membership:
@@ -1932,7 +1932,7 @@ f     AST_HASCOLUMN
 
 *  Synopsis:
 c     #include "table.h"
-c     int astHasColumn( AstTable *this, const char *column, int *status )
+c     int astHasColumn( AstTable *this, const char *column )
 f     RESULT = AST_HASCOLUMN( THIS, COLUMN, STATUS )
 
 *  Class Membership:
@@ -2005,7 +2005,7 @@ f     AST_HASPARAMETER
 
 *  Synopsis:
 c     #include "table.h"
-c     int astHasParameter( AstTable *this, const char *parameter, int *status )
+c     int astHasParameter( AstTable *this, const char *parameter )
 f     RESULT = AST_HASPARAMETER( THIS, PARAMETER, STATUS )
 
 *  Class Membership:

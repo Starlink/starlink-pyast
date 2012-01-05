@@ -15066,7 +15066,7 @@ Object             - Base class for all AST Objects
 
          \sstitem
          This method simply deletes the cards currently in the FitsChan.
-         Unlike AST\_WRITEFITS,
+         Unlike \htmlref{AST\_WRITEFITS}{AST_WRITEFITS},
          they are not first written out to the sink function or sink file.
 
          \sstitem
@@ -24579,7 +24579,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    AST\_PUTCOLUMNDATA\sstlabel{AST_PUTCOLUMNDATA}
 }{
-   Retrieve all the data values stored in a column
+   Store new data values for all rows of a column
 }{
    \sstdescription{
       This routine
@@ -24774,6 +24774,11 @@ Object             - Base class for all AST Objects
          it is replaced with the new one. A deep copy of the FitsTable is
          stored in the FitsChan, so any subsequent changes made to the
          FitsTable will have no effect on the behaviour of the FitsChan.
+      }
+      \sstsubsection{
+         EXTNAM = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         The name of the FITS extension associated with the table.
       }
       \sstsubsection{
          STATUS = INTEGER (Given and Returned)
@@ -33097,7 +33102,7 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
-   AST\_WriteFits\sstlabel{AST_WriteFits}
+   AST\_WRITEFITS\sstlabel{AST_WRITEFITS}
 }{
    Write out all cards in a FitsChan to the sink function
 }{
@@ -33110,7 +33115,7 @@ Object             - Base class for all AST Objects
       FitsChan.
    }
    \sstinvocation{
-      CALL AST\_WriteFits( THIS, STATUS )
+      CALL AST\_WRITEFITS( THIS, STATUS )
    }
    \sstarguments{
       \sstsubsection{
@@ -39905,7 +39910,7 @@ Object             - Base class for all AST Objects
 
          \sstitem
          If the Channel is copied or dumped
-         (using \htmlref{AST\_COPY}{AST_COPY} or AST\_DUMP)
+         (using \htmlref{AST\_COPY}{AST_COPY} or \htmlref{AST\_SHOW}{AST_SHOW})
          the SinkFile attribute is left in a cleared state in the output
          Channel (i.e. the value of the SinkFile attribute is not copied).
       }
@@ -40043,7 +40048,7 @@ Object             - Base class for all AST Objects
       floating point axis value, in radians, when setting a value for the
       attribute, and will be returned in the same form when getting the value
       of the attribute. In this case the integer axis index should be {\tt{"}}1{\tt{"}}
-      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitue axes are
+      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitude axes are
       given by the \htmlref{LonAxis}{LonAxis} and \htmlref{LatAxis}{LatAxis} attributes).
 
       If no axis index is included in the attribute name (e.g. {\tt{"}}SkyRef{\tt{"}}) then
@@ -40164,7 +40169,7 @@ Object             - Base class for all AST Objects
       floating point axis value, in radians, when setting a value for the
       attribute, and will be returned in the same form when getting the value
       of the attribute. In this case the integer axis index should be {\tt{"}}1{\tt{"}}
-      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitue axes are
+      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitude axes are
       given by the \htmlref{LonAxis}{LonAxis} and \htmlref{LatAxis}{LatAxis} attributes).
 
       If no axis index is included in the attribute name (e.g. {\tt{"}}SkyRefP{\tt{"}}) then
@@ -40317,7 +40322,7 @@ Object             - Base class for all AST Objects
 
          \sstitem
          If the Channel is copied or dumped
-         (using \htmlref{AST\_COPY}{AST_COPY} or AST\_DUMP)
+         (using \htmlref{AST\_COPY}{AST_COPY} or \htmlref{AST\_SHOW}{AST_SHOW})
          the SourceFile attribute is left in a cleared state in the output
          Channel (i.e. the value of the SourceFile attribute is not copied).
       }
@@ -43295,7 +43300,7 @@ Object             - Base class for all AST Objects
          \htmlref{AST\_TESTFITS}{AST_TESTFITS}: Test if a keyword has a defined value in a FitsChan
 
          \sstitem
-         AST\_WRITEFITS: Write all cards out to the sink function
+         \htmlref{AST\_WRITEFITS}{AST_WRITEFITS}: Write all cards out to the sink function
       }
    }
 }
@@ -49908,7 +49913,7 @@ evaluate the inverse the inverse transformation if no inverse
 transformation is defined when the PolyMap is created.
 
 \item The \htmlref{FitsChan}{FitsChan} class has a new method
-AST\_WRITEFITS
+\htmlref{AST\_WRITEFITS}{AST_WRITEFITS}
 which writes out all cards currently in the FitsChan to the associated
 external data sink (specified either by the \htmlref{SinkFile}{SinkFile} attribute or the
 sink function supplied when the FitsChan was created), and then empties
@@ -49938,12 +49943,10 @@ evaluate the inverse correction for each point transformed.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V6.0}
+\subsection{Changes Introduced in V6.0}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V5.7-2 and V6.0 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V5.7-2 and V6.0:
 
 \begin{enumerate}
 
@@ -49965,6 +49968,26 @@ routine \htmlref{AST\_TUNEC}{AST_TUNEC}.
 
 \end{enumerate}
 
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V6.0-1}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V6.0 and V6.0-1 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{FitsChan}{FitsChan} class now recognises the Spitzer ``-SIP'' distortion
+code within FITS headers that describe non-celestial axes, as well as
+celestial axes.
+
+\item A bug has been fixed that could cause inappropriate equinox values to
+be used when aligning SkyFrames if the \htmlref{AlignSystem}{AlignSystem} attribute is set.
+
+\item The versioning string for AST has changed from
+``$<major>.<minor>-<release>$'' to ``$<major>.<minor>.<release>$''.
+
+\end{enumerate}
 
 Programs which are statically linked will need to be re-linked in
 order to take advantage of these new facilities.

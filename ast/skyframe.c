@@ -81,8 +81,8 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     RFWS: R.F. Warren-Smith (Starlink)
@@ -299,6 +299,10 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 *        When clearing or setting the System attribute, clear SkyRef rather
 *        than reporting an error if the Mapping from the old System to the
 *        new System is unknown.
+*     30-NOV-2011 (DSB):
+*        When aligning two SkyFrames in the system specified by AlignSystem,
+*        do not assume inappropriate default equinox values for systems
+*        that are not referred to the equinox specified by the Equinox attribute.
 *class--
 */
 
@@ -334,6 +338,11 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 #define GETLABEL_BUFF_LEN 40
 #define GETSYMBOL_BUFF_LEN 20
 #define GETTITLE_BUFF_LEN 200
+
+/* A macro which returns a flag indicating if the supplied system is
+   references to the equinox specified by the Equinox attribute. */
+#define EQREF(system) \
+((system==AST__FK4||system==AST__FK4_NO_E||system==AST__FK5||system==AST__ECLIPTIC)?1:0)
 
 /*
 *
@@ -5794,6 +5803,12 @@ static int MakeSkyMapping( AstSkyFrame *target, AstSkyFrame *result,
    result_system = astGetSystem( result );
    target_system = astGetSystem( target );
 
+/* If either system is not references to the equinox given by the Equinox
+   attribute, then use the equinox of the other system rather than
+   adopting the arbitrary default of J2000. */
+   if( !EQREF(result_system) ) result_equinox = target_equinox;
+   if( !EQREF(target_system) ) target_equinox = result_equinox;
+
 /* If both systems are unknown, assume they are the same. Return a UnitMap.
    We need to do this, otherwise a simple change of Title (for instance)
    will result in a FrameSet whose current Frame has System=AST__UNKNOWN
@@ -11104,7 +11119,7 @@ astMAKE_GET(SkyFrame,SkyRefIs,int,IGNORED_REF,(this->skyrefis == BAD_REF ? IGNOR
 *     floating point axis value, in radians, when setting a value for the
 *     attribute, and will be returned in the same form when getting the value
 *     of the attribute. In this case the integer axis index should be "1"
-*     or "2" (the values to use for longitude and latitue axes are
+*     or "2" (the values to use for longitude and latitude axes are
 *     given by the LonAxis and LatAxis attributes).
 *
 *     If no axis index is included in the attribute name (e.g. "SkyRef") then
@@ -11191,7 +11206,7 @@ MAKE_GET(SkyRef,double,0.0,((this->skyref[axis_p]!=AST__BAD)?this->skyref[axis_p
 *     floating point axis value, in radians, when setting a value for the
 *     attribute, and will be returned in the same form when getting the value
 *     of the attribute. In this case the integer axis index should be "1"
-*     or "2" (the values to use for longitude and latitue axes are
+*     or "2" (the values to use for longitude and latitude axes are
 *     given by the LonAxis and LatAxis attributes).
 *
 *     If no axis index is included in the attribute name (e.g. "SkyRefP") then

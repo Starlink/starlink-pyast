@@ -15,7 +15,7 @@
 *     including the file config.h, which defines macros PACKAGE_STRING,
 *     PACKAGE_VERSION and (equivalently to the latter) VERSION.
 *
-*     For example, the version string `3.2-1' corresponds to major version
+*     For example, the version string `3.2.1' corresponds to major version
 *     3, minor version 2, release 1.
 
 *  Macros defined:
@@ -48,8 +48,8 @@
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     NG: Norman Gray (Starlink)
@@ -60,14 +60,14 @@
 *-
 */
 
-/* The current version of AST is 6.0 */
+/* The current version of AST is 6.0.1 */
 #define AST__VMAJOR    6
 #define AST__VMINOR    0
-#define AST__RELEASE   0
+#define AST__RELEASE   1
 
 /* Deprecated macros */
 #define AST_MAJOR_VERS 6
 #define AST_MINOR_VERS 0
-#define AST_RELEASE    0
+#define AST_RELEASE    1
 
 #endif /* #if ! defined(VERSION_INCLUDED) */

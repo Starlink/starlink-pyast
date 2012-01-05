@@ -36,8 +36,8 @@
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     DSB: D.S. Berry (STARLINK)
@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     25-OCT-2011 (makeh):
+*     5-JAN-2012 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -531,11 +531,11 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 /* ===== */
 #define AST__VMAJOR 6
 #define AST__VMINOR 0
-#define AST__RELEASE 0
+#define AST__RELEASE 1
 
 #define AST_MAJOR_VERS 6
 #define AST_MINOR_VERS 0
-#define AST_RELEASE 0
+#define AST_RELEASE 1
 
 #include <stdarg.h>
 #include <float.h>

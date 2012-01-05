@@ -189,8 +189,8 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     DSB: David Berry (Starlink)
@@ -1004,6 +1004,8 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        When reading a FITS-WCFS header, if the projection is TPV (as produced
 *        by SCAMP), change to TPN (the internal AST code for a distorted
 *        TAN projection).
+*     22-NOV-2011 (DSB):
+*        Allow the "-SIP" code to be used with non-celestial axes.
 *class--
 */
 
@@ -7639,7 +7641,6 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
                          int naxes, AstMapping **map1, AstMapping **map2,
                          AstMapping **map3, AstMapping **map4,
                          const char *method, const char *class, int *status ){
-
 /*
 *  Name:
 *     DistortMap
@@ -7651,7 +7652,6 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
 *     Private function.
 
 *  Synopsis:
-
 *     void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
 *                       int naxes, AstMapping **map1, AstMapping **map2,
 *                       AstMapping **map3, AstMapping **map4,
@@ -7722,6 +7722,7 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
    double *dim;              /* Array holding array dimensions */
    int found_axes[ 2 ];      /* Index of axes with the distortion code */
    int i;                    /* FITS axis index */
+   int nc;                   /* No. of characters in CTYPE without "-SIP" */
    int nfound;               /* No. of axes with the distortion code */
    int warned;               /* Have any ASTWARN cards been issued? */
 
@@ -7750,18 +7751,20 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
    ============= */
 
 /* Spitzer distortion is limited to 2D. Check the first two axes to see if
-   they have "-SIP" codes in their CTYPE values. If they do, terminate the
-   ctype string in order to exclude the distortion code (this is so that
-   later functions do not need to allow for the possibility of a distortion
-   code  being present in the CTYPE value)*/
+   they have "-SIP" codes at the end of their CTYPE values. If they do,
+   terminate the ctype string in order to exclude the distortion code (this
+   is so that later functions do not need to allow for the possibility of a
+   distortion code being present in the CTYPE value). */
       ctype = GetItemC( &(store->ctype), 0, 0, s, NULL, method, class, status );
-      if( ctype && 3 == astSscanf( ctype, "%4s-%3s-%3s", type, code, dist ) ){
-         if( !strcmp( "SIP", dist ) ) {
-            ctype[ 8 ] = 0;
+      if( ctype ){
+         nc = astChrLen( ctype ) - 4;
+         if( nc >= 0 && !strcmp( ctype + nc, "-SIP" ) ) {
+            ctype[ nc ] = 0;
             ctype = GetItemC( &(store->ctype), 1, 0, s, NULL, method, class, status );
-            if( ctype && 3 == astSscanf( ctype, "%4s-%3s-%3s", type, code, dist ) ){
-               if( !strcmp( "SIP", dist ) ) {
-                  ctype[ 8 ] = 0;
+            if( ctype ) {
+               nc = astChrLen( ctype ) - 4;
+               if( nc >= 0 && !strcmp( ctype + nc, "-SIP" ) ) {
+                  ctype[ nc ] = 0;
 
 /* Create a Mapping describing the distortion (other axes are passed
    unchanged by this Mapping), and add it in series with the returned map2
@@ -7785,8 +7788,9 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
       warned = 0;
       for( i = 2; i < naxes; i++ ){
          ctype = GetItemC( &(store->ctype), i, 0, s, NULL, method, class, status );
-         if( ctype && 3 == astSscanf( ctype, "%4s-%3s-%3s", type, code, dist ) ){
-            if( !strcmp( "SIP", dist ) ){
+         if( ctype ){
+            nc = astChrLen( ctype ) - 4;
+            if( nc >= 0 && !strcmp( ctype + nc, "-SIP" ) ) {
                if( !warned ){
                   warned = 1;
                   sprintf( msgbuf, "The \"-SIP\" distortion code can only be "
@@ -7795,7 +7799,7 @@ static void DistortMaps( AstFitsChan *this, FitsStore *store, char s,
                            FormatKey( "CTYPE", i + 1, -1, ' ', status ),  ctype );
                   Warn( this, "distortion", msgbuf, method, class, status );
                }
-               ctype[ 8 ] = 0;
+               ctype[ nc ] = 0;
             }
          }
       }
@@ -23557,6 +23561,9 @@ f     TABLE = INTEGER (Given)
 *        it is replaced with the new one. A deep copy of the FitsTable is
 *        stored in the FitsChan, so any subsequent changes made to the
 *        FitsTable will have no effect on the behaviour of the FitsChan.
+c     extnam
+f     EXTNAM = CHARACTER * ( * ) (Given)
+*        The name of the FITS extension associated with the table.
 f     STATUS = INTEGER (Given and Returned)
 f        The global status.
 
@@ -29916,8 +29923,7 @@ f     Register a source routine for accessing tables in FITS files.
 c     #include "fitschan.h"
 c     void astTableSource( AstFitsChan *this,
 c                          void (* tabsource)( AstFitsChan *, const char *,
-c                                              int, int, int * ),
-c                          int *status )
+c                                              int, int, int * ) )
 f     CALL AST_TABLESOURCE( THIS, TABSOURCE, STATUS )
 
 *  Class Membership:
@@ -36895,7 +36901,7 @@ static void WriteFits( AstFitsChan *this, int *status ){
 *++
 *  Name:
 c     astWriteFits
-f     AST_WriteFits
+f     AST_WRITEFITS
 
 *  Purpose:
 *     Write out all cards in a FitsChan to the sink function.
@@ -36906,7 +36912,7 @@ f     AST_WriteFits
 *  Synopsis:
 c     #include "fitschan.h"
 c     void astWriteFits( AstFitsChan *this )
-f     CALL AST_WriteFits( THIS, STATUS )
+f     CALL AST_WRITEFITS( THIS, STATUS )
 
 *  Class Membership:
 *     FitsChan method.

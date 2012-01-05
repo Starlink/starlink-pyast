@@ -32,8 +32,8 @@
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     RFWS: R.F. Warren-Smith (Starlink)
@@ -145,6 +145,8 @@
 *     21-JUN-2011 (DSB):
 *        Added astCheckMemory - an alternative to astFlushMemory that does
 *        not free any memory.
+*     21-NOV-2011 (DSB):
+*        Correct matchend value returned by astChrSplitRE.
 */
 
 /* Configuration results. */
@@ -2592,7 +2594,7 @@ static char *ChrMatcher( const char *test, const char *end, const char *template
                if( matches[ nmatch ] ) {
                   matches[ nmatch ][ matchlen ] = 0;
                   nmatch++;
-                  if( matchend ) *matchend = a + 1;
+                  if( matchend ) *matchend = a;
                }
             }
 
@@ -2721,7 +2723,7 @@ static char *ChrMatcher( const char *test, const char *end, const char *template
             if( matches[ nmatch ] ) {
                matches[ nmatch ][ matchlen ] = 0;
                nmatch++;
-               if( matchend ) *matchend = a + 1;
+               if( matchend ) *matchend = a;
             }
          }
 

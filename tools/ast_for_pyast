@@ -1,0 +1,90 @@
+#!/bin/tcsh
+
+# This script creates the AST source files needed by pyast, based on
+# the current development version of AST. It modifies the configure
+# script to avoid checking for or using a fortran compiler.
+
+#  Change this line to refer to your starlink libraries source directory
+cd /stardev/git/starlink/libraries
+
+
+source /star/etc/login
+source /star/etc/cshrc
+setenv PATH /star/buildsupport/bin\:$PATH
+
+
+
+#  Create an ast-x.x.x.tar.gz distibution tar file. Also create the ast.h include file.
+mv ast ast-safe
+git checkout ast
+rm -rf ast-for-pyast >& /dev/null
+mv ast ast-for-pyast
+mv ast-safe ast
+cd ast-for-pyast
+echo 'm4_define([OVERRIDE_PREFIX],[/usr/local])' >acinclude.m4
+./bootstrap
+./configure
+make dist
+make ast.h
+mv ast-*.tar.gz ast.h ..
+cd ..
+
+
+
+
+
+
+# The configure script created by a standard "make dist" checks for a
+# fortran compiler and uses it for various tests if one is found. This can
+# cause problems and is not needed, so create a new configure script that
+# omits all such tests. This involves temporarily changing starconf.m4 to
+# omit the invocation of the STAR_RESTFP_FIX macro.
+mv ast ast-safe
+git checkout ast
+rm -rf ast-for-pyast >& /dev/null
+mv ast ast-for-pyast
+mv ast-safe ast
+
+cd ast-for-pyast
+cat configure.ac | \
+  sed -e 's/AC_FC_LIBRARY_LDFLAGS/#AC_FC_LIBRARY_LDFLAGS/' | \
+  sed -e 's/AC_PROG_LIBTOOL/#AC_PROG_LIBTOOL/' | \
+  sed -e 's/STAR_CNF_F2C_COMPATIBLE/#STAR_CNF_F2C_COMPATIBLE/' | \
+  sed -e 's/STAR_CNF_TRAIL_TYPE/#STAR_CNF_TRAIL_TYPE/' | \
+  sed -e 's/f77.h//' > configure.ac.new
+mv configure.ac.new configure.ac
+
+cat Makefile.am | \
+  sed -e 's/lib_LTLIBRARIES =/#lib_LTLIBRARIES =/' | \
+  sed -e 's/^.*_la.*\\$/# \\/' | \
+  sed -e 's/^.*_la.*$/#/' > Makefile.am.new
+mv Makefile.am.new Makefile.am
+
+cp /star/buildsupport/share/aclocal/starconf.m4 /star/buildsupport/share/aclocal/starconf.m4.safe
+sed -e 's/^_poss_STAR_RESTFP_FIX/## _poss_STAR_RESTFP_FIX/'  /star/buildsupport/share/aclocal/starconf.m4 > tmp
+mv tmp /star/buildsupport/share/aclocal/starconf.m4
+
+echo 'm4_define([OVERRIDE_PREFIX],[/usr/local])' >acinclude.m4
+./bootstrap
+mv /star/buildsupport/share/aclocal/starconf.m4.safe /star/buildsupport/share/aclocal/starconf.m4
+
+
+#  Gather all the required files together.
+mv configure ../ast-for-pyast-configure
+cd ..
+rm -rf ast-for-pyast
+tar -xzf ast-*.tar.gz
+mv `basename ast-*.tar.gz .tar.gz` ast-for-pyast
+mv ast.h ast-for-pyast/
+mv ast-for-pyast-configure ast-for-pyast/configure
+rm ast-*.tar.gz
+
+touch ast-for-pyast/install.sh
+
+echo ""
+echo "Now delete the contents of pyast/ast and copy the contents of $PWD/ast-for-pyast into pyast/ast"
+echo ""
+
+
+
+

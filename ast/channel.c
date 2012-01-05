@@ -74,8 +74,8 @@ f     - AST_WRITE: Write an Object to a Channel
 *
 *     You should have received a copy of the GNU General Public Licence
 *     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 59 Temple Place,Suite 330, Boston, MA
-*     02111-1307, USA
+*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
+*     02110-1301, USA
 
 *  Authors:
 *     RFWS: R.F. Warren-Smith (Starlink)
@@ -4946,8 +4946,8 @@ f     AST_READ
 *  Notes:
 *     - Any open SourceFile is closed when the Channel is deleted.
 *     - If the Channel is copied or dumped
-c     (using astCopy or astDump)
-f     (using AST_COPY or AST_DUMP)
+c     (using astCopy or astShow)
+f     (using AST_COPY or AST_SHOW)
 *     the SourceFile attribute is left in a cleared state in the output
 *     Channel (i.e. the value of the SourceFile attribute is not copied).
 
@@ -5027,8 +5027,8 @@ f     AST_WRITE
 *     error will be reported.
 *     - Any open SinkFile is closed when the Channel is deleted.
 *     - If the Channel is copied or dumped
-c     (using astCopy or astDump)
-f     (using AST_COPY or AST_DUMP)
+c     (using astCopy or astShow)
+f     (using AST_COPY or AST_SHOW)
 *     the SinkFile attribute is left in a cleared state in the output
 *     Channel (i.e. the value of the SinkFile attribute is not copied).
 

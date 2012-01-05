@@ -46,13 +46,15 @@ check_PROGRAMS = ast_test$(EXEEXT)
 DIST_COMMON = $(am__configure_deps) $(dist_bin_SCRIPTS) \
 	$(dist_noinst_SCRIPTS) $(dist_pkgdata_DATA) \
 	$(dist_starnews_DATA) $(include_HEADERS) $(include_MESSAGES) \
-	$(srcdir)/AST_ERR $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/ast_cpp.in $(srcdir)/ast_err.h $(srcdir)/ast_link.in \
-	$(srcdir)/component.xml.in $(srcdir)/config.h.in \
-	$(srcdir)/f77.h.in $(srcdir)/fac_1521_err \
-	$(srcdir)/object.h.in $(stardocs_DATA) $(top_srcdir)/configure \
-	COPYING.LIB compile config.guess config.sub depcomp install-sh \
-	ltmain.sh missing
+	$(srcdir)/../compile $(srcdir)/../config.guess \
+	$(srcdir)/../config.sub $(srcdir)/../depcomp \
+	$(srcdir)/../install-sh $(srcdir)/../ltmain.sh \
+	$(srcdir)/../missing $(srcdir)/AST_ERR $(srcdir)/Makefile.am \
+	$(srcdir)/Makefile.in $(srcdir)/ast_cpp.in $(srcdir)/ast_err.h \
+	$(srcdir)/ast_link.in $(srcdir)/component.xml.in \
+	$(srcdir)/config.h.in $(srcdir)/f77.h.in \
+	$(srcdir)/fac_1521_err $(srcdir)/object.h.in $(stardocs_DATA) \
+	$(top_srcdir)/configure COPYING.LIB
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -195,7 +197,7 @@ dist_binSCRIPT_INSTALL = $(INSTALL_SCRIPT)
 SCRIPTS = $(bin_SCRIPTS) $(dist_bin_SCRIPTS) $(dist_noinst_SCRIPTS) \
 	$(noinst_SCRIPTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
-depcomp = $(SHELL) $(top_srcdir)/depcomp
+depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__depfiles_maybe = depfiles
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
@@ -2549,7 +2551,7 @@ check-TESTS: $(TESTS)
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/.
+	$(mkdir_p) $(distdir)/. $(distdir)/..
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

@@ -14368,7 +14368,7 @@ Object             - Base class for all AST Objects
    }
    \sstsynopsis{
       void astColumnShape( AstTable $*$this, const char $*$column, int mxdim,
-                           int $*$ndim, int $*$dims, int $*$status )
+                           int $*$ndim, int $*$dims )
    }
    \sstparameters{
       \sstsubsection{
@@ -17232,7 +17232,7 @@ Object             - Base class for all AST Objects
    \sstsynopsis{
       void astGetColumnData( AstFitsTable $*$this, const char $*$column,
                              float fnull, double dnull, size\_t mxsize,
-                             void $*$coldata, int $*$nelem, int $*$status )
+                             void $*$coldata, int $*$nelem )
    }
    \sstparameters{
       \sstsubsection{
@@ -19109,7 +19109,7 @@ Object             - Base class for all AST Objects
       \htmlref{astAddColumn}{astAddColumn}.
    }
    \sstsynopsis{
-      int astHasColumn( AstTable $*$this, const char $*$column, int $*$status )
+      int astHasColumn( AstTable $*$this, const char $*$column )
    }
    \sstparameters{
       \sstsubsection{
@@ -19146,7 +19146,7 @@ Object             - Base class for all AST Objects
       \htmlref{astAddParameter}{astAddParameter}.
    }
    \sstsynopsis{
-      int astHasParameter( AstTable $*$this, const char $*$parameter, int $*$status )
+      int astHasParameter( AstTable $*$this, const char $*$parameter )
    }
    \sstparameters{
       \sstsubsection{
@@ -25222,7 +25222,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    astPutColumnData\sstlabel{astPutColumnData}
 }{
-   Retrieve all the data values stored in a column
+   Store new data values for all rows of a column
 }{
    \sstdescription{
       This function
@@ -25365,6 +25365,11 @@ Object             - Base class for all AST Objects
          it is replaced with the new one. A deep copy of the FitsTable is
          stored in the FitsChan, so any subsequent changes made to the
          FitsTable will have no effect on the behaviour of the FitsChan.
+      }
+      \sstsubsection{
+         extnam
+      }{
+         The name of the FITS extension associated with the table.
       }
    }
    \sstnotes{
@@ -31216,8 +31221,7 @@ Object             - Base class for all AST Objects
    \sstsynopsis{
       void astTableSource( AstFitsChan $*$this,
                            void ($*$ tabsource)( AstFitsChan $*$, const char $*$,
-                                               int, int, int $*$ ),
-                           int $*$status )
+                                               int, int, int $*$ ) )
    }
    \sstparameters{
       \sstsubsection{
@@ -40852,7 +40856,7 @@ Object             - Base class for all AST Objects
 
          \sstitem
          If the Channel is copied or dumped
-         (using \htmlref{astCopy}{astCopy} or astDump)
+         (using \htmlref{astCopy}{astCopy} or \htmlref{astShow}{astShow})
          the SinkFile attribute is left in a cleared state in the output
          Channel (i.e. the value of the SinkFile attribute is not copied).
       }
@@ -40990,7 +40994,7 @@ Object             - Base class for all AST Objects
       floating point axis value, in radians, when setting a value for the
       attribute, and will be returned in the same form when getting the value
       of the attribute. In this case the integer axis index should be {\tt{"}}1{\tt{"}}
-      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitue axes are
+      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitude axes are
       given by the \htmlref{LonAxis}{LonAxis} and \htmlref{LatAxis}{LatAxis} attributes).
 
       If no axis index is included in the attribute name (e.g. {\tt{"}}SkyRef{\tt{"}}) then
@@ -41111,7 +41115,7 @@ Object             - Base class for all AST Objects
       floating point axis value, in radians, when setting a value for the
       attribute, and will be returned in the same form when getting the value
       of the attribute. In this case the integer axis index should be {\tt{"}}1{\tt{"}}
-      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitue axes are
+      or {\tt{"}}2{\tt{"}} (the values to use for longitude and latitude axes are
       given by the \htmlref{LonAxis}{LonAxis} and \htmlref{LatAxis}{LatAxis} attributes).
 
       If no axis index is included in the attribute name (e.g. {\tt{"}}SkyRefP{\tt{"}}) then
@@ -41264,7 +41268,7 @@ Object             - Base class for all AST Objects
 
          \sstitem
          If the Channel is copied or dumped
-         (using \htmlref{astCopy}{astCopy} or astDump)
+         (using \htmlref{astCopy}{astCopy} or \htmlref{astShow}{astShow})
          the SourceFile attribute is left in a cleared state in the output
          Channel (i.e. the value of the SourceFile attribute is not copied).
       }
@@ -52186,12 +52190,10 @@ evaluate the inverse correction for each point transformed.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V6.0}
+\subsection{Changes Introduced in V6.0}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V5.7-2 and V6.0 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V5.7-2 and V6.0:
 
 \begin{enumerate}
 
@@ -52213,6 +52215,26 @@ function \htmlref{astTuneC}{astTuneC}.
 
 \end{enumerate}
 
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V6.0-1}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V6.0 and V6.0-1 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{FitsChan}{FitsChan} class now recognises the Spitzer ``-SIP'' distortion
+code within FITS headers that describe non-celestial axes, as well as
+celestial axes.
+
+\item A bug has been fixed that could cause inappropriate equinox values to
+be used when aligning SkyFrames if the \htmlref{AlignSystem}{AlignSystem} attribute is set.
+
+\item The versioning string for AST has changed from
+``$<major>.<minor>-<release>$'' to ``$<major>.<minor>.<release>$''.
+
+\end{enumerate}
 
 Programs which are statically linked will need to be re-linked in
 order to take advantage of these new facilities.
