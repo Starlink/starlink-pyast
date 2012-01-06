@@ -2,6 +2,8 @@ build/
 starlink/ast/exceptions.c
 __pycache__/
 .#*
+*~
+*.pyc
 starlink/ast/AsTime_def.c
 starlink/ast/AsTime_desc.c
 starlink/ast/Bottom_def.c
