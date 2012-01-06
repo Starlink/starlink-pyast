@@ -1,6 +1,7 @@
 
 from __future__ import print_function
 
+from distutils import ccompiler
 from distutils.core import setup, Extension
 import sys, os, subprocess, numpy, tarfile
 from tools import make_exceptions, make_attributes
@@ -17,10 +18,6 @@ include_dirs.append(os.path.join('.','ast'))
 os.environ[ "AST_SOURCE" ] = os.path.join( os.getcwd(), 'ast' )
 make_exceptions.make_exceptions( os.path.join('starlink','ast') )
 make_attributes.make_attributes( os.path.join('starlink','ast') )
-
-#  If not already done, configure the AST source code.
-if not os.path.exists( os.path.join('ast','config.h') ):
-   subprocess.call( os.path.join('.','configure'), cwd='ast' )
 
 #  Extract the AST documentation
 if not os.path.exists( 'sun211.htx'):
@@ -61,9 +58,23 @@ for cfile in ast_c:
 for cfile in ast_c_extra:
    sources.append( os.path.join( 'ast', cfile ) )
 
+# Test the compiler
+define_macros = []
+compiler=ccompiler.new_compiler()
+if compiler.has_function('strtok_r'):
+   define_macros.append(('HAVE_STRTOK_R','1'))
+
+if compiler.has_function('strerror_r'):
+   define_macros.append(('HAVE_STRERROR_R','1'))
+
+# Assume we have isnan() available and assume we have a working sscanf
+# configure would test for these but we no longer run configure
+define_macros.append(('HAVE_DECL_ISNAN','1'))
+
 #  Create the description of the starlink.Ast module.
 Ast = Extension('starlink.Ast',
                 include_dirs  = include_dirs,
+                define_macros = define_macros,
                 sources       = sources )
 
 # OSX needs to hide all the normal AST symbols to prevent
