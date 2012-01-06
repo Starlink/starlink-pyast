@@ -68,8 +68,8 @@ Ast = Extension('starlink.Ast',
 
 # OSX needs to hide all the normal AST symbols to prevent
 # name clashes when loaded alongside libast itself (eg from pyndf)
+symbol_list = "public_symbols.txt"
 if sys.platform.startswith("darwin"):
-   symbol_list = "public_symbols.txt"
    symfile = open( symbol_list, "w" )
    if sys.version_info[0] > 2:
       symname = "_PyInit_Ast"
@@ -90,3 +90,6 @@ setup (name = 'starlink-ast',
        package_data = { 'starlink': [os.path.join('include','star','pyast.h')] },
        ext_modules=[Ast],
        py_modules=['starlink.Grf','starlink.Atl'])
+
+if os.path.exists(symbol_list):
+   os.unlink(symbol_list)
