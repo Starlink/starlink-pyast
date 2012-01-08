@@ -5331,7 +5331,8 @@ typedef struct {
 /* Prototypes for class functions */
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
-static PyObject *Region_overlap( Region *self, PyObject * args );
+static PyObject *Region_overlap( Region *self, PyObject *args );
+static PyObject *Region_mapregion( Region *self, PyObject *args );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -5355,6 +5356,7 @@ static PyGetSetDef Region_getseters[] = {
 static PyMethodDef Region_methods[] = {
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
   {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
+  {"mapregion", (PyCFunction)Region_mapregion, METH_VARARGS, "Transform a Region into a new Frame using a given Mapping"},
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
   {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -5449,6 +5451,33 @@ static PyObject *Region_getregionframe( Region *self ) {
 
   TIDY;
   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".mapregion"
+static PyObject *Region_mapregion( Region *self, PyObject * args ) {
+
+/* args: result:map,frame */
+
+   Object *other = NULL;
+   Object *another = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O!O!:" NAME, &MappingType, (PyObject**)&other,
+                       &FrameType, (PyObject**)&another ) && astOK ) {
+      AstRegion *region = astMapRegion( THIS, THAT, ANOTHER );
+      if( astOK && region ) {
+         PyObject *region_object = NewObject( (AstObject *) region );
+         result = Py_BuildValue( "O", region_object );
+         Py_XDECREF( region_object );
+      }
+      region = astAnnul( region );
+   }
+
+   TIDY;
+   return result;
 }
 
 #undef NAME

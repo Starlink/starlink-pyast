@@ -618,6 +618,18 @@ class TestAst(unittest.TestCase):
       self.assertEqual( overlap, 4 )
       self.assertTrue(  box.removeregions().isaframe() )
 
+   def test_MapRegion(self):
+      box = starlink.Ast.Box( starlink.Ast.Frame(2), 1,
+                             [0,0],[3,4] )
+      frame = starlink.Ast.Frame(2)
+      mapping = starlink.Ast.ZoomMap( 2, 2.0 )
+      region = box.mapregion( mapping, frame )
+      lbnd,ubnd = region.getregionbounds()
+      self.assertEqual( lbnd[0], 0 )
+      self.assertEqual( ubnd[0], 6 )
+      self.assertEqual( lbnd[1], 0 )
+      self.assertEqual( ubnd[1], 8 )
+
    def test_Circle(self):
       circle = starlink.Ast.Circle( starlink.Ast.Frame(2), 0,
                              [0,0],[3,4] )
