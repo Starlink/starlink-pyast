@@ -53,7 +53,58 @@ static void Sinka( const char *text );
    appropriate Python exceptions instead. */
 #include "exceptions.c"
 
-
+/* Helper routine to return a string form of a numpy data type.
+   Can not find the function in numpy itself (but it must exist) */
+static const char * numpydtype2str ( int dtype ) {
+  const char * retval;
+  switch (dtype) {
+  case PyArray_DOUBLE:
+    retval = "double";
+    break;
+  case PyArray_FLOAT:
+    retval = "float";
+    break;
+  case PyArray_INT:
+    retval = "int";
+    break;
+  case PyArray_UINT:
+    retval = "unsigned int";
+    break;
+  case PyArray_BYTE:
+    retval = "byte";
+    break;
+  case PyArray_UBYTE:
+    retval = "unsigned byte";
+    break;
+  case PyArray_SHORT:
+    retval = "short";
+    break;
+  case PyArray_USHORT:
+    retval = "unsigned short";
+    break;
+  case PyArray_LONG:
+    retval = "long";
+    break;
+  case PyArray_ULONG:
+    retval = "unsigned long";
+    break;
+  case PyArray_LONGLONG:
+    retval = "long long";
+    break;
+  case PyArray_ULONGLONG:
+    retval = "unsigned long long";
+    break;
+  case PyArray_CFLOAT:
+    retval = "complex float";
+    break;
+  case PyArray_CDOUBLE:
+    retval = "complex double";
+    break;
+  default:
+    retval = "Unknown";
+  }
+  return retval;
+}
 
 /* Object */
 /* ====== */
@@ -895,10 +946,11 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
-            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
-                             "to " NAME " has a data type that is not "
-                             "supported by " NAME " (must be float64, "
-                             "float32 or int32)." );
+            PyErr_Format( PyExc_ValueError, "The 'in' array supplied "
+                          "to " NAME " has a data type of %s that is not "
+                          "supported by " NAME " (must be float64, "
+                          "float32 or int32).",
+                          numpydtype2str(type));
          }
 
 /* Also record the number of axes and dimensions in the input array. */
@@ -1095,10 +1147,11 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
-            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
-                             "to " NAME " has a data type that is not "
-                             "supported by " NAME " (must be float64, "
-                             "float32 or int32)." );
+            PyErr_Format( PyExc_ValueError, "The 'in' array supplied "
+                          "to " NAME " has a data type of %s that is not "
+                          "supported by " NAME " (must be float64, "
+                          "float32 or int32).",
+                          numpydtype2str(type));
          }
 
 /* Also record the number of axes and dimensions in the input array. */
@@ -1118,8 +1171,9 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 
 /* Report an error if the weights array is not double. */
          if( ((PyArrayObject*) weights_object)->descr->type_num != PyArray_DOUBLE ) {
-            PyErr_SetString( PyExc_ValueError, "The 'weights' array supplied to "
-                             NAME " is not of type float64." );
+            PyErr_Format( PyExc_ValueError, "The 'weights' array supplied to "
+                          NAME " is of type %s not not of type float64.",
+                          numpydtype2str(((PyArrayObject*) weights_object)->descr->type_num));
             pbadval = NULL;
          }
       }
@@ -10167,10 +10221,11 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
             format[ 0 ] = 'B';
             pvalue = &value_B;
          } else {
-            PyErr_SetString( PyExc_ValueError, "The 'array' array supplied "
-                             "to " NAME " has a data type that is not "
-                             "supported by " NAME " (must be float64, "
-                             "float32 or int32)." );
+            PyErr_Format( PyExc_ValueError, "The 'array' array supplied "
+                          "to " NAME " has a data type of %s that is not "
+                          "supported by " NAME " (must be float64, "
+                          "float32 or int32).",
+                          numpydtype2str(type));
          }
 
 /* Also record the number of axes and dimensions in the input array. */
