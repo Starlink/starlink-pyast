@@ -942,7 +942,8 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
          } else if( type == PyArray_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == PyArray_INT ||
+                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
@@ -1143,7 +1144,8 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          } else if( type == PyArray_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == PyArray_INT ||
+                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
