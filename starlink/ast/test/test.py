@@ -412,9 +412,9 @@ class TestAst(unittest.TestCase):
       self.assertEqual( d.sum(), 0.0 )
       self.assertIsNone( outv )
 
-      data_in = numpy.array( [[1,2,3],[4,5,6],[7,8,9]], dtype=numpy.int32 )
-      data_out = numpy.empty( (3,3), dtype=numpy.int32 )
-      weights = numpy.zeros( (3,3), dtype=numpy.float64 )
+      data_in = numpy.array( [[1,2,3],[4,5,6],[7,8,9]], dtype=numpy.intc )
+      data_out = numpy.empty( (3,3), dtype=numpy.intc )
+      weights = numpy.zeros( (3,3), dtype=numpy.double )
 
       flags = starlink.Ast.USEBAD | starlink.Ast.REBININIT
       nused = 0
