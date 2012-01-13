@@ -9843,7 +9843,7 @@ static PyObject *FitsTable_columnnull( FitsTable *self, PyObject *args ) {
    if( PyArg_ParseTuple(args, "s|i:" NAME, &column, &set, &newval ) && astOK ) {
       int oldval = astColumnNull( THIS, column, set, newval, &wasset, &hasnull );
       if( astOK ) {
-         result = Py_BuildValue( "iii", (oldval?Py_True:Py_False),
+         result = Py_BuildValue( "OOO", (oldval?Py_True:Py_False),
                                  (wasset?Py_True:Py_False), (hasnull?Py_True:Py_False) );
       }
    }
