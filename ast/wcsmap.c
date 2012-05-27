@@ -614,6 +614,7 @@ int astTest##attr##_( AstWcsMap *this, int axis, int *status ) { \
 #include "pal.h"                 /* SLALIB function prototypes */
 #include "channel.h"             /* I/O channels */
 #include "proj.h"                /* WCSLIB projections and WCSLIB_MXPAR */
+#include "skyaxis.h"             /* For astDrange */
 
 /* Error code definitions. */
 /* ----------------------- */
@@ -1073,8 +1074,8 @@ static int CanSwap( AstMapping *map1, AstMapping *map2, int inv1, int inv2,
    intrinsically simpler than the original mappings. */
             if( ret ) {
 
-/* If the PermMap preceeds the WcsMap, this will be the case if the PermMap
-   has more outputs than inputs. If the WcsMap preceeds the PermMap, this
+/* If the PermMap precedes the WcsMap, this will be the case if the PermMap
+   has more outputs than inputs. If the WcsMap precedes the PermMap, this
    will be the case if the PermMap has more inputs than outputs. */
                *simpler = ( nowcs == map1 ) ? nout > nin : nin > nout;
             }
@@ -1319,7 +1320,6 @@ static void CopyPV( AstWcsMap *in, AstWcsMap *out, int *status ) {
    int latax_out;                /* Index of output latitude axis */
    int lonax_in;                 /* Index of input longitude axis */
    int lonax_out;                /* Index of output longitude axis */
-   int nax_in;                   /* No. of axis in the input WcsMap */
    int nax_out;                  /* No. of axis in the output WcsMap */
 
 /* Check the global error status. */
@@ -1337,7 +1337,6 @@ static void CopyPV( AstWcsMap *in, AstWcsMap *out, int *status ) {
    if( in->np && in->p ){
 
 /* Store the number of axes in the input and output WcsMaps */
-      nax_in = astGetNin( in );
       nax_out = astGetNin( out );
 
 /* Allocate memory for the array holding the number of projection parameters
@@ -2760,17 +2759,17 @@ static int Map( AstWcsMap *this, int forward, int npoint, double *in0,
    and the latitude is in the range [-90,90] (as required by the WCSLIB
    library). Any point with a latitude outside the range [-90,90] is
    converted to the equivalent point on the complementary meridian. */
-            latitude = AST__DR2D*palSlaDrange(  factor*in1[ point ] );
+            latitude = AST__DR2D*astDrange(  factor*in1[ point ] );
             if ( latitude > 90.0 ){
                latitude = 180.0 - latitude;
-               longitude = AST__DR2D*palSlaDrange( AST__DPI + factor*in0[ point ] );
+               longitude = AST__DR2D*astDrange( AST__DPI + factor*in0[ point ] );
 
             } else if ( latitude < -90.0 ){
                latitude = -180.0 - latitude;
-               longitude = AST__DR2D*palSlaDrange( AST__DPI + factor*in0[ point ] );
+               longitude = AST__DR2D*astDrange( AST__DPI + factor*in0[ point ] );
 
             } else {
-               longitude = AST__DR2D*palSlaDrange( factor*in0[ point ] );
+               longitude = AST__DR2D*astDrange( factor*in0[ point ] );
             }
 
 /* Call the relevant WCSLIB forward projection function. */
@@ -2984,7 +2983,6 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
 
 /* Local Variables: */
    AstMapping *mc[2];    /* Copies of supplied Mappings to swap */
-   AstMapping *neighbour; /* Pointer to neighbouring Mapping */
    AstMapping *smc0;     /* Simplied Mapping */
    AstMapping *smc1;     /* Simplied Mapping */
    const char *nclass;   /* Pointer to neighbouring Mapping class */
@@ -3055,7 +3053,6 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
       if( where > 0 ) {
          i1 = where - 1;
          i2 = where;
-         neighbour = ( *map_list )[ i1 ];
          merge = CanMerge( ( *map_list )[ i1 ], (* invert_list)[ i1 ],
                            ( *map_list )[ i2 ], (* invert_list)[ i2 ], status );
       }
@@ -3065,7 +3062,6 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
       if( !merge && where < *nmap - 1 ) {
          i1 = where;
          i2 = where + 1;
-         neighbour = ( *map_list )[ i2 ];
          merge = CanMerge( ( *map_list )[ i1 ], (* invert_list)[ i1 ],
                            ( *map_list )[ i2 ], (* invert_list)[ i2 ], status );
       }
@@ -3695,7 +3691,6 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
 /* Local Variables: */
    AstWcsMap *this;              /* Pointer to the WcsMap structure */
    double dval;                  /* Attribute value */
-   int ival;                     /* Attribute value */
    int len;                      /* Length of setting string */
    int nc;                       /* Number of characters read by astSscanf */
    int i;                        /* Axis index */
@@ -4696,7 +4691,7 @@ astMAKE_TEST(WcsMap,FITSProj,( this->fits_proj != -INT_MAX ))
 *     version of FITS-WCS paper II. If it is zero, then the TAN
 *     projection from (psi,theta) to (xi,eta) is replaced by a unit
 *     transformation, so that the WcsMap implements the polynomial
-*     transformation only, without any preceeding TAN projection.
+*     transformation only, without any preceding TAN projection.
 *
 *     In addition if the TPNTan value is zero, then the WcsMap
 *     assumes that the input and output values are in degrees rather

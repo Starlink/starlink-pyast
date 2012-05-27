@@ -1006,6 +1006,28 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        TAN projection).
 *     22-NOV-2011 (DSB):
 *        Allow the "-SIP" code to be used with non-celestial axes.
+*     1-FEB-2012 (DSB):
+*        Write out MJD-OBS in the timescale specified by any TIMESYS
+*        keyword in the FitsChan, and ensure the TIMESYS value is included
+*        in the output header.
+*     23-FEB-2012 (DSB):
+*        Use iauGd2gc in place of palGeoc where is saves some calculations.
+*     24-FEB-2012 (DSB):
+*        Move invocation of AddEncodingFrame from Write to end of
+*        MakeFitsFrameSet. This is so that AddEncodingFrame can take
+*        advantage of any standardisations (such as adding celestial axes)
+*        performed by MakeFItsFrameSet. Without this, a FRameSet contain
+*        a 1D SpecFrame (no celestial axes) would fail to be exported using
+*        FITS-CLASS encoding.
+*     29-FEB-2012 (DSB):
+*        Fix bug in CLASSFromStore that caused spatial axes added by
+*        MakeFitsFrameSet to be ignored.
+*     2-MAR-2012 (DSB):
+*        - In CLASSFromSTore, ensure NAXIS2/3 values are stored in teh FitsChan,
+*        and cater for FrameSets that have only a apectral axis and no celestial
+*        axes (this prevented the VELO_LSR keyword being created)..
+*     7-MAR-2012 (DSB):
+*        Use iauGc2gd in place of Geod.
 *class--
 */
 
@@ -1189,10 +1211,12 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #include "permmap.h"
 #include "pointset.h"
 #include "shiftmap.h"
+#include "skyaxis.h"
 #include "skyframe.h"
 #include "timeframe.h"
 #include "keymap.h"
 #include "pal.h"
+#include "sofa.h"
 #include "slamap.h"
 #include "specframe.h"
 #include "dsbspecframe.h"
@@ -1252,6 +1276,7 @@ typedef struct FitsStore {
    char ****specsys;
    char ****ssyssrc;
    char ****ps;
+   char ****timesys;
    double ***pc;
    double ***cdelt;
    double ***crpix;
@@ -1278,7 +1303,6 @@ typedef struct FitsStore {
    double ***imagfreq;
    double ***axref;
    int naxis;
-   AstTimeScaleType timesys;
    AstKeyMap *tables;
 } FitsStore;
 
@@ -1543,7 +1567,7 @@ static int TestWarnings( AstFitsChan *, int * );
 static void SetWarnings( AstFitsChan *, const char *, int * );
 static AstFitsChan *SpecTrans( AstFitsChan *, int, const char *, const char *, int * );
 static AstFitsTable *GetNamedTable( AstFitsChan *, const char *, int, int, int, const char *, int * );
-static AstFrameSet *MakeFitsFrameSet( AstFrameSet *, int, int, int * );
+static AstFrameSet *MakeFitsFrameSet( AstFitsChan *, AstFrameSet *, int, int, int, const char *, const char *, int * );
 static AstGrismMap *ExtractGrismMap( AstMapping *, int, AstMapping **, int * );
 static AstKeyMap *GetTables( AstFitsChan *, int * );
 static AstMapping *AddUnitMaps( AstMapping *, int, int, int * );
@@ -1578,7 +1602,7 @@ static AstWinMap *WcsShift( FitsStore *, char, int, const char *, const char *, 
 static FitsCard *GetLink( FitsCard *, int, const char *, const char *, int * );
 static FitsStore *FitsToStore( AstFitsChan *, int, const char *, const char *, int * );
 static FitsStore *FreeStore( FitsStore *, int * );
-static FitsStore *FsetToStore( AstFitsChan *, AstFrameSet *, int, double *, const char *, const char *, int * );
+static FitsStore *FsetToStore( AstFitsChan *, AstFrameSet *, int, double *, int, const char *, const char *, int * );
 static char *CardComm( AstFitsChan *, int * );
 static char *CardName( AstFitsChan *, int * );
 static double *Cheb2Poly( double *, int, int, double, double, double, double, int * );
@@ -1596,7 +1620,7 @@ static double **OrthVectorSet( int, int, double **, int * );
 static double *FitLine( AstMapping *, double *, double *, double *, double, double *, int * );
 static double *OrthVector( int, int, double **, int * );
 static double *ReadCrval( AstFitsChan *, AstFrame *, char, const char *, const char *, int * );
-static double ChooseEpoch( FitsStore *, char, const char *, const char *, int * );
+static double ChooseEpoch( AstFitsChan *, FitsStore *, char, const char *, const char *, int * );
 static double DateObs( const char *, int * );
 static double GetItem( double ****, int, int, char, char *, const char *method, const char *class, int * );
 static double NearestPix( AstMapping *, double, int, int * );
@@ -1605,7 +1629,7 @@ static int *CardFlags( AstFitsChan *, int * );
 static int AIPSFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
 static int AIPSPPFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
 static int AddEncodingFrame( AstFitsChan *, AstFrameSet *, int, const char *, const char *, int * );
-static int AddVersion( AstFitsChan *, AstFrameSet *, int, int, FitsStore *, double *, char, const char *, const char *, int * );
+static int AddVersion( AstFitsChan *, AstFrameSet *, int, int, FitsStore *, double *, char, int, const char *, const char *, int * );
 static int CLASSFromStore( AstFitsChan *, FitsStore *, AstFrameSet *, double *, const char *, const char *, int * );
 static int CardType( AstFitsChan *, int * );
 static int CheckFitsName( const char *, const char *, const char *, int * );
@@ -1665,7 +1689,7 @@ static int PCFromStore( AstFitsChan *, FitsStore *, const char *, const char *, 
 static int SearchCard( AstFitsChan *, const char *, const char *, const char *, int * );
 static int SetFits( AstFitsChan *, const char *, void *, int, const char *, int, int * );
 static int Similar( const char *, const char *, int * );
-static int SkySys( AstSkyFrame *, int, int, FitsStore *, int, int, char c, const char *, const char *, int * );
+static int SkySys( AstFitsChan *, AstSkyFrame *, int, int, FitsStore *, int, int, char c, const char *, const char *, int * );
 static int Split( const char *, char **, char **, char **, const char *, const char *, int * );
 static int SplitMap( AstMapping *, int, int, int, AstMapping **, AstWcsMap **, AstMapping **, int * );
 static int SplitMap2( AstMapping *, int, AstMapping **, AstWcsMap **, AstMapping **, int * );
@@ -1705,7 +1729,6 @@ static void FixUsed( AstFitsChan *, int, int, int, const char *, const char *, i
 static void FormatCard( AstFitsChan *, char *, const char *, int * );
 static void FreeItem( double ****, int * );
 static void FreeItemC( char *****, int * );
-static void Geod( double[3], double *, double *, double *, int * );
 static void GetFiducialNSC( AstWcsMap *, double *, double *, int * );
 static void GetFiducialPPC( AstWcsMap *, double *, double *, int * );
 static void GetNextData( AstChannel *, int, char **, char **, int * );
@@ -1972,7 +1995,6 @@ static int AddEncodingFrame( AstFitsChan *this, AstFrameSet *fs, int encoding,
 *     Private function.
 
 *  Synopsis:
-
 *     int AddEncodingFrame( AstFitsChan *this, AstFrameSet *fs, int encoding,
 *                           const char *method, const char *class, int *status )
 
@@ -2237,7 +2259,7 @@ static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
 }
 
 static int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
-                       FitsStore *store, double *dim, char s,
+                       FitsStore *store, double *dim, char s, int encoding,
                        const char *method, const char *class, int *status ){
 
 /*
@@ -2252,9 +2274,8 @@ static int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
-*                     FitsStore *store, double *dim, char s,
+*                     FitsStore *store, double *dim, char s, int encoding,
 *                     const char *method, const char *class, int *status )
 
 *  Class Membership:
@@ -2287,6 +2308,8 @@ static int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
 *        The co-ordinate version character. A space means the primary
 *        axis descriptions. Otherwise the supplied character should be
 *        an upper case alphabetical character ('A' to 'Z').
+*     encoding
+*        The encoding being used.
 *     method
 *        Pointer to a string holding the name of the calling method.
 *        This is only for use in constructing error messages.
@@ -2371,7 +2394,7 @@ static int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
    position (SpecFrame attributes RefRA and RefDec), then FITS-WCS paper
    III requires there to be a pair of celestial axes in the WCS Frame in
    which the celestial reference point for the spectral axis is defined. */
-   fset = MakeFitsFrameSet( fs, ipix, iwcs, status );
+   fset = MakeFitsFrameSet( this, fs, ipix, iwcs, encoding, method, class, status );
 
 /* Abort if the FrameSet could not be produced. */
    if( !fset ) return ret;
@@ -2993,8 +3016,8 @@ static int AIPSFromStore( AstFitsChan *this, FitsStore *store,
       } else {
          rho_b = atan2( -cdlon_lat, cdelt[ axrot2 ] );
       }
-      if( fabs( palSlaDrange( rho_a - rho_b ) ) < 1.0E-2 ){
-         crota = 0.5*( palSlaDranrm( rho_a ) + palSlaDranrm( rho_b ) );
+      if( fabs( astDrange( rho_a - rho_b ) ) < 1.0E-2 ){
+         crota = 0.5*( palDranrm( rho_a ) + palDranrm( rho_b ) );
          coscro = cos( crota );
          sincro = sin( crota );
          if( fabs( coscro ) > fabs( sincro ) ){
@@ -3140,14 +3163,14 @@ static int AIPSFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-         palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+         palCaldj( 99, 1, 1, &mjd99, &jj );
          if( val < mjd99 ) {
-            palSlaDjcal( 0, val, iymdf, &jj );
+            palDjcal( 0, val, iymdf, &jj );
             sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                      iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
          } else {
-            palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-            palSlaDd2tf( 3, fd, sign, ihmsf );
+            palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+            palDd2tf( 3, fd, sign, ihmsf );
             sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                      iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                      ihmsf[2], ihmsf[3] );
@@ -3495,8 +3518,8 @@ static int AIPSPPFromStore( AstFitsChan *this, FitsStore *store,
       } else {
          rho_b = atan2( -cdlon_lat, cdelt[ axrot2 ] );
       }
-      if( fabs( palSlaDrange( rho_a - rho_b ) ) < 1.0E-2 ){
-         crota = 0.5*( palSlaDranrm( rho_a ) + palSlaDranrm( rho_b ) );
+      if( fabs( astDrange( rho_a - rho_b ) ) < 1.0E-2 ){
+         crota = 0.5*( palDranrm( rho_a ) + palDranrm( rho_b ) );
          coscro = cos( crota );
          sincro = sin( crota );
          if( fabs( coscro ) > fabs( sincro ) ){
@@ -3673,14 +3696,14 @@ static int AIPSPPFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-         palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+         palCaldj( 99, 1, 1, &mjd99, &jj );
          if( val < mjd99 ) {
-            palSlaDjcal( 0, val, iymdf, &jj );
+            palDjcal( 0, val, iymdf, &jj );
             sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                      iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
          } else {
-            palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-            palSlaDd2tf( 3, fd, sign, ihmsf );
+            palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+            palDd2tf( 3, fd, sign, ihmsf );
             sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                      iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                      ihmsf[2], ihmsf[3] );
@@ -4153,6 +4176,10 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
 /* Initialise */
    ret = NULL;
 
+/* Other initialisation to avoid compiler warnings. */
+   mlon = 0;
+   mlat = 0;
+
 /* Check the inherited status. */
    if( !astOK ) return ret;
 
@@ -4293,7 +4320,7 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
             }
 
 /* Store the CTYPE, CNAME, EQUINOX, MJDOBS, and RADESYS values. */
-            SkySys( skyfrm, 1, astGetWcsType( map2 ), store, fits_ilon,
+            SkySys( this, skyfrm, 1, astGetWcsType( map2 ), store, fits_ilon,
                     fits_ilat, s, method, class, status );
 
 /* Store the LONPOLE and LATPOLE values in the FitsStore. */
@@ -4520,7 +4547,7 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
          if( tmap0 ) {
 
 /* Store the CTYPE, CNAME, EQUINOX, MJDOBS, and RADESYS values. */
-            SkySys( skyfrm, 0, 0, store, fits_ilon, fits_ilat, s, method,
+            SkySys( this, skyfrm, 0, 0, store, fits_ilon, fits_ilat, s, method,
                     class, status );
 
 /* If possible, choose the two CRVAL values (which are values on the psi
@@ -5155,8 +5182,8 @@ static void CheckZero( char *text, double value, int width, int *status ){
    }
 }
 
-static double ChooseEpoch( FitsStore *store, char s, const char *method,
-                           const char *class, int *status ){
+static double ChooseEpoch( AstFitsChan *this, FitsStore *store, char s,
+                           const char *method, const char *class, int *status ){
 /*
 *  Name:
 *     ChooseEpoch
@@ -5168,8 +5195,8 @@ static double ChooseEpoch( FitsStore *store, char s, const char *method,
 *     Private function.
 
 *  Synopsis:
-*     double ChooseEpoch( FitsStore *store, char s, const char *method,
-*                         const char *class, int *status )
+*     double ChooseEpoch( AstFitsChan *this, FitsStore *store, char s,
+*                         const char *method, const char *class, int *status )
 
 *  Class Membership:
 *     FitsChan
@@ -5182,6 +5209,8 @@ static double ChooseEpoch( FitsStore *store, char s, const char *method,
 *     keywords by the SpecTrans function before this function is called.
 
 *  Parameters:
+*     this
+*        Pointer to the FitsChan.
 *     store
 *        A structure containing values for FITS keywords relating to
 *        the World Coordinate System.
@@ -5205,7 +5234,8 @@ static double ChooseEpoch( FitsStore *store, char s, const char *method,
 */
 
 /* Local Variables: */
-   double mjd;         /* The returned MJD */
+   const char *timesys;  /* The TIMESYS value in the FitsStore */
+   double mjd;           /* The returned MJD */
 
 /* Initialise the returned value. */
    mjd = AST__BAD;
@@ -5230,7 +5260,9 @@ static double ChooseEpoch( FitsStore *store, char s, const char *method,
                                         method, class, status );
 
 /* Now convert the MJD value to the TDB timescale. */
-   mjd = TDBConv( mjd, store->timesys, 0, method, class, status );
+   timesys = GetItemC( &(store->timesys), 0, 0, ' ', NULL, method, class, status );
+   mjd = TDBConv( mjd, TimeSysToAst( this, timesys, method, class, status ),
+                  0, method, class, status );
 
 /* Return the answer. */
    return mjd;
@@ -5523,6 +5555,10 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    int ok;             /* Is FitsSTore OK for IRAF encoding? */
    int prj;            /* Projection type */
 
+/* Other initialisation to avoid compiler warnings. */
+   lonval = 0.0;
+   latval = 0.0;
+
 /* Check the inherited status. */
    if( !astOK ) return 0;
 
@@ -5552,7 +5588,7 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
 /* If the spatial pixel axes are degenerate (i.e. span only a single
    pixel), modify the CRPIX and CRVAL values in the FitsStore to put
    the reference point at the centre of the one and only spatial pixel. */
-      if( dim[ axlon ] == 1.0 && dim[ axlat ] == 1.0 ){
+      if( store->naxis >= 3 && dim[ axlon ] == 1.0 && dim[ axlat ] == 1.0 ){
          xin[ 0 ] = 1.0;
          xin[ 1 ] = 1.0;
          xin[ 2 ] = 1.0;
@@ -5698,9 +5734,10 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
 /* Save the number of WCS axes */
    naxis = GetMaxJM( &(store->crpix), ' ', status ) + 1;
 
-/* If this is larger than the number of pixel axes, ignore the surplus
-   WCS axes. */
-   if( naxis > store->naxis ) naxis = store->naxis;
+/* If this is larger than 3, ignore the surplus WCS axes. Note, the
+   above code has checked that the spatial and spectral axes are
+   WCS axes 0, 1 and 2. */
+   if( naxis > 3 ) naxis = 3;
 
 /* Allocate memory to store the CDELT values */
    if( ok ) {
@@ -5790,6 +5827,26 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    of the FITS-CLASS encoding. */
    if( ok ) {
 
+/* If celestial axes were added by MakeFitsFrameSet, we need to ensure
+   the header contains 3 main array axes. This is because the CLASS
+   encoding does not support the WCSAXES keyword. */
+      if( store->naxis == 1 ) {
+
+/* Update the "NAXIS" value to 3 or put a new card in at the start. */
+         astClearCard( this );
+         i = 3;
+         SetValue( this, "NAXIS", &i, AST__INT, NULL, status );
+
+/* Put NAXIS2/3 after NAXIS1, or after NAXIS if the FitsChan does not contain
+   NAXIS1. These are set to 1 since the spatial axes are degenerate. */
+         if( FindKeyCard( this, "NAXIS1",  method, class, status ) ) {
+            MoveCard( this, 1, method, class, status );
+         }
+         i = 1;
+         SetValue( this, "NAXIS2", &i, AST__INT, NULL, status );
+         SetValue( this, "NAXIS3", &i, AST__INT, NULL, status );
+      }
+
 /* Find the last WCS related card. */
       FindWcs( this, 1, 1, 0, method, class, status );
 
@@ -5869,14 +5926,14 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-         palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+         palCaldj( 99, 1, 1, &mjd99, &jj );
          if( val < mjd99 ) {
-            palSlaDjcal( 0, val, iymdf, &jj );
+            palDjcal( 0, val, iymdf, &jj );
             sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                      iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
          } else {
-            palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-            palSlaDd2tf( 3, fd, sign, ihmsf );
+            palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+            palDd2tf( 3, fd, sign, ihmsf );
             sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                      iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                      ihmsf[2], ihmsf[3] );
@@ -5915,10 +5972,10 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    to get the value for VELO-LSR. Create a SpecFrame describing the
    required frame (other attributes such as Epoch etc are left unset and
    so will be picked up from the supplied FrameSet). We set MinAxes
-   and MaxAxes so that the Frame can be used as a template to match the 3D
-   current Frame in the supplied FrameSet. */
+   and MaxAxes so that the Frame can be used as a template to match the
+   1D or 3D current Frame in the supplied FrameSet. */
       velofrm = (AstFrame *) astSpecFrame( "System=vrad,StdOfRest=lsrk,"
-                                           "Unit=m/s,MinAxes=3,MaxAxes=3", status );
+                                           "Unit=m/s,MinAxes=1,MaxAxes=3", status );
 
 /* Find the spectral axis within the current Frame of the supplied
    FrameSet, using the above "velofrm" as a template. */
@@ -7444,7 +7501,7 @@ static double DateObs( const char *dateobs, int *status ) {
    if( ok ) {
 
 /* Get the MJD at the start of the day. */
-      palSlaCaldj( yy, mm, dd, &ret, &j );
+      palCaldj( yy, mm, dd, &ret, &j );
 
 /* If succesful, convert the hours, minutes and seconds to a fraction of
     a day, and add it onto the MJD found above. */
@@ -7463,7 +7520,7 @@ static double DateObs( const char *dateobs, int *status ) {
          secs += (double) sc;
 
 /*Convert the hours, minutes and seconds to a fractional day. */
-         palSlaDtf2d( hr, mn, secs, &days, &j );
+         palDtf2d( hr, mn, secs, &days, &j );
 
 /* If succesful, add this onto the returned MJD. */
          if( j == 0 ) {
@@ -9778,6 +9835,7 @@ static void FindWcs( AstFitsChan *this, int last, int all, int rewind,
              Match( keyname, "EQUINOX%0c", 0, NULL, &nfld, method, class, status ) ||
              Match( keyname, "MJD-OBS",  0, NULL, &nfld, method, class, status ) ||
              Match( keyname, "DATE-OBS", 0, NULL, &nfld, method, class, status ) ||
+             Match( keyname, "TIMESYS", 0, NULL, &nfld, method, class, status ) ||
              Match( keyname, "RADECSYS", 0, NULL, &nfld, method, class, status ) ||
              Match( keyname, "RADESYS%0c", 0, NULL, &nfld, method, class, status ) ||
              Match( keyname, "C%1dVAL%d", 0, NULL, &nfld, method, class, status ) ||
@@ -10218,7 +10276,7 @@ static FitsStore *FitsToStore( AstFitsChan *this, int encoding,
       ret->imagfreq = NULL;
       ret->axref = NULL;
       ret->naxis = 0;
-      ret->timesys = AST__UTC;
+      ret->timesys = NULL;
       ret->tables = astKeyMap( "", status );
    }
 
@@ -10301,6 +10359,9 @@ static void FreeItem( double ****item, int *status ){
    int j;                /* Intermediate co-ordinate axis index */
    int oldstatus;        /* Old error status value */
    int oldreport;        /* Old error reporting value */
+
+/* Other initialisation to avoid compiler warnings. */
+   oldreport = 0;
 
 /* Check the supplied pointer */
    if( item && *item ){
@@ -10393,6 +10454,9 @@ static void FreeItemC( char *****item, int *status ){
    int jm;               /* Pixel co-ordinate axis or parameter index */
    int oldstatus;        /* Old error status value */
    int oldreport;        /* Old error reporting value */
+
+/* Other initialisation to avoid compiler warnings. */
+   oldreport = 0;
 
 /* Check the supplied pointer */
    if( item && *item ){
@@ -10493,6 +10557,7 @@ static FitsStore *FreeStore( FitsStore *store, int *status ){
    FreeItemC( &(store->specsys), status );
    FreeItemC( &(store->ssyssrc), status );
    FreeItemC( &(store->ps), status );
+   FreeItemC( &(store->timesys), status );
    FreeItem( &(store->pc), status );
    FreeItem( &(store->cdelt), status );
    FreeItem( &(store->crpix), status );
@@ -10551,7 +10616,7 @@ static char *FormatKey( const char *key, int c1, int c2, char s, int *status ){
 *        less than zero.
 *     c2
 *        A second integer value to append to the end of the keyword. Ignored if
-*        less than zero. This second integer is preceeded by an underscore.
+*        less than zero. This second integer is preceded by an underscore.
 *     s
 *        The co-ordinate version character to append to the end of the
 *        final string. Ignored if blank.
@@ -10597,7 +10662,7 @@ static char *FormatKey( const char *key, int c1, int c2, char s, int *status ){
       }
 
 /* If index c2 has been supplied, append it to the end of the string,
-   preceeded by an underscore. */
+   preceded by an underscore. */
       if( c2 >= 0 ) {
          if( len >= 0 && ( nc = sprintf( formatkey_buff + len, "_%d", c2 ) ) >= 0 ){
             len += nc;
@@ -10781,7 +10846,7 @@ static AstObject *FsetFromStore( AstFitsChan *this, FitsStore *store,
 }
 
 static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
-                               double *dim, const char *class,
+                               double *dim, int encoding, const char *class,
                                const char *method, int *status ){
 
 /*
@@ -10798,7 +10863,7 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
 *  Synopsis:
 
 *     FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
-*                             double *dim, const char *class,
+*                             double *dim, int encoding, const char *class,
 *                             const char *method, int *status )
 
 *  Class Membership:
@@ -10827,6 +10892,8 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
 *     dim
 *        Pointer to an array of pixel axis dimensions. Individual elements
 *        will be AST__BAD if dimensions are not known.
+*     encoding
+*        The encoding being used.
 *     method
 *        Pointer to a string holding the name of the calling method.
 *        This is only for use in constructing error messages.
@@ -10909,7 +10976,7 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
       ret->imagfreq = NULL;
       ret->axref = NULL;
       ret->naxis = naxis;
-      ret->timesys = AST__UTC;
+      ret->timesys = NULL;
       ret->tables = astKeyMap( "", status );
 
 /* Obtain the index of the Base Frame (i.e. the pixel frame ). */
@@ -10921,8 +10988,8 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
 
 /* Add a description of the primary axes to the FitsStore, based on the
    Current Frame in the FrameSet. */
-      primok = AddVersion( this, fset, ibase, icurr, ret, dim, ' ', method,
-                           class, status );
+      primok = AddVersion( this, fset, ibase, icurr, ret, dim, ' ',
+                           encoding, method, class, status );
 
 /* Do not add any alternate axis descriptions if the primary axis
    descriptions could not be produced. */
@@ -10991,7 +11058,7 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
             s = sid[ ifrm ];
             if( s != 0 && s != 1 ) {
                secok = AddVersion( this, fset, ibase, ifrm, ret, dim,
-                                   s, method, class, status );
+                                   s, encoding, method, class, status );
             }
          }
 
@@ -11006,117 +11073,6 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
 
 /* Return the answer. */
    return ret;
-}
-
-static void Geod( double pos[3], double *phi, double *h, double *lambda, int *status ){
-/*
-*  Name:
-*     Geod
-
-*  Purpose:
-*     Convert a terrestrial Cartesian (x,y,z) position to geodetic lat/long
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "fitschan.h"
-*     void Geod( double pos[3], double *phi, double *h, double *lambda, int *status )
-
-*  Class Membership:
-*     FitsChan member function.
-
-*  Description:
-*     This function converts a position supplied as terrestrial Cartesian
-*     (x,y,z) values into geodetic longitude, latitude and height above the
-*     reference spheroid. The (x,y,z) system has origin at the centre of
-*     the earth, Z axis going through the north pole, X axis at
-*     (long,lat)=(0,0), and Y axis at (long,lat) = (E90,0).
-*
-*     The algorithm is due to Borkowski, and is described in the
-*     Explanatory Supplement to the Astronomical Almanac (p206).
-
-*  Parameters:
-*     pos
-*        Array holding the (x,y,z) values, in metres.
-*     phi
-*        Pointer at a location at which to return the geodetic latitude,
-*        in radians.
-*     h
-*        Pointer at a location at which to return the height above the
-*        reference spheroid (geodetic, metres).
-*     lambda
-*        Pointer at a location at which to return the geodetic longitude,
-*        in radians, positive east.
-*     status
-*        Pointer to the inherited status variable.
-*/
-
-/* Local Variables... */
-   double r, e, f, p, q, d, n, g, t, rp, rd, sn, b0, boa, ab2oa;
-
-/* Initialise */
-   *phi = 0.0;
-   *h = 0.0;
-   *lambda = 0.0;
-
-/* Check the global status. */
-   if( !astOK ) return;
-
-/* Earth polar radius (metres) */
-   b0 = A0*( 1.0 - FL );
-
-/* Useful functions */
-   boa = b0/A0;
-   ab2oa = ( A0*A0 - b0*b0)/A0;
-
-/* To obtain the proper sign and polynomial solution, the sign of b is
-   set to that of z. Note the sign of z. */
-   if( pos[ 2 ] > 0.0 ) {
-      sn = 1.0;
-   } else {
-      sn = -1.0;
-   }
-
-/* If the supplied position is on the polar axis, the returned values are
-   trivial. We check this case because it corresponds to a singularity in
-   the main algorithm. */
-   r = sqrt( pos[ 0 ]*pos[ 0 ] + pos[ 1 ]*pos[ 1 ] );
-   if( r == 0 ) {
-      *lambda = 0.0;
-      *phi = AST__DPIBY2;
-      *h = pos[ 2 ] - sn*b0;
-   } else {
-
-/* The longitude is simple. */
-      *lambda = atan2( pos[ 1 ], pos[ 0 ] );
-
-/* The equator is also a singularity in the main algorithm. If the
-   supplied point is on the equator, the answers are trivial. */
-      if( pos[ 2 ] == 0.0 ) {
-         *phi = 0.0;
-         *h = r - A0;
-
-/* For all other cases, use the main Borkowski algorithm. */
-      } else {
-         e = ( sn*boa*pos[ 2 ] - ab2oa )/r;
-         f = ( sn*boa*pos[ 2 ] + ab2oa )/r;
-         p = 4.0*( e*f + 1.0 )/3.0;
-         q = 2.0*( e*e - f*f );
-         d = p*p*p + q*q;
-         if( d < 0.0 ) {
-            rp = sqrt( -p );
-            n = 2.0*rp*cos( acos( q/(p*rp) )/3.0 );
-         } else {
-            rd = sqrt( d );
-            n = pow( ( rd - q ), 1.0/3.0 ) - pow( (rd + q ), 1.0/3.0 );
-         }
-         g = 0.5* ( sqrt( e*e + n ) + e );
-         t = sqrt( g*g + ( f - n*g )/( 2*g - e ) ) - g;
-         *phi = atan( A0*( 1.0 - t*t  )/( 2.0*sn*b0*t ) );
-         *h = ( r - A0*t )*cos( *phi ) + ( pos[ 2 ] - sn*b0 )*sin( *phi );
-      }
-   }
 }
 
 static int GetClean( AstFitsChan *this, int *status ) {
@@ -15125,7 +15081,6 @@ static void FixUsed( AstFitsChan *this, int reset, int used, int remove,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     void FixUsed( AstFitsChan *this, int reset, int used, int remove,
 *                   const char *method, const char *class, int *status )
 
@@ -16672,7 +16627,6 @@ static int GetSkip( AstChannel *this_channel, int *status ) {
 static int GetValue( AstFitsChan *this, const char *keyname, int type,
                      void *value, int report, int mark, const char *method,
                      const char *class, int *status ){
-
 /*
 *  Name:
 *     GetValue
@@ -16684,7 +16638,6 @@ static int GetValue( AstFitsChan *this, const char *keyname, int type,
 *     Private function.
 
 *  Synopsis:
-
 *     int GetValue( AstFitsChan *this, const char *keyname, int type, void *value,
 *                   int report, int mark, const char *method, const char *class, int *status )
 
@@ -17599,14 +17552,14 @@ static int IRAFFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-      palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+      palCaldj( 99, 1, 1, &mjd99, &jj );
       if( val < mjd99 ) {
-         palSlaDjcal( 0, val, iymdf, &jj );
+         palDjcal( 0, val, iymdf, &jj );
          sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                   iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
       } else {
-         palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-         palSlaDd2tf( 3, fd, sign, ihmsf );
+         palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+         palDd2tf( 3, fd, sign, ihmsf );
          sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                   iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                   ihmsf[2], ihmsf[3] );
@@ -19375,7 +19328,10 @@ static AstMapping *MakeColumnMap( AstFitsTable *table, const char *col,
    return result;
 }
 
-static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int *status ) {
+static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
+                                      int ipix, int iwcs, int encoding,
+                                      const char *method, const char *class,
+                                      int *status ) {
 /*
 *  Name:
 *     MakeFitsFrameSet
@@ -19389,7 +19345,10 @@ static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int
 
 *  Synopsis:
 *     #include "fitschan.h"
-*     AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int *status )
+*     AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
+*                                    int ipix, int iwcs, int encoding,
+*                                    const char *method, const char *class,
+*                                    int *status )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -19419,12 +19378,22 @@ static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int
 *     celestial axes.
 
 *  Parameters:
+*     this
+*        The FitsChan.
 *     fset
 *        The FrameSet to check.
 *     ipix
 *        The index of the FITS pixel Frame within "fset".
 *     iwcs
 *        The index of the WCS Frame within "fset".
+*     encoding
+*        The encoding in use.
+*     method
+*        Pointer to a string holding the name of the calling method.
+*        This is only for use in constructing error messages.
+*     class
+*        Pointer to a string holding the name of the supplied object class.
+*        This is only for use in constructing error messages.
 *     status
 *        Pointer to the inherited status variable.
 
@@ -19458,13 +19427,14 @@ static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int
    char card[ AST__FITSCHAN_FITSCARDLEN + 1 ]; /* A FITS header card */
    char equinox_attr[ 13 ];/* Name of Equinox attribute for sky axes */
    char system_attr[ 12 ]; /* Name of System attribute for sky axes */
-   const char *eqn;              /* Pointer to original sky Equinox value */
+   const char *eqn;        /* Pointer to original sky Equinox value */
    const char *skysys;     /* Pointer to original sky System value */
    double con;             /* Constant axis value */
    double reflat;          /* Celestial latitude at reference point */
    double reflon;          /* Celestial longitude at reference point */
    int *perm;              /* Pointer to axis permutation array */
    int iax;                /* Axis inex */
+   int icurr;              /* Index of original current Frame in returned FrameSet */
    int ilat;               /* Celestial latitude index within WCS Frame */
    int ilon;               /* Celestial longitude index within WCS Frame */
    int ispec;              /* SpecFrame axis index within WCS Frame */
@@ -19557,7 +19527,7 @@ static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int
             astAddFrame( ret, AST__BASE, map, wcsfrm );
 
 /* If we have a celestial reference position for the spectral axis, ensure
-   it is descirbed correctly by a pair of celestial axes. */
+   it is described correctly by a pair of celestial axes. */
          } else {
 
 /* If the WCS Frame does not contain any celestial axes, we add some now. */
@@ -19711,6 +19681,14 @@ static AstFrameSet *MakeFitsFrameSet( AstFrameSet *fset, int ipix, int iwcs, int
          }
       }
    }
+
+/* Add a new current Frame into the FrameSet which increases the chances of
+   the requested encoding being usable. The index of the original current
+   Frame is returned, or AST__NOFRAME if no new Frame was added. */
+   icurr = AddEncodingFrame( this, ret, encoding, method, class, status );
+
+/* If a new Frame was added, remove the original current Frame. */
+   if( icurr != AST__NOFRAME ) astRemoveFrame( ret, icurr );
 
 /* Free resources. */
    if( specfrm ) specfrm = astAnnul( specfrm );
@@ -20189,7 +20167,7 @@ static int MakeIntWorld( AstMapping *cmap, AstFrame *fr, int *wperm, char s,
    The "g0" array only contains "nin" values. If nout>nin, then the
    missing g0 values will be assumed to be zero when we come to find the
    CRPIX values below.
-   We use palSlaDmat to solve this system of simultaneous equations to get
+   We use palDmat to solve this system of simultaneous equations to get
    crpix. The "y" array initially holds "w0" but is over-written to hold
    "g0 - crpix". */
          mat = astMalloc( sizeof( double )*(size_t)( nout*nout ) );
@@ -20201,7 +20179,7 @@ static int MakeIntWorld( AstMapping *cmap, AstFrame *fr, int *wperm, char s,
                for( j = 0; j < nout; j++ ) *(m++) = fullmat[ j ][ i ];
                y[ i ] = w0[ i ];
             }
-            palSlaDmat( nout, mat, y, &det, &sing, iw );
+            palDmat( nout, mat, y, &det, &sing, iw );
          }
          mat = astFree( mat );
          iw = astFree( iw );
@@ -20210,7 +20188,7 @@ static int MakeIntWorld( AstMapping *cmap, AstFrame *fr, int *wperm, char s,
          for( j = 0; j < nout; j++ ) {
             colvec = fullmat[ j ];
 
-/* Get the CRPIX values from the "y" vector created above by palSlaDmat.
+/* Get the CRPIX values from the "y" vector created above by palDmat.
    First deal with axes for which there are Mapping inputs. */
             if( j < nin ) {
                crp = g0[ j ] - y[ j ];
@@ -21856,7 +21834,7 @@ static double *OrthVector( int n, int m, double **in, int *status ){
 *     returned vectors, but indices into an array of indices which have
 *     been sorted into column magnitude order. This is now a set of MxM
 
-*     simultaneous linear equations which we can solve using palSlaDmat:
+*     simultaneous linear equations which we can solve using palDmat:
 *
 *     MAT.R = V
 *
@@ -21865,7 +21843,7 @@ static double *OrthVector( int n, int m, double **in, int *status ){
 *     required vector (just the components which have *not* been set
 *     constant), and V is a constant vector equal to the column of values
 *     on the right hand side in the above set of simultaneous equations.
-*     The palSlaDmat function solves this equation to obtain R.
+*     The palDmat function solves this equation to obtain R.
 
 *  Parameters:
 *     n
@@ -21972,7 +21950,7 @@ static double *OrthVector( int n, int m, double **in, int *status ){
    V vector (other elements hold the indices of the columns which are
    being ignored because they will be mutiplied by a value of zero - the
    assumed value of the corresponding components of the returned vector). We
-   now copy the these values into arrays which can be passed to palSlaDmat.
+   now copy the these values into arrays which can be passed to palDmat.
    First, initialise a pointer used to step through the mat array. */
       mel = mat;
 
@@ -21982,16 +21960,16 @@ static double *OrthVector( int n, int m, double **in, int *status ){
          d = in[ i ];
 
 /* Copy the required M elements of this supplied vector into the work array
-   which will be passed to palSlaDmat. */
+   which will be passed to palDmat. */
          for( j = 0; j < m; j++ ) *(mel++) = d[ colperm[ j ] ];
 
 /* Put the next right-hand side value into the "rhs" array. */
          rhs[ i ] = -d[ colperm[ m ] ];
       }
 
-/* Use palSlaDmat to find the first M elements of the returned array. These
+/* Use palDmat to find the first M elements of the returned array. These
    are stored in "rhs", over-writing the original right-hand side values. */
-      palSlaDmat( m, mat, rhs, &det, &sing, iw );
+      palDmat( m, mat, rhs, &det, &sing, iw );
 
 /* If the supplied vectors span fewer than M axes, the above call will fail.
    In this case, annul the returned vector. */
@@ -22920,14 +22898,14 @@ static int PCFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-            palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+            palCaldj( 99, 1, 1, &mjd99, &jj );
             if( val < mjd99 ) {
-               palSlaDjcal( 0, val, iymdf, &jj );
+               palDjcal( 0, val, iymdf, &jj );
                sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                         iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
             } else {
-               palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-               palSlaDd2tf( 3, fd, sign, ihmsf );
+               palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+               palDd2tf( 3, fd, sign, ihmsf );
                sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                         iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                         ihmsf[2], ihmsf[3] );
@@ -25541,7 +25519,6 @@ static void SetValue( AstFitsChan *this, const char *keyname, void *value,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     void SetValue( AstFitsChan *this, char *keyname, void *value,
 *                    int type, const char *comment, int *status )
 
@@ -26388,7 +26365,7 @@ static void SkyPole( AstWcsMap *map2, AstMapping *map3, int ilon, int ilat,
    takes the default value, replace it with AST__BAD to prevent an explicit
    keyword being stored in the FitsChan. */
          GetFiducialNSC( map2, &phi0, &theta0, status );
-         lonpole = palSlaDranrm( ptr1[ axlon ][ 0 ] );
+         lonpole = palDranrm( ptr1[ axlon ][ 0 ] );
          if( delta0 >= theta0 ){
             deflonpole = 0.0;
          } else {
@@ -26420,8 +26397,8 @@ static void SkyPole( AstWcsMap *map2, AstMapping *map3, int ilon, int ilat,
    }
 }
 
-static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
-                   FitsStore *store, int axlon, int axlat, char s,
+static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
+                   int wcsproj, FitsStore *store, int axlon, int axlat, char s,
                    const char *method, const char *class, int *status ){
 /*
 *  Name:
@@ -26435,8 +26412,8 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
 
 *  Synopsis:
 *     #include "fitschan.h"
-*     int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
-*                 FitsStore *store, int axlon, int axlat, char s,
+*     int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
+*                 int wcsproj, FitsStore *store, int axlon, int axlat, char s,
 *                 const char *method, const char *class, int *status )
 
 *  Class Membership:
@@ -26444,11 +26421,13 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
 
 *  Description:
 *     This function sets values for the following FITS-WCS keywords
-*     within the supplied FitsStore structure: CTYPE, CNAME, RADECSYS, EQUINOX,
+*     within the supplied FitsStore structure: CTYPE, CNAME, RADESYS, EQUINOX,
 *     MJDOBS, CUNIT, OBSGEO-X/Y/Z. The values are derived from the supplied
 *     SkyFrame and WcsMap.
 
 *  Parameters:
+*     this
+*        Pointer to the FitsChan.
 *     skyfrm
 *        A pointer to the SkyFrame to be described.
 *     wcstype
@@ -26482,6 +26461,7 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
 */
 
 /* Local Variables: */
+   astDECLARE_GLOBALS     /* Declare the thread specific global data */
    char *label;             /* Pointer to axis label string */
    char lattype[MXCTYPELEN];/* Latitude axis CTYPE value */
    char lontype[MXCTYPELEN];/* Longitude axis CTYPE value */
@@ -26489,23 +26469,29 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
    const char *lonsym;      /* SkyFrame longitude axis symbol */
    const char *prj_name;    /* Pointer to projection name string */
    const char *sys;         /* Celestal coordinate system */
-   double ep;               /* Epoch of observation (MJD) */
+   const char *timesys;     /* Timescale specified in FitsChan */
+   double ep;               /* Epoch of observation in required timescale (MJD) */
+   double ep_tdb;           /* Epoch of observation in TDB timescale (MJD) */
+   double ep_utc;           /* Epoch of observation in UTC timescale (MJD) */
    double eq;               /* Epoch of reference equinox (MJD) */
    double h;                /* Geodetic altitude of observer (metres) */
    double geolat;           /* Geodetic latitude of observer (radians) */
    double geolon;           /* Geodetic longitude of observer (radians) */
-   double r;                /* Distance (in AU) from earth axis */
-   double z;                /* Distance (in AU) above earth equator */
+   double xyz[3];           /* Geocentric position vector (in m) */
    int defdate;             /* Can the date keywords be defaulted? */
    int i;                   /* Character count */
    int isys;                /* Celestial coordinate system */
    int latax;               /* Index of latitude axis in SkyFrame */
    int lonax;               /* Index of longitude axis in SkyFrame */
+   int old_ignore_used;     /* Original setting of external ignore_used variable */
    int radesys;             /* RA/DEC reference frame */
    int ret;                 /* Returned flag */
 
 /* Check the status. */
    if( !astOK ) return 0;
+
+/* Get a pointer to the structure holding thread-specific global data. */
+   astGET_GLOBALS(this);
 
 /* Check we have a SkyFrame. */
    if( !astIsASkyFrame( skyfrm ) ) return 0;
@@ -26513,14 +26499,38 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
 /* Initialise */
    ret = 1;
 
-/* Get the equinox, epoch of observation, and system of the SkyFrame. */
+/* Get the equinox, epoch of observation, and system of the SkyFrame. The epoch
+   is in TDB. It is assumed the Equinox is in UTC. */
    eq = astGetEquinox( skyfrm );
-   if( astTestEpoch( skyfrm ) ) {
-      ep = TDBConv( astGetEpoch( skyfrm ), AST__UTC, 1, method, class, status );
-   } else {
-      ep = AST__BAD;
-   }
    sys = astGetC( skyfrm, "system" );
+   ep_tdb = astTestEpoch( skyfrm ) ? astGetEpoch( skyfrm ) : AST__BAD;
+
+/* Convert the epoch to UTC. */
+   ep_utc = TDBConv( ep_tdb, AST__UTC, 1, method, class, status );
+
+/* See if the FitsChan contains a value for the TIMESYS keyword (include
+   previously used cards in the search). If so, and if it is not UTC, convert
+   the epoch to the specified time scale, and store a TIMESYS value in the
+   FitsStore. */
+   old_ignore_used = ignore_used;
+   ignore_used = 0;
+   if( GetValue( this, "TIMESYS", AST__STRING, (void *) &timesys, 0, 0, method,
+                 class, status ) && strcmp( timesys, "UTC" ) ) {
+      ep = TDBConv( ep_tdb, TimeSysToAst( this, timesys, method, class,
+                                          status ),
+                    1, method, class, status );
+      SetItemC( &(store->timesys), 0, 0, s, timesys, status );
+
+/* If no TIMESYS keyword was found in the FitsChan, or the timesys was
+   UTC, we use the UTC epoch value found above. In this case no TIMESYS value
+   need be stored in the FitsSTore since UTC is the default for TIMESYS. */
+   } else {
+      ep = ep_utc;
+   }
+
+/* Reinstate the original value for the flag that indicates whether keywords
+   in the FitsChan that have been used previously should be ignored. */
+   ignore_used = old_ignore_used;
 
 /* The MJD-OBS and DATE-OBS keywords default to the epoch of the
    reference equinox if not supplied. Therefore MJD-OBS and DATE-OBS do
@@ -26529,22 +26539,22 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
    producing FITS headers which say unlikely things like
    DATE-OBS = "01/01/50". Set a flag indicating if MJD-OBS and DATE-OBS
    can be defaulted. */
-   defdate = EQUAL( ep, eq );
+   defdate = EQUAL( ep_utc, eq );
 
 /* Convert the equinox to a Julian or Besselian epoch. Also get the
    reference frame and standard system. */
    if( !Ustrcmp( sys, "FK4", status ) ){
-      eq = palSlaEpb( eq );
+      eq = palEpb( eq );
       radesys = FK4;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK4", status );
    } else if( !Ustrcmp( sys, "FK4_NO_E", status ) || !Ustrcmp( sys, "FK4-NO-E", status ) ){
-      eq = palSlaEpb( eq );
+      eq = palEpb( eq );
       radesys = FK4NOE;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK4-NO-E", status );
    } else if( !Ustrcmp( sys, "FK5", status ) ){
-      eq = palSlaEpj( eq );
+      eq = palEpj( eq );
       radesys = FK5;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK5", status );
@@ -26674,11 +26684,10 @@ static int SkySys( AstSkyFrame *skyfrm, int wcstype, int wcsproj,
       geolat = astGetObsLat( skyfrm );
       h = astGetObsAlt( skyfrm );
       if( geolat != AST__BAD && geolon != AST__BAD && h != AST__BAD ) {
-         palSlaGeoc( geolat, h, &r, &z );
-         r *= AST__AU;
-         SetItem( &(store->obsgeox), 0, 0, ' ', r*cos( geolon ), status );
-         SetItem( &(store->obsgeoy), 0, 0, ' ', r*sin( geolon ), status );
-         SetItem( &(store->obsgeoz), 0, 0, ' ', z*AST__AU, status );
+         iauGd2gc( 1, geolon, geolat, h, xyz );
+         SetItem( &(store->obsgeox), 0, 0, ' ', xyz[0], status );
+         SetItem( &(store->obsgeoy), 0, 0, ' ', xyz[1], status );
+         SetItem( &(store->obsgeoz), 0, 0, ' ', xyz[2], status );
       }
    }
    if( !astOK ) ret = 0;
@@ -26896,12 +26905,11 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
    double imagfreq;        /* Image sideband equivalent to the rest frequency (Hz) */
    double lbnd_s;          /* Lower bound on spectral axis */
    double pv;              /* Value of projection parameter */
-   double r;               /* Distance (in AU) from earth axis */
    double restfreq;        /* Rest frequency (Hz) */
    double ubnd_s;          /* Upper bound on spectral axis */
    double vsource;         /* Rel.vel. of source (m/s) */
    double xval;            /* Value of "X" system at reference point  */
-   double z;               /* Distance (in AU) above earth equator */
+   double xyz[3];          /* Geocentric position vector (in m) */
    double zsource;         /* Redshift of source */
    int *inperm;            /* Pointer to permutation array for input axes */
    int *outperm;           /* Pointer to permutation array for output axes */
@@ -27436,11 +27444,10 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
                   geolat = astGetObsLat( specfrm );
                   h = astGetObsAlt( specfrm );
                   if( geolat != AST__BAD && geolon != AST__BAD && h != AST__BAD ) {
-                     palSlaGeoc( geolat, h, &r, &z );
-                     r *= AST__AU;
-                     SetItem( &(store->obsgeox), 0, 0, ' ', r*cos( geolon ), status );
-                     SetItem( &(store->obsgeoy), 0, 0, ' ', r*sin( geolon ), status );
-                     SetItem( &(store->obsgeoz), 0, 0, ' ', z*AST__AU, status );
+                     iauGd2gc( 1, geolon, geolat, h, xyz );
+                     SetItem( &(store->obsgeox), 0, 0, ' ', xyz[0], status );
+                     SetItem( &(store->obsgeoy), 0, 0, ' ', xyz[1], status );
+                     SetItem( &(store->obsgeoz), 0, 0, ' ', xyz[2], status );
                   }
                }
                if( astTestRestFreq( specfrm ) ) {
@@ -27579,7 +27586,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
 *        is also done for CmPIXi, CmYPEi, and CmNITi. CmELTi is converted
 *        to a CDj_is array.
 *
-*     7) EQUINOX keywords with string values equal to a date preceeded
+*     7) EQUINOX keywords with string values equal to a date preceded
 *        by the leter B or J (eg "B1995.0"). These are converted to the
 *        corresponding Julian floating point value without any epoch
 *        specifier.
@@ -28314,7 +28321,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
                if( 1 == astSscanf( cval + 1, " %lf ", &dval ) ){
 
 /* If it is a Besselian epoch, convert to Julian. */
-                  if( bj == 'B' ) dval = palSlaEpj( palSlaEpb2d( dval ) );
+                  if( bj == 'B' ) dval = palEpj( palEpb2d( dval ) );
 
 /* Replace the original EQUINOX card. */
                   SetValue( ret, "EQUINOX", (void *) &dval, AST__FLOAT,
@@ -28662,7 +28669,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
              GetValue2( ret, this, FormatKey( "CRPIX", axlon + 1, -1, s, status ),
                         AST__FLOAT, (void *) &dval, 0, method, class, status ) ) {
             if( cdelti != 0.0 ) {
-               dval = 0.5 + AST__DR2D*palSlaDrange( AST__DD2R*( dval - 0.5 )*cdelti )/cdelti;
+               dval = 0.5 + AST__DR2D*astDrange( AST__DD2R*( dval - 0.5 )*cdelti )/cdelti;
                SetValue( ret, FormatKey( "CRPIX", axlon + 1, -1, s, status ),
                          (void *) &dval, AST__FLOAT, CardComm( this, status ), status );
             }
@@ -30576,9 +30583,9 @@ static double TDBConv( double mjd, int timescale, int fromTDB,
 *        Indicates the direction of the required conversion. If non-zero,
 *        the supplied "mjd" value should be in the TDB timescale, and the
 *        returned value will be in the timescale specified by "timescale".
-*        Indicates the direction of the required conversion. If zero,
-*        the supplied "mjd" value should be in the timescale specified by
-*        "timescale", and the returned value will be in the TDB timescale.
+*        If zero, the supplied "mjd" value should be in the timescale
+*        specified by "timescale", and the returned value will be in the
+*        TDB timescale.
 *     method
 *        The calling method. Used only in error messages.
 *     class
@@ -30597,8 +30604,8 @@ static double TDBConv( double mjd, int timescale, int fromTDB,
 /* Initialise */
    ret = AST__BAD;
 
-/* Check inherited status */
-   if( !astOK ) return ret;
+/* Check inherited status and supplied TDB value. */
+   if( !astOK || mjd == AST__BAD ) return ret;
 
 /* Return the supplied value if no conversion is needed. */
    if( timescale == AST__TDB ) {
@@ -31000,7 +31007,8 @@ static AstTimeScaleType TimeSysToAst( AstFitsChan *this, const char *timesys,
 *     this
 *        Pointer to the FitsChan.
 *     timesys
-*        Pointer to the string holding the TIMESYS value.
+*        Pointer to the string holding the TIMESYS value. A NULL pointer
+*        returns the default timescale of UTC.
 *     method
 *        Pointer to a string holding the name of the calling method.
 *        This is only for use in constructing error messages.
@@ -31023,7 +31031,9 @@ static AstTimeScaleType TimeSysToAst( AstFitsChan *this, const char *timesys,
 
 /* Check the inherited status. */
    if( !astOK ) return result;
-   if( !strcmp( timesys, "UTC" ) ) {
+   if( !timesys ) {
+      result = AST__UTC;
+   } else if( !strcmp( timesys, "UTC" ) ) {
       result = AST__UTC;
    } else if( !strcmp( timesys, "UT" ) ) {
       result = AST__UTC;
@@ -31434,7 +31444,7 @@ static void Warn( AstFitsChan *this, const char *condition, const char *text,
    if( FullForm( astGetWarnings( this ), condition, 0, status ) >= 0 ){
 
 /* If found, store the warning in the parent Channel structure. */
-      astAddWarning( this, 1, text, method, status );
+      astAddWarning( this, 1, "%s", method, status, text );
 
 /* For historical reasons, warnings are also stored in the FitsChan as a
    set of FITS cards... First save the current card index, and rewind the
@@ -31634,6 +31644,13 @@ static int WATCoeffs( const char *watstr, int iaxis, double **cvals,
    *mvals = NULL;
    *cvals = NULL;
    *ok = 1;
+
+/* Other initialisation to avoid compiler warnings. */
+   etamin = 0.0;
+   etamin = 0.0;
+   ximax = 0.0;
+   ximin = 0.0;
+   order = 0;
 
 /* Check the global status. */
    if ( !astOK || !watstr ) return result;
@@ -32032,6 +32049,9 @@ static AstMapping *WcsCelestial( AstFitsChan *this, FitsStore *store, char s,
    *reflon = AST__BAD;
    *reflat = AST__BAD;
    *reffrm = NULL;
+
+/* Other initialisation to avoid compiler warnings. */
+   map1 = NULL;
 
 /* Check the global status. */
    if ( !astOK ) return ret;
@@ -33093,16 +33113,11 @@ static void WcsFcRead( AstFitsChan *fc, AstFitsChan *fc2, FitsStore *store,
 
 /* Is this a TIMESYS keyword? */
       } else if( Match( keynam, "TIMESYS", 0, fld, &nfld, method, class, status ) ){
-         item = NULL;
-         if( CnvValue( fc, AST__STRING, 0, &cval, method, status ) ) {
-            store->timesys = TimeSysToAst( fc, cval, method, class, status );
-            MarkCard( fc, status );
-         } else {
-            sprintf( buf, "The original FITS header contained a value for "
-                     "keyword TIMESYS which could not be converted to a "
-                     "character string." );
-            Warn( fc, "badval", buf, method, class, status );
-         }
+         item = &(store->timesys);
+         type = AST__STRING;
+         i = 0;
+         jm = 0;
+         s = ' ';
 
 /* Following keywords are used to describe "-SIP" distortion as used by
    the Spitzer project... */
@@ -33227,7 +33242,6 @@ static int WcsFromStore( AstFitsChan *this, FitsStore *store,
 *     Private function.
 
 *  Synopsis:
-
 *     int WcsFromStore( AstFitsChan *this, FitsStore *store,
 *                       const char *method, const char *class, int *status )
 
@@ -33292,9 +33306,11 @@ static int WcsFromStore( AstFitsChan *this, FitsStore *store,
    int prj;            /* Projection type */
    int ret;            /* Returned value */
 
-
 /* Initialise */
    ret = 0;
+
+/* Other initialisation to avoid compiler warnings. */
+   tabaxis = NULL;
 
 /* Check the inherited status. */
    if( !astOK ) return ret;
@@ -33533,14 +33549,14 @@ static int WcsFromStore( AstFitsChan *this, FitsStore *store,
 /* The format used for the DATE-OBS keyword depends on the value of the
    keyword. For DATE-OBS < 1999.0, use the old "dd/mm/yy" format.
    Otherwise, use the new "ccyy-mm-ddThh:mm:ss[.ssss]" format. */
-            palSlaCaldj( 99, 1, 1, &mjd99, &jj );
+            palCaldj( 99, 1, 1, &mjd99, &jj );
             if( val < mjd99 ) {
-               palSlaDjcal( 0, val, iymdf, &jj );
+               palDjcal( 0, val, iymdf, &jj );
                sprintf( combuf, "%2.2d/%2.2d/%2.2d", iymdf[ 2 ], iymdf[ 1 ],
                         iymdf[ 0 ] - ( ( iymdf[ 0 ] > 1999 ) ? 2000 : 1900 ) );
             } else {
-               palSlaDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
-               palSlaDd2tf( 3, fd, sign, ihmsf );
+               palDjcl( val, iymdf, iymdf+1, iymdf+2, &fd, &jj );
+               palDd2tf( 3, fd, sign, ihmsf );
                sprintf( combuf, "%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%3.3d",
                         iymdf[0], iymdf[1], iymdf[2], ihmsf[0], ihmsf[1],
                         ihmsf[2], ihmsf[3] );
@@ -33554,6 +33570,11 @@ static int WcsFromStore( AstFitsChan *this, FitsStore *store,
          val = GetItem( &(store->mjdavg), 0, 0, ' ', NULL, method, class, status );
          if( val != AST__BAD ) SetValue( this, "MJD-AVG", &val, AST__FLOAT,
                                          "Average Modified Julian Date of observation", status );
+
+/* Store the timescale in TIMESYS. */
+         cval = GetItemC( &(store->timesys), 0, 0, s, NULL, method, class, status );
+         if( cval ) SetValue( this, "TIMESYS", &cval, AST__STRING,
+                              "Timescale for MJD-OBS/MJD-AVG values", status );
       }
 
 /* Numerical projection parameters */
@@ -34395,7 +34416,7 @@ static AstMapping *WcsNative( AstFitsChan *this, FitsStore *store, char s,
 /* Limit the latitude to the range +/- PI/2, issuing a warning if the
    supplied CRVAL value is outside this range. The "alphap" variable is used
    as workspace here. */
-      alphap = palSlaDrange( delta0 );
+      alphap = astDrange( delta0 );
       delta0 = alphap;
       if ( delta0 > AST__DPIBY2 ){
          delta0 = AST__DPIBY2;
@@ -34759,8 +34780,8 @@ static int WcsNatPole( AstFitsChan *this, AstWcsMap *wcsmap, double alpha0,
                } else {
                   t4 = acos( t3 );
                }
-               deltap_1 = palSlaDrange( t1 + t4 );
-               deltap_2 = palSlaDrange( t1 - t4 );
+               deltap_1 = astDrange( t1 + t4 );
+               deltap_2 = astDrange( t1 - t4 );
 
 /* Select which of these two values of deltap to use. Values outside the
    range +/- PI/2 cannot be used. If both values are within this range
@@ -35414,9 +35435,9 @@ static AstSkyFrame *WcsSkyFrame( AstFitsChan *this, FitsStore *store, char s,
 /* Convert the equinox to a Modified Julian Date. */
    if( equinox != AST__BAD ) {
       if( bj == 'B' ) {
-         eqmjd = palSlaEpb2d( equinox );
+         eqmjd = palEpb2d( equinox );
       } else {
-         eqmjd = palSlaEpj2d( equinox );
+         eqmjd = palEpj2d( equinox );
       }
    } else {
       eqmjd = AST__BAD;
@@ -35424,7 +35445,7 @@ static AstSkyFrame *WcsSkyFrame( AstFitsChan *this, FitsStore *store, char s,
 
 /* Get a value for the Epoch attribute. If no value is available, use
    EQUINOX and issue a warning. */
-   mjdobs = ChooseEpoch( store, s, method, class, status );
+   mjdobs = ChooseEpoch( this, store, s, method, class, status );
    if( mjdobs == AST__BAD ) {
       mjdobs = eqmjd;
       if( mjdobs != AST__BAD ) {
@@ -35523,7 +35544,7 @@ static AstSkyFrame *WcsSkyFrame( AstFitsChan *this, FitsStore *store, char s,
       if( obsgeo[ 0 ] != AST__BAD &&
           obsgeo[ 1 ] != AST__BAD &&
           obsgeo[ 2 ] != AST__BAD ) {
-         Geod( obsgeo, &geolat, &h, &geolon, status );
+         iauGc2gd( 1, obsgeo, &geolon, &geolat, &h );
          astSetObsLat( ret, geolat );
          astSetObsLon( ret, geolon );
          astSetObsAlt( ret, h );
@@ -35693,7 +35714,7 @@ static AstMapping *WcsSpectral( AstFitsChan *this, FitsStore *store, char s,
             astSetUnit( iwcfrm, i, cunit );
 
 /* Get a value for the Epoch attribute (the date of observation). */
-            mjd = ChooseEpoch( store, s, method, class, status );
+            mjd = ChooseEpoch( this, store, s, method, class, status );
             if( mjd != AST__BAD ) astSetEpoch( specfrm, mjd );
 
 /* Set the rest frequency. Use the RESTFRQ keyword (assumed to be in Hz),
@@ -35714,7 +35735,7 @@ static AstMapping *WcsSpectral( AstFitsChan *this, FitsStore *store, char s,
             if( obsgeo[ 0 ] != AST__BAD &&
                 obsgeo[ 1 ] != AST__BAD &&
                 obsgeo[ 2 ] != AST__BAD ) {
-               Geod( obsgeo, &geolat, &h, &geolon, status );
+               iauGc2gd( 1, obsgeo, &geolon, &geolat, &h );
                astSetObsLat( specfrm, geolat );
                astSetObsLon( specfrm, geolon );
                astSetObsAlt( specfrm, h );
@@ -36012,8 +36033,11 @@ static int WorldAxes( AstFitsChan *this, AstMapping *cmap, double *dim, int *per
    int retain;
    int used;
 
-/* Initialise */
+/* Initialise returned value */
    ret = 0;
+
+/* Other initialisation to avoid compiler warnings. */
+   retain = 0;
 
 /* Check the status */
    if( !astOK ) return ret;
@@ -36432,7 +36456,6 @@ static int Write( AstChannel *this_channel, AstObject *object, int *status ) {
    int comm;                     /* Value of Comm attribute */
    int encoding;                 /* FITS encoding scheme to use */
    int i;                        /* Axis index */
-   int icurr;                    /* Original current Frame index */
    int naxis;                    /* No. of pixel axes */
    int ret;                      /* Number of objects read */
 
@@ -36547,24 +36570,11 @@ static int Write( AstChannel *this_channel, AstObject *object, int *status ) {
                                  dim + i ) ) dim[ i ] = AST__BAD;
             }
 
-/* Add a new current Frame into the FrameSet which increases the chances of
-   the requested encoding being usable. The index of the original current
-   Frame is returned, or AST__NOFRAME if no new Frame was added. */
-            icurr = AddEncodingFrame( this, (AstFrameSet *) object,
-                                      encoding, method, class, status );
-
 /* Extract the required information from the FrameSet into a standard
    intermediary structure called a FitsStore. The indices of any
    celestial axes are returned. */
             store = FsetToStore( this, (AstFrameSet *) object, naxis, dim,
-                                 method, class, status );
-
-/* Remove the Frame (if any) added above, and re-instate the original current
-   Frame. */
-            if( icurr != AST__NOFRAME ) {
-               astRemoveFrame( (AstFrameSet *) object, AST__CURRENT );
-               astSetCurrent( (AstFrameSet *) object, icurr );
-            }
+                                 encoding, method, class, status );
 
 /* If the FrameSet cannot be described in terms of any of the supported
    FITS encodings, a null pointer will have been returned. */

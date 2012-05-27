@@ -202,6 +202,12 @@ f     - AST_SHOWMESH: Display a mesh of points on the surface of a Region
 *     17-MAY-2011 (DSB):
 *        In RegBaseGrid, accept the final try even if it is not within 5%
 *        of the required meshsize.
+*     27-APR-2012 (DSB):
+*        Store a negated copy of itself with each Region. Changing the Negated 
+*        attribute of a Region causes the cached information to be reset, and
+*        re-calculating it can be an expensive operation. So instead of changing
+*        "Negatated" in "this", access the negated copy of "this" using the
+*        new protected method astGetNegation.
 *class--
 
 *  Implementation Notes:
@@ -332,7 +338,7 @@ static void Clear##attribute( AstFrame *this_frame, int axis, int *status ) { \
    this = (AstRegion *) this_frame; \
 \
 /* Validate the axis index supplied. */ \
-   (void) astValidateAxis( this, axis, "astClear" #attribute ); \
+   (void) astValidateAxis( this, axis, 1, "astClear" #attribute ); \
 \
 /* We use the public astSetx method rather than the protected \
    astSet#attribute method so that the current Frame in the encapsulated \
@@ -455,7 +461,7 @@ static type Get##attribute( AstFrame *this_frame, int axis, int *status ) { \
    this = (AstRegion *) this_frame; \
 \
 /* Validate the axis index supplied. */ \
-   (void) astValidateAxis( this, axis, "astGet" #attribute ); \
+   (void) astValidateAxis( this, axis, 1, "astGet" #attribute ); \
 \
 /* Obtain a pointer to the Region's encapsulated FrameSet and invoke its \
    astGet<Attribute> method.  */ \
@@ -633,7 +639,7 @@ static void Set##attribute( AstFrame *this_frame, int axis, type value, int *sta
    this = (AstRegion *) this_frame; \
 \
 /* Validate the axis index supplied. */ \
-   (void) astValidateAxis( this, axis, "astSet" #attribute ); \
+   (void) astValidateAxis( this, axis, 1, "astSet" #attribute ); \
 \
 /* We use the public astSetx method rather than the protected \
    astSet#attribute method so that the current Frame in the encapsulated \
@@ -752,7 +758,7 @@ static int Test##attribute( AstFrame *this_frame, int axis, int *status ) { \
    this = (AstRegion *) this_frame; \
 \
 /* Validate the axis index supplied. */ \
-   (void) astValidateAxis( this, axis, "astTest" #attribute ); \
+   (void) astValidateAxis( this, axis, 1, "astTest" #attribute ); \
 \
 /* Obtain a pointer to the Region's encapsulated FrameSet and invoke its \
    astTest<Attribute> method.  */ \
@@ -921,7 +927,7 @@ static int RegPins( AstRegion *, AstPointSet *, AstRegion *, int **, int * );
 static int SubFrame( AstFrame *, AstFrame *, int, const int *, const int *, AstMapping **, AstFrame **, int * );
 static int RegTrace( AstRegion *, int, double *, double **, int * );
 static int Unformat( AstFrame *, int, const char *, double *, int * );
-static int ValidateAxis( AstFrame *, int, const char *, int * );
+static int ValidateAxis( AstFrame *, int, int, const char *, int * );
 static void CheckPerm( AstFrame *, const int *, const char *, int * );
 static void Copy( const AstObject *, AstObject *, int * );
 static void Delete( AstObject *, int * );
@@ -952,6 +958,7 @@ static void SetAxis( AstFrame *, int, AstAxis *, int * );
 static void SetRegFS( AstRegion *, AstFrame *, int * );
 static void ShowMesh( AstRegion *, int, const char *, int * );
 static void ValidateAxisSelection( AstFrame *, int, const int *, const char *, int * );
+static AstRegion *GetNegation( AstRegion *, int * );
 
 static int GetBounded( AstRegion *, int * );
 static AstRegion *GetDefUnc( AstRegion *, int * );
@@ -1192,7 +1199,7 @@ static const char *Abbrev( AstFrame *this_frame, int axis, const char *fmt,
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astAbbrev" );
+   (void) astValidateAxis( this, axis, 1, "astAbbrev" );
 
 /* Obtain a pointer to the Region's current Frame and invoke this
    Frame's astAbbrev method to perform the processing. Annul the Frame
@@ -1360,7 +1367,7 @@ static double AxAngle( AstFrame *this_frame, const double a[], const double b[],
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis - 1, "astAxAngle" );
+   (void) astValidateAxis( this, axis - 1, 1, "astAxAngle" );
 
 /* Obtain a pointer to the Region's encapsulated Frame and invoke the
    astAxAngle method for this Frame. Annul the Frame pointer
@@ -1439,7 +1446,7 @@ static double AxDistance( AstFrame *this_frame, int axis, double v1, double v2, 
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis - 1, "astAxDistance" );
+   (void) astValidateAxis( this, axis - 1, 1, "astAxDistance" );
 
 /* Obtain a pointer to the Region's encapsulated Frame and invoke the
    astAxDistance method for this Frame. Annul the Frame pointer
@@ -1518,7 +1525,7 @@ static double AxOffset( AstFrame *this_frame, int axis, double v1, double dist, 
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis - 1, "astAxOffset" );
+   (void) astValidateAxis( this, axis - 1, 1, "astAxOffset" );
 
 /* Obtain a pointer to the Region's encapsulated Frame and invoke the
    astAxOffset method for this Frame. Annul the Frame pointer
@@ -1991,16 +1998,12 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
 
 /* Local Variables: */
    AstRegion *this;            /* Pointer to the Region structure */
-   int len;                    /* Length of attrib string */
 
 /* Check the global error status. */
    if ( !astOK ) return;
 
 /* Obtain a pointer to the Region structure. */
    this = (AstRegion *) this_object;
-
-/* Obtain the length of the "attrib" string. */
-   len = strlen( attrib );
 
 /* Check the attribute name and clear the appropriate attribute. */
 
@@ -2731,7 +2734,7 @@ static const char *Format( AstFrame *this_frame, int axis, double value, int *st
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astFormat" );
+   (void) astValidateAxis( this, axis, 1, "astFormat" );
 
 /* Obtain a pointer to the Region's current Frame and invoke the
    astFormat method for this Frame. Annul the Frame pointer
@@ -2809,7 +2812,7 @@ static double Gap( AstFrame *this_frame, int axis, double gap, int *ntick, int *
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astGap" );
+   (void) astValidateAxis( this, axis, 1, "astGap" );
 
 /* Obtain a pointer to the Region's current Frame and invoke this
    Frame's astGap method to obtain the required gap value. Annul the
@@ -2885,6 +2888,7 @@ static int GetObjSize( AstObject *this_object, int *status ) {
    result += astGetObjSize( this->basemesh );
    result += astGetObjSize( this->basegrid );
    result += astGetObjSize( this->unc );
+   result += astGetObjSize( this->negation );
    result += astGetObjSize( this->defunc );
 
 /* If an error occurred, clear the result value. */
@@ -2949,7 +2953,6 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    const char *result;           /* Pointer value to return */
    double dval;                  /* Floating point attribute value */
    int ival;                     /* Integer attribute value */
-   int len;                      /* Length of attrib string */
 
 /* Initialise. */
    result = NULL;
@@ -2962,9 +2965,6 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
 
 /* Obtain a pointer to the Region structure. */
    this = (AstRegion *) this_object;
-
-/* Obtain the length of the attrib string. */
-   len = strlen( attrib );
 
 /* Compare "attrib" with each recognised attribute name in turn,
    obtaining the value of the required attribute. If necessary, write
@@ -3235,7 +3235,7 @@ static AstAxis *GetAxis( AstFrame *this_frame, int axis, int *status ) {
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astGetAxis" );
+   (void) astValidateAxis( this, axis, 1, "astGetAxis" );
 
 /* Obtain a pointer to the Region's encapsulated FrameSet and invoke
    this FrameSet's astGetAxis method to obtain the required Axis
@@ -3349,6 +3349,59 @@ static AstRegion *GetDefUnc( AstRegion *this, int *status ) {
 
 /* Return the required pointer. */
    return result;
+}
+
+static AstRegion *GetNegation( AstRegion *this, int *status ) {
+/*
+*+
+*  Name:
+*     astGetNegation
+
+*  Purpose:
+*     Obtain a pointer to a negated copy of the supplied Region.
+
+*  Type:
+*     Protected function.
+
+*  Synopsis:
+*     #include "region.h"
+*     AstRegion *GetNegation( AstRegion *this, int *status )
+
+*  Class Membership:
+*     Region virtual function.
+
+*  Description:
+*     This function returns a pointer to a Region which is a negated
+*     copy of "this". The copy is cached in the Region structure for
+*     future use.
+
+*  Parameters:
+*     this
+*        Pointer to the Region.
+
+*  Returned Value:
+*     A pointer to the Region. This should be annulled (using astAnnul)
+*     when no longer needed.
+
+*  Notes:
+*     - A NULL pointer will be returned if this function is invoked
+*     with the global error status set, or if it should fail for any
+*     reason.
+*-
+*/
+
+/* Check the global error status. */
+   if ( !astOK ) return NULL;
+
+/* If the Region struture does not contain a pointer to a negated copy of
+   itself, create one now. */
+   if( ! this->negation ) {
+      this->negation = astCopy( this );
+      astNegate( this->negation );
+   }
+
+/* Return a clone of the negation pointer. */
+   return astClone( this->negation );
 }
 
 static AstFrameSet *GetRegFS( AstRegion *this, int *status ) {
@@ -4286,6 +4339,7 @@ void astInitRegionVtab_(  AstRegionVtab *vtab, const char *name, int *status ) {
    vtab->RegClearAttrib = RegClearAttrib;
    vtab->RegSetAttrib = RegSetAttrib;
    vtab->GetDefUnc = GetDefUnc;
+   vtab->GetNegation = GetNegation;
    vtab->GetUncFrm = GetUncFrm;
    vtab->SetUnc = SetUnc;
    vtab->GetUnc = GetUnc;
@@ -5005,6 +5059,7 @@ static int ManageLock( AstObject *this_object, int mode, int extra,
    if( !result ) result = astManageLock( this->frameset, mode, extra, fail );
    if( !result ) result = astManageLock( this->points, mode, extra, fail );
    if( !result ) result = astManageLock( this->unc, mode, extra, fail );
+   if( !result ) result = astManageLock( this->negation, mode, extra, fail );
    if( !result ) result = astManageLock( this->defunc, mode, extra, fail );
    if( !result ) result = astManageLock( this->basemesh, mode, extra, fail );
    if( !result ) result = astManageLock( this->basegrid, mode, extra, fail );
@@ -7339,6 +7394,7 @@ static AstPointSet *RegBaseGrid( AstRegion *this, int *status ){
 
 /* Loop until we have a grid of nearly the right size. Make at most three
    attempts. */
+      ipr = 0;
       np = meshsize;
       ntry = 0;
       while( ntry++ < 3 ) {
@@ -9189,6 +9245,7 @@ static void ResetCache( AstRegion *this, int *status ){
    if( this ) {
       if( this->basemesh ) this->basemesh = astAnnul( this->basemesh );
       if( this->basegrid ) this->basegrid = astAnnul( this->basegrid );
+      if( this->negation ) this->negation = astAnnul( this->negation );
    }
 }
 
@@ -9613,7 +9670,7 @@ static void SetAxis( AstFrame *this_frame, int axis, AstAxis *newaxis, int *stat
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index supplied. */
-   (void) astValidateAxis( this, axis, "astSetAxis" );
+   (void) astValidateAxis( this, axis, 1, "astSetAxis" );
 
 /* Obtain a pointer to the Region's current Frame and invoke this
    Frame's astSetAxis method to assign the new Axis object. Annul the
@@ -9892,7 +9949,7 @@ f     This routine
 *     each axis in the Frame encapsulated by the Region. The number of
 *     points in the mesh is determined by the MeshSize attribute.
 *
-*     The table is preceeded by a given title string, and followed by a
+*     The table is preceded by a given title string, and followed by a
 *     single line containing the word "ENDMESH".
 
 *  Parameters:
@@ -11078,7 +11135,7 @@ static int Unformat( AstFrame *this_frame, int axis, const char *string,
    this = (AstRegion *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astUnformat" );
+   (void) astValidateAxis( this, axis, 1, "astUnformat" );
 
 /* Obtain a pointer to the Region's current Frame and invoke the
    astUnformat method for this Frame. Annul the Frame pointer
@@ -11100,7 +11157,8 @@ static int Unformat( AstFrame *this_frame, int axis, const char *string,
    return nc;
 }
 
-static int ValidateAxis( AstFrame *this_frame, int axis, const char *method, int *status ) {
+static int ValidateAxis( AstFrame *this_frame, int axis, int fwd,
+                         const char *method, int *status ) {
 /*
 *  Name:
 *     ValidateAxis
@@ -11113,7 +11171,8 @@ static int ValidateAxis( AstFrame *this_frame, int axis, const char *method, int
 
 *  Synopsis:
 *     #include "region.h"
-*     int ValidateAxis( AstFrame *this, int axis, const char *method, int *status )
+*     int ValidateAxis( AstFrame *this, int axis, int fwd, const char *method,
+*                       int *status )
 
 *  Class Membership:
 *     Region member function (over-rides the protected
@@ -11137,6 +11196,13 @@ static int ValidateAxis( AstFrame *this_frame, int axis, const char *method, int
 *        must lie between zero and (naxes-1) inclusive, where "naxes"
 *        is the number of coordinate axes associated with the
 *        Region's current Frame.
+*     fwd
+*        If non-zero, the suppplied axis index is assumed to be an
+*        "external" axis index, and the corresponding "internal" axis index
+*        is returned as the function value. Otherwise, the suppplied axis
+*        index is assumed to be an "internal" axis index, and the
+*        corresponding "external" axis index is returned as the function
+*        value.
 *     method
 *        Pointer to a constant null-terminated character string
 *        containing the name of the method that invoked this function
@@ -11146,7 +11212,8 @@ static int ValidateAxis( AstFrame *this_frame, int axis, const char *method, int
 *        Pointer to the inherited status variable.
 
 *  Returned Value:
-*     The permuted axis index.
+*     The permuted axis index - either "internal" or "external" as
+*     specified by "fwd".
 
 *  Notes:
 *     - A value of zero will be returned if this function is invoked
@@ -11193,7 +11260,7 @@ static int ValidateAxis( AstFrame *this_frame, int axis, const char *method, int
    afterwards. */
       } else {
          fr = astGetFrame( this->frameset, AST__CURRENT );
-         result = astValidateAxis( fr, axis, "astValidateAxis" );
+         result = astValidateAxis( fr, axis, fwd, "astValidateAxis" );
          fr = astAnnul( fr );
       }
    }
@@ -11853,6 +11920,7 @@ static void Copy( const AstObject *objin, AstObject *objout, int *status ) {
    out->frameset = NULL;
    out->points = NULL;
    out->unc = NULL;
+   out->negation = NULL;
    out->defunc = NULL;
 
 /* Now copy each of the above structures. */
@@ -11861,6 +11929,7 @@ static void Copy( const AstObject *objin, AstObject *objout, int *status ) {
    if( in->basemesh ) out->basemesh = astCopy( in->basemesh );
    if( in->basegrid ) out->basegrid = astCopy( in->basegrid );
    if( in->unc ) out->unc = astCopy( in->unc );
+   if( in->negation ) out->negation = astCopy( in->negation );
    if( in->defunc ) out->defunc = astCopy( in->defunc );
 }
 
@@ -11907,6 +11976,7 @@ static void Delete( AstObject *obj, int *status ) {
    if( this->basemesh ) this->basemesh = astAnnul( this->basemesh );
    if( this->basegrid ) this->basegrid = astAnnul( this->basegrid );
    if( this->unc ) this->unc = astAnnul( this->unc );
+   if( this->negation ) this->negation = astAnnul( this->negation );
    if( this->defunc ) this->defunc = astAnnul( this->defunc );
 }
 
@@ -12229,6 +12299,7 @@ AstRegion *astInitRegion_( void *mem, size_t size, int init,
       new->fillfactor = AST__BAD;
       new->defunc = NULL;
       new->nomap = 0;
+      new->negation = NULL;
 
 /* If the supplied Frame is a Region, gets its encapsulated Frame. If a
    FrameSet was supplied, use its current Frame, otherwise use the
@@ -12691,6 +12762,10 @@ double *astRegCentre_( AstRegion *this, double *cen, double **ptr, int index,
                        int ifrm, int *status ){
    if ( !astOK ) return NULL;
    return (**astMEMBER(this,Region,RegCentre))( this, cen, ptr, index, ifrm, status );
+}
+AstRegion *astGetNegation_( AstRegion *this, int *status ){
+   if ( !astOK ) return NULL;
+   return (**astMEMBER(this,Region,GetNegation))( this, status );
 }
 AstRegion *astGetUncFrm_( AstRegion *this, int ifrm, int *status ){
    if ( !astOK ) return NULL;

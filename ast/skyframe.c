@@ -303,6 +303,20 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 *        When aligning two SkyFrames in the system specified by AlignSystem,
 *        do not assume inappropriate default equinox values for systems
 *        that are not referred to the equinox specified by the Equinox attribute.
+*     26-APR-2012 (DSB):
+*        - Correct Dump function so that any axis permutation is taken into
+*        account when dumping SkyFrame attributes that have a separate value
+*        for each axis (e.g. SkyRef and SkyRefP).
+*        - Take axis permutation into account when setting a new value
+*        for attributes that have a separate value for each axis (e.g.
+*        SkyRef and SkyRefP).
+*        - Remove the code that overrides ClearEpoch and SetEpoch (these
+*        overrides have not been needed since the changes made on
+*        24/11/2009).
+*     27-APR-2012 (DSB):
+*        - Correct astLoadSkyFrame function so that any axis permutation is
+*        taken into account when loading SkyFrame attributes that have a
+*        separate value for each axis.
 *class--
 */
 
@@ -409,7 +423,7 @@ static void Clear##attr( AstSkyFrame *this, int axis, int *status ) { \
    if ( !astOK ) return; \
 \
 /* Validate and permute the axis index. */ \
-   axis_p = astValidateAxis( this, axis, "astClear" #attr ); \
+   axis_p = astValidateAxis( this, axis, 1, "astClear" #attr ); \
 \
 /* Assign the "clear" value. */ \
    if( astOK ) { \
@@ -499,7 +513,7 @@ static type Get##attr( AstSkyFrame *this, int axis, int *status ) { \
    if ( !astOK ) return result; \
 \
 /* Validate and permute the axis index. */ \
-   axis_p = astValidateAxis( this, axis, "astGet" #attr ); \
+   axis_p = astValidateAxis( this, axis, 1, "astGet" #attr ); \
 \
 /* Assign the result value. */ \
    if( astOK ) { \
@@ -591,11 +605,11 @@ static void Set##attr( AstSkyFrame *this, int axis, type value, int *status ) { 
    if ( !astOK ) return; \
 \
 /* Validate and permute the axis index. */ \
-   axis_p = astValidateAxis( this, axis, "astSet" #attr ); \
+   axis_p = astValidateAxis( this, axis, 1, "astSet" #attr ); \
 \
 /* Store the new value in the structure component. */ \
    if( astOK ) { \
-      this->component[ axis ] = (assign); \
+      this->component[ axis_p ] = (assign); \
    } \
 } \
 \
@@ -677,7 +691,7 @@ static int Test##attr( AstSkyFrame *this, int axis, int *status ) { \
    if ( !astOK ) return result; \
 \
 /* Validate and permute the axis index. */ \
-   axis_p = astValidateAxis( this, axis, "astTest" #attr ); \
+   axis_p = astValidateAxis( this, axis, 1, "astTest" #attr ); \
 \
 /* Assign the result value. */ \
    if( astOK ) { \
@@ -796,7 +810,6 @@ static int (* parent_testformat)( AstFrame *, int, int * );
 static int (* parent_unformat)( AstFrame *, int, const char *, double *, int * );
 static void (* parent_clearattrib)( AstObject *, const char *, int * );
 static void (* parent_cleardut1)( AstFrame *, int * );
-static void (* parent_clearepoch)( AstFrame *, int * );
 static void (* parent_clearformat)( AstFrame *, int, int * );
 static void (* parent_clearobsalt)( AstFrame *, int * );
 static void (* parent_clearobslat)( AstFrame *, int * );
@@ -805,7 +818,6 @@ static void (* parent_clearsystem)( AstFrame *, int * );
 static void (* parent_overlay)( AstFrame *, const int *, AstFrame *, int * );
 static void (* parent_setattrib)( AstObject *, const char *, int * );
 static void (* parent_setdut1)( AstFrame *, double, int * );
-static void (* parent_setepoch)( AstFrame *, double, int * );
 static void (* parent_setformat)( AstFrame *, int, const char *, int * );
 static void (* parent_setobsalt)( AstFrame *, double, int * );
 static void (* parent_setobslat)( AstFrame *, double, int * );
@@ -953,7 +965,6 @@ static int Unformat( AstFrame *, int, const char *, double *, int * );
 static void ClearAsTime( AstSkyFrame *, int, int * );
 static void ClearAttrib( AstObject *, const char *, int * );
 static void ClearDut1( AstFrame *, int * );
-static void ClearEpoch( AstFrame *, int * );
 static void ClearEquinox( AstSkyFrame *, int * );
 static void ClearNegLon( AstSkyFrame *, int * );
 static void ClearObsAlt( AstFrame *, int * );
@@ -975,7 +986,6 @@ static void Resolve( AstFrame *, const double [], const double [], const double 
 static void SetAsTime( AstSkyFrame *, int, int, int * );
 static void SetAttrib( AstObject *, const char *, int * );
 static void SetDut1( AstFrame *, double, int * );
-static void SetEpoch( AstFrame *, double, int * );
 static void SetEquinox( AstSkyFrame *, double, int * );
 static void SetNegLon( AstSkyFrame *, int, int * );
 static void SetObsAlt( AstFrame *, double, int * );
@@ -1108,10 +1118,10 @@ static double Angle( AstFrame *this_frame, const double a[],
             if( cc[ 0 ] != bb[ 0 ] || cc[ 1 ] != bb[ 1 ] ) {
 
 /* Find the angle from north to the line BA. */
-               anga = palSlaDbear( bb[ 0 ], bb[ 1 ], aa[ 0 ], aa[ 1 ] );
+               anga = palDbear( bb[ 0 ], bb[ 1 ], aa[ 0 ], aa[ 1 ] );
 
 /* Find the angle from north to the line BC. */
-               angc = palSlaDbear( bb[ 0 ], bb[ 1 ], cc[ 0 ], cc[ 1 ] );
+               angc = palDbear( bb[ 0 ], bb[ 1 ], cc[ 0 ], cc[ 1 ] );
 
 /* Find the difference. */
                result = angc - anga;
@@ -1122,7 +1132,7 @@ static double Angle( AstFrame *this_frame, const double a[],
                if( perm[ 0 ] != 0 ) result = piby2 - result;
 
 /* Fold the result into the range +/- PI. */
-               result = palSlaDrange( result );
+               result = astDrange( result );
             }
          }
       }
@@ -1298,7 +1308,7 @@ static void ClearAsTime( AstSkyFrame *this, int axis, int *status ) {
    if ( !astOK ) return;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astClearAsTime" );
+   (void) astValidateAxis( this, axis, 1, "astClearAsTime" );
 
 /* Obtain a pointer to the Axis object. */
    ax = astGetAxis( this, axis );
@@ -1492,55 +1502,6 @@ static void ClearDut1( AstFrame *this, int *status ) {
       ( (AstSkyFrame *) this )->eplast = AST__BAD;
       ( (AstSkyFrame *) this )->klast = AST__BAD;
    }
-}
-
-static void ClearEpoch( AstFrame *this_frame, int *status ) {
-/*
-*  Name:
-*     ClearEpoch
-
-*  Purpose:
-*     Clear the value of the Epoch attribute for a SkyFrame.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "skyframe.h"
-*     void ClearEpoch( AstFrame *this, int *status )
-
-*  Class Membership:
-*     SkyFrame member function (over-rides the astClearEpoch method
-*     inherited from the Frame class).
-
-*  Description:
-*     This function clears the Epoch value and updates the LAST value
-*     stored in the SkyFrame.
-
-*  Parameters:
-*     this
-*        Pointer to the SkyFrame.
-*     status
-*        Pointer to the inherited status variable.
-
-*/
-
-/* Local Variables: */
-   AstSkyFrame *this;            /* Pointer to the SkyFrame structure */
-   double orig;                  /* Original epoch */
-
-/* Check the global error status. */
-   if ( !astOK ) return;
-
-/* Obtain a pointer to the SkyFrame structure. */
-   this = (AstSkyFrame *) this_frame;
-
-/* Save ther original epoch */
-   orig = astGetEpoch( this_frame );
-
-/* Invoke the parent method to clear the Frame epoch. */
-   (*parent_clearepoch)( this_frame, status );
-
 }
 
 static void ClearObsAlt( AstFrame *this, int *status ) {
@@ -1903,7 +1864,7 @@ static double Distance( AstFrame *this_frame,
          p2[ perm[ 1 ] ] = point2[ 1 ];
 
 /* Calculate the great circle distance between the points in radians. */
-         result = palSlaDsep( p1[ 0 ], p1[ 1 ], p2[ 0 ], p2[ 1 ] );
+         result = palDsep( p1[ 0 ], p1[ 1 ], p2[ 0 ], p2[ 1 ] );
       }
    }
 
@@ -1969,7 +1930,7 @@ static const char *Format( AstFrame *this_frame, int axis, double value, int *st
    this = (AstSkyFrame *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astFormat" );
+   (void) astValidateAxis( this, axis, 1, "astFormat" );
 
 /* Determine if a Format value has been set for the axis and set a temporary
    value if it has not. Use the GetFormat member function for this class
@@ -2102,8 +2063,8 @@ static AstPointSet *FrameGrid( AstFrame *this_object, int size, const double *lb
        lolon != AST__BAD && hilon != AST__BAD ) {
 
 /* Ensure the longitude bounds are in the range 0-2PI. */
-      lolon = palSlaDranrm( lolon );
-      hilon = palSlaDranrm( hilon );
+      lolon = palDranrm( lolon );
+      hilon = palDranrm( hilon );
 
 /* If the upper longitude limit is less than the lower limit, add 2.PI */
       if( hilon <= lolon &&
@@ -2262,7 +2223,7 @@ static double Gap( AstFrame *this_frame, int axis, double gap, int *ntick, int *
    this = (AstSkyFrame *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astGap" );
+   (void) astValidateAxis( this, axis, 1, "astGap" );
 
 /* Determine if a Format value has been set for the axis and set a
    temporary value if it has not. Use the GetFormat member function
@@ -2441,7 +2402,7 @@ static int GetAsTime( AstSkyFrame *this, int axis, int *status ) {
    result = 0;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetAsTime" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetAsTime" );
 
 /* Obtain a pointer to the required Axis object. */
    ax = astGetAxis( this, axis );
@@ -2573,8 +2534,8 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
 
 /* Format the Equinox as decimal years. Use a Besselian epoch if it
    will be less than 1984.0, otherwise use a Julian epoch. */
-         result = astFmtDecimalYr( ( equinox < palSlaEpj2d( 1984.0 ) ) ?
-                                   palSlaEpb( equinox ) : palSlaEpj( equinox ),
+         result = astFmtDecimalYr( ( equinox < palEpj2d( 1984.0 ) ) ?
+                                   palEpb( equinox ) : palEpj( equinox ),
                                    DBL_DIG );
       }
 
@@ -2769,7 +2730,7 @@ static int GetDirection( AstFrame *this_frame, int axis, int *status ) {
    this = (AstSkyFrame *) this_frame;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetDirection" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetDirection" );
 
 /* Check if a value has been set for the axis Direction attribute. If so,
    obtain its value. */
@@ -2848,7 +2809,7 @@ static double GetBottom( AstFrame *this_frame, int axis, int *status ) {
    this = (AstSkyFrame *) this_frame;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetBottom" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetBottom" );
 
 /* Check if a value has been set for the axis Bottom attribute. If so,
    obtain its value. */
@@ -3100,9 +3061,9 @@ static double GetEpoch( AstFrame *this_frame, int *status ) {
    setting. */
       system = astGetSystem( this );
       if( system  == AST__FK4 || system == AST__FK4_NO_E ) {
-         result = palSlaEpb2d( 1950.0 );
+         result = palEpb2d( 1950.0 );
       } else {
-         result = palSlaEpj2d( 2000.0 );
+         result = palEpj2d( 2000.0 );
       }
    }
 
@@ -3169,7 +3130,7 @@ static double GetTop( AstFrame *this_frame, int axis, int *status ) {
    this = (AstSkyFrame *) this_frame;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetTop" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetTop" );
 
 /* Check if a value has been set for the axis Top attribute. If so,
    obtain its value. */
@@ -3335,7 +3296,7 @@ static const char *GetFormat( AstFrame *this_frame, int axis, int *status ) {
    this = (AstSkyFrame *) this_frame;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetFormat" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetFormat" );
 
 /* Obtain a pointer to the Axis structure. */
    ax = astGetAxis( this, axis );
@@ -3500,7 +3461,7 @@ static const char *GetLabel( AstFrame *this, int axis, int *status ) {
    result = NULL;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetLabel" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetLabel" );
 
 /* Check if a value has been set for the required axis label string. If so,
    invoke the parent astGetLabel method to obtain a pointer to it. */
@@ -3615,7 +3576,7 @@ static double GetDiurab( AstSkyFrame *this, int *status ) {
    value will be reset to AST__BAD if the ObsLat attribute value is
    changed. This code is transliterated from SLA_AOPPA. */
    if( this->diurab == AST__BAD ) {
-      palSlaGeoc( astGetObsLat( this ), astGetObsAlt( this ), &uau, &vau );
+      palGeoc( astGetObsLat( this ), astGetObsAlt( this ), &uau, &vau );
       this->diurab = 2*AST__DPI*uau*SOLSID/C;
    }
 
@@ -4010,7 +3971,7 @@ static double GetSkyRefP( AstSkyFrame *this, int axis, int *status ) {
    if ( !astOK ) return result;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetSkyRefP" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetSkyRefP" );
 
 /* Check if a value has been set for the required axis. If so, return it. */
    if( this->skyrefp[ axis_p ] != AST__BAD ) {
@@ -4096,7 +4057,7 @@ static const char *GetSymbol( AstFrame *this, int axis, int *status ) {
    result = NULL;
 
 /* Validate and permute the axis index. */
-   axis_p = astValidateAxis( this, axis, "astGetSymbol" );
+   axis_p = astValidateAxis( this, axis, 1, "astGetSymbol" );
 
 /* Check if a value has been set for the required axis symbol string. If so,
    invoke the parent astGetSymbol method to obtain a pointer to it. */
@@ -4386,11 +4347,11 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	    pos = sprintf( gettitle_buff, "FK4 equatorial %s", word );
             if( astTestEquinox( this ) || astGetUseDefs( this ) ) {
    	       pos += sprintf( gettitle_buff + pos, "; mean equinox B%s",
-		               astFmtDecimalYr( palSlaEpb( equinox ), 9 ) );
+		               astFmtDecimalYr( palEpb( equinox ), 9 ) );
             }
             if( astTestEpoch( this ) || astGetUseDefs( this ) ) {
                pos += sprintf( gettitle_buff + pos,
-                               "; epoch B%s", astFmtDecimalYr( palSlaEpb( epoch ), 9 ) );
+                               "; epoch B%s", astFmtDecimalYr( palEpb( epoch ), 9 ) );
             }
 	    break;
 
@@ -4401,11 +4362,11 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	    pos = sprintf( gettitle_buff, "FK4 equatorial %s; no E-terms", word );
             if( astTestEquinox( this ) || astGetUseDefs( this ) ) {
    	       pos += sprintf( gettitle_buff + pos, "; mean equinox B%s",
-		               astFmtDecimalYr( palSlaEpb( equinox ), 9 ) );
+		               astFmtDecimalYr( palEpb( equinox ), 9 ) );
             }
             if( astTestEpoch( this ) || astGetUseDefs( this ) ) {
                pos += sprintf( gettitle_buff + pos,
-                               "; epoch B%s", astFmtDecimalYr( palSlaEpb( epoch ), 9 ) );
+                               "; epoch B%s", astFmtDecimalYr( palEpb( epoch ), 9 ) );
             }
 	    break;
 
@@ -4416,7 +4377,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	    pos = sprintf( gettitle_buff, "FK5 equatorial %s", word );
             if( astTestEquinox( this ) || astGetUseDefs( this ) ) {
    	       pos += sprintf( gettitle_buff + pos, "; mean equinox J%s",
-		               astFmtDecimalYr( palSlaEpj( equinox ), 9 ) );
+		               astFmtDecimalYr( palEpj( equinox ), 9 ) );
             }
 	    break;
 
@@ -4448,7 +4409,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	 case AST__GAPPT:
 	    pos = sprintf( gettitle_buff,
                            "Geocentric apparent equatorial %s; "
-                           "; epoch J%s", word, astFmtDecimalYr( palSlaEpj( epoch ), 9 ) );
+                           "; epoch J%s", word, astFmtDecimalYr( palEpj( epoch ), 9 ) );
 	    break;
 
 /* Ecliptic coordinates. */
@@ -4458,7 +4419,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	    pos = sprintf( gettitle_buff, "Ecliptic %s", word );
             if( astTestEquinox( this ) || astGetUseDefs( this ) ) {
    	       pos += sprintf( gettitle_buff + pos, "; mean equinox J%s",
-		               astFmtDecimalYr( palSlaEpj( equinox ), 9 ) );
+		               astFmtDecimalYr( palEpj( equinox ), 9 ) );
             }
 	    break;
 
@@ -4469,7 +4430,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 	    pos = sprintf( gettitle_buff, "Helio-ecliptic %s; mean equinox J2000", word );
             if( astTestEpoch( this ) || astGetUseDefs( this ) ) {
    	       pos += sprintf( gettitle_buff + pos, "; epoch J%s",
-		               astFmtDecimalYr( palSlaEpj( epoch ), 9 ) );
+		               astFmtDecimalYr( palEpj( epoch ), 9 ) );
             }
 	    break;
 
@@ -4608,7 +4569,7 @@ static const char *GetUnit( AstFrame *this_frame, int axis, int *status ) {
    this = (AstSkyFrame *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astGetUnit" );
+   (void) astValidateAxis( this, axis, 1, "astGetUnit" );
 
 /* The Unit value may depend on the value of the Format attribute, so
    determine if a Format value has been set for the axis and set a
@@ -4820,12 +4781,6 @@ void astInitSkyFrameVtab_(  AstSkyFrameVtab *vtab, const char *name, int *status
    parent_unformat = frame->Unformat;
    frame->Unformat = Unformat;
 
-   parent_setepoch = frame->SetEpoch;
-   frame->SetEpoch = SetEpoch;
-
-   parent_clearepoch = frame->ClearEpoch;
-   frame->ClearEpoch = ClearEpoch;
-
    parent_setdut1 = frame->SetDut1;
    frame->SetDut1 = SetDut1;
 
@@ -4876,9 +4831,9 @@ void astInitSkyFrameVtab_(  AstSkyFrameVtab *vtab, const char *name, int *status
 /* Initialize constants for converting between hours, degrees and
    radians, etc.. */
    LOCK_MUTEX2
-   palSlaDtf2r( 1, 0, 0.0, &hr2rad, &stat );
-   palSlaDaf2r( 1, 0, 0.0, &deg2rad, &stat );
-   palSlaDaf2r( 180, 0, 0.0, &pi, &stat );
+   palDtf2r( 1, 0, 0.0, &hr2rad, &stat );
+   palDaf2r( 1, 0, 0.0, &deg2rad, &stat );
+   palDaf2r( 180, 0, 0.0, &pi, &stat );
    piby2 = 0.5*pi;
    UNLOCK_MUTEX2
 
@@ -5011,32 +4966,32 @@ static void Intersect( AstFrame *this_frame, const double a1[2],
          }
 
 /* Convert each (lon,lat) pair into a unit length 3-vector. */
-         palSlaDcs2c( aa1[ 0 ], aa1[ 1 ], va1 );
-         palSlaDcs2c( aa2[ 0 ], aa2[ 1 ], va2 );
-         palSlaDcs2c( bb1[ 0 ], bb1[ 1 ], vb1 );
-         palSlaDcs2c( bb2[ 0 ], bb2[ 1 ], vb2 );
+         palDcs2c( aa1[ 0 ], aa1[ 1 ], va1 );
+         palDcs2c( aa2[ 0 ], aa2[ 1 ], va2 );
+         palDcs2c( bb1[ 0 ], bb1[ 1 ], vb1 );
+         palDcs2c( bb2[ 0 ], bb2[ 1 ], vb2 );
 
 /* Find the normal vectors to the two great cicles. */
-         palSlaDvxv( va1, va2, na );
-         palSlaDvxv( vb1, vb2, nb );
+         palDvxv( va1, va2, na );
+         palDvxv( vb1, vb2, nb );
 
 /* The cross product of the two normal vectors points to one of the
    two diametrically opposite intersections. */
-         palSlaDvxv( na, nb, vp );
+         palDvxv( na, nb, vp );
 
 /* Normalise the "vp" vector, also obtaining its original modulus. */
-         palSlaDvn( vp, vpn, &vmod );
+         palDvn( vp, vpn, &vmod );
          if( vmod != 0.0 ) {
 
 /* We want the intersection which is closest to "a1". The dot product
    gives the cos(distance) between two positions. So find the dot
    product between "a1" and "vpn", and then between "a1" and the point
    diametrically opposite "vpn". */
-            d1 = palSlaDvdv( vpn, va1 );
+            d1 = palDvdv( vpn, va1 );
             vpn[ 0 ] = -vpn[ 0 ];
             vpn[ 1 ] = -vpn[ 1 ];
             vpn[ 2 ] = -vpn[ 2 ];
-            d2 = palSlaDvdv( vpn, va1 );
+            d2 = palDvdv( vpn, va1 );
 
 /* Revert to "vpn" if it is closer to "a1". */
             if( d1 > d2 ) {
@@ -5047,8 +5002,8 @@ static void Intersect( AstFrame *this_frame, const double a1[2],
 
 /* Convert the vector back into a (lon,lat) pair, and put the longitude
    into the range 0 to 2.pi. */
-            palSlaDcc2s( vpn, cc, cc + 1 );
-            *cc = palSlaDranrm( *cc );
+            palDcc2s( vpn, cc, cc + 1 );
+            *cc = palDranrm( *cc );
 
 /* Permute the result coordinates to undo the effect of the SkyFrame
    axis permutation array. */
@@ -5206,7 +5161,7 @@ static int LineContains( AstFrame *this, AstLineDef *l, int def, double *point, 
          if ( perm ) {
             p1[ perm[ 0 ] ] = point[ 0 ];
             p1[ perm[ 1 ] ] = point[ 1 ];
-            palSlaDcs2c( p1[ 0 ], p1[ 1 ], bb );
+            palDcs2c( p1[ 0 ], p1[ 1 ], bb );
             b = bb;
          } else {
             b = NULL;
@@ -5224,7 +5179,7 @@ static int LineContains( AstFrame *this, AstLineDef *l, int def, double *point, 
 
 /* Check that the point is 90 degrees away from the pole of the great
    circle containing the line. */
-        t1 = palSlaDvdv( sl->q, b );
+        t1 = palDvdv( sl->q, b );
         t2 = 1.0E-7*sl->length;
         if( t2 < 1.0E-10 ) t2 = 1.0E-10;
         if( fabs( t1 ) <= t2 ) result = 1;
@@ -5346,9 +5301,9 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 /* Point of intersection of the two great circles is perpendicular to the
    pole vectors of both great circles. Put the Cartesian coords in elements
    2 to 4 of the returned array. */
-      palSlaDvxv( sl1->q, sl2->q, temp );
+      palDvxv( sl1->q, sl2->q, temp );
       b = crossing + 2;
-      palSlaDvn( temp, b, &len );
+      palDvn( temp, b, &len );
 
 /* See if this point is within the length of both arcs. If so return it. */
       if( LineIncludes( sl2, b, status ) && LineIncludes( sl1, b, status ) ) {
@@ -5364,7 +5319,7 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
       }
 
 /* Store the spherical coords in elements 0 and 1 of the returned array. */
-      palSlaDcc2s( b, p, p + 1 );
+      palDcc2s( b, p, p + 1 );
 
 /* Permute the spherical axis value into the order used by the SkyFrame. */
       perm = astGetPerm( this );
@@ -5475,12 +5430,12 @@ static AstLineDef *LineDef( AstFrame *this, const double start[2],
 
 /* Convert each point into a 3-vector of unit length and store in the
    returned structure. */
-         palSlaDcs2c( p1[ 0 ], p1[ 1 ], result->start );
-         palSlaDcs2c( p2[ 0 ], p2[ 1 ], result->end );
+         palDcs2c( p1[ 0 ], p1[ 1 ], result->start );
+         palDcs2c( p2[ 0 ], p2[ 1 ], result->end );
 
 /* Calculate the great circle distance between the points in radians and
    store in the result structure. */
-         result->length = acos( palSlaDvdv( result->start, result->end ) );
+         result->length = acos( palDvdv( result->start, result->end ) );
 
 /* Find a unit vector representing the pole of the system in which the
    equator is given by the great circle. This is such that going the
@@ -5489,16 +5444,16 @@ static AstLineDef *LineDef( AstFrame *this, const double start[2],
    If the line has zero length, or 180 degrees length, the pole is
    undefined, so we use an arbitrary value. */
          if( result->length == 0.0 || result->length > pi - 5.0E-11 ) {
-            palSlaDcs2c( p1[ 0 ] + 0.01, p1[ 1 ] + 0.01, temp );
-            palSlaDvxv( temp, result->start, result->dir );
+            palDcs2c( p1[ 0 ] + 0.01, p1[ 1 ] + 0.01, temp );
+            palDvxv( temp, result->start, result->dir );
          } else {
-            palSlaDvxv( result->end, result->start, result->dir );
+            palDvxv( result->end, result->start, result->dir );
          }
-         palSlaDvn( result->dir, result->q, &len );
+         palDvn( result->dir, result->q, &len );
 
 /* Also store a point which is 90 degrees along the great circle from the
    start. */
-         palSlaDvxv( result->start, result->q, result->dir );
+         palDvxv( result->start, result->q, result->dir );
 
 /* Store a pointer to the defining SkyFrame. */
          result->frame = this;
@@ -5582,9 +5537,9 @@ static int LineIncludes( SkyLineDef *l, double point[3], int *status ) {
    line in the range 0 - 180 degs. Check it is less than the line length.
    Then check that the point is not more than 90 degs away from the quarter
    point. */
-   t1 = palSlaDvdv( l->start, point );
+   t1 = palDvdv( l->start, point );
    t2 = acos( t1 );
-   t3 = palSlaDvdv( l->dir, point );
+   t3 = palDvdv( l->dir, point );
    return ( ((l->length > 0) ? t2 < l->length : t2 == 0.0 ) && t3 >= -1.0E-8 );
 }
 
@@ -5683,7 +5638,7 @@ static void LineOffset( AstFrame *this, AstLineDef *line, double par,
       }
 
 /* Convert to lon/lat */
-      palSlaDcc2s( v, p, p + 1 );
+      palDcc2s( v, p, p + 1 );
 
 /* Permute the spherical axis value into the order used by the SkyFrame. */
       perm = astGetPerm( this );
@@ -5922,10 +5877,10 @@ static int MakeSkyMapping( AstSkyFrame *target, AstSkyFrame *result,
 /* Convert the equinox and epoch values (stored as Modified Julian
    Dates) into the equivalent Besselian and Julian epochs (as decimal
    years). */
-      equinox_B = palSlaEpb( equinox );
-      equinox_J = palSlaEpj( equinox );
-      epoch_B = palSlaEpb( epoch );
-      epoch_J = palSlaEpj( epoch );
+      equinox_B = palEpb( equinox );
+      equinox_J = palEpj( equinox );
+      epoch_B = palEpb( epoch );
+      epoch_J = palEpj( epoch );
 
 /* Formulate the conversion... */
 
@@ -6160,10 +6115,10 @@ static int MakeSkyMapping( AstSkyFrame *target, AstSkyFrame *result,
    Dates) into the equivalent Besselian and Julian epochs (as decimal
    years). */
    if( astOK ) {
-      equinox_B = palSlaEpb( equinox );
-      equinox_J = palSlaEpj( equinox );
-      epoch_B = palSlaEpb( epoch );
-      epoch_J = palSlaEpj( epoch );
+      equinox_B = palEpb( equinox );
+      equinox_J = palEpj( equinox );
+      epoch_B = palEpb( epoch );
+      epoch_J = palEpj( epoch );
    }
 
 /* Check we need to do the conversion. */
@@ -6645,7 +6600,7 @@ static int Match( AstFrame *template_frame, AstFrame *target, int matchsub,
    SkyFrame (whose method we are executing) causes an axis
    reversal. Determine this by permuting axis index zero. */
    if ( astOK && match ) {
-      swap1 = ( astValidateAxis( template, 0, "astMatch" ) != 0 );
+      swap1 = ( astValidateAxis( template, 0, 1, "astMatch" ) != 0 );
 
 /* The second factor depends on whether the axes of the underlying
    primary SkyFrame are reversed when seen in the target Frame. */
@@ -6916,8 +6871,8 @@ static void Norm( AstFrame *this_frame, double value[], int *status ) {
 
 /* Fold the longitude value into the range 0 to 2*pi and the latitude into
    the range -pi to +pi. */
-         sky_long = palSlaDranrm( sky_long );
-         sky_lat = palSlaDrange( sky_lat );
+         sky_long = palDranrm( sky_long );
+         sky_lat = astDrange( sky_lat );
 
 /* If the latitude now exceeds pi/2, shift the longitude by pi in whichever
    direction will keep it in the range 0 to 2*pi. */
@@ -6940,11 +6895,11 @@ static void Norm( AstFrame *this_frame, double value[], int *status ) {
 
 /* If only the longitude value is valid, wrap it into the range 0 to 2*pi. */
       } else if ( sky_long != AST__BAD ) {
-         sky_long = palSlaDranrm( sky_long );
+         sky_long = palDranrm( sky_long );
 
 /* If only the latitude value is valid, wrap it into the range -pi to +pi. */
       } else if ( sky_lat != AST__BAD ) {
-         sky_lat = palSlaDrange( sky_lat );
+         sky_lat = astDrange( sky_lat );
 
 /* Then refect through one of the poles (as above), if necessary, to move it
    into the range -pi/2 to +pi/2. */
@@ -6962,7 +6917,7 @@ static void Norm( AstFrame *this_frame, double value[], int *status ) {
 /* If the NegLon attribute is set, and the longitude value is good,
    convert it into the range -pi to +pi. */
       if( sky_long != AST__BAD && astGetNegLon( this ) ) {
-         sky_long = palSlaDrange( sky_long );
+         sky_long = astDrange( sky_long );
       }
 
 /* Return the new values, allowing for any axis permutation. */
@@ -7072,8 +7027,8 @@ static void NormBox( AstFrame *this_frame, double lbnd[], double ubnd[],
 
 /* Find the lowest latitude after normalisation. */
          if( ub[ 1 ] != AST__BAD &&  lb[ 1 ] != AST__BAD ){
-            t = palSlaDrange( ub[ 1 ] );
-            t2 = palSlaDrange( lb[ 1 ] );
+            t = astDrange( ub[ 1 ] );
+            t2 = astDrange( lb[ 1 ] );
             if( t2 < t ) t = t2;
          } else {
             t = AST__BAD;
@@ -7095,8 +7050,8 @@ static void NormBox( AstFrame *this_frame, double lbnd[], double ubnd[],
 
 /* Find the highest latitude after normalisation. */
          if( ub[ 1 ] != AST__BAD &&  lb[ 1 ] != AST__BAD ){
-            t = palSlaDrange( ub[ 1 ] );
-            t2 = palSlaDrange( lb[ 1 ] );
+            t = astDrange( ub[ 1 ] );
+            t2 = astDrange( lb[ 1 ] );
             if( t2 > t ) t = t2;
          } else {
             t = AST__BAD;
@@ -7224,17 +7179,17 @@ static void Offset( AstFrame *this_frame, const double point1[],
          p2[ perm[ 1 ] ] = point2[ 1 ];
 
 /* Convert each point into a 3-vector of unit length. */
-         palSlaDcs2c( p1[ 0 ], p1[ 1 ], v1 );
-         palSlaDcs2c( p2[ 0 ], p2[ 1 ], v2 );
+         palDcs2c( p1[ 0 ], p1[ 1 ], v1 );
+         palDcs2c( p2[ 0 ], p2[ 1 ], v2 );
 
 /* Find the cross product between these two vectors (the vector order
    is reversed here to compensate for the sense of rotation introduced
-   by palSlaDav2m and palSlaDmxv below). */
-         palSlaDvxv( v2, v1, v3 );
+   by palDav2m and palDmxv below). */
+         palDvxv( v2, v1, v3 );
 
 /* Normalise the cross product vector, also obtaining its original
    modulus. */
-         palSlaDvn( v3, vrot, &vmod );
+         palDvn( v3, vrot, &vmod );
 
 /* If the original modulus was zero, the input points are either
    coincident or diametrically opposite, so do not uniquely define a
@@ -7251,9 +7206,9 @@ static void Offset( AstFrame *this_frame, const double point1[],
 
 /* Convert the 3-vector back into spherical cooordinates and then
    constrain the longitude result to lie in the range 0 to 2*pi
-   (palSlaDcc2s doesn't do this itself). */
-               palSlaDcc2s( v3, &p3[ 0 ], &p3[ 1 ] );
-               p3[ 0 ] = palSlaDranrm( p3[ 0 ] );
+   (palDcc2s doesn't do this itself). */
+               palDcc2s( v3, &p3[ 0 ], &p3[ 1 ] );
+               p3[ 0 ] = palDranrm( p3[ 0 ] );
 
 /* If the offset was not a multiple of pi, generate "bad" output
    coordinates. */
@@ -7273,13 +7228,13 @@ static void Offset( AstFrame *this_frame, const double point1[],
 /* Generate the rotation matrix that implements this rotation and use
    it to rotate the first input point (3-vector) to give the required
    result (3-vector). */
-            palSlaDav2m( vrot, mrot );
-            palSlaDmxv( mrot, v1, v3 );
+            palDav2m( vrot, mrot );
+            palDmxv( mrot, v1, v3 );
 
 /* Convert the 3-vector back into spherical cooordinates and then
    constrain the longitude result to lie in the range 0 to 2*pi. */
-            palSlaDcc2s( v3, &p3[ 0 ], &p3[ 1 ] );
-            p3[ 0 ] = palSlaDranrm( p3[ 0 ] );
+            palDcc2s( v3, &p3[ 0 ], &p3[ 1 ] );
+            p3[ 0 ] = palDranrm( p3[ 0 ] );
          }
 
 /* Permute the result coordinates to undo the effect of the SkyFrame
@@ -7391,16 +7346,16 @@ f     function is invoked with STATUS set to an error value, or if it
 
 /* Convert each point into a 3-vector of unit length. The SkyRef position
    defines the X axis in the offset coord system. */
-         palSlaDcs2c( astGetSkyRef( this, lonaxis ), astGetSkyRef( this, lataxis ), vx );
-         palSlaDcs2c( astGetSkyRefP( this, lonaxis ), astGetSkyRefP( this, lataxis ), vp );
+         palDcs2c( astGetSkyRef( this, lonaxis ), astGetSkyRef( this, lataxis ), vx );
+         palDcs2c( astGetSkyRefP( this, lonaxis ), astGetSkyRefP( this, lataxis ), vp );
 
 /* The Y axis is perpendicular to both the X axis and the skyrefp
    position. That is, it is parallel to the cross product of the 2 above
    vectors.*/
-         palSlaDvxv( vp, vx, vy );
+         palDvxv( vp, vx, vy );
 
 /* Normalize the y vector. */
-         palSlaDvn( vy, vy, &vmod );
+         palDvn( vy, vy, &vmod );
 
 /* Report an error if the modulus of the vector is zero.*/
          if( vmod == 0.0 ) {
@@ -7410,7 +7365,7 @@ f     function is invoked with STATUS set to an error value, or if it
 
 /* If OK, form the Z axis as the cross product of the x and y axes. */
          } else {
-            palSlaDvxv( vx, vy, vz );
+            palDvxv( vx, vy, vz );
 
          }
 
@@ -7420,16 +7375,16 @@ f     function is invoked with STATUS set to an error value, or if it
 
 /* Convert each point into a 3-vector of unit length. The SkyRef position
    defines the Z axis in the offset coord system. */
-         palSlaDcs2c( astGetSkyRef( this, lonaxis ), astGetSkyRef( this, lataxis ), vz );
-         palSlaDcs2c( astGetSkyRefP( this, lonaxis ), astGetSkyRefP( this, lataxis ), vp );
+         palDcs2c( astGetSkyRef( this, lonaxis ), astGetSkyRef( this, lataxis ), vz );
+         palDcs2c( astGetSkyRefP( this, lonaxis ), astGetSkyRefP( this, lataxis ), vp );
 
 /* The Y axis is perpendicular to both the Z axis and the skyrefp
    position. That is, it is parallel to the cross product of the 2 above
    vectors.*/
-         palSlaDvxv( vz, vp, vy );
+         palDvxv( vz, vp, vy );
 
 /* Normalize the y vector. */
-         palSlaDvn( vy, vy, &vmod );
+         palDvn( vy, vy, &vmod );
 
 /* Report an error if the modulus of the vector is zero.*/
          if( vmod == 0.0 ) {
@@ -7439,7 +7394,7 @@ f     function is invoked with STATUS set to an error value, or if it
 
 /* If OK, form the X axis as the cross product of the y and z axes. */
          } else {
-            palSlaDvxv( vy, vz, vx );
+            palDvxv( vy, vz, vx );
          }
       }
 
@@ -7631,13 +7586,13 @@ static double Offset2( AstFrame *this_frame, const double point1[2],
 
 /* Calculate the position angle of the great circle at the required
    point. */
-         pa = atan2( palSlaDvdv( q3, q2 ), palSlaDvdv( q3, q1 ) );
+         pa = atan2( palDvdv( q3, q2 ), palDvdv( q3, q1 ) );
 
 /* Convert this from a pa into the required angle. */
          result = ( perm[ 0 ] == 0 )? pa: piby2 - pa;
 
 /* Ensure that the end angle is in the range 0 to 2*pi. */
-         result = palSlaDranrm( result );
+         result = palDranrm( result );
 
 /* Permute the result coordinates to undo the effect of the SkyFrame
    axis permutation array. */
@@ -7969,15 +7924,15 @@ static void Resolve( AstFrame *this_frame, const double point1[],
          p3[ perm[ 1 ] ] = point3[ 1 ];
 
 /* Convert each point into a 3-vector of unit length. */
-         palSlaDcs2c( p1[ 0 ], p1[ 1 ], v1 );
-         palSlaDcs2c( p2[ 0 ], p2[ 1 ], v2 );
-         palSlaDcs2c( p3[ 0 ], p3[ 1 ], v3 );
+         palDcs2c( p1[ 0 ], p1[ 1 ], v1 );
+         palDcs2c( p2[ 0 ], p2[ 1 ], v2 );
+         palDcs2c( p3[ 0 ], p3[ 1 ], v3 );
 
 /* Find the cross product between the first two vectors, and normalize is.
    This is the unit normal to the great circle plane defining parallel
    distance. */
-         palSlaDvxv( v2, v1, vtemp );
-         palSlaDvn( vtemp, n1, &vmod );
+         palDvxv( v2, v1, vtemp );
+         palDvn( vtemp, n1, &vmod );
 
 /* Return with bad values if the normal is undefined (i.e. if the first two
    vectors are identical or diametrically opposite). */
@@ -7986,13 +7941,13 @@ static void Resolve( AstFrame *this_frame, const double point1[],
 /* Now take the cross product of the normal vector and v1. This gives a
    point, v5, on the great circle which is 90 degrees away from v1, in the
    direction of v2. */
-            palSlaDvxv( v1, n1, v5 );
+            palDvxv( v1, n1, v5 );
 
 /* Find the cross product of the outlying point (point 3), and the vector
    n1 found above, and normalize it. This is the unit normal to the great
    circle plane defining perpendicular distance. */
-            palSlaDvxv( v3, n1, vtemp );
-            palSlaDvn( vtemp, n2, &vmod );
+            palDvxv( v3, n1, vtemp );
+            palDvn( vtemp, n2, &vmod );
 
 /* Return with bad values if the normal is undefined (i.e. if the
    outlying point is normal to the great circle defining the basis
@@ -8004,24 +7959,24 @@ static void Resolve( AstFrame *this_frame, const double point1[],
    This is the cross product of n1 and n2. No need to normalize this time
    since both n1 and n2 are unit vectors, and so v4 will already be a
    unit vector. */
-               palSlaDvxv( n1, n2, v4 );
+               palDvxv( n1, n2, v4 );
 
 /* The dot product of v4 and v1 is the cos of the parallel distance,
    d1, whilst the dot product of v4 and v5 is the sin of the parallel
    distance. Use these to get the parallel distance with the correct
    sign, in the range -PI to +PI. */
-               *d1 = atan2( palSlaDvdv( v4, v5 ), palSlaDvdv( v4, v1 ) );
+               *d1 = atan2( palDvdv( v4, v5 ), palDvdv( v4, v1 ) );
 
 /* The dot product of v4 and v3 is the cos of the perpendicular distance,
    d2, whilst the dot product of n1 and v3 is the sin of the perpendicular
    distance. Use these to get the perpendicular distance. */
-               *d2 = fabs( atan2( palSlaDvdv( v3, n1 ), palSlaDvdv( v3, v4 ) ) );
+               *d2 = fabs( atan2( palDvdv( v3, n1 ), palDvdv( v3, v4 ) ) );
 
 /* Convert the 3-vector representing the intersection of the two planes
    back into spherical cooordinates and then constrain the longitude result
    to lie in the range 0 to 2*pi. */
-               palSlaDcc2s( v4, &p4[ 0 ], &p4[ 1 ] );
-               p4[ 0 ] = palSlaDranrm( p4[ 0 ] );
+               palDcc2s( v4, &p4[ 0 ], &p4[ 1 ] );
+               p4[ 0 ] = palDranrm( p4[ 0 ] );
 
 /* Permute the result coordinates to undo the effect of the SkyFrame
    axis permutation array. */
@@ -8225,13 +8180,13 @@ static AstPointSet *ResolvePoints( AstFrame *this_frame, const double point1[],
       p2[ perm[ 1 ] ] = point2[ 1 ];
 
 /* Convert these points into 3-vectors of unit length. */
-      palSlaDcs2c( p1[ 0 ], p1[ 1 ], v1 );
-      palSlaDcs2c( p2[ 0 ], p2[ 1 ], v2 );
+      palDcs2c( p1[ 0 ], p1[ 1 ], v1 );
+      palDcs2c( p2[ 0 ], p2[ 1 ], v2 );
 
 /* Find the cross product between the vectors, and normalize it. This is the
    unit normal to the great circle plane defining parallel distance. */
-      palSlaDvxv( v2, v1, vtemp );
-      palSlaDvn( vtemp, n1, &vmod );
+      palDvxv( v2, v1, vtemp );
+      palDvn( vtemp, n1, &vmod );
 
 /* Return with bad values if the normal is undefined (i.e. if the first two
    vectors are identical or diametrically opposite). */
@@ -8242,7 +8197,7 @@ static AstPointSet *ResolvePoints( AstFrame *this_frame, const double point1[],
 /* Now take the cross product of the normal vector and v1. This gives a
    point, v5, on the great circle which is 90 degrees away from v1, in the
    direction of v2. */
-         palSlaDvxv( v1, n1, v5 );
+         palDvxv( v1, n1, v5 );
       }
 
 /* Store pointers to the first two axis arrays in the returned PointSet. */
@@ -8274,13 +8229,13 @@ static AstPointSet *ResolvePoints( AstFrame *this_frame, const double point1[],
                p3[ perm[ 1 ] ] = *point3y;
 
 /* Convert into a 3-vector of unit length. */
-               palSlaDcs2c( p3[ 0 ], p3[ 1 ], v3 );
+               palDcs2c( p3[ 0 ], p3[ 1 ], v3 );
 
 /* Find the cross product of the outlying point (point 3), and the vector
    n1 found above, and normalize it. This is the unit normal to the great
    circle plane defining perpendicular distance. */
-               palSlaDvxv( v3, n1, vtemp );
-               palSlaDvn( vtemp, n2, &vmod );
+               palDvxv( v3, n1, vtemp );
+               palDvn( vtemp, n2, &vmod );
 
 /* Return with bad values if the normal is undefined (i.e. if the
    outlying point is normal to the great circle defining the basis
@@ -8295,18 +8250,18 @@ static AstPointSet *ResolvePoints( AstFrame *this_frame, const double point1[],
    This is the cross product of n1 and n2. No need to normalize this time
    since both n1 and n2 are unit vectors, and so v4 will already be a
    unit vector. */
-                  palSlaDvxv( n1, n2, v4 );
+                  palDvxv( n1, n2, v4 );
 
 /* The dot product of v4 and v1 is the cos of the parallel distance,
    d1, whilst the dot product of v4 and v5 is the sin of the parallel
    distance. Use these to get the parallel distance with the correct
    sign, in the range -PI to +PI. */
-                  *d1 = atan2( palSlaDvdv( v4, v5 ), palSlaDvdv( v4, v1 ) );
+                  *d1 = atan2( palDvdv( v4, v5 ), palDvdv( v4, v1 ) );
 
 /* The dot product of v4 and v3 is the cos of the perpendicular distance,
    d2, whilst the dot product of n1 and v3 is the sin of the perpendicular
    distance. Use these to get the perpendicular distance. */
-                  *d2 = sign*atan2( palSlaDvdv( v3, n1 ), palSlaDvdv( v3, v4 ) );
+                  *d2 = sign*atan2( palDvdv( v3, n1 ), palDvdv( v3, v4 ) );
                }
             }
          }
@@ -8373,7 +8328,7 @@ static void SetAsTime( AstSkyFrame *this, int axis, int value, int *status ) {
    if ( !astOK ) return;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astSetAsTime" );
+   (void) astValidateAxis( this, axis, 1, "astSetAsTime" );
 
 /* Obtain a pointer to the Axis object. */
    ax = astGetAxis( this, axis );
@@ -8868,57 +8823,6 @@ static void SetDut1( AstFrame *this_frame, double val, int *status ) {
       this->eplast = AST__BAD;
       this->klast = AST__BAD;
    }
-}
-
-static void SetEpoch( AstFrame *this_frame, double val, int *status ) {
-/*
-*  Name:
-*     SetEpoch
-
-*  Purpose:
-*     Set the value of the Epoch attribute for a SkyFrame.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "skyframe.h"
-*     void SetEpoch( AstFrame *this, double val, int *status )
-
-*  Class Membership:
-*     SkyFrame member function (over-rides the astSetEpoch method
-*     inherited from the Frame class).
-
-*  Description:
-*     This function clears the Epoch value and updates the LAST value
-*     stored in the SkyFrame.
-
-*  Parameters:
-*     this
-*        Pointer to the SkyFrame.
-*     val
-*        New Epoch value.
-*     status
-*        Pointer to the inherited status variable.
-
-*/
-
-/* Local Variables: */
-   AstSkyFrame *this;            /* Pointer to the SkyFrame structure */
-   double orig;                  /* Original epoch value */
-
-/* Check the global error status. */
-   if ( !astOK ) return;
-
-/* Obtain a pointer to the SkyFrame structure. */
-   this = (AstSkyFrame *) this_frame;
-
-/* Save the old epoch. */
-   orig = astGetEpoch( this );
-
-/* Invoke the parent method to set the Frame epoch. */
-   (*parent_setepoch)( this_frame, val, status );
-
 }
 
 static void SetLast( AstSkyFrame *this, int *status ) {
@@ -9701,7 +9605,7 @@ static int SubFrame( AstFrame *target_frame, AstFrame *template,
    supplied in (longitude,latitude) pairs. Test whether we need to swap the
    order of the target SkyFrame coordinates to conform with this. */
       if ( astOK && match ) {
-         target_swap = ( astValidateAxis( target, 0, "astSubFrame" ) != 0 );
+         target_swap = ( astValidateAxis( target, 0, 1, "astSubFrame" ) != 0 );
 
 /* Coordinates will also be delivered in (longitude,latitude) pairs, so check
    to see whether the result SkyFrame coordinate order should be swapped. */
@@ -9788,7 +9692,7 @@ static int SubFrame( AstFrame *target_frame, AstFrame *template,
          ax = astGetAxis( temp, target_axis );
 
 /* Set an explicit value for the IsLatitude and CentreZero attributes. */
-         if( astValidateAxis( temp, target_axis, "astSubFrame" ) == 1 ) {
+         if( astValidateAxis( temp, target_axis, 1, "astSubFrame" ) == 1 ) {
             astSetAxisIsLatitude( ax, 1 );
             astSetAxisCentreZero( ax, 1 );
 
@@ -10132,7 +10036,7 @@ static int TestAsTime( AstSkyFrame *this, int axis, int *status ) {
    if ( !astOK ) return 0;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astTestAsTime" );
+   (void) astValidateAxis( this, axis, 1, "astTestAsTime" );
 
 /* Obtain a pointer to the Axis object. */
    ax = astGetAxis( this, axis );
@@ -10367,7 +10271,7 @@ static int Unformat( AstFrame *this_frame, int axis, const char *string,
    this = (AstSkyFrame *) this_frame;
 
 /* Validate the axis index. */
-   (void) astValidateAxis( this, axis, "astUnformat" );
+   (void) astValidateAxis( this, axis, 1, "astUnformat" );
 
 /* Determine if a Format value has been set for the axis and set a
    temporary value if it has not. Use the GetFormat member function
@@ -10822,7 +10726,7 @@ astMAKE_GET(SkyFrame,Equinox,double,AST__BAD,(
             ( this->equinox != AST__BAD ) ? this->equinox :
                ( ( ( astGetSystem( this ) == AST__FK4 ) ||
                    ( astGetSystem( this ) == AST__FK4_NO_E ) ) ?
-                    palSlaEpb2d( 1950.0 ) : palSlaEpj2d( 2000.0 ) ) ))
+                    palEpb2d( 1950.0 ) : palEpj2d( 2000.0 ) ) ))
 
 /* Allow any Equinox value to be set, unless the System is Helio-ecliptic
    (in which case clear the value so that J2000 is used). */
@@ -11371,19 +11275,37 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
 /* Local Variables: */
    AstSkyFrame *this;            /* Pointer to the SkyFrame structure */
    AstSystemType system;         /* System attribute value */
-   const char *sval;             /* Pointer to string value */
    char buf[ 100 ];              /* Comment buffer */
+   char key[ 10 ];               /* Buffer for keywords */
+   const char *sval;             /* Pointer to string value */
+   const int *perm;              /* Pointer to axis permutation array */
    double dval;                  /* Double value */
    int bessyr;                   /* Use a Besselian year value ?*/
    int helpful;                  /* Helpful to display un-set value? */
+   int invperm[ 2 ];             /* Inverse permutation array */
    int ival;                     /* Integer value */
    int set;                      /* Attribute value set? */
+   int axis;                     /* External (i.e. permuted) zero-based axis index */
+   int axis_p;                   /* Internal zero-based axis index */
 
 /* Check the global error status. */
    if ( !astOK ) return;
 
 /* Obtain a pointer to the SkyFrame structure. */
    this = (AstSkyFrame *) this_object;
+
+/* Get a pointer to the SkyFrame's axis permutation array (using a method,
+   to allow for any over-ride by a derived class). */
+   perm = astGetPerm( this );
+
+/* Generate an inverse axis permutation array from the forward permutation
+   values. This will be used to determine which axis should be enquired
+   about (using possibly over-ridden methods) to obtain data to
+   correspond with a particular internal value (i.e. instance variable)
+   relating to an axis. This step is needed so that the effect of any
+   axis permutation can be un-done before values are written out, as
+   output values are written by this function in un-permuted order. */
+   for ( axis = 0; axis < 2; axis++ ) invperm[ perm[ axis ] ] = axis;
 
 /* Write out values representing the instance variables for the
    SkyFrame class.  Accompany these with appropriate comment strings,
@@ -11430,8 +11352,8 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
                ( system == AST__ECLIPTIC ) );
 
 /* Convert MJD to Besselian or Julian years, depending on the value. */
-   bessyr = ( dval < palSlaEpj2d( 1984.0 ) );
-   dval = bessyr ? palSlaEpb( dval ) : palSlaEpj( dval );
+   bessyr = ( dval < palEpj2d( 1984.0 ) );
+   dval = bessyr ? palEpb( dval ) : palEpj( dval );
    astWriteDouble( channel, "Eqnox", set, helpful, dval,
                    bessyr ? "Besselian epoch of mean equinox" :
                             "Julian epoch of mean equinox" );
@@ -11455,27 +11377,33 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
 
 /* SkyRef. */
 /* ------- */
-   set = TestSkyRef( this, 0, status );
-   dval = set ? GetSkyRef( this, 0, status ) : astGetSkyRef( this, 0 );
-   sprintf( buf, "Ref. pos. %s %s", astGetSymbol( this, 0 ), astFormat( this, 0, dval ) );
-   astWriteDouble( channel, "SRef1", set, 0, dval, buf );
+/* The inverse axis permutation array is used to obtain the axis index
+   to use when accessing the SkyRef attribute. This reverses the effect
+   of the SkyFrame's axis permutation array and yields a value appropriate
+   to the axis with internal index "axis". */
+   for ( axis_p = 0; axis_p < 2; axis_p++ ) {
+      axis = invperm[ axis_p ];
 
-   set = TestSkyRef( this, 1, status );
-   dval = set ? GetSkyRef( this, 1, status ) : astGetSkyRef( this, 1 );
-   sprintf( buf, "Ref. pos. %s %s", astGetSymbol( this, 1 ), astFormat( this, 1, dval ) );
-   astWriteDouble( channel, "SRef2", set, 0, dval, buf );
+      set = TestSkyRef( this, axis, status );
+      dval = set ? GetSkyRef( this, axis, status ) : astGetSkyRef( this, axis );
+      sprintf( buf, "Ref. pos. %s %s", astGetSymbol( this, axis ),
+               astFormat( this, axis, dval ) );
+      sprintf( key, "SRef%d", axis_p + 1 );
+      astWriteDouble( channel, key, set, 0, dval, buf );
+   }
 
 /* SkyRefP. */
 /* -------- */
-   set = TestSkyRefP( this, 0, status );
-   dval = set ? GetSkyRefP( this, 0, status ) : astGetSkyRefP( this, 0 );
-   sprintf( buf, "Ref. north %s %s", astGetSymbol( this, 0 ), astFormat( this, 0, dval ) );
-   astWriteDouble( channel, "SRefP1", set, 0, dval, buf );
+   for ( axis_p = 0; axis_p < 2; axis_p++ ) {
+      axis = invperm[ axis_p ];
 
-   set = TestSkyRefP( this, 1, status );
-   dval = set ? GetSkyRefP( this, 1, status ) : astGetSkyRefP( this, 1 );
-   sprintf( buf, "Ref. north %s %s", astGetSymbol( this, 1 ), astFormat( this, 1, dval ) );
-   astWriteDouble( channel, "SRefP2", set, 0, dval, buf );
+      set = TestSkyRefP( this, axis, status );
+      dval = set ? GetSkyRefP( this, axis, status ) : astGetSkyRefP( this, axis );
+      sprintf( buf, "Ref. north %s %s", astGetSymbol( this, axis ),
+               astFormat( this, axis, dval ) );
+      sprintf( key, "SRefP%d", axis_p + 1 );
+      astWriteDouble( channel, key, set, 0, dval, buf );
+   }
 
 /* AlignOffset. */
 /* ------------ */
@@ -11771,10 +11699,13 @@ AstSkyFrame *astLoadSkyFrame_( void *mem, size_t size,
 */
 
 /* Local Variables: */
-   astDECLARE_GLOBALS            /* Pointer to thread-specific global data */
    AstSkyFrame *new;             /* Pointer to the new SkyFrame */
+   astDECLARE_GLOBALS            /* Pointer to thread-specific global data */
    char *sval;                   /* Pointer to string value */
+   const int *perm;              /* Pointer to axis permutation array */
    double dval;                  /* Floating point attribute value */
+   int axis;                     /* External axis index */
+   int invperm[ 2 ];             /* Inverse permutation array */
 
 /* Initialise. */
    new = NULL;
@@ -11808,6 +11739,19 @@ AstSkyFrame *astLoadSkyFrame_( void *mem, size_t size,
                        channel );
 
    if ( astOK ) {
+
+/* Get a pointer to the SkyFrame's axis permutation array (using a method,
+   to allow for any over-ride by a derived class). */
+      perm = astGetPerm( new );
+
+/* Generate an inverse axis permutation array from the forward permutation
+   values. This will be used to determine which axis should be enquired
+   about (using possibly over-ridden methods) to obtain data to
+   correspond with a particular internal value (i.e. instance variable)
+   relating to an axis. This step is needed so that the effect of any
+   axis permutation can be un-done before values are written out, as
+   output values are written by this function in un-permuted order. */
+      for( axis = 0; axis < 2; axis++ ) invperm[ perm[ axis ] ] = axis;
 
 /* Read input data. */
 /* ================ */
@@ -11853,19 +11797,22 @@ AstSkyFrame *astLoadSkyFrame_( void *mem, size_t size,
 /* SkyRef. */
 /* ------- */
       new->skyref[ 0 ] = astReadDouble( channel, "sref1", AST__BAD );
-      if ( TestSkyRef( new, 0, status ) ) SetSkyRef( new, 0, new->skyref[ 0 ], status );
+      axis = invperm[ 0 ];
+      if ( TestSkyRef( new, axis, status ) ) SetSkyRef( new, axis, new->skyref[ 0 ], status );
 
       new->skyref[ 1 ] = astReadDouble( channel, "sref2", AST__BAD );
-      if ( TestSkyRef( new, 1, status ) ) SetSkyRef( new, 1, new->skyref[ 1 ], status );
+      axis = invperm[ 1 ];
+      if ( TestSkyRef( new, axis, status ) ) SetSkyRef( new, axis, new->skyref[ 1 ], status );
 
 /* SkyRefP. */
 /* -------- */
       new->skyrefp[ 0 ] = astReadDouble( channel, "srefp1", AST__BAD );
-      if ( TestSkyRefP( new, 0, status ) ) SetSkyRefP( new, 0, new->skyrefp[ 0 ], status );
+      axis = invperm[ 0 ];
+      if ( TestSkyRefP( new, axis, status ) ) SetSkyRefP( new, axis, new->skyrefp[ 0 ], status );
 
       new->skyrefp[ 1 ] = astReadDouble( channel, "srefp2", AST__BAD );
-      if ( TestSkyRefP( new, 1, status ) ) SetSkyRefP( new, 1, new->skyrefp[ 1 ], status );
-
+      axis = invperm[ 1 ];
+      if ( TestSkyRefP( new, axis, status ) ) SetSkyRefP( new, axis, new->skyrefp[ 1 ], status );
 
 /* System. */
 /* ------- */
@@ -11921,8 +11868,8 @@ AstSkyFrame *astLoadSkyFrame_( void *mem, size_t size,
 /* Interpret this as Besselian or Julian depending on its value. */
       new->equinox = astReadDouble( channel, "eqnox", AST__BAD );
       if ( TestEquinox( new, status ) ) {
-         SetEquinox( new, ( new->equinox < 1984.0 ) ? palSlaEpb2d( new->equinox ) :
-                                                      palSlaEpj2d( new->equinox ), status );
+         SetEquinox( new, ( new->equinox < 1984.0 ) ? palEpb2d( new->equinox ) :
+                                                      palEpj2d( new->equinox ), status );
       }
 
 /* NegLon. */

@@ -67,6 +67,13 @@ if compiler.has_function('strtok_r'):
 if compiler.has_function('strerror_r'):
    define_macros.append(('HAVE_STRERROR_R','1'))
 
+#  We need to tell AST what type a 64-bit int will have
+#  Not really sure how to determine whether we have int64_t
+import ctypes
+
+define_macros.append(('SIZEOF_LONG', ctypes.sizeof(ctypes.c_long)))
+define_macros.append(('SIZEOF_LONG_LONG', ctypes.sizeof(ctypes.c_longlong)))
+
 # Assume we have isnan() available and assume we have a working sscanf
 # configure would test for these but we no longer run configure
 define_macros.append(('HAVE_DECL_ISNAN','1'))

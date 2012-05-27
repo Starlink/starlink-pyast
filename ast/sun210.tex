@@ -17,17 +17,17 @@
 \newcommand{\stardocsource}    {sun\stardocnumber}
 
 % Variable part - replace [xxx] as appropriate.
-\newcommand{\stardocnumber}    {210.26}
+\newcommand{\stardocnumber}    {210.27}
 \newcommand{\stardocauthors}   {R.F. Warren-Smith \& D.S. Berry}
-\newcommand{\stardocdate}      {4th October 2011}
+\newcommand{\stardocdate}      {16th February 2012}
 \newcommand{\stardoctitle}     {AST\\
                                 A Library for Handling\\
                                 World Coordinate Systems\\
                                 in Astronomy}
-\newcommand{\stardoccopyright} {Copyright (C) 2009 Science \& Technology Facilities Council}
+\newcommand{\stardoccopyright} {Copyright (C) 2012 Science \& Technology Facilities Council}
 \newcommand{\stardoctitlehtml} {AST - A Library for Handling World Coordinate
                                       Systems in Astronomy}
-\newcommand{\stardocversion}   {V6.0}
+\newcommand{\stardocversion}   {V7.0}
 \newcommand{\stardocmanual}    {Programmer's Guide\\(Fortran Version)}
 \newcommand{\stardocmanualhtml}{Programmer's Guide (Fortran Version)}
 \newcommand{\stardocabstract}  {
@@ -777,10 +777,11 @@ are described here:
 
 \begin{enumerate}
 \item {\bf{Minimum Software Dependencies.}}
-The AST library depends on no other other software\footnote{It now comes with a
-minimal cut-down version of the widely-available SLALIB positional astronomy
-library (\xref{SUN/67}{sun67}{}), including just those functions needed
-by AST, and the previous dependency on SLALIB is no longer present}.
+The AST library depends on no other other software\footnote{It comes with
+bundled copies of the IAU SOFA and Starlink PAL libraries which are built
+at the same time as the other AST internal libraries. Alternatively, external
+PAL and SOFA libraries may be used by specifying the ``{\tt
+--with-external\_pal}'' option when configuring AST}.
 
 \item {\bf{Environment Independence.}}
 AST is designed so that it can operate in a variety of ``programming
@@ -23774,6 +23775,10 @@ Object             - Base class for all AST Objects
          FrameSet's current Frame becoming the current Frame of the Plot3D.
 
          \sstitem
+         At least one of the three axes of the current Frame must be
+         independent of the other two current Frame axes.
+
+         \sstitem
          If a null Object pointer (AST\_\_NULL) is supplied (via the
          FRAME pointer), then the returned Plot3D will contain two
          Frames, both created by this function. The base Frame will
@@ -28600,7 +28605,7 @@ Object             - Base class for all AST Objects
       each axis in the \htmlref{Frame}{Frame} encapsulated by the Region. The number of
       points in the mesh is determined by the \htmlref{MeshSize}{MeshSize} attribute.
 
-      The table is preceeded by a given title string, and followed by a
+      The table is preceded by a given title string, and followed by a
       single line containing the word {\tt{"}}ENDMESH{\tt{"}}.
    }
    \sstinvocation{
@@ -44847,7 +44852,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    Plot3D\sstlabel{Plot3D}
 }{
-   Provide facilities for 2D graphical output
+   Provide facilities for 3D graphical output
 }{
    \sstdescription{
       A Plot3D is a specialised form of \htmlref{Plot}{Plot} that provides facilities
@@ -44887,6 +44892,8 @@ Object             - Base class for all AST Objects
       class. The results of each plotting operation are automatically
       transformed into 3D graphical coordinates before being plotted
       using the facilities of the grf3d module linked into the application.
+      Note, at least one of the three axes of the current Frame must be
+      independent of the other two current Frame axes.
 
       You may select different physical coordinate systems in which to
       plot (including the native graphical coordinate system itself)
@@ -46994,20 +47001,16 @@ in a non-standard location.} is on your PATH.
       }
    }
    \sstdiytopic{
-      SLALIB
+      SOFA \& PAL
    }{
-      The AST distribution includes a cut down subset of the C version of
-      the SLALIB library written by Pat Wallace. This subset contains only
-      the functions needed by the AST library. It is built as part of the
-      process of building AST and is distributed under GPL (and is thus
-      compatible with the AST license). Previous version of this script
-      allowed AST applications to be linked against external SLALIB
-      libraries (either Fortran or C) rather than the internal version.
-      The current version of this script does not provide this option,
-      and always uses the internal SLALIB library. However, for backward
-      compatibility, this script still allows the {\tt{"}}-fsla{\tt{"}} and {\tt{"}}-csla{\tt{"}} flags
-      (previously used for selecting which version of SLALIB to use) to be
-      specified, but they will be ignored.
+      The AST distribution includes bundled copies of the IAU SOFA and
+      Starlink PAL libraries. These will be used for fundamental
+      positional astronomy calculations unless the {\tt{"}}--with-external\_pal{\tt{"}}
+      option was used when AST was configured. If {\tt{"}}--with-external\_pal{\tt{"}}
+      is used, this script will include {\tt{"}}-lpal{\tt{"}} in the returned list of
+      linking options, and the user should then ensure that extrnal copies
+      of the PAL and SOFA libraries are available (SOFA functions are used
+      within PAL).
    }
 }
 \sstroutine{
@@ -49968,12 +49971,10 @@ routine \htmlref{AST\_TUNEC}{AST_TUNEC}.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V6.0-1}
+\subsection{Changes Introduced in V6.0-1}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V6.0 and V6.0-1 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V6.0 and V6.0-1:
 
 \begin{enumerate}
 
@@ -49986,6 +49987,76 @@ be used when aligning SkyFrames if the \htmlref{AlignSystem}{AlignSystem} attrib
 
 \item The versioning string for AST has changed from
 ``$<major>.<minor>-<release>$'' to ``$<major>.<minor>.<release>$''.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.0.0}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V6.0-1 and V7.0.0:
+
+\begin{enumerate}
+
+\item Fundamental positional astronomy calculations are now performed
+using the IAU SOFA library where possible, and the Starlink PAL library
+otherwise (the PAL library contains a subset of the Fortran Starlink SLALIB
+library re-written in C). Copies of these libraries are bundled with AST
+and so do not need to be obtained or built separately, although external
+copies of SOFA and PAL can be used if necessary by including the
+``{\tt --with-external\_pal}'' option when configuring AST.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.0.1}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.0 and V7.0.1:
+
+\begin{enumerate}
+
+\item The levmar and wcslib code distributed within AST is now stored in the
+main AST library (libast.so) rather than in separate libraries.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.0.2}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.1 and V7.0.2:
+
+\begin{enumerate}
+
+\item The libast\_pal library is no longer built if the
+``--with-external\_pal'' option is used when AST is configured.
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V7.0.3}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V7.0.2 and V7.0.3 (the
+current version):
+
+\begin{enumerate}
+
+\item A bug has been fixed which could cause an incorrect axis to be used when
+accessing axis attributes within CmpFrames. This could happen if axes
+within the \htmlref{CmpFrame}{CmpFrame} have been permuted.
+
+\item A bug has been fixed in the SKyFrame class that could cause the two
+values of the SkyRef and/or SkyRefP attributes to be reversed.
+
+\item Bugs have been fixed in the \htmlref{CmpRegion}{CmpRegion} class that should allow the border
+around a compound \htmlref{Region}{Region} to be plotted more quickly, and more accurately.
+Previously, component Regions nested deeply inside a CmpRegion may have
+been completely or partially ignored.
+
+\item A bug has been fixed in the \htmlref{Plot3D}{Plot3D} class that caused a sementation
+violation if the MinTick attribute was set to zero.
+
+\item The astResampleX set of methods now includes astResampleK and
+astResampleUK that handles 64 bit integer data.
 
 \end{enumerate}
 

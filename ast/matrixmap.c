@@ -476,7 +476,7 @@ static int CanSwap( AstMapping *map1, AstMapping *map2, int inv1, int inv2,
 
                if( nin != nax ){
                   astError( AST__RDERR, "Inverse PermMap produces %d inputs, but the "
-                            "preceeding MatrixMap has %d outputs\n", status, nin, nax );
+                            "preceding MatrixMap has %d outputs\n", status, nin, nax );
                   ret = 0;
                }
 
@@ -501,8 +501,8 @@ static int CanSwap( AstMapping *map1, AstMapping *map2, int inv1, int inv2,
    intrinsically simpler than the original mappings. */
             if( ret ) {
 
-/* If the PermMap preceeds the WinMap, this will be the case if the PermMap
-   has more outputs than inputs. If the WinMap preceeds the PermMap, this
+/* If the PermMap precedes the WinMap, this will be the case if the PermMap
+   has more outputs than inputs. If the WinMap precedes the PermMap, this
    will be the case if the PermMap has more inputs than outputs. */
                *simpler = ( nomat == map1 ) ? nout > nin : nin > nout;
             }
@@ -1362,9 +1362,9 @@ static double *InvertMatrix( int form, int nrow, int ncol, double *matrix, int *
    double det;                    /* Determinant of supplied matrix */
    double mval;                   /* Matrix element value */
    double *out;                   /* Pointer to returned inverse matrix */
-   double *vector;                /* Pointer to vector used by palSlaDmat */
+   double *vector;                /* Pointer to vector used by palDmat */
    int i;                         /* Matrix element number */
-   int *iw;                       /* Pointer to workspace used by palSlaDmat */
+   int *iw;                       /* Pointer to workspace used by palDmat */
    int nel;                       /* No. of elements in square matrix */
    int ndiag;                     /* No. of diagonal elements */
    int ok;                        /* Zero if any bad matrix values found */
@@ -1444,7 +1444,7 @@ static double *InvertMatrix( int form, int nrow, int ncol, double *matrix, int *
 /* Obtain work space and attempt to invert the matrix using SLALIB, then
    free the work space. */
                iw = (int *) astMalloc( sizeof(int)*(size_t) nrow );
-               if( astOK ) palSlaDmat( nrow, out, vector, &det, &sing, iw );
+               if( astOK ) palDmat( nrow, out, vector, &det, &sing, iw );
                iw = (int *) astFree( (void *) iw );
 
             }

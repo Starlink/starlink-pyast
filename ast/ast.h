@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     5-JAN-2012 (makeh):
+*     26-MAY-2012 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -529,13 +529,13 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 #define astINIT_GLOBALS
 /* unit. */
 /* ===== */
-#define AST__VMAJOR 6
+#define AST__VMAJOR 7
 #define AST__VMINOR 0
-#define AST__RELEASE 1
+#define AST__RELEASE 3
 
-#define AST_MAJOR_VERS 6
+#define AST_MAJOR_VERS 7
 #define AST_MINOR_VERS 0
-#define AST_RELEASE 1
+#define AST_RELEASE 3
 
 #include <stdarg.h>
 #include <float.h>
@@ -813,6 +813,9 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define AST__SOMB (12)
 #define AST__SOMBCOS (13)
 
+#include <stdint.h>
+typedef int64_t INT_BIG;
+typedef uint64_t UINT_BIG;
 typedef struct AstMapping {
 
    AstObject object;
@@ -827,28 +830,32 @@ typedef struct AstMapping {
 } AstMapping;
 astPROTO_CHECK(Mapping)
 astPROTO_ISA(Mapping)
-int astResampleLD_( AstMapping *, int, const int [], const int [], const long double [], const long double [], int, void (*)(void), const double [], int, double, int, long double, int, const int [], const int [], const int [], const int [], long double [], long double [], int * );
-void astRebinLD_( AstMapping *, double, int, const int [], const int [], const long double [], const long double [], int, const double [], int, double, int, long double, int, const int [], const int [], const int [], const int [], long double [], long double [], int * );
-void astRebinSeqLD_( AstMapping *, double, int, const int [], const int [], const long double [], const long double [], int, const double [], int, double, int, long double, int, const int [], const int [], const int [], const int [], long double [], long double [], double [], int *, int * );
+#define PROTO_GENERIC_ALL(X,Xtype) int astResample##X##_( AstMapping *, int, const int [], const int [], const Xtype [], const Xtype [], int, void (*)(), const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * );
+PROTO_GENERIC_ALL(B,signed char)
+PROTO_GENERIC_ALL(D,double)
+PROTO_GENERIC_ALL(F,float)
+PROTO_GENERIC_ALL(I,int)
+PROTO_GENERIC_ALL(K,INT_BIG)
+PROTO_GENERIC_ALL(L,long int)
+PROTO_GENERIC_ALL(S,short int)
+PROTO_GENERIC_ALL(UB,unsigned char)
+PROTO_GENERIC_ALL(UI,unsigned int)
+PROTO_GENERIC_ALL(UK,UINT_BIG)
+PROTO_GENERIC_ALL(UL,unsigned long int)
+PROTO_GENERIC_ALL(US,unsigned short int)
+
+PROTO_GENERIC_ALL(LD,long double)
+
+#define PROTO_GENERIC_DFI(X,Xtype) void astRebin##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * ); void astRebinSeq##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], double [], int *, int * );
+
+PROTO_GENERIC_DFI(D,double)
+PROTO_GENERIC_DFI(F,float)
+PROTO_GENERIC_DFI(I,int)
+
+PROTO_GENERIC_DFI(LD,long double)
 
 AstMapping *astRemoveRegions_( AstMapping *, int * );
 AstMapping *astSimplify_( AstMapping *, int * );
-void astRebinD_( AstMapping *, double, int, const int [], const int [], const double [], const double [], int, const double [], int, double, int, double, int, const int [], const int [], const int [], const int [], double [], double [], int * );
-void astRebinF_( AstMapping *, double, int, const int [], const int [], const float [], const float [], int, const double [], int, double, int, float, int, const int [], const int [], const int [], const int [], float [], float [], int * );
-void astRebinI_( AstMapping *, double, int, const int [], const int [], const int [], const int [], int, const double [], int, double, int, int, int, const int [], const int [], const int [], const int [], int [], int [], int * );
-void astRebinSeqD_( AstMapping *, double, int, const int [], const int [], const double [], const double [], int, const double [], int, double, int, double, int, const int [], const int [], const int [], const int [], double [], double [], double [], int *, int * );
-void astRebinSeqF_( AstMapping *, double, int, const int [], const int [], const float [], const float [], int, const double [], int, double, int, float, int, const int [], const int [], const int [], const int [], float [], float [], double [], int *, int * );
-void astRebinSeqI_( AstMapping *, double, int, const int [], const int [], const int [], const int [], int, const double [], int, double, int, int, int, const int [], const int [], const int [], const int [], int [], int [], double [], int *, int * );
-int astResampleB_( AstMapping *, int, const int [], const int [], const signed char [], const signed char [], int, void (*)(void), const double [], int, double, int, signed char, int, const int [], const int [], const int [], const int [], signed char [], signed char [], int * );
-int astResampleD_( AstMapping *, int, const int [], const int [], const double [], const double [], int, void (*)(void), const double [], int, double, int, double, int, const int [], const int [], const int [], const int [], double [], double [], int * );
-int astResampleF_( AstMapping *, int, const int [], const int [], const float [], const float [], int, void (*)(void), const double [], int, double, int, float, int, const int [], const int [], const int [], const int [], float [], float [], int * );
-int astResampleI_( AstMapping *, int, const int [], const int [], const int [], const int [], int, void (*)(void), const double [], int, double, int, int, int, const int [], const int [], const int [], const int [], int [], int [], int * );
-int astResampleL_( AstMapping *, int, const int [], const int [], const long int [], const long int [], int, void (*)(void), const double [], int, double, int, long int, int, const int [], const int [], const int [], const int [], long int [], long int [], int * );
-int astResampleS_( AstMapping *, int, const int [], const int [], const short int [], const short int [], int, void (*)(void), const double [], int, double, int, short int, int, const int [], const int [], const int [], const int [], short int [], short int [], int * );
-int astResampleUB_( AstMapping *, int, const int [], const int [], const unsigned char [], const unsigned char [], int, void (*)(void), const double [], int, double, int, unsigned char, int, const int [], const int [], const int [], const int [], unsigned char [], unsigned char [], int * );
-int astResampleUI_( AstMapping *, int, const int [], const int [], const unsigned int [], const unsigned int [], int, void (*)(void), const double [], int, double, int, unsigned int, int, const int [], const int [], const int [], const int [], unsigned int [], unsigned int [], int * );
-int astResampleUL_( AstMapping *, int, const int [], const int [], const unsigned long int [], const unsigned long int [], int, void (*)(void), const double [], int, double, int, unsigned long int, int, const int [], const int [], const int [], const int [], unsigned long int [], unsigned long int [], int * );
-int astResampleUS_( AstMapping *, int, const int [], const int [], const unsigned short int [], const unsigned short int [], int, void (*)(void), const double [], int, double, int, unsigned short int, int, const int [], const int [], const int [], const int [], unsigned short int [], unsigned short int [], int * );
 void astInvert_( AstMapping *, int * );
 int astLinearApprox_( AstMapping *, const double *, const double *, double, double *, int * );
 int astQuadApprox_( AstMapping *, const double[2], const double[2], int, int, double *, double *, int * );
@@ -867,8 +874,6 @@ void astMapSplitId_( AstMapping *, int, const int *, int *, AstMapping **, int *
 
 #define astIsAMapping(this) astINVOKE_ISA(Mapping,this)
 #define astResampleLD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleLD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinLD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinLD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinSeqLD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqLD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
 
 #define astInvert(this) astINVOKE(V,astInvert_(astCheckMapping(this),STATUS_PTR))
 #define astLinearApprox(this,lbnd,ubnd,tol,fit) astINVOKE(V,astLinearApprox_(astCheckMapping(this),lbnd,ubnd,tol,fit,STATUS_PTR))
@@ -885,6 +890,8 @@ void astMapSplitId_( AstMapping *, int, const int *, int *, AstMapping **, int *
 #define astResampleUL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleUI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResampleK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResampleUK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleS_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleUS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUS_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleB_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
@@ -1688,6 +1695,7 @@ AstSkyAxis *astSkyAxisId_( const char *, ... )__attribute__((format(printf,1,2))
 #define astIsASkyAxis(this) astINVOKE_ISA(SkyAxis,this)
 
 #define astSkyAxis astINVOKE(F,astSkyAxisId_)
+double astDrange_( double );
 /* mapping. */
 /* ======== */
 /* cmpmap. */
@@ -2252,6 +2260,7 @@ typedef struct AstRegion {
    AstPointSet *basegrid;
    int adaptive;
    int nomap;
+   struct AstRegion *negation;
 } AstRegion;
 astPROTO_CHECK(Region)
 astPROTO_ISA(Region)
@@ -2272,6 +2281,7 @@ int astMaskUI_( AstRegion *, AstMapping *, int, int, const int[], const int[], u
 int astMaskUL_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned long int[], unsigned long int, int * );
 int astMaskUS_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned short int[], unsigned short int, int * );
 void astSetUnc_( AstRegion *, AstRegion *, int * );
+AstRegion *astGetNegation_( AstRegion *, int * );
 AstRegion *astGetUnc_( AstRegion *, int, int * );
 void astGetRegionBounds_( AstRegion *, double *, double *, int * );
 void astShowMesh_( AstRegion *, int, const char *, int * );
@@ -3003,9 +3013,10 @@ typedef struct AstCmpRegion {
    double *offs[ 2 ];
    int nbreak[ 2 ];
    double d0[ 2 ];
+   double dtot[ 2 ];
    AstRegion *xor1;
    AstRegion *xor2;
-
+   int bounded;
 } AstCmpRegion;
 astPROTO_CHECK(CmpRegion)
 astPROTO_ISA(CmpRegion)
