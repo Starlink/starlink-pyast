@@ -342,7 +342,7 @@
 #define STATUS_PTR astGetStatusPtr
 #endif
 #define AST__MAPPING_GETATTRIB_BUFF_LEN 50
-#define AST__MAPPING_FUNPN_MAX_CACHE  5
+#define AST__MAPPING_RATEFUN_MAX_CACHE  5
 
 /* Resampling flags. */
 /* ----------------- */
@@ -362,6 +362,7 @@
 #define AST__VARWGT (1024)       /* Use input variances as weights? */
 #define AST__NOBAD (2048)        /* Leave bad output values unchanged? */
 #define AST__DISVAR (4096)       /* Generate distribution (not mean) variance? */
+#define AST__NONORM (8192)       /* No normalisation required at end? */
 
 /* These macros identify standard sub-pixel interpolation algorithms
    for use by astResample<X>. They are used by giving the macro's
@@ -474,7 +475,7 @@ typedef struct AstMappingVtab {
 #define DECLARE_GENERIC_ALL(X,Xtype) \
    int (* Resample##X)( AstMapping *, int, const int [], const int [], \
                         const Xtype [], const Xtype [], int, \
-                        void (*)(), const double [], int, double, int, \
+                        void (*)( void ), const double [], int, double, int, \
                         Xtype, int, const int [], const int [], \
                         const int [], const int [], Xtype [], Xtype [], int * ); \
 
@@ -531,10 +532,10 @@ typedef struct AstMappingGlobals {
    char GetAttrib_Buff[ AST__MAPPING_GETATTRIB_BUFF_LEN + 1 ];
    AstMapping *Unsimplified_Mapping;
    int Rate_Disabled;
-   AstPointSet *FunPN_Pset1_Cache[ AST__MAPPING_FUNPN_MAX_CACHE ];
-   AstPointSet *FunPN_Pset2_Cache[ AST__MAPPING_FUNPN_MAX_CACHE ];
-   int FunPN_Next_Slot;
-   int FunPN_Pset_Size[ AST__MAPPING_FUNPN_MAX_CACHE ];
+   AstPointSet *RateFun_Pset1_Cache[ AST__MAPPING_RATEFUN_MAX_CACHE ];
+   AstPointSet *RateFun_Pset2_Cache[ AST__MAPPING_RATEFUN_MAX_CACHE ];
+   int RateFun_Next_Slot;
+   int RateFun_Pset_Size[ AST__MAPPING_RATEFUN_MAX_CACHE ];
 } AstMappingGlobals;
 
 #endif
@@ -573,7 +574,7 @@ void astInitMappingGlobals_( AstMappingGlobals * );
 #define PROTO_GENERIC_ALL(X,Xtype) \
    int astResample##X##_( AstMapping *, int, const int [], const int [], \
                         const Xtype [], const Xtype [], int, \
-                        void (*)(), const double [], int, double, int, \
+                        void (*)( void ), const double [], int, double, int, \
                         Xtype, int, const int [], const int [], \
                         const int [], const int [], Xtype [], Xtype [], int * ); \
 

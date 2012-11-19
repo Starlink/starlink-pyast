@@ -80,6 +80,8 @@ f     - AST_PUTTABLEHEADER: Store FITS headers within a FitsTable
 *  History:
 *     25-NOV-2010 (DSB):
 *        Original version.
+*     2-OCT-2012 (DSB):
+*        Check for Infs as well as NaNs.
 *class--
 */
 
@@ -942,6 +944,9 @@ static void GenerateColumns( AstFitsTable *this, AstFitsChan *header,
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Initialise */
+   type = AST__BADTYPE;
+
 /* Get the number of columns defined in the header. */
    if( !astGetFitsI( header, "TFIELDS", &ncol ) ) ncol = 0;
 
@@ -989,7 +994,6 @@ static void GenerateColumns( AstFitsTable *this, AstFitsChan *header,
          type = AST__STRINGTYPE;
 
       } else if( astOK ){
-         type = AST__BADTYPE;
          astError( AST__BDFTS, "astFitsTable: Keyword '%s' in supplied FITS "
                    "binary table header has unsupported value '%s'.", status,
                    keyword, cval );
@@ -1241,6 +1245,9 @@ f     AST_COLUMNNULL functiom.
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Initialise */
+   nb = 0;
+
 /* Find the number of bytes needed to hold a single element of the value
    in a column cell. */
    type = astGetColumnType( this, column );
@@ -1263,7 +1270,6 @@ f     AST_COLUMNNULL functiom.
       nb = sizeof( char );
 
    } else if( astOK ) {
-      nb = 0;
       astError( AST__INTER, "astGetColumnData(%s): Unsupported column type "
                 "%d (internal AST programming error).", status,
                 astGetClass( this ), type );
@@ -1318,9 +1324,9 @@ f     AST_COLUMNNULL functiom.
       } else if(  type == AST__DOUBLETYPE ){
          ok = astMapGet1D( this, key, nel, &nval, pout );
 
-         if( ok && !astISNAN(dnull) ) {
+         if( ok && astISFINITE(dnull) ) {
             for( iel = 0; iel < nel; iel++ ) {
-               if( astISNAN( ((double *)pout)[ iel ] ) ) {
+               if( !astISFINITE( ((double *)pout)[ iel ] ) ) {
                   ((double *)pout)[ iel ] = dnull;
                }
             }
@@ -1329,9 +1335,9 @@ f     AST_COLUMNNULL functiom.
       } else if(  type == AST__FLOATTYPE ){
          ok = astMapGet1F( this, key, nel, &nval, pout );
 
-         if( ok && !astISNAN(fnull) ) {
+         if( ok && astISFINITE(fnull) ) {
             for( iel = 0; iel < nel; iel++ ) {
-               if( astISNAN( ((float *)pout)[ iel ] ) ) {
+               if( !astISFINITE( ((float *)pout)[ iel ] ) ) {
                   ((float *)pout)[ iel ] = fnull;
                }
             }
@@ -1949,6 +1955,9 @@ f        The global status.
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Initialise */
+   nb = 0;
+
 /* Find the number of bytes in the supplied array holding a single element
    of the value in a column cell. */
    type = astGetColumnType( this, column );
@@ -1971,7 +1980,6 @@ f        The global status.
       nb = sizeof( char );
 
    } else if( astOK ) {
-      nb = 0;
       astError( AST__INTER, "astPutColumnData(%s): Unsupported column type "
                 "%d (internal AST programming error).", status,
                 astGetClass( this ), type );
@@ -2014,7 +2022,7 @@ f        The global status.
 
       } else if(  type == AST__DOUBLETYPE ){
          for( iel = 0; iel < nel; iel++ ) {
-            if( ! astISNAN( ((double *)pin)[ iel ] ) ) {
+            if( astISFINITE( ((double *)pin)[ iel ] ) ) {
                astMapPut1D( this, key, nel, pin, NULL );
                break;
             }
@@ -2022,7 +2030,7 @@ f        The global status.
 
       } else if(  type == AST__FLOATTYPE ){
          for( iel = 0; iel < nel; iel++ ) {
-            if( ! astISNAN( ((double *)pin)[ iel ] ) ) {
+            if( astISFINITE( ((double *)pin)[ iel ] ) ) {
                astMapPut1F( this, key, nel, pin, NULL );
                break;
             }

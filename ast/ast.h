@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     26-MAY-2012 (makeh):
+*     19-NOV-2012 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -530,12 +530,12 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 7
-#define AST__VMINOR 0
-#define AST__RELEASE 3
+#define AST__VMINOR 1
+#define AST__RELEASE 0
 
 #define AST_MAJOR_VERS 7
-#define AST_MINOR_VERS 0
-#define AST_RELEASE 3
+#define AST_MINOR_VERS 1
+#define AST_RELEASE 0
 
 #include <stdarg.h>
 #include <float.h>
@@ -783,7 +783,7 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define STATUS_PTR astGetStatusPtr
 
 #define AST__MAPPING_GETATTRIB_BUFF_LEN 50
-#define AST__MAPPING_FUNPN_MAX_CACHE 5
+#define AST__MAPPING_RATEFUN_MAX_CACHE 5
 
 #define AST__URESAMP1 (1)
 #define AST__URESAMP2 (2)
@@ -798,6 +798,7 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define AST__VARWGT (1024)
 #define AST__NOBAD (2048)
 #define AST__DISVAR (4096)
+#define AST__NONORM (8192)
 
 #define AST__UKERN1 (1)
 
@@ -830,7 +831,7 @@ typedef struct AstMapping {
 } AstMapping;
 astPROTO_CHECK(Mapping)
 astPROTO_ISA(Mapping)
-#define PROTO_GENERIC_ALL(X,Xtype) int astResample##X##_( AstMapping *, int, const int [], const int [], const Xtype [], const Xtype [], int, void (*)(), const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * );
+#define PROTO_GENERIC_ALL(X,Xtype) int astResample##X##_( AstMapping *, int, const int [], const int [], const Xtype [], const Xtype [], int, void (*)( void ), const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * );
 PROTO_GENERIC_ALL(B,signed char)
 PROTO_GENERIC_ALL(D,double)
 PROTO_GENERIC_ALL(F,float)
@@ -1695,7 +1696,6 @@ AstSkyAxis *astSkyAxisId_( const char *, ... )__attribute__((format(printf,1,2))
 #define astIsASkyAxis(this) astINVOKE_ISA(SkyAxis,this)
 
 #define astSkyAxis astINVOKE(F,astSkyAxisId_)
-double astDrange_( double );
 /* mapping. */
 /* ======== */
 /* cmpmap. */

@@ -19,7 +19,7 @@
 % Variable part - replace [xxx] as appropriate.
 \newcommand{\stardocnumber}    {210.27}
 \newcommand{\stardocauthors}   {R.F. Warren-Smith \& D.S. Berry}
-\newcommand{\stardocdate}      {16th February 2012}
+\newcommand{\stardocdate}      {13th August 2012}
 \newcommand{\stardoctitle}     {AST\\
                                 A Library for Handling\\
                                 World Coordinate Systems\\
@@ -27,7 +27,7 @@
 \newcommand{\stardoccopyright} {Copyright (C) 2012 Science \& Technology Facilities Council}
 \newcommand{\stardoctitlehtml} {AST - A Library for Handling World Coordinate
                                       Systems in Astronomy}
-\newcommand{\stardocversion}   {V7.0}
+\newcommand{\stardocversion}   {V7.1}
 \newcommand{\stardocmanual}    {Programmer's Guide\\(Fortran Version)}
 \newcommand{\stardocmanualhtml}{Programmer's Guide (Fortran Version)}
 \newcommand{\stardocabstract}  {
@@ -741,7 +741,7 @@ numbering and labelling curvilinear axes is rarely straightforward.
 for use with curvilinear coordinate systems. These include the
 plotting of axes and complete labelled coordinate grids.  A large
 number of options are provided for tailoring the output to your
-specific needs.
+specific needs. Three dimensional coordinate grids can also be produced.
 
 \item[4. Aligning Data from Different Sources]\mbox{}\\
 One of the main uses of coordinate systems is to facilitate the
@@ -1305,11 +1305,15 @@ in \appref{ss:classdescriptions} and the \htmlref{Encoding}{Encoding} entry in
 
 \subsection{Producing Graphical Output}
 
-Graphical output is supported by a specialised form of \htmlref{FrameSet}{FrameSet} called
+Two dimensional graphical output is supported by a specialised form of
+\htmlref{FrameSet}{FrameSet} called
 a \htmlref{Plot}{Plot}, whose base \htmlref{Frame}{Frame} corresponds with the native coordinates of
 the underlying graphics system.  Plotting operations are specified in
 {\em{physical coordinates}} which correspond with the Plot's current
 Frame. Typically, this might be a celestial coordinate system.
+
+Three dimensional plotting is also supported, via the \htmlref{Plot3D}{Plot3D} class -
+sub-class of Plot.
 
 Operations, such as drawing lines, are automatically transformed from
 physical to graphical coordinates before plotting, using an adaptive
@@ -11734,7 +11738,8 @@ Object             - Base class for all AST Objects
             SpecFluxFrame - Observed value versus spectral position
          FluxFrame - Observed value at a given fixed spectral position
          FrameSet  - Set of inter-related coordinate systems
-            Plot   - Provide facilities for graphical output
+            Plot   - Provide facilities for 2D graphical output
+               Plot3D - Provide facilities for 3D graphical output
          Region    - Specify areas within a coordinate system
             Box    - A box region with sides parallel to the axes of a Frame
             Circle - A circular or spherical region within a Frame
@@ -17247,6 +17252,10 @@ Object             - Base class for all AST Objects
          returned larger than the upper limit. Note, this is different to an
          axis which has a constant value (in which case both lower and upper
          limit will be returned set to the constant value).
+
+         \sstitem
+         If the bounds on an axis cannot be determined, AST\_\_BAD is returned for
+         both upper and lower bounds
       }
    }
 }
@@ -21353,6 +21362,10 @@ Object             - Base class for all AST Objects
          A value of zero will be returned if this function is invoked
          with the global error status set, or if it should fail for any
          reason.
+
+         \sstitem
+         An error will be reported if the overlap of the Region and
+         the array cannot be determined.
       }
    }
    \sstdiytopic{
@@ -25862,16 +25875,24 @@ Object             - Base class for all AST Objects
       rebinned input data is added into them. Subsequenct invocations
       within the same sequence should omit the AST\_\_REBININIT flag.
 
-      The last call in a sequence is indicated by specifying the AST\_\_REBINEND
-      flag. This causes the output data and variance arrays to be normalised
-      before being returned. This normalisation consists of dividing the data
+      The last call in a sequence is indicated by specifying the
+      AST\_\_REBINEND flag. Depending on which flags are supplied, this may
+      cause the output data and variance arrays to be normalised before
+      being returned. This normalisation consists of dividing the data
       array by the weights array, and can eliminate artifacts which may be
-      introduced into the rebinned data as a consequence of aliasing between
-      the input and output grids. However, it can also result in small changes to
-      the total pixel value in any given area of the output array. In addition to
-      normalisation of the output data values, any output variances are also
-      appropriately normalised, and any output data values with weight less
-      than
+      introduced into the rebinned data as a consequence of aliasing
+      between the input and output grids. This results in each output
+      pixel value being the weighted mean of the input pixel values that
+      fall in the neighbourhood of the output pixel (rather like
+      \htmlref{AST\_RESAMPLE$<$X$>$}{AST_RESAMPLEX}).
+      Optionally, these normalised
+      values can then be multiplied by a scaling factor to ensure that the
+      total data sum in any small area is unchanged. This scaling factor
+      is equivalent to the number of input pixel values that fall into each
+      output pixel. In addition to
+      normalisation of the output data values, any output variances are
+      also appropriately normalised, and any output data values with
+      weight less than
       WLIM are set to BADVAL.
 
       Output variances can be generated in two ways; by rebinning the supplied
@@ -26218,7 +26239,7 @@ Object             - Base class for all AST Objects
       integer data (stored in an INTEGER array), etc.
 
       Note that, unlike
-      \htmlref{AST\_RESAMPLE$<$X$>$}{AST_RESAMPLEX}, the AST\_REBINSEQ$<$X$>$
+      AST\_RESAMPLE$<$X$>$, the AST\_REBINSEQ$<$X$>$
       set of functions does not yet support unsigned integer data types
       or integers of different sizes.
    }
@@ -26245,14 +26266,16 @@ Object             - Base class for all AST Objects
          each value in the
          OUT and OUT\_VAR
          arrays to be divided by a normalisation factor before being
-         returned. The normalisation factor for each output data value is just the
-         corresponding value from the weights array. The normalisation factor
-         for each output variance value is the square of the data value
-         normalisation factor. It also causes output data values to be set
-         bad if the corresponding weight is less than the value supplied for
+         returned. The normalisation factor for each output data value is just
+         the corresponding value from the weights array. The normalisation
+         factor for each output variance value is the square of the data value
+         normalisation factor (see also AST\_\_CONSERVEFLUX). It also causes
+         output data values to be set bad if the corresponding weight is less
+         than the value supplied for
          argument WLIM.
          It also causes any temporary values stored in the output variance array
          (see flag AST\_\_GENVAR below) to be converted into usable variance values.
+         Note, this flag is ignored if the AST\_\_NONORM flag is set.
 
          \sstitem
          AST\_\_USEBAD: Indicates that there may be bad pixels in the
@@ -26293,7 +26316,7 @@ Object             - Base class for all AST Objects
          the generated output variances. If AST\_\_DISVAR is not specified,
          generated variances represent variances on the output mean  values. If
          AST\_\_DISVAR is specified, the generated variances represent the variance
-         of the distribution from which the input values were taken. Eaxch output
+         of the distribution from which the input values were taken. Each output
          variance created with AST\_\_DISVAR will be larger than that created
          without AST\_\_DISVAR by a factor equal to the number of input samples
          that contribute to the output sample.
@@ -26304,7 +26327,57 @@ Object             - Base class for all AST Objects
          given equal weight. If this flag is specified, the calculation of the
          output variances (if any) is modified to take account of the
          varying weights assigned to the input data values.
+
+         \sstitem
+         AST\_\_NONORM: If the simple unnormalised sum of all input data falling
+         in each output pixel is required, then this flag should be set on
+         each call in the sequence and the AST\_\_REBINEND should not be used
+         on the last call. In this case
+         WEIGHTS and NUSED are ignored.
+         This flag cannot be used with the AST\_\_CONSERVEFLUX, AST\_\_GENVAR
+         or AST\_\_VARWGT flag.
+
+         \sstitem
+         AST\_\_CONSERVEFLUX: Indicates that the normalized output pixel values
+         generated by the AST\_\_REBINEND flag should be scaled in such a way as
+         to preserve the total data value in a feature on the sky. Without this
+         flag, each normalised output pixel value represents a weighted mean
+         of the input data values around the corresponding input position.
+         (i.e. AST\_REBINSEQ$<$F$>$ behaves similarly to AST\_RESAMPLE$<$X$>$). This
+         (i.e. AST\_REBINSEQ$<$F$>$ behaves similarly to AST\_RESAMPLE$<$X$>$). This
+         is appropriate if the input data represents the spatial density of
+         some quantity (e.g. surface brightness in Janskys per square
+         arc-second) because the output pixel values will have the same
+         normalisation and units as the input pixel values. However, if the
+         input data values represent flux (or some other physical quantity)
+         per pixel, then the AST\_\_CONSERVEFLUX flag could be of use. It causes
+         each output pixel value to be scaled by the ratio of the output pixel
+         size to the input pixel size.
+
       }
+      This flag can only be used if the Mapping is successfully approximated
+      by one or more linear transformations. Thus an error will be reported
+      if it used when the
+      TOL argument
+      is set to zero (which stops the use of linear approximations), or
+      if the Mapping is too non-linear to be approximated by a piece-wise
+      linear transformation. The ratio of output to input pixel size is
+      evaluated once for each panel of the piece-wise linear approximation to
+      the Mapping, and is assumed to be constant for all output pixels in the
+      panel. The scaling factors for adjacent panels will in general
+      differ slightly, and so the joints between panels may be visible when
+      viewing the output image at high contrast. If this is a problem,
+      reduce the value of the
+      TOL argument
+      until the difference between adjacent panels is sufficiently small
+      to be insignificant.
+
+      This flag should normally be supplied on each invocation of
+      AST\_REBINSEQ$<$X$>$
+      within a given sequence.
+
+      Note, this flag cannot be used in conjunction with the AST\_\_NOSCALE
+      flag (an error will be reported if both flags are specified).
    }
    \sstdiytopic{
       Propagation of Missing Data
@@ -27432,7 +27505,7 @@ Object             - Base class for all AST Objects
          the input pixel size.
 
       }
-      This flag can only be used if the Mapping is succesfully approximated
+      This flag can only be used if the Mapping is successfully approximated
       by one or more linear transformations. Thus an error will be reported
       if it used when the
       TOL argument
@@ -27451,11 +27524,6 @@ Object             - Base class for all AST Objects
 
       Note, this flag cannot be used in conjunction with the AST\_\_NOBAD
       flag (an error will be reported if both flags are specified).
-
-      Flux conservation can only be approximate when using a resampling
-      algorithm. For accurate flux conservation use the
-      AST\_REBIN$<$X$>$ or AST\_REBINSEQ$<$X$>$ routine
-      instead.
    }
    \sstdiytopic{
       Propagation of Missing Data
@@ -33803,7 +33871,8 @@ Object             - Base class for all AST Objects
          {\tt{"}}BadPV{\tt{"}}: This condition arises when reading a FrameSet from a
          non-Native encoded FitsChan. It is issued if a \htmlref{PVi\_m}{PVi_m} header is found
          that refers to a projection parameter that is not used by the
-         projection type specified by CTYPE.
+         projection type specified by CTYPE, or the PV values are otherwise
+         inappropriate for the projection type.
 
          \sstitem
          {\tt{"}}BadVal{\tt{"}}: This condition arises when reading a FrameSet from a
@@ -50031,12 +50100,10 @@ occurred in the AST library between versions V7.0.1 and V7.0.2:
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V7.0.3}
+\subsection{Changes Introduced in V7.0.3}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V7.0.2 and V7.0.3 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.2 and V7.0.3:
 
 \begin{enumerate}
 
@@ -50044,7 +50111,7 @@ current version):
 accessing axis attributes within CmpFrames. This could happen if axes
 within the \htmlref{CmpFrame}{CmpFrame} have been permuted.
 
-\item A bug has been fixed in the SKyFrame class that could cause the two
+\item A bug has been fixed in the \htmlref{SkyFrame}{SkyFrame} class that could cause the two
 values of the SkyRef and/or SkyRefP attributes to be reversed.
 
 \item Bugs have been fixed in the \htmlref{CmpRegion}{CmpRegion} class that should allow the border
@@ -50052,11 +50119,88 @@ around a compound \htmlref{Region}{Region} to be plotted more quickly, and more 
 Previously, component Regions nested deeply inside a CmpRegion may have
 been completely or partially ignored.
 
-\item A bug has been fixed in the \htmlref{Plot3D}{Plot3D} class that caused a sementation
+\item A bug has been fixed in the \htmlref{Plot3D}{Plot3D} class that caused a segmentation
 violation if the MinTick attribute was set to zero.
 
 \item The astResampleX set of methods now includes astResampleK and
 astResampleUK that handles 64 bit integer data.
+
+\end{enumerate}
+
+
+\subsection{Changes Introduced in V7.0.4}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.3 and V7.0.4:
+
+
+\begin{enumerate}
+
+\item The previously private grf3d.h header file is now installed into
+prefix/include.
+
+\end{enumerate}
+
+
+\subsection{Changes Introduced in V7.0.5}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.4 and V7.0.5:
+
+\begin{enumerate}
+
+\item The \htmlref{FitsChan}{FitsChan} class can now read FITS headers that use the SAO
+convention for representing distorted TAN projections, based on the use
+of ``COi\_m'' keywords to hold the coefficients of the distortion polynomial.
+
+\end{enumerate}
+
+
+\subsection{Changes Introduced in V7.0.6}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.0.5 and V7.0.6:
+
+\begin{enumerate}
+
+\item A bug has been fixed in astRebinSeq<X> which could result in
+incorrect normalisation of the final binned data and variance values.
+
+\item When reading a \htmlref{FrameSet}{FrameSet} from a FITS-DSS header, the keywords CNPIX1
+and CNPIX2 now default to zero if absent. Previously an error was reported.
+
+\end{enumerate}
+
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V7.1.0}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V7.0.6 and V7.1.0 (the
+current version):
+
+\begin{enumerate}
+
+\item IMPORTANT! The default behaviour of astRebinSeq is now NOT to conserve
+flux. To conserve flux, the AST\_\_CONSERVEFLUX flag should be supplied
+when calling
+AST\_REBINSEQ<X>.
+Without this flag, each output value is a weighted mean of the neighbouring
+input values.
+
+\item A new flag AST\_\_NONORM can be used with astRebinSeq<X> to indicate that
+normalisation of the output arrays is not required. In this case no
+weights array need be supplied.
+
+\item A bug has been fixed in
+\htmlref{AST\_ADDFRAME}{AST_ADDFRAME} routine
+that could result in the incorrect inversion of Mappings within the \htmlref{FrameSet}{FrameSet}
+when the AST\_\_ALLFRAMES flag is supplied for the
+IFRAME argument.
+
+\item The
+\htmlref{AST\_RATE}{AST_RATE} function
+has been re-written to make it faster and more reliable.
 
 \end{enumerate}
 

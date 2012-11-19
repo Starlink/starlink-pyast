@@ -7,7 +7,7 @@ dnl   1.5.  It should work with autoconf versions 2.50 or better, and
 dnl   automake 1.6 or better.
 
 dnl   Initialisation: package name and version number
-AC_INIT(ast, 7.0.3, ussc@star.rl.ac.uk)
+AC_INIT(ast, 7.1.0, starlink@jiscmail.ac.uk)
 
 dnl   Require autoconf-2.50 at least
 AC_PREREQ(2.50)
@@ -118,6 +118,9 @@ AC_PATH_PROG(PERL, perl, [/usr/bin/env perl], [$STARLINK/Perl/bin:$PATH])
 #   Function and declaration checks
 AC_CHECK_FUNCS([isnan])
 AC_CHECK_DECLS([isnan],,,[#include <math.h>
+                         ])
+AC_CHECK_FUNCS([isfinite])
+AC_CHECK_DECLS([isfinite],,,[#include <math.h>
                          ])
 STAR_DECLARE_DEPENDENCIES(sourceset, [sst htx])
 

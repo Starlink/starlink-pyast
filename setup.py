@@ -67,6 +67,9 @@ if compiler.has_function('strtok_r'):
 if compiler.has_function('strerror_r'):
    define_macros.append(('HAVE_STRERROR_R','1'))
 
+if compiler.has_function('isfinite'):
+   define_macros.append(('HAVE_DECL_ISFINITE','1'))
+
 #  We need to tell AST what type a 64-bit int will have
 #  Not really sure how to determine whether we have int64_t
 import ctypes

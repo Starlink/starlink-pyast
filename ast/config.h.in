@@ -6,6 +6,10 @@
 /* Define to 1 if you have the `backtrace' function. */
 #undef HAVE_BACKTRACE
 
+/* Define to 1 if you have the declaration of `isfinite', and to 0 if you
+   don't. */
+#undef HAVE_DECL_ISFINITE
+
 /* Define to 1 if you have the declaration of `isnan', and to 0 if you don't.
    */
 #undef HAVE_DECL_ISNAN
@@ -21,6 +25,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `isfinite' function. */
+#undef HAVE_ISFINITE
 
 /* Define to 1 if you have the `isnan' function. */
 #undef HAVE_ISNAN

@@ -116,6 +116,9 @@ f     - AST_WRITE: Write an Object to a Channel
 *        Represent AST__BAD externally using the string "<bad>".
 *     23-JUN-2011 (DSB):
 *        Added attributes SinkFile and SourceFile.
+*     2-OCT-2012 (DSB):
+*        Report an error if an Inf or NaN value is read from the external
+*        source.
 *class--
 */
 
@@ -597,7 +600,7 @@ c++
 *     the AST library.
 c--
 */
-   astDECLARE_GLOBALS;
+   astDECLARE_GLOBALS
    astGET_GLOBALS(NULL);
    return channel_data;
 }
@@ -2959,6 +2962,13 @@ static double ReadDouble( AstChannel *this, const char *name, double def, int *s
                          "be read as a double precision floating point "
                          "number.", status, astGetClass( this ),
                          value->name, value->ptr.string );
+
+            } else if( !astISFINITE( result ) ) {
+               astError( AST__BADIN,
+                         "astRead(%s): Illegal double precision floating "
+                         "point value \"%s\" read for \"%s\".", status,
+                         astGetClass( this ), value->ptr.string, value->name );
+
             }
 
 /* Report a similar error if the Value does not describe a string. */
@@ -4487,7 +4497,7 @@ int astWriteInvocations_( int *status ){
 *     the AstUnit class as an example.
 *-
 */
-   astDECLARE_GLOBALS;
+   astDECLARE_GLOBALS
    astGET_GLOBALS(NULL);
    return nwrite_invoc;
 }

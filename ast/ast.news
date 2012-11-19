@@ -1,6 +1,6 @@
 AST Library
 -----------
-   A new release (V7.0.3) of the Starlink AST (astrometry) library is
+   A new release (V7.1.0) of the Starlink AST (astrometry) library is
 now available.
 
    AST provides a comprehensive range of facilities for attaching
@@ -16,11 +16,54 @@ environment-independent.
 Main Changes in this Version
 ----------------------------
 
+- IMPORTANT! The default behaviour of astRebinSeq is now NOT to conserve
+flux. To conserve flux, the AST__CONSERVEFLUX flag should be supplied
+when calling astRebinSeq. Without this flag, each output value is a
+weighted mean of the neighbouring input values.
+
+- A new flag AST__NONORM can be used with astRebinSeq<X> to indicate that
+normalisation of the output arrays is not required. In this case no
+weights array need be supplied.
+
+- A bug has been fixed in astAddFrame (AST_ADDFRAME) method that could
+result in the incorrect inversion of Mappings within the FrameSet when
+the AST__ALLFRAMES flag is supplied for the "iframe" parameter.
+
+- The astRate method has been re-written to make it faster and more
+reliable.
+
+Main Changes in V7.0.6
+----------------------
+
+- A bug has been fixed in astRebinSeq<X> which could result in
+incorrect normalisation of the final binned data and variance values.
+
+- When reading a FrameSet from a FITS-DSS header, the keywords CNPIX1 and
+CNPIX2 now default to zero if absent. Previously an error was reported.
+
+Main Changes in V7.0.5
+----------------------
+
+- The FitsChan class can now read FITS headers that use the SAO
+convention for representing distorted TAN projections, based on the use
+of "COi_j" keywords to hold the coefficients of the distortion polynomial.
+
+
+Main Changes in V7.0.4
+----------------------
+
+- The previously private grf3d.h header file is now installed into
+prefix/include.
+
+
+Main Changes in V7.0.3
+----------------------
+
 - A bug has been fixed which could cause an incorrect axis to be used when
 accessing axis attributes within CmpFrames. This could happen if axes
 within the CmpFrame have been permuted.
 
-- A bug has been fixed in the SKyFrame class that could cause the two
+- A bug has been fixed in the SkyFrame class that could cause the two
 values of the SkyRef and/or SkyRefP attributes to be reversed.
 
 - Bugs have been fixed in the CmpRegion class that should allow the border
@@ -28,7 +71,7 @@ around a compound Region to be plotted more quickly, and more accurately.
 Previously, component Regions nested deeply inside a CmpRegion may have
 been completely or partially ignored.
 
-- A bug has been fixed in the Plot3D class that caused a sementation
+- A bug has been fixed in the Plot3D class that caused a segmentation
 violation if the MinTick attribute was set to zero.
 
 - The astResampleX set of methods now includes astResampleK and

@@ -309,6 +309,38 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *        performed, if set to "1" NaNs are changed to AST__BAD but no
 *        error is reported, if set to anything else NaNs are changed to
 *        AST__BAD and an error is reported.
+*     6-JUL-2012 (DSB):
+*        The astRebinSeq<X> family was normalising the returned data and
+*        variances values incorrectly, when the AST__REBINEND flag was
+*        supplied. The exact size of the error depended on the nature of
+*        the Mapping and the spreading method, and so is hard to predict.
+*     20-JUL-2012 (DSB):
+*        Major re-structuring of astRebinSeq<X> to add further
+*        corrections to the normalisation. The model is now that each
+*        input array is first rebinned and then scaled to preserve the
+*        total data sum, and then each final output pixel is the weighed
+*        mean of all the aligned rebinned  pixels.
+*     13-AUG-2012 (DSB):
+*        Added AST__NONORM flag for asstRebuinSeq<X>.
+*     30-AUG_2012 (DSB):
+*        Added AST__CONSERVEFLUX flag for astRebinSeq<X>.
+*     10-SEP-2012 (DSB):
+*        Cater for Mappings that have different numbers of inputs and
+*        outputs when finding the flux conservation factor within
+*        astRebinSeq and astResample.
+*     1-OCT-2012 (DSB):
+*        Ensure astRebinSeq<X> does not create any negative output
+*        variances.
+*     2-OCT-2012 (DSB):
+*        - Check for Infs as well as NaNs.
+*        - In Rate, break out of the loop if the RMS is very small, not
+*          just if it is exactly zero.
+*     5-OCT-2012 (DSB):
+*        Complete re-write of Rate. It's now much simpler, faster and
+*        more reliable.
+*     16-OCT-2012 (DSB):
+*        In MatrixDet, ignore rows/columns filled with AST_BAD as well as
+*        rows/columns filled with zeros.
 *class--
 */
 
@@ -321,7 +353,8 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 
 /* Define numerical constants for use in thie module. */
 #define GETATTRIB_BUFF_LEN 50
-#define FUNPN_MAX_CACHE  5
+#define RATEFUN_MAX_CACHE  5
+#define RATE_ORDER 8
 
 /* Include files. */
 /* ============== */
@@ -400,18 +433,6 @@ typedef struct MapData {
    int nout;                     /* Number of output coordinates per point */
 } MapData;
 
-/* Data structure describing a polynomial function */
-#define RATE_ORDER 4             /* The order of polynial used to evalue function derivatives */
-typedef struct PN {
-   int order;                    /* The order; zero=constant, 1=linear, 2=quadratic */
-   double coeff[ RATE_ORDER + 1 ]; /* The coefficients of the polynomail */
-   double xlo;                   /* The lower x limit covered by the polynomial */
-   double xhi;                   /* The upper x limit covered by the polynomial */
-   double y0;                    /* The y offset to be added to the polynomial value */
-   int too_small;                /* Dynamic range of function value over h is
-                                    close to zero */
-} PN;
-
 /* Convert from floating point to floating point or integer */
 #define CONV(IntType,val) ( ( IntType ) ? (int) ( (val) + (((val)>0)?0.5:-0.5) ) : (val) )
 
@@ -450,10 +471,10 @@ astMAKE_INITGLOBALS(Mapping)
 #define getattrib_buff astGLOBAL(Mapping,GetAttrib_Buff)
 #define unsimplified_mapping astGLOBAL(Mapping,Unsimplified_Mapping)
 #define rate_disabled astGLOBAL(Mapping,Rate_Disabled)
-#define funpn_pset1_cache astGLOBAL(Mapping,FunPN_Pset1_Cache)
-#define funpn_pset2_cache astGLOBAL(Mapping,FunPN_Pset2_Cache)
-#define funpn_next_slot astGLOBAL(Mapping,FunPN_Next_Slot)
-#define funpn_pset_size astGLOBAL(Mapping,FunPN_Pset_Size)
+#define ratefun_pset1_cache astGLOBAL(Mapping,RateFun_Pset1_Cache)
+#define ratefun_pset2_cache astGLOBAL(Mapping,RateFun_Pset2_Cache)
+#define ratefun_next_slot astGLOBAL(Mapping,RateFun_Next_Slot)
+#define ratefun_pset_size astGLOBAL(Mapping,RateFun_Pset_Size)
 
 
 
@@ -474,11 +495,11 @@ static AstMapping *unsimplified_mapping = NULL;
    value of 1.0. */
 static int rate_disabled = 0;
 
-/* static values used in function "FunPN". */
-static AstPointSet *funpn_pset1_cache[ FUNPN_MAX_CACHE ];
-static AstPointSet *funpn_pset2_cache[ FUNPN_MAX_CACHE ];
-static int funpn_next_slot;
-static int funpn_pset_size[ FUNPN_MAX_CACHE ];
+/* static values used in function "RateFun". */
+static AstPointSet *ratefun_pset1_cache[ RATEFUN_MAX_CACHE ];
+static AstPointSet *ratefun_pset2_cache[ RATEFUN_MAX_CACHE ];
+static int ratefun_next_slot;
+static int ratefun_pset_size[ RATEFUN_MAX_CACHE ];
 
 
 /* Define the class virtual function table and its initialisation flag
@@ -514,7 +535,7 @@ static int InterpolateNearest##X( int, const int *, const int *, const Xtype *, 
 \
 static int Resample##X( AstMapping *, int, const int [], const int [], \
                         const Xtype [], const Xtype [], int, \
-                        void (*)(), const double [], int, double, int, \
+                        void (*)( void ), const double [], int, double, int, \
                         Xtype, int, const int [], const int [], \
                         const int [], const int [], Xtype [], Xtype [], int * ); \
 \
@@ -558,19 +579,19 @@ static void RebinSeq##X( AstMapping *, double, int, const int [], const int [], 
                          Xtype [], double [], int *, int * ); \
 \
 static void SpreadKernel1##X( AstMapping *, int, const int *, const int *, \
-                         const Xtype *, const Xtype *, int, const int *, \
+                         const Xtype *, const Xtype *, double, int, const int *, \
                          const double *const *, \
                          void (*)( double, const double *, int, double *, int * ), \
                          int, const double *, int, Xtype, int, Xtype *, \
                          Xtype *, double *, int *, int * ); \
 \
 static void SpreadLinear##X( int, const int *, const int *, const Xtype *, \
-                             const Xtype *, int, const int *, const double *const *, \
+                             const Xtype *, double, int, const int *, const double *const *, \
                              int, Xtype, int, Xtype *, Xtype *, double *, int *, \
                              int * ); \
 \
 static void SpreadNearest##X( int, const int *, const int *, const Xtype *, \
-                              const Xtype *, int, const int *, const double *const *, \
+                              const Xtype *, double, int, const int *, const double *const *, \
                               int, Xtype, int, Xtype *, Xtype *, double *, \
                               int *, int * );
 
@@ -592,15 +613,12 @@ DECLARE_GENERIC(LD,long double)
 static AstMapping *RemoveRegions( AstMapping *, int * );
 static AstMapping *Simplify( AstMapping *, int * );
 static AstPointSet *Transform( AstMapping *, AstPointSet *, int, AstPointSet *, int * );
-static PN *FitPN( AstMapping *, double *, int, int, double, double, double *, int * );
-static PN *InterpPN( int, double *, double *, int * );
 static const char *GetAttrib( AstObject *, const char *, int * );
-static double EvaluateDPN( PN *, double, int * );
-static double EvaluatePN( PN *, double, int * );
+static double FindGradient( AstMapping *, double *, int, int, double, double, double *, int * );
 static double J1Bessel( double, int * );
 static double LocalMaximum( const MapData *, double, double, double [], int * );
 static double MapFunction( const MapData *, const double [], int *, int * );
-static double MatrixDet( int, const double *, int * );
+static double MatrixDet( int, int, const double *, int * );
 static double MaxD( double, double, int * );
 static double NewVertex( const MapData *, int, double, double [], double [], int *, double [], int * );
 static double Random( long int *, int * );
@@ -609,11 +627,11 @@ static double UphillSimplex( const MapData *, double, int, const double [], doub
 static int *MapSplit( AstMapping *, int, const int *, AstMapping **, int * );
 static int Equal( AstObject *, AstObject *, int * );
 static int GetInvert( AstMapping *, int * );
+static int GetIsLinear( AstMapping *, int * );
 static int GetIsSimple( AstMapping *, int * );
 static int GetNin( AstMapping *, int * );
 static int GetNout( AstMapping *, int * );
 static int GetReport( AstMapping *, int * );
-static int GetIsLinear( AstMapping *, int * );
 static int GetTranForward( AstMapping *, int * );
 static int GetTranInverse( AstMapping *, int * );
 static int LinearApprox( AstMapping *, const double *, const double *, double, double *, int * );
@@ -622,9 +640,11 @@ static int MapMerge( AstMapping *, int, int, int *, AstMapping ***, int **, int 
 static int MaxI( int, int, int * );
 static int MinI( int, int, int * );
 static int QuadApprox( AstMapping *, const double[2], const double[2], int, int, double *, double *, int * );
-static int ResampleAdaptively( AstMapping *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)(), const double *, int, double, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
-static int ResampleSection( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)(), const double *, double, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
-static int ResampleWithBlocking( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)(), const double *, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
+static int RebinAdaptively( AstMapping *, int, const int *, const int *, const void *, const void *, DataType, int, const double *, int, double, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
+static int RebinWithBlocking( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, const double *, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
+static int ResampleAdaptively( AstMapping *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)( void ), const double *, int, double, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
+static int ResampleSection( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)( void ), const double *, double, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
+static int ResampleWithBlocking( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, void (*)( void ), const double *, int, const void *, int, const int *, const int *, const int *, const int *, void *, void *, int * );
 static int SpecialBounds( const MapData *, double *, double *, double [], double [], int * );
 static int TestAttrib( AstObject *, const char *, int * );
 static int TestInvert( AstMapping *, int * );
@@ -632,19 +652,16 @@ static int TestReport( AstMapping *, int * );
 static void ClearAttrib( AstObject *, const char *, int * );
 static void ClearInvert( AstMapping *, int * );
 static void ClearReport( AstMapping *, int * );
-static void CombinePN( PN *, PN *, int * );
 static void Copy( const AstObject *, AstObject *, int * );
 static void Decompose( AstMapping *, AstMapping **, AstMapping **, int *, int *, int *, int * );
 static void Delete( AstObject *, int * );
 static void Dump( AstObject *, AstChannel *, int * );
-static void FunPN( AstMapping *, double *, int, int, int, double *, double *, int * );
 static void Gauss( double, const double [], int, double *, int * );
 static void GlobalBounds( MapData *, double *, double *, double [], double [], int * );
 static void Invert( AstMapping *, int * );
 static void MapBox( AstMapping *, const double [], const double [], int, int, double *, double *, double [], double [], int * );
-static void RebinAdaptively( AstMapping *, int, const int *, const int *, const void *, const void *, DataType, int, const double *, int, double, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
-static void RebinSection( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, const double *, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
-static void RebinWithBlocking( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, DataType, int, const double *, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
+static void RateFun( AstMapping *, double *, int, int, int, double *, double *, int * );
+static void RebinSection( AstMapping *, const double *, int, const int *, const int *, const void *, const void *, double, DataType, int, const double *, int, const void *, int, const int *, const int *, const int *, const int *, int, void *, void *, double *, int *, int * );
 static void ReportPoints( AstMapping *, int, AstPointSet *, AstPointSet *, int * );
 static void SetAttrib( AstObject *, const char *, int * );
 static void SetInvert( AstMapping *, int, int * );
@@ -742,72 +759,6 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
    } else {
       (*parent_clearattrib)( this_object, attrib, status );
    }
-}
-
-static void CombinePN( PN *lo, PN *hi, int *status ) {
-/*
-*  Name:
-*     CombinePN
-
-*  Purpose:
-*     Combine polynomials "lo" and "hi", both of order N, into a polynomial
-*     of order N+1.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "mapping.h"
-*     void CombinePN( PN *lo, PN *hi, int *status )
-
-*  Class Membership:
-*     Mapping member function.
-
-*  Description:
-*     This function combines polynomials "lo" and "hi", both of order N,
-*     into a polynomial of order N+1, and return the new polynomial in
-*     "lo". It is used to implemtn Neville's algorithm for finding an
-*     interpolating polynomial. See:
-*
-*        http://mathworld.wolfram.com/NevillesAlgorithm.html
-
-*  Parameters:
-*     lo
-*        A polynomial covering the lower x interval. Returned holding the
-*        combined higher-order polynomial.
-*     hi
-*        A polynomial covering the higher x interval. Unchanged on exit.
-*     status
-*        Pointer to the inherited status variable.
-
-*/
-
-/* Local Variables: */
-   int n, k;
-   double f, xlo, xhi, cc[ RATE_ORDER + 1 ];
-
-/* Check the global error status */
-   if ( !astOK ) return;
-
-   n = lo->order;
-   xlo = lo->xlo;
-   xhi = hi->xhi;
-
-   f = 1.0/( xlo - xhi );
-
-   cc[ 0 ] = f*(- xhi*( lo->coeff[0]) + xlo*( hi->coeff[ 0 ] ) );
-   for( k = 1; k <= n; k++ ) {
-      cc[ k ] = f*( ( lo->coeff[ k - 1 ] ) - xhi*( lo->coeff[ k ] )
-                   -( hi->coeff[ k - 1 ] ) + xlo*( hi->coeff[ k ] ) );
-   }
-
-   cc[ n + 1 ] = f*( lo->coeff[ n ] - hi->coeff[ n ] );
-
-   lo->order = n + 1;
-   lo->xlo = xlo;
-   lo->xhi = xhi;
-   for( k = 0; k < n+2; k++ ) lo->coeff[ k ] = cc[ k ];
-
 }
 
 /*
@@ -1153,315 +1104,30 @@ static int Equal( AstObject *this_object, AstObject *that_object, int *status ) 
    return result;
 }
 
-static void FunPN( AstMapping *map, double *at, int ax1, int ax2,
-                   int n, double *x, double *y, int *status ) {
+static double FindGradient( AstMapping *map, double *at, int ax1, int ax2,
+                            double x0, double h, double *range, int *status ){
 /*
 *  Name:
-*     FunPN
+*     FindGradient
 
 *  Purpose:
-*     Find the value of the function currently being differentiated by the
-*     astRate method.
+*     Find the mean gradient in an interval, and the range of gradients
+*     within the interval.
 
 *  Type:
 *     Private function.
 
 *  Synopsis:
 *     #include "mapping.h"
-*     void FunPN( AstMapping *map, double *at, int ax1, int ax2,
-*                 int n, double *x, double *y, int *status )
+*     double FindGradient( AstMapping *map, double *at, int ax1, int ax2,
+*                          double x0, double h, double *range, int *status )
 
 *  Class Membership:
 *     Mapping method.
 
 *  Description:
-*     This is a service function for the astRate method. It evaluates the
-*     function being differentiated at specified axis values.
-*
-*     This function uses static resources in order to avoid the overhead
-*     of creating new PointSets each time this function is called. These
-*     static resources which must be initialised before the first invocation
-*     with a given Mapping, and must be released after the final invocation.
-*     See "ax1".
-
-*  Parameters:
-*     map
-*        Pointer to a Mapping which yields the value of the function at x.
-*        The Mapping may have any number of inputs and outputs; the specific
-*        output representing the function value, f, is specified by ax1 and
-*        the specific input representing the argument, x, is specified by ax2.
-*     at
-*        A pointer to an array holding axis values at the position at which
-*        the function is to be evaluated. The number of values supplied
-*        must equal the number of inputs to the Mapping. The value supplied
-*        for axis "ax2" is ignored (the value of "x" is used for axis "ax2").
-*     ax1
-*        The zero-based index of the Mapping output which is to be
-*        differentiated. Set this to -1 to allocate, or -2 to release,
-*        the static resources used by this function.
-*     ax2
-*        The zero-based index of the Mapping input which is to be varied.
-*     n
-*        The number of elements in the "x" and "y" arrays. This should not
-*        be greater than 2*RATE_ORDER.
-*     x
-*        The value of the Mapping input specified by ax2 at which the
-*        function is to be evaluated. If "ax2" is set to -1, then the
-*        supplied value is used as flag indicating if the static resources
-*        used by this function should be initialised (if x >= 0 ) or
-*        freed (if x < 0).
-*     y
-*        An array in which to return the function values at the positions
-*        given in "x".
-*     status
-*        Pointer to the inherited status variable.
-
-*/
-
-/* Local Variables: */
-   astDECLARE_GLOBALS
-   AstPointSet *pset1;
-   AstPointSet *pset2;
-   double **ptr1;
-   double **ptr2;
-   double *oldx;
-   double *oldy;
-   double *p;
-   double xx;
-   int i;
-   int k;
-   int nin;
-   int nout;
-
-/* Check the global error status. */
-   if ( !astOK ) return;
-
-/* Get a pointer to the thread specific global data structure. */
-   astGET_GLOBALS(map);
-
-/* Initialise variables to avoid "used of uninitialised variable"
-   messages from dumb compilers. */
-   pset2 = NULL;
-
-/* If required, initialise things. */
-   if( ax1 == -1 ) {
-      for( i = 0; i < FUNPN_MAX_CACHE; i++ ) {
-         funpn_pset_size[ i ] = 0;
-         funpn_pset1_cache[ i ] = NULL;
-         funpn_pset2_cache[ i ] = NULL;
-      }
-      funpn_next_slot = 0;
-
-/* If required, clean up. */
-   } else if( ax1 == -2 ) {
-      for( i = 0; i < FUNPN_MAX_CACHE; i++ ) {
-         funpn_pset_size[ i ] = 0;
-         if( funpn_pset1_cache[ i ] ) funpn_pset1_cache[ i ] = astAnnul( funpn_pset1_cache[ i ] );
-         if( funpn_pset2_cache[ i ] ) funpn_pset2_cache[ i ] = astAnnul( funpn_pset2_cache[ i ] );
-      }
-      funpn_next_slot = 0;
-
-/* Otherwise do the transformations. */
-   } else {
-
-/* See if we have already created PointSets of the correct size. */
-      pset1 = NULL;
-      for( i = 0; i < FUNPN_MAX_CACHE; i++ ) {
-         if( funpn_pset_size[ i ] == n ) {
-            pset1 = funpn_pset1_cache[ i ];
-            pset2 = funpn_pset2_cache[ i ];
-            break;
-         }
-      }
-
-/* If we have not, create new PointSets now. */
-      if( pset1 == NULL ) {
-         nin = astGetNin( map );
-         pset1 = astPointSet( n, nin, "", status );
-         ptr1 = astGetPoints( pset1 );
-
-         nout = astGetNout( map );
-         pset2 = astPointSet( n, nout, "", status );
-         ptr2 = astGetPoints( pset2 );
-
-/* Store the input position in the input PointSet. */
-         for( i = 0; i < nin; i++ ) {
-            xx = at[ i ];
-            p = ptr1[ i ];
-            for( k = 0; k < n; k++, p++ ) *p = xx;
-         }
-
-/* Add these new PointSets to the cache, removing any existing
-   PointSets. */
-         if( funpn_pset_size[ funpn_next_slot ] > 0 ) {
-            (void) astAnnul( funpn_pset1_cache[ funpn_next_slot ] );
-            (void) astAnnul( funpn_pset2_cache[ funpn_next_slot ] );
-         }
-         funpn_pset1_cache[ funpn_next_slot ] = pset1;
-         funpn_pset2_cache[ funpn_next_slot ] = pset2;
-         funpn_pset_size[ funpn_next_slot ] = n;
-         if( ++funpn_next_slot == FUNPN_MAX_CACHE ) funpn_next_slot = 0;
-
-/* If existing PointSets were found, get there data arrays. */
-      } else {
-         ptr1 = astGetPoints( pset1 );
-         ptr2 = astGetPoints( pset2 );
-      }
-
-/* Store the input X values in the input PointSet data array. */
-      oldx = ptr1[ ax2 ];
-      ptr1[ ax2 ] = x;
-
-/* Store the output Y values in the output PointSet data array. */
-      oldy = ptr2[ ax1 ];
-      ptr2[ ax1 ] = y;
-
-/* Transform the positions. */
-      (void) astTransform( map, pset1, 1, pset2 );
-
-/* Re-instate the original arrays in the PointSets. */
-      ptr1[ ax2 ] = oldx;
-      ptr2[ ax1 ] = oldy;
-
-   }
-}
-
-static double EvaluateDPN( PN *pn, double x, int *status ) {
-/*
-*  Name:
-*     EvaluateDPN
-
-*  Purpose:
-*     Evaluate the gradient of a polynomial at a given x value.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "mapping.h"
-*     double EvaluateDPN( PN *pn, double x, int *status )
-
-*  Class Membership:
-*     Mapping method.
-
-*  Description:
-*     This function evaluates the gradient of the supplied polynomial
-*     at the supplied x value.
-
-*  Parameters:
-*     pn
-*        Pointer to the structure describing the polynomial.
-*     x
-*        The x value at which to evaluate the polynomial gradient.
-*     status
-*        Pointer to the inherited status variable.
-
-*  Returns:
-*     The polynomial gradient value.
-*/
-
-/* Local Variables: */
-   int n, i;
-   double ret;
-
-/* Initialise */
-   ret = AST__BAD;
-
-/* Check the global error status. */
-   if ( !astOK || !pn ) return ret;
-
-   n = pn->order;
-
-   ret = n*pn->coeff[ n ];
-   for( i = n - 1; i > 0; i-- ) {
-      ret = i*pn->coeff[ i ] + ret*x;
-   }
-
-   return ret;
-
-}
-
-static double EvaluatePN( PN *pn, double x, int *status ) {
-/*
-*  Name:
-*     EvaluatePN
-
-*  Purpose:
-*     Evaluate a polynomial at a given x value.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "mapping.h"
-*     static double EvaluatePN( PN *pn, double x, int *status ) {
-
-*  Class Membership:
-*     Mapping method.
-
-*  Description:
-*     This function evaluates the supplied polynomial at the supplied x
-*     value.
-
-*  Parameters:
-*     pn
-*        Pointer to the structure descirbing the polynomial.
-*     x
-*        The x value at which to evaluate the polynomial.
-*     status
-*        Pointer to the inherited status variable.
-
-*  Returns:
-*     The polynomial value.
-*/
-
-/* Local Variables: */
-   int n, i;
-   double ret;
-
-/* Initialise */
-   ret = AST__BAD;
-
-/* Check the global error status. */
-   if ( !astOK || !pn ) return ret;
-
-   n = pn->order;
-   ret = pn->coeff[ n ];
-   for( i = n - 1; i >= 0; i-- ) {
-      ret = pn->coeff[ i ] + ret*x;
-   }
-
-   return ret;
-
-}
-
-static PN *FitPN( AstMapping *map, double *at, int ax1, int ax2, double x0,
-                  double h, double *rms, int *status ){
-/*
-*  Name:
-*     FitPN
-
-*  Purpose:
-*     Fit a polynomial to the function being differentiated and return
-*     the RMS residual.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "mapping.h"
-*     PN *FitPN( AstMapping *map, double *at, int ax1, int ax2, double x0,
-*                double h, double *rms, int *status )
-
-*  Class Membership:
-*     Mapping method.
-
-*  Description:
-*     This function finds a polynomial which interpolates a set of evenly
-*     spaced samples of the function being differentiated by the astRate
-*     method. The coefficients of this polynomial are returned, together
-*     with the RMS residual between the polynomial and the function at points
-*     mid way between the interpolating points.
+*     This function finds the mean gradient in an interval, and the range
+*     of gradients within the interval.
 
 *  Parameters:
 *     map
@@ -1484,30 +1150,35 @@ static PN *FitPN( AstMapping *map, double *at, int ax1, int ax2, double x0,
 *        The central axis value at which the function is to be evaluated.
 *     h
 *        The interval over which the fitting is to be performed.
-*     rms
-*        A pointer to a location at which to return the RMS residual
-*        between the returned polynomial and the function, estimated at
-*        points mid way between the interpolating points. May be NULL.
+*     range
+*        A pointer to a location at which to return the range of
+*        gradients found within the interval.
 *     status
 *        Pointer to the inherited status variable.
 
 *  Returns:
-*     The PN structure holding the polynomial coefficients, etc, or NULL
-*     if no polynomial can be fitted. The independant variable of the
-*     polynomial is (x-x0) and the dependant variable is (y(x)-y(x0)).
-*     The value of y(x0) is stored in the returned PN structure. The
-*     memory used to store the polynomial should be freed using astFree
-*     when no longer needed.
+*     The mean gradient, or AST__BAD if the mean gradient cannot be
+*     calculated.
 */
 
 /* Local Variables: */
-   double x[ RATE_ORDER + 2 ], y[ RATE_ORDER + 2 ], dh, off, s2, e, mean,
-          max, min;
-   PN *ret;
-   int i0, i, n;
+   double dh;
+   double g;
+   double gmax;
+   double gmin;
+   double ret;
+   double x1;
+   double x2;
+   double x[ RATE_ORDER + 2 ];
+   double y1;
+   double y2;
+   double y[ RATE_ORDER + 2 ];
+   int i0;
+   int i;
+   int ngood;
 
 /* Initialise */
-   ret = NULL;
+   ret = AST__BAD;
 
 /* Check the global error status. */
    if ( !astOK ) return ret;
@@ -1522,86 +1193,48 @@ static PN *FitPN( AstMapping *map, double *at, int ax1, int ax2, double x0,
    }
 
 /* Get the function values at these positions. */
-   FunPN( map, at, ax1, ax2, RATE_ORDER + 1, x, y, status );
+   RateFun( map, at, ax1, ax2, RATE_ORDER + 1, x, y, status );
 
-/* Get the mean, max and min function value. */
-   mean = max = min = y[ 0 ];
-   if( mean == AST__BAD ) return NULL;
-   for( i = 1; i <= RATE_ORDER; i++ ) {
+/* Find the maximum and minimum mean gradient within any sub-interval, and
+   note the (x,y) values at the first and last good point within the
+   interval. */
+   y1 = AST__BAD;
+   y2 = AST__BAD;
+   gmax = AST__BAD;
+   gmin = AST__BAD;
+   ngood = 0;
 
-      if( y[ i ] == AST__BAD ) return NULL;
+   for( i = 0; i < RATE_ORDER; i++ ) {
+      if( y[ i + 1 ] !=AST__BAD && y[ i ] != AST__BAD &&
+          x[ i + 1 ] != x[ i ] ) {
+         ngood++;
 
-      mean += y[ i ];
+         g = ( y[ i + 1 ] - y[ i ] )/( x[ i + 1 ] - x[ i ] );
 
-      if( y[ i ] > max ) {
-         max = y[ i ];
-
-      } else if( y[ i ] < min ) {
-         min = y[ i ];
-
+         if( ngood == 1 ) {
+            gmax = gmin = g;
+         } else if( g < gmin ) {
+            gmin = g;
+         } else if( g > gmax) {
+            gmax = g;
+         }
+         if( y1 == AST__BAD ) {
+            y1 = y[ i ];
+            x1 = x[ i ];
+         }
+         y2 = y[ i + 1 ];
+         x2 = x[ i + 1 ];
       }
    }
 
-/* Convert the x values into x offsets from "x0", and convert the y
-   values into y offsets from the central y value. */
-   off = y[ i0 ];
-   if( off == AST__BAD ) return NULL;
-   for( i = 0; i <= RATE_ORDER; i++ ) {
-      if( y[ i ] == AST__BAD ) {
-         return NULL;
-      } else {
-         y[ i ] -= off;
-         x[ i ] -= x0;
-      }
-   }
-
-/* Find the polynomial which interpolates these points. */
-   ret = InterpPN( RATE_ORDER + 1, x, y, status );
-   if( ret ) {
-      ret->y0 = off;
-
-/* Indicate if the dynamic range of the function values is clsoe to zero. */
-      ret->too_small = ( max - min <= 1.0E-6*fabs( mean )/( RATE_ORDER + 1 ) );
-
-/* If required, find the rms error between the polynomial and the
-   function at points mid-way between the interpolating points. */
-      if( rms ) {
-
-/* Store the x values at which to evaluate the function. These are the
-   points mid way between the interpolating points (plus one beyond each
-   end). */
-         dh *= 0.5;
-         for( i = 0; i <= RATE_ORDER; i++ ) {
-            x[ i ] += x0 - dh;
-         }
-         x[ RATE_ORDER + 1 ] = x[ RATE_ORDER ] + 2*dh;
-
-/* Evaluate the function at these positions. */
-         FunPN( map, at, ax1, ax2, RATE_ORDER + 2, x, y, status );
-
-/* Loop round evaluating the polynomial fit and incrementing the sum of
-   the squared residuals. */
-         s2 = 0.0;
-         n = 0;
-         for( i = 0; i <= RATE_ORDER + 1; i++ ) {
-            if( y[ i ] != AST__BAD ) {
-               e = EvaluatePN( ret, x[ i ] - x0, status ) + off - y[ i ];
-               s2 += e*e;
-               n++;
-            }
-         }
-
-/* Evaluate the rms residual. */
-         if( n > 1 ) {
-            *rms = sqrt( s2/( RATE_ORDER + 2 ) );
-         } else {
-            *rms = AST__BAD;
-         }
-      }
+/* If two or more sub-intervals were usable, return the range of
+   gradients found, and the mean gradient. */
+   if( ngood > 1 ) {
+      ret = ( y2 - y1 )/( x2 - x1 );
+      if( range ) *range = ( gmax - gmin );
    }
 
    return ret;
-
 }
 
 static void Gauss( double offset, const double params[], int flags,
@@ -6523,103 +6156,6 @@ MAKE_INTERPOLATE_BLOCKAVE(UB,unsigned char,0,float,0)
 #undef MAKE_INTERPOLATE_BLOCKAVE
 
 
-static PN *InterpPN( int np, double *x, double *y, int *status ) {
-/*
-*  Name:
-*     InterpPN
-
-*  Purpose:
-*     Find a polynomial which interpolates the given points.
-
-*  Type:
-*     Private function.
-
-*  Synopsis:
-*     #include "mapping.h"
-*     PN *InterpPN( int np, double *x, double *y, int *status )
-
-*  Class Membership:
-*     Mapping member function.
-
-*  Description:
-*     This function finds the coefficients of a polynomial which
-*     interpolates the supplied positions. The order of the returned
-*     polynomial is one less than the the number of supplied points
-*     (thus if 2 points are supplied, the polynomial will be of order
-*     1 - a straight line).
-
-*  Parameters:
-*     np
-*        The number of points supplied in arrays x and y. This must be no
-*        more than (RATE_ORDER+1).
-*     x
-*        Pointer to a an array of "np" x values. Note the values in this
-*        array must increase monotonically.
-*     y
-*        Pointer to a an array of "np" y values.
-*     status
-*        Pointer to the inherited status variable.
-
-*  Returned:
-*     Pointer to a structure describing the polynomial, or NULL if no
-*     polynomial could be found. The memory used to store the polynomial
-*     should be freed using astFree when no longer needed.
-
-*/
-
-/* Local Variables: */
-    int i, k;
-    PN *pn[ RATE_ORDER + 1 ], *ret;
-
-/* Initialise. */
-    ret = NULL;
-
-/* Check the global error status */
-   if ( !astOK ) return ret;
-
-/* Check supplied points are good. */
-    if( np > RATE_ORDER + 1 ) return NULL;
-    for( i = 0; i < np; i++ ) {
-       if( x[ i ] == AST__BAD || y[ i ] == AST__BAD ) return NULL;
-    }
-
-/* Produce polynomials of order zero. */
-    for( i = 0; i < np; i++ ) {
-       pn[ i ] = astMalloc( sizeof( PN ) );
-       if( !astOK ) return NULL;
-       pn[ i ]->order = 0;
-       pn[ i ]->coeff[ 0 ] = y[ i ];
-       pn[ i ]->xlo = x[ i ];
-       pn[ i ]->xhi = x[ i ];
-    }
-
-/* Produce polynomials of order "k", from the polynomials of order "k-1".
-   This uses Neville's method (see:
-
-      http://mathworld.wolfram.com/NevillesAlgorithm.html
-
-*/
-    for( k = 1; k < np; k++ ) {
-       for( i = 0; i < np - k; i++ ) {
-          CombinePN( pn[i], pn[i+1], status );
-       }
-    }
-
-    for( i = 1; i < np; i++ ) pn[ i ] = astFree( pn[ i ] );
-
-/* If any of the coefficients could not be found return NULL. */
-    ret = pn[ 0 ];
-    for( i = 0; i < np; i++ ) {
-       if( astISNAN( ret->coeff[ i ] ) ) {
-          ret = astFree( ret );
-          break;
-       }
-    }
-
-    return ret;
-}
-
-
 static void Invert( AstMapping *this, int *status ) {
 /*
 *++
@@ -8236,47 +7772,62 @@ static int *MapSplit( AstMapping *this, int nin, const int *in,
    return result;
 }
 
-static double MatrixDet( int ndim, const double *matrix, int *status ){
+static double MatrixDet( int nrow, int ncol, const double *matrix, int *status ){
 /*
 *  Name:
 *     MatrixDet
 
 *  Purpose:
-*     Return the determinant of a square matrix.
+*     Return the determinant of a matrix.
 
 *  Type:
 *     Private function.
 
 *  Synopsis:
 *     #include "mapping.h"
-*     double MatrixDet( int ndim, const double *matrix, int *status )
+*     double MatrixDet( int nrow, int ncol, const double *matrix, int *status )
 
 *  Class Membership:
 *     Mapping member function.
 
 *  Description:
-*     This function returns the determinant of the supplied square matrix.
+*     This function returns the determinant of the supplied matrix. Any
+*     rows or columns that hold only zeros or AST_BAD values are first
+*     removed from the matrix. If the resulting matrix is not square, a
+*     value of AST__BAD is returned for the determinant.
 
 *  Parameters:
-*     ndim
-*        The number of rows and columns in the matrix.
+*     nrow
+*        The number of rows in the matrix.
+*     ncol
+*        The number of columns in the matrix.
 *     matrix
-*        The matrix element values. The first row of "ndim" elements
+*        The matrix element values. The first row of "ncol" elements
 *        should be supplied first, followed by the second row, etc.
 *     status
 *        Pointer to the inherited status variable.
 
 *  Returned Value:
-*     The determinant.
+*     The determinant, or AST__BAD if the determinant could not be
+*     caclculated.
 */
 
 /* Local Variables: */
-   double result;
+   const double *sqmat;
+   const double *m;
    double *a;
    double *y;
+   double result;
    int *iw;
+   int *usecol;
+   int *userow;
    int i;
+   int icol;
+   int irow;
    int jf;
+   int ncoluse;
+   int ndim;
+   int nrowuse;
 
 /* Initialise */
    result = AST__BAD;
@@ -8284,24 +7835,92 @@ static double MatrixDet( int ndim, const double *matrix, int *status ){
 /* Check the global error status. */
    if ( !astOK ) return result;
 
-   if( ndim == 1 ) {
-      result = matrix[ 0 ];
+/* Initialise... */
+   sqmat = NULL;
+   nrowuse = 0;
+   ncoluse = 0;
 
-   } else if( ndim == 2 ) {
-      result = matrix[ 0 ]*matrix[ 3 ] - matrix[ 1 ]*matrix[ 2 ];
-
-   } else {
-      a = astStore( NULL, matrix, sizeof( double )*(size_t) (ndim*ndim) );
-      iw = astMalloc( sizeof( int )*(size_t) ndim );
-      y = astMalloc( sizeof( double )*(size_t) ndim );
-      if( y ) {
-         for( i = 0; i < ndim; i++ ) y[ i ] = 1.0;
-         palDmat( ndim, a, y, &result, &jf, iw );
+/* Flag any rows and columns that should be ignored because they contain
+   only bad values or zeros. */
+   userow = astCalloc( nrow, sizeof( *userow ) );
+   usecol = astCalloc( ncol, sizeof( *userow ) );
+   if( astOK ) {
+      m = matrix;
+      for( irow = 0; irow < nrow; irow++ ) {
+         for( icol = 0; icol < ncol; icol++,m++ ) {
+            if( *m != AST__BAD && *m != 0.0 ) {
+               usecol[ icol ] = 1;
+               userow[ irow ] = 1;
+            }
+         }
       }
-      y = astFree( y );
-      iw = astFree( iw );
-      a = astFree( a );
+
+/* Find the number of usable rows and columns. */
+      for( irow = 0; irow < nrow; irow++ ) {
+         if( userow[ irow ] ) nrowuse++;
+      }
+
+      for( icol = 0; icol < ncol; icol++ ) {
+         if( usecol[ icol ] ) ncoluse++;
+      }
    }
+
+/* Return AST__BAD if the resulting matrix is not square. */
+   if( ncoluse == nrowuse ) {
+      ndim = ncoluse;
+
+/* If any rows or columns contained just bad or zero values, create a new
+   matrix that excludes them. */
+      if( ncol > ndim || nrow > ndim ) {
+         sqmat = astMalloc( ndim*ndim*sizeof(*sqmat) );
+         if( astOK ) {
+            m = matrix;
+            a = (double *) sqmat;
+            for( irow = 0; irow < nrow; irow++ ) {
+               if( userow[ irow ] ) {
+                  for( icol = 0; icol < ncol; icol++,m++ ) {
+                     if( usecol[ icol ] ) *(a++) = *m;
+                  }
+               } else {
+                  m += ncol;
+               }
+            }
+         }
+
+/* If no rows or columns contained just bad values, use the supplied
+   matrix. */
+      } else {
+         sqmat = matrix;
+      }
+
+/* Calculate the determinant of the modified matrix */
+      if( ndim == 1 ) {
+         result = sqmat[ 0 ];
+
+      } else if( ndim == 2 ) {
+         result = sqmat[ 0 ]*sqmat[ 3 ] - sqmat[ 1 ]*sqmat[ 2 ];
+
+      } else {
+         a = astStore( NULL, sqmat, sizeof( double )*(size_t) (ndim*ndim) );
+         iw = astMalloc( sizeof( int )*(size_t) ndim );
+         y = astMalloc( sizeof( double )*(size_t) ndim );
+         if( y ) {
+            for( i = 0; i < ndim; i++ ) y[ i ] = 1.0;
+            palDmat( ndim, a, y, &result, &jf, iw );
+         }
+         y = astFree( y );
+         iw = astFree( iw );
+         a = astFree( a );
+      }
+
+   }
+
+/* Free the square matrix if it was allocated here. */
+   if( sqmat != matrix ) sqmat = astFree( (void *) sqmat );
+
+/* Free the usable row/column flags. */
+   userow = astFree( userow );
+   usecol = astFree( usecol );
 
    return result;
 }
@@ -9029,7 +8648,8 @@ static double Random( long int *seed, int *status ) {
    return ( (double) ( *seed - 1 ) ) / (double) 2147483646;
 }
 
-static double Rate( AstMapping *this, double *at, int ax1, int ax2, int *status ){
+static double Rate( AstMapping *this, double *at, int ax1, int ax2,
+                    int *status ){
 /*
 *+
 *  Name:
@@ -9053,11 +8673,17 @@ static double Rate( AstMapping *this, double *at, int ax1, int ax2, int *status 
 *     the supplied Mapping with respect to a specified input, at a
 *     specified input position.
 *
-*     The result is estimated by interpolating the function using a
-*     fourth order polynomial in the neighbourhood of the specified
-*     position. The size of the neighbourhood used is chosen to minimise
-*     the RMS residual per unit length between the interpolating
-*     polynomial and the supplied Mapping function.
+*     The result is the mean gradient within a small interval centred on
+*     the supplied position. The interval size is selected automatically
+*     to minimise the error on the returned value. For large intervals,
+*     the error is dominated by changes in the gradient of the
+*     transformation. For small intervals, the error is dominated by
+*     rounding errors. The best interval is the one that gives the most
+*     consistent measure of the gradient within the interval. To find this
+*     consistency, each candidate interval is subdivided into eight
+*     sub-intervals, the mean gradient within each sub-interval is found,
+*     and the associated consistency measure is then the difference between
+*     the maximum and minimum sub-interval gradient found within the interval.
 
 *  Parameters:
 *     this
@@ -9094,11 +8720,25 @@ static double Rate( AstMapping *this, double *at, int ax1, int ax2, int *status 
 *     function.
 */
 
+#define NN 50
+
 /* Local Variables: */
-#define MXY 100
-   double x0, h, s1, s2, sp, r, dh, ed2, ret, rms, h0, x[MXY], y[MXY];
-   int ntry, nin, nout, i, ixy, fitted, fitok;
-   PN *fit;
+   double h0;
+   double h;
+   double mean;
+   double minrange;
+   double range0;
+   double range;
+   double ret;
+   double x0;
+   double y[2*NN+1];
+   double z[2*NN+1];
+   int ibot;
+   int iin;
+   int iret;
+   int itop;
+   int nin;
+   int nout;
 
 /* Initialise */
    ret = AST__BAD;
@@ -9107,7 +8747,7 @@ static double Rate( AstMapping *this, double *at, int ax1, int ax2, int *status 
    if ( !astOK ) return ret;
 
 /* Allocate resources */
-   FunPN( NULL, NULL, -1, 0, 0, NULL, NULL, status );
+   RateFun( NULL, NULL, -1, 0, 0, NULL, NULL, status );
 
 /* Obtain the numbers of input and output coordinates for the Mapping. */
    nin = astGetNin( this );
@@ -9140,234 +8780,330 @@ static double Rate( AstMapping *this, double *at, int ax1, int ax2, int *status 
 /* If it is bad, return bad values. */
    if( astOK && x0 != AST__BAD ) {
 
-/* The required derivative is estimated by fitting a polynomial to the
-  function over a small range of length "h" centred on the supplied value
-  "x0", and then finding the derivative of this fitting polynomial at "x0".
-  The bulk of the problem lies in choosing a suitable value for the
-  length "h". If "h" is too large, the function is not well fitted by a
-  polynomial and so the returned value is inaccurate. If "h" is too small,
-  then the returned value is dominated by rounding errors and so is again
-  inaccurate. The process tries a series of different values for "h". The
-  initial estimate is formed as a fixed small fraction of the supplied
-  "x0", or 1.0 if "x0" is zero. */
-      h = ( x0 != 0.0 ) ? DBL_EPSILON*1.0E10*x0 : 1.0;
+/* The required derivative is formed by evaluating the transformation at
+   two positions close to "x0", and dividing the change in y by the
+   change in x. The complexity comes in deciding how close to "x0" the
+   two points should be. If the points are too far apart, the gradient of
+   the function may vary significantly between the two points and so we
+   have little confidence that he mean gradient in the interval is a good
+   estimate of the gradient at "x0". On the other hand if the points are
+   too close together, rounding errors will make the gradient value
+   unreliable. The optimal interval is found by testing a number of
+   different intervals as follows. Each interval is split into NDIV equal
+   sub-intervals, and the gradient in each sub-interval is found. The max
+   and min gradient for any of these sub-intervals is found, and the
+   difference between them is used as an estimate of the reliability of the
+   mean gradient within the whole interval. The interval with the
+   greatest reliability is used to define the returned gradient.
 
-/* We next find a more reliable estimate based on the probable accuracy
-   of the calculated function values and the rate of change of the
-   derivative of the function in the region of "x0". Find a polynomial fit
-   to the function over this initial interval. The independant variable
-   of this fit is (x-x0) and the dependant variable is (y(x)-y(x0). If
-   this fails, repeat up to ten times with a larger "h" value. */
-      fit = FitPN( this, at, ax1, ax2, x0, h, NULL, status );
-      ntry = 0;
-      while( ( !fit || fit->too_small ) && ntry++ < 10 ) {
-         (void) astFree( fit );
-         h *= 1000;
-         fit = FitPN( this, at, ax1, ax2, x0, h, NULL, status );
+   The initial estimate of the interval size is a fixed small fraction of
+   the supplied "x0" value, or 1.0 if "x0" is zero. */
+      h0 = ( x0 != 0.0 ) ? DBL_EPSILON*1.0E9*fabs( x0 ) : 1.0;
+
+/* Attempt to find the mean gradient, and the range of gradients, within
+   an interval of size "h0" centred on "x0". If this cannot be done,
+   increase "h0" by a factor fo ten repeatedly until it can be done, or a
+   silly large interval size is reached. */
+      mean = AST__BAD;
+      while( mean == AST__BAD && h0 < 1.0E-10*DBL_MAX ) {
+         h0 *= 10;
+         mean = FindGradient( this, at, ax1, ax2, x0, h0, &range0, status );
       }
-      if( !fit ) return AST__BAD;
 
-/* We need an estimate of how much the derivative may typically change
-   over this interval. The more the derivative changes, the smaller we
-   should make "h" in order to produce a good fit to the polynomial.
-   Calculate the rate of change of the polynomial (i.e the derivative
-   estimate) at a set of 5 evenly spaced points over the interval "h"
-   and then find the standard deviation of the derivative estimates
-   divided by the interval size. At the same time form an estimate of
-   the RMS polynomial value over the step ("sp"). */
-      s1 = 0.0;
-      s2 = 0.0;
-      sp = 0.0;
-      dh = h/4.0;
-      for( i = -(RATE_ORDER/2); i < (RATE_ORDER+1)/2; i++ ) {
-         r = EvaluateDPN( fit, i*dh, status );
-         s1 += r;
-         s2 += r*r;
-         r = EvaluatePN( fit, i*dh, status ) + fit->y0;
-         sp += r*r;
-      }
-      s2 /= RATE_ORDER;
-      s1 /= RATE_ORDER;
-      ed2 = s2 - s1*s1;
-      if( ed2 > 0 ) {
-         ed2 = sqrt( ed2 )/h;
-      } else {
-         ed2 = 0.0;
-      }
-      sp = sqrt( sp/RATE_ORDER );
+/* If this was not successful, return AST__BAD as the function value. */
+      if( mean != AST__BAD ) {
 
-      fit = astFree( fit );
+/* We now search through a range of larger interval sizes, to see if any
+   produce a more reliable mean gradient estimate (i.e. have a smaller range
+   of gradients within the interval ). After that we search through a range
+   of smaller interval sizes. The gradient range and mean gradient for
+   each interval size are stored in arrays "y" and "z" respectively. "iret"
+   is the index of the most reliable interval found so far (i.e. the one
+   with the smallest range of sub-interval gradients). The original interval
+   "h0" is stored in the middle element of these arrays (index "NN").
+   Intervals are stored in monotonic order of interval size in the arrays. */
+         iret = NN;
+         y[ NN ] = range0;
+         z[ NN ] = mean;
+         minrange = range0;
 
-/* If the derivative estimate does not change significantly over the interval,
-   return it. */
-      if( ed2 <= 1.0E-10*fabs( s1/h ) ) {
-         ret = s1;
+/* itop is the index of the last array elements to store calculated values. */
+         itop = NN;
 
-      } else {
+/* Loop round increasing the interval size by a factor of four each time
+   round. */
+         h = h0;
+         for( iin = NN + 1; iin <= 2*NN && astOK; iin++ ){
+            h *= 4.0;
 
-/* Otherwise, we find a better estimate for the step size by assuming a
-   fixed relative error in the function value, and a second derivative
-   based on the "ed2" value found above. The total error in the
-   derivative estimate is assumed to be of the form:
+/* Calculate the mean gradient, and the range of gradients, using the
+   current interval size. */
+            mean = FindGradient( this, at, ax1, ax2, x0, h, &range, status );
 
-     (a/h)**2 + (d2*h)**2
+/* If it could be done, store the values in the arrays. */
+            if( mean != AST__BAD ) {
+               itop++;
+               z[ itop ] = mean;
+               y[ itop ] = range;
 
-   where "a" is the accuracy with which the function can be evaluated
-   (assumed to be 1.0E5*DBL_EPSILON*sp) and d2 is the second derivative.
-   The value of "h" below is the value which minimises the above
-   total error expression. */
+/* Look for the smallest range, and note its index in the arrays. */
+               if( range < minrange ) {
+                  minrange = range;
+                  iret = itop;
 
-         h = sqrt( fabs( 1.0E5*DBL_EPSILON*sp/ed2 ) );
-
-/* It turns out that the error in the derivative (i.e. the residual
-   between the true derivative value and the derivative of the fitting
-   polynomial at the "x0" value), is generally equal to the RMS error
-   between the fitting polynomial and the function value, divided by the
-   step size. This error is high for very small step sizes because of
-   rounding error and is also high for large step sizes becase the function
-   is not well fitted by a polynomial. In between there is a minimum
-   which corresponds to the optimal step size. It also turns out that the
-   error in the derivative is a monotonic increasing function for step
-   sizes above the optimal step size. We find the optimal step size by
-   working our way down this monotonic function, in powers of ten, until
-   the first increase in error is encountered.
-
-   Starting at the step size found above, note log10( normalised rms error of
-   fit ) at increasing step sizes until the rms error exceeds the 0.2 of
-   the rms function value. Each new step size is a factor 10 times the previous
-   step size. Once the step size is so large rgat we cannot fit the
-   polynomial, break out of the loop. */
-         h0 = h;
-         ixy = 0;
-         rms = 0.1*sp - 1;
-         fitted = 0;
-         fitok = 1;
-         while( rms < 0.2*sp && ixy < MXY && ( !fitted || fitok ) ) {
-            fit = FitPN( this, at, ax1, ax2, x0, h0, &rms, status );
-            if( fit ) {
-               fitted = 1;
-               fitok = 1;
-
-/* If we come across an exact fit, use it to determine the returned
-   values and break. */
-               if( rms == 0.0 ) {
-                  ret = fit->coeff[ 1 ];
-                  fit = astFree( fit );
+/* If a range of zero is encountered, we only believe it if the previous
+   interval also had zero range. Otherwise, it's probably just a numerical
+   fluke. If the previous interval also had a range of zero, we can forget
+   the rest of the algorithm since the supplied transformation is linear
+   and we now have its gradient. So leave the loop. */
+               } else if( range == 0.0 && y[ iin - 1 ] == 0 ) {
+                  iret = itop;
                   break;
-
-               } else {
-                  if( fit->coeff[ 1 ] != 0.0 ) {
-                     y[ ixy ] = log10( rms/( h0*fabs( fit->coeff[ 1 ] ) ) );
-                  } else {
-                     y[ ixy ] = AST__BAD;
-                  }
-                  fit = astFree( fit );
                }
-            } else {
-               fitok = 0;
-               y[ ixy ] = AST__BAD;
+
+/* Stop looping when the interval range is 100 times the original
+   interval range. */
+               if( range > 100*range0 ) break;
             }
-            x[ ixy ] = ixy;
-            ixy++;
-            h0 *= 10.0;
          }
 
-/* If we found a step size which gave zero rms error, use it. Otherwise, run
-   down from the largest step size to the smallest looking for the first step
-   size at which the error increases rather than decreasing. */
-         if( ret == AST__BAD ) {
-            h0 = AST__BAD;
-            ixy--;
-            while( --ixy > 0 ){
-               if( y[ ixy - 1 ] != AST__BAD &&
-                   y[ ixy ] != AST__BAD &&
-                   y[ ixy + 1 ] != AST__BAD ) {
-                  if( y[ ixy - 1 ] > y[ ixy ] ) {
-                     h0 = x[ ixy ];
+/* Record the minimum range found so far. */
+         range0 = minrange;
 
-                     x[ 0 ] = x[ ixy - 1 ];
-                     x[ 1 ] = x[ ixy ];
-                     x[ 2 ] = x[ ixy + 1 ];
+/* ibot is the index of the first array elements to store calculated values. */
+         ibot = NN;
 
-                     y[ 0 ] = y[ ixy - 1 ];
-                     y[ 1 ] = y[ ixy ];
-                     y[ 2 ] = y[ ixy + 1 ];
+/* Loop round decreasing the interval size by a factor of four each time
+   round. This is just like the last loop, but goes the other way, to
+   lower indices. */
+         h = h0;
+         for( iin = NN - 1; iin >= 0 && astOK; iin-- ){
+            h /= 4.0;
 
-                     break;
-                  }
+            mean = FindGradient( this, at, ax1, ax2, x0, h, &range, status );
+            if( mean != AST__BAD ) {
+               ibot--;
+               z[ ibot ] = mean;
+               y[ ibot ] = range;
+
+               if( range < minrange ) {
+                  minrange = range;
+                  iret = ibot;
+               } else if( range == 0.0 && y[ iin + 1 ] == 0 ) {
+                  iret = ibot;
+                  break;
                }
+
+               if( range > 100*range0 ) break;
             }
+         }
 
-/* If no minimum could be found in the above loop, continue decreasing
-   the step size below the value set above until a minimum is found. */
-            if( h0 == AST__BAD ) {
-               h0 = h;
-               ixy = 0;
-               while( y[ 0 ] < y[ 1 ] ) {
+/* If the smallest gradient range in any interval was zero, we only
+   believe it if the adjacent interval size also had zero range. */
+         if( minrange == 0.0 ) {
+            if( ( iret > ibot && y[ iret - 1 ] == 0 ) ||
+                ( iret < itop && y[ iret + 1 ] == 0 ) ) {
+               ret = z[ iret ];
 
-                  h0 *= 0.1;
-                  ixy--;
-                  fit = FitPN( this, at, ax1, ax2, x0, h0, &rms, status );
-                  if( fit ) {
-                     x[ 2 ] = x[ 1 ];
-                     x[ 1 ] = x[ 0 ];
-                     y[ 2 ] = y[ 1 ];
-                     y[ 1 ] = y[ 0 ];
-
-                     if( rms == 0.0 ) {
-                        ret = fit->coeff[ 1 ];
-                        fit = astFree( fit );
-                        break;
-
-                     } else if( fit->coeff[ 1 ] != 0.0 ) {
-                        x[ 0 ] = ixy;
-                        y[ 0 ] = log10( rms/( h0*fabs( fit->coeff[ 1 ] ) ) );
-
-                     } else {
-                        h0 *= 10.0;
-                        x[ 0 ] = AST__BAD;
-                        break;
+/* Otherwise, search for the smallest gradient range, ignoring values
+   exactly equal to zero, and return the corresponding mean interval
+   gradient. */
+            } else {
+               for( iin = ibot; iin <= itop; iin++ ){
+                  if( y[ iin ] > 0.0 ){
+                     if( minrange == 0 || y[ iin ] < minrange ) {
+                        minrange = y[ iin ];
+                        ret = z[ iin ];
                      }
-                     fit = astFree( fit );
-                  } else {
-                     h0 *= 10.0;
-                     x[ 0 ] = AST__BAD;
-                     break;
                   }
                }
             }
 
-/* If we have found a error which is lower than either of its
-   neighbouring errors, fit a quadratic through the three points and find
-   the power of ten which correspnds to the minimum of the function. */
-            if( ret == AST__BAD ) {
-               if( x[ 0 ] != AST__BAD ) {
-                  fit = InterpPN( 3, x, y, status );
-                  if( fit ){
-                     if( fit->coeff[ 2 ] > 0.0 ) {
-                        h0 = h*pow( 10.0, -0.5*fit->coeff[ 1 ]/fit->coeff[ 2 ] );
-                     }
-                     fit = astFree( fit );
-                  }
-               }
-
-/* Use the best estimate of h to calculate the returned derivatives. */
-               fit = FitPN( this, at, ax1, ax2, x0, h0, &rms, status );
-               if( fit ) {
-                  ret = fit->coeff[ 1 ];
-                  fit = astFree( fit );
-               }
-            }
+/* If the minimum range was non-zero, we can just return the
+   corresponding mean gradient. */
+         } else {
+            ret = z[ iret ];
          }
       }
    }
 
-/* Free resources */
-   FunPN( NULL, NULL, -2, 0, 0, NULL, NULL, status );
-
 /* Return the result. */
    return ret;
-#undef MXY
+
+#undef NN
+}
+
+static void RateFun( AstMapping *map, double *at, int ax1, int ax2,
+                     int n, double *x, double *y, int *status ) {
+/*
+*  Name:
+*     RateFun
+
+*  Purpose:
+*     Find the value of the function currently being differentiated by the
+*     astRate method.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "mapping.h"
+*     void RateFun( AstMapping *map, double *at, int ax1, int ax2,
+*                   int n, double *x, double *y, int *status )
+
+*  Class Membership:
+*     Mapping method.
+
+*  Description:
+*     This is a service function for the astRate method. It evaluates the
+*     function being differentiated at specified axis values.
+*
+*     This function uses static resources in order to avoid the overhead
+*     of creating new PointSets each time this function is called. These
+*     static resources which must be initialised before the first invocation
+*     with a given Mapping, and must be released after the final invocation.
+*     See "ax1".
+
+*  Parameters:
+*     map
+*        Pointer to a Mapping which yields the value of the function at x.
+*        The Mapping may have any number of inputs and outputs; the specific
+*        output representing the function value, f, is specified by ax1 and
+*        the specific input representing the argument, x, is specified by ax2.
+*     at
+*        A pointer to an array holding axis values at the position at which
+*        the function is to be evaluated. The number of values supplied
+*        must equal the number of inputs to the Mapping. The value supplied
+*        for axis "ax2" is ignored (the value of "x" is used for axis "ax2").
+*     ax1
+*        The zero-based index of the Mapping output which is to be
+*        differentiated. Set this to -1 to allocate, or -2 to release,
+*        the static resources used by this function.
+*     ax2
+*        The zero-based index of the Mapping input which is to be varied.
+*     n
+*        The number of elements in the "x" and "y" arrays. This should not
+*        be greater than 2*RATE_ORDER.
+*     x
+*        The value of the Mapping input specified by ax2 at which the
+*        function is to be evaluated. If "ax2" is set to -1, then the
+*        supplied value is used as flag indicating if the static resources
+*        used by this function should be initialised (if x >= 0 ) or
+*        freed (if x < 0).
+*     y
+*        An array in which to return the function values at the positions
+*        given in "x".
+*     status
+*        Pointer to the inherited status variable.
+
+*/
+
+/* Local Variables: */
+   astDECLARE_GLOBALS
+   AstPointSet *pset1;
+   AstPointSet *pset2;
+   double **ptr1;
+   double **ptr2;
+   double *oldx;
+   double *oldy;
+   double *p;
+   double xx;
+   int i;
+   int k;
+   int nin;
+   int nout;
+
+/* Check the global error status. */
+   if ( !astOK ) return;
+
+/* Get a pointer to the thread specific global data structure. */
+   astGET_GLOBALS(map);
+
+/* Initialise variables to avoid "used of uninitialised variable"
+   messages from dumb compilers. */
+   pset2 = NULL;
+
+/* If required, initialise things. */
+   if( ax1 == -1 ) {
+      for( i = 0; i < RATEFUN_MAX_CACHE; i++ ) {
+         ratefun_pset_size[ i ] = 0;
+         ratefun_pset1_cache[ i ] = NULL;
+         ratefun_pset2_cache[ i ] = NULL;
+      }
+      ratefun_next_slot = 0;
+
+/* If required, clean up. */
+   } else if( ax1 == -2 ) {
+      for( i = 0; i < RATEFUN_MAX_CACHE; i++ ) {
+         ratefun_pset_size[ i ] = 0;
+         if( ratefun_pset1_cache[ i ] ) ratefun_pset1_cache[ i ] = astAnnul( ratefun_pset1_cache[ i ] );
+         if( ratefun_pset2_cache[ i ] ) ratefun_pset2_cache[ i ] = astAnnul( ratefun_pset2_cache[ i ] );
+      }
+      ratefun_next_slot = 0;
+
+/* Otherwise do the transformations. */
+   } else {
+
+/* See if we have already created PointSets of the correct size. */
+      pset1 = NULL;
+      for( i = 0; i < RATEFUN_MAX_CACHE; i++ ) {
+         if( ratefun_pset_size[ i ] == n ) {
+            pset1 = ratefun_pset1_cache[ i ];
+            pset2 = ratefun_pset2_cache[ i ];
+            break;
+         }
+      }
+
+/* If we have not, create new PointSets now. */
+      if( pset1 == NULL ) {
+         nin = astGetNin( map );
+         pset1 = astPointSet( n, nin, "", status );
+         ptr1 = astGetPoints( pset1 );
+
+         nout = astGetNout( map );
+         pset2 = astPointSet( n, nout, "", status );
+         ptr2 = astGetPoints( pset2 );
+
+/* Store the input position in the input PointSet. */
+         for( i = 0; i < nin; i++ ) {
+            xx = at[ i ];
+            p = ptr1[ i ];
+            for( k = 0; k < n; k++, p++ ) *p = xx;
+         }
+
+/* Add these new PointSets to the cache, removing any existing
+   PointSets. */
+         if( ratefun_pset_size[ ratefun_next_slot ] > 0 ) {
+            (void) astAnnul( ratefun_pset1_cache[ ratefun_next_slot ] );
+            (void) astAnnul( ratefun_pset2_cache[ ratefun_next_slot ] );
+         }
+         ratefun_pset1_cache[ ratefun_next_slot ] = pset1;
+         ratefun_pset2_cache[ ratefun_next_slot ] = pset2;
+         ratefun_pset_size[ ratefun_next_slot ] = n;
+         if( ++ratefun_next_slot == RATEFUN_MAX_CACHE ) ratefun_next_slot = 0;
+
+/* If existing PointSets were found, get there data arrays. */
+      } else {
+         ptr1 = astGetPoints( pset1 );
+         ptr2 = astGetPoints( pset2 );
+      }
+
+/* Store the input X values in the input PointSet data array. */
+      oldx = ptr1[ ax2 ];
+      ptr1[ ax2 ] = x;
+
+/* Store the output Y values in the output PointSet data array. */
+      oldy = ptr2[ ax1 ];
+      ptr2[ ax1 ] = y;
+
+/* Transform the positions. */
+      (void) astTransform( map, pset1, 1, pset2 );
+
+/* Re-instate the original arrays in the PointSets. */
+      ptr1[ ax2 ] = oldx;
+      ptr2[ ax1 ] = oldy;
+
+   }
 }
 
 /*
@@ -9911,6 +9647,7 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
 \
 /* Local Variables: */ \
    astDECLARE_GLOBALS            /* Thread-specific data */ \
+   const char *badflag;          /* Name of illegal flag */ \
    AstMapping *simple;           /* Pointer to simplified Mapping */ \
    Xtype *d;                     /* Pointer to next output data value */ \
    Xtype *v;                     /* Pointer to next output variance value */ \
@@ -10077,6 +9814,32 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
                 astGetClass( unsimplified_mapping ) ); \
    } \
 \
+/* Report an error if any illegal flags were supplied. */ \
+   if( flags & AST__REBININIT ) { \
+      badflag = "AST__REBININIT"; \
+   } else if( flags & AST__REBINEND ) { \
+      badflag = "AST__REBINEND"; \
+   } else if( flags & AST__GENVAR ) { \
+      badflag = "AST__GENVAR"; \
+   } else if( flags & AST__DISVAR ) { \
+      badflag = "AST__DISVAR"; \
+   } else if( flags & AST__VARWGT ) { \
+      badflag = "AST__VARWGT"; \
+   } else if( flags & AST__NONORM ) { \
+      badflag = "AST__NONORM"; \
+   } else if( flags & AST__CONSERVEFLUX ) { \
+      badflag = "AST__CONSERVEFLUX"; \
+   } else if( flags & ~( AST__USEBAD + AST__USEVAR ) ) { \
+      badflag = "unknown"; \
+   } else { \
+      badflag = NULL; \
+   } \
+   if ( badflag && astOK ) { \
+      astError( AST__BADFLG, "astRebin"#X"(%s): An illegal flag (%s) "  \
+                "was included in the 'flags' argument.", status, \
+                astGetClass( unsimplified_mapping ), badflag ); \
+   }  \
+\
 /* If required, allocate work array to hold the sum of the weights \
    contributing to each output pixel, and initialise it to zero. */ \
    if( wlim > 0.0 ) { \
@@ -10109,14 +9872,20 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
    having to replicate functions unnecessarily for each data \
    type. However, we also pass an argument that identifies the data \
    type we have obscured. */ \
-   RebinAdaptively( simple, ndim_in, lbnd_in, ubnd_in, \
-                    (const void *) in, (const void *) in_var, \
-                    TYPE_##X, spread, \
-                    params, flags, tol, maxpix, \
-                    (const void *) &badval, \
-                    ndim_out, lbnd_out, ubnd_out, \
-                    lbnd, ubnd, npix_out, \
-                    (void *) out, (void *) out_var, work, NULL, status ); \
+   if( RebinAdaptively( simple, ndim_in, lbnd_in, ubnd_in, \
+                        (const void *) in, (const void *) in_var, \
+                        TYPE_##X, spread, \
+                        params, flags, tol, maxpix, \
+                        (const void *) &badval, \
+                        ndim_out, lbnd_out, ubnd_out, \
+                        lbnd, ubnd, npix_out, \
+                        (void *) out, (void *) out_var, work, \
+                        NULL, status ) && astOK ) { \
+      astError( AST__CNFLX, "astRebin"#X"(%s): Flux conservation was " \
+                "requested but could not be performed because the " \
+                "forward transformation of the supplied Mapping " \
+                "is too non-linear.", status, astGetClass( this ) ); \
+   } \
 \
 /* If required set output pixels bad if they have a total weight less \
    than "wlim". */ \
@@ -10158,7 +9927,7 @@ MAKE_REBIN(I,int,1)
 /* Undefine the macro. */
 #undef MAKE_REBIN
 
-static void RebinAdaptively( AstMapping *this, int ndim_in,
+static int RebinAdaptively( AstMapping *this, int ndim_in,
                             const int *lbnd_in, const int *ubnd_in,
                             const void *in, const void *in_var,
                             DataType type, int spread,
@@ -10166,8 +9935,9 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
                             int maxpix, const void *badval_ptr,
                             int ndim_out, const int *lbnd_out,
                             const int *ubnd_out, const int *lbnd,
-                            const int *ubnd, int npix_out, void *out,
-                            void *out_var, double *work, int *nused, int *status ){
+                            const int *ubnd, int npix_out,
+                            void *out, void *out_var, double *work,
+                            int *nused, int *status ){
 /*
 *  Name:
 *     RebinAdaptively
@@ -10180,7 +9950,7 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 
 *  Synopsis:
 *     #include "mapping.h"
-*     void RebinAdaptively( AstMapping *this, int ndim_in,
+*     int RebinAdaptively( AstMapping *this, int ndim_in,
 *                          const int *lbnd_in, const int *ubnd_in,
 *                          const void *in, const void *in_var,
 *                          DataType type, int spread,
@@ -10189,7 +9959,8 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 *                          int ndim_out, const int *lbnd_out,
 *                          const int *ubnd_out, const int *lbnd,
 *                          const int *ubnd, int npix_out, void *out,
-*                          void *out_var, double *work, int *nused, int *status )
+*                          void *out_var, double *work, int *nused,
+*                          int *status )
 
 *  Class Membership:
 *     Mapping member function.
@@ -10379,6 +10150,14 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 *        number of input values pasted into the output array. Ignored if NULL.
 *     status
 *        Pointer to the inherited status variable.
+
+*  Returned Value:
+*     A non-zero value is returned if "flags" included AST__CONSERVEFLUX (i.e.
+*     flux conservation was requested), but the forward transformation of the
+*     supplied Mapping had zero determinant everywhere within the region
+*     being binned (no error is reported if this happens). Zero is returned
+*     otherwise.
+
 */
 
 /* Local Variables: */
@@ -10397,11 +10176,17 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
    int npix;                     /* Number of pixels in output section */
    int npoint;                   /* Number of points for obtaining a fit */
    int nvertex;                  /* Number of vertices of output section */
+   int result;                   /* Returned value */
+   int res1;                     /* Flux conservation error in 1st section? */
+   int res2;                     /* Flux conservation error in 2nd section? */
    int toobig;                   /* Section too big (must sub-divide)? */
    int toosmall;                 /* Section too small to sub-divide? */
 
+/* Initialise */
+   result = 0;
+
 /* Check the global error status. */
-   if ( !astOK ) return;
+   if ( !astOK ) return result;
 
 /* Further initialisation. */
    npix = 1;
@@ -10511,10 +10296,11 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
    above. */
    if ( astOK ) {
       if ( !divide ) {
-         RebinWithBlocking( this, linear_fit, ndim_in, lbnd_in, ubnd_in,
-                            in, in_var, type, spread,  params, flags,
-                            badval_ptr, ndim_out, lbnd_out, ubnd_out, lbnd,
-                            ubnd, npix_out, out, out_var, work, nused, status );
+         result = RebinWithBlocking( this, linear_fit, ndim_in, lbnd_in,
+                                     ubnd_in, in, in_var, type, spread,
+                                     params, flags, badval_ptr, ndim_out,
+                                     lbnd_out, ubnd_out, lbnd, ubnd, npix_out,
+                                     out, out_var, work, nused, status );
 
 /* Otherwise, allocate workspace to perform the sub-division. */
       } else {
@@ -10536,10 +10322,11 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 
 /* Rebin the resulting smaller section using a recursive invocation
    of this function. */
-            RebinAdaptively( this, ndim_in, lbnd_in, ubnd_in, in, in_var,
-                             type, spread, params, flags, tol, maxpix,
-                             badval_ptr, ndim_out, lbnd_out, ubnd_out,
-                             lo, hi, npix_out, out, out_var, work, nused, status );
+            res1 = RebinAdaptively( this, ndim_in, lbnd_in, ubnd_in, in,
+                                    in_var, type, spread, params,
+                                    flags, tol, maxpix, badval_ptr, ndim_out,
+                                    lbnd_out, ubnd_out, lo, hi, npix_out, out,
+                                    out_var, work, nused, status );
 
 /* Now set up a second section which covers the remaining half of the
    original input section. */
@@ -10549,11 +10336,19 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 /* If this section contains pixels, resample it in the same way,
    summing the returned values. */
             if ( lo[ dimx ] <= hi[ dimx ] ) {
-               RebinAdaptively( this, ndim_in, lbnd_in, ubnd_in, in, in_var,
-                                type, spread, params, flags, tol, maxpix,
-                                badval_ptr,  ndim_out, lbnd_out, ubnd_out,
-                                lo, hi, npix_out, out, out_var, work, nused, status );
+               res2 = RebinAdaptively( this, ndim_in, lbnd_in, ubnd_in, in,
+                                       in_var, type, spread, params,
+                                       flags, tol, maxpix, badval_ptr,
+                                       ndim_out, lbnd_out, ubnd_out,
+                                       lo, hi, npix_out, out, out_var, work,
+                                       nused, status );
+            } else {
+               res2 = 0;
             }
+
+/* If neither section could be rebinned because of an indeterminant
+   mapping, return a result indicating this. */
+            result = ( res1 && res2 );
          }
 
 /* Free the workspace. */
@@ -10565,13 +10360,17 @@ static void RebinAdaptively( AstMapping *this, int ndim_in,
 /* If coefficients for a linear fit were obtained, then free the space
    they occupy. */
    if ( linear_fit ) linear_fit = astFree( linear_fit );
+
+/* Retyurn a flag indicating if no part of the array could be binned
+   because of an indeterminate Mapping. */
+   return result;
 }
 
 static void RebinSection( AstMapping *this, const double *linear_fit,
                           int ndim_in, const int *lbnd_in, const int *ubnd_in,
-                          const void *in, const void *in_var, DataType type,
-                          int spread, const double *params, int flags,
-                          const void *badval_ptr, int ndim_out,
+                          const void *in, const void *in_var, double infac,
+                          DataType type, int spread, const double *params,
+                          int flags, const void *badval_ptr, int ndim_out,
                           const int *lbnd_out, const int *ubnd_out,
                           const int *lbnd, const int *ubnd, int npix_out,
                           void *out, void *out_var, double *work,
@@ -10590,13 +10389,13 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
 *     #include "mapping.h"
 *     void RebinSection( AstMapping *this, const double *linear_fit,
 *                        int ndim_in, const int *lbnd_in, const int *ubnd_in,
-*                        const void *in, const void *in_var, DataType type,
-*                        int spread, const double *params, int flags,
-*                        const void *badval_ptr, int ndim_out,
+*                        const void *in, const void *in_var, double infac,
+*                        DataType type, int spread, const double *params,
+*                        int flags, const void *badval_ptr, int ndim_out,
 *                        const int *lbnd_out, const int *ubnd_out,
 *                        const int *lbnd, const int *ubnd, int npix_out,
 *                        void *out, void *out_var, double *work,
-*                        int *nused )
+*                        int *nused, int *status )
 
 *  Class Membership:
 *     Mapping member function.
@@ -10671,6 +10470,8 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
 *
 *        If no variance estimates are required, a NULL pointer should
 *        be given.
+*     infac
+*        A factor by which to multiply the input data values before use.
 *     type
 *        A value taken from the "DataType" enum, which specifies the
 *        data type of the input and output arrays containing the
@@ -11150,7 +10951,7 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                case ( TYPE_##X ): \
                   SpreadNearest##X( ndim_out, lbnd_out, ubnd_out, \
                                     (Xtype *) in, (Xtype *) in_var, \
-                                    npoint, offset, \
+                                    infac, npoint, offset, \
                                     (const double *const *) ptr_out, \
                                     flags, *( (Xtype *) badval_ptr ), \
                                     npix_out, (Xtype *) out, \
@@ -11193,7 +10994,7 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                case ( TYPE_##X ): \
                   SpreadLinear##X( ndim_out, lbnd_out, ubnd_out,\
                                    (Xtype *) in, (Xtype *) in_var, \
-                                   npoint, offset, \
+                                   infac, npoint, offset, \
                                    (const double *const *) ptr_out, \
                                    flags, *( (Xtype *) badval_ptr ), \
                                    npix_out, (Xtype *) out, \
@@ -11390,12 +11191,13 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                case ( TYPE_##X ): \
                   SpreadKernel1##X( this, ndim_out, lbnd_out, ubnd_out, \
                                          (Xtype *) in, (Xtype *) in_var, \
-                                         npoint, offset, \
+                                         infac, npoint, offset, \
                                          (const double *const *) ptr_out, \
                                          kernel, neighb, par, flags, \
                                          *( (Xtype *) badval_ptr ), \
                                          npix_out, (Xtype *) out, \
-                                         (Xtype *) out_var, work, nused, status ); \
+                                         (Xtype *) out_var, work, nused, \
+                                         status ); \
                   break;
 
 /* Use the above macro to invoke the appropriate function. */
@@ -11529,16 +11331,25 @@ f     FLAGS argument.
 *     rebinned input data is added into them. Subsequenct invocations
 *     within the same sequence should omit the AST__REBININIT flag.
 *
-*     The last call in a sequence is indicated by specifying the AST__REBINEND
-*     flag. This causes the output data and variance arrays to be normalised
-*     before being returned. This normalisation consists of dividing the data
+*     The last call in a sequence is indicated by specifying the
+*     AST__REBINEND flag. Depending on which flags are supplied, this may
+*     cause the output data and variance arrays to be normalised before
+*     being returned. This normalisation consists of dividing the data
 *     array by the weights array, and can eliminate artifacts which may be
-*     introduced into the rebinned data as a consequence of aliasing between
-*     the input and output grids. However, it can also result in small changes to
-*     the total pixel value in any given area of the output array. In addition to
-*     normalisation of the output data values, any output variances are also
-*     appropriately normalised, and any output data values with weight less
-*     than
+*     introduced into the rebinned data as a consequence of aliasing
+*     between the input and output grids. This results in each output
+*     pixel value being the weighted mean of the input pixel values that
+*     fall in the neighbourhood of the output pixel (rather like
+c     astResample<X>).
+f     AST_RESAMPLE<X>).
+*     Optionally, these normalised
+*     values can then be multiplied by a scaling factor to ensure that the
+*     total data sum in any small area is unchanged. This scaling factor
+*     is equivalent to the number of input pixel values that fall into each
+*     output pixel. In addition to
+*     normalisation of the output data values, any output variances are
+*     also appropriately normalised, and any output data values with
+*     weight less than
 c     "wlim" are set to "badval".
 f     WLIM are set to BADVAL.
 *
@@ -11922,15 +11733,17 @@ f     OUT, OUT_VAR and WEIGHTS
 c     "out" and "out_var"
 f     OUT and OUT_VAR
 *     arrays to be divided by a normalisation factor before being
-*     returned. The normalisation factor for each output data value is just the
-*     corresponding value from the weights array. The normalisation factor
-*     for each output variance value is the square of the data value
-*     normalisation factor. It also causes output data values to be set
-*     bad if the corresponding weight is less than the value supplied for
+*     returned. The normalisation factor for each output data value is just
+*     the corresponding value from the weights array. The normalisation
+*     factor for each output variance value is the square of the data value
+*     normalisation factor (see also AST__CONSERVEFLUX). It also causes
+*     output data values to be set bad if the corresponding weight is less
+*     than the value supplied for
 c     parameter "wlim".
 f     argument WLIM.
 *     It also causes any temporary values stored in the output variance array
 *     (see flag AST__GENVAR below) to be converted into usable variance values.
+*     Note, this flag is ignored if the AST__NONORM flag is set.
 *     - AST__USEBAD: Indicates that there may be bad pixels in the
 *     input array(s) which must be recognised by comparing with the
 c     value given for "badval" and propagated to the output array(s).
@@ -11966,7 +11779,7 @@ f     routine
 *     the generated output variances. If AST__DISVAR is not specified,
 *     generated variances represent variances on the output mean  values. If
 *     AST__DISVAR is specified, the generated variances represent the variance
-*     of the distribution from which the input values were taken. Eaxch output
+*     of the distribution from which the input values were taken. Each output
 *     variance created with AST__DISVAR will be larger than that created
 *     without AST__DISVAR by a factor equal to the number of input samples
 *     that contribute to the output sample.
@@ -11975,6 +11788,56 @@ f     routine
 *     given equal weight. If this flag is specified, the calculation of the
 *     output variances (if any) is modified to take account of the
 *     varying weights assigned to the input data values.
+*     - AST__NONORM: If the simple unnormalised sum of all input data falling
+*     in each output pixel is required, then this flag should be set on
+*     each call in the sequence and the AST__REBINEND should not be used
+*     on the last call. In this case
+c     NULL pointers can be supplied for "weights" and "nused".
+f     WEIGHTS and NUSED are ignored.
+*     This flag cannot be used with the AST__CONSERVEFLUX, AST__GENVAR
+*     or AST__VARWGT flag.
+*     - AST__CONSERVEFLUX: Indicates that the normalized output pixel values
+*     generated by the AST__REBINEND flag should be scaled in such a way as
+*     to preserve the total data value in a feature on the sky. Without this
+*     flag, each normalised output pixel value represents a weighted mean
+*     of the input data values around the corresponding input position.
+f     (i.e. AST_REBINSEQ<F> behaves similarly to AST_RESAMPLE<X>). This
+f     (i.e. AST_REBINSEQ<F> behaves similarly to AST_RESAMPLE<X>). This
+*     is appropriate if the input data represents the spatial density of
+*     some quantity (e.g. surface brightness in Janskys per square
+*     arc-second) because the output pixel values will have the same
+*     normalisation and units as the input pixel values. However, if the
+*     input data values represent flux (or some other physical quantity)
+*     per pixel, then the AST__CONSERVEFLUX flag could be of use. It causes
+*     each output pixel value to be scaled by the ratio of the output pixel
+*     size to the input pixel size.
+*
+*     This flag can only be used if the Mapping is successfully approximated
+*     by one or more linear transformations. Thus an error will be reported
+*     if it used when the
+c     "tol" parameter
+f     TOL argument
+*     is set to zero (which stops the use of linear approximations), or
+*     if the Mapping is too non-linear to be approximated by a piece-wise
+*     linear transformation. The ratio of output to input pixel size is
+*     evaluated once for each panel of the piece-wise linear approximation to
+*     the Mapping, and is assumed to be constant for all output pixels in the
+*     panel. The scaling factors for adjacent panels will in general
+*     differ slightly, and so the joints between panels may be visible when
+*     viewing the output image at high contrast. If this is a problem,
+*     reduce the value of the
+c     "tol" parameter
+f     TOL argument
+*     until the difference between adjacent panels is sufficiently small
+*     to be insignificant.
+*
+*     This flag should normally be supplied on each invocation of
+c     astRebinSeq<X>
+f     AST_REBINSEQ<X>
+*     within a given sequence.
+*
+*     Note, this flag cannot be used in conjunction with the AST__NOSCALE
+*     flag (an error will be reported if both flags are specified).
 
 *  Propagation of Missing Data:
 *     Instances of missing data (bad pixels) in the output grid are
@@ -11995,6 +11858,7 @@ c     calculated) may be declared bad and flagged with the "badval"
 c     value in the "out_var" array for similar reasons.
 f     calculated) may be declared bad and flagged with the BADVAL
 f     value in the OUT_VAR array for similar reasons.
+
 *--
 */
 /* Define a macro to implement the function for a specific data
@@ -12011,15 +11875,15 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
                      double weights[], int *nused, int *status ) { \
 \
 /* Local Variables: */ \
-   astDECLARE_GLOBALS            /* Thread-specific data */ \
    AstMapping *simple;           /* Pointer to simplified Mapping */ \
    Xtype *d;                     /* Pointer to next output data value */ \
    Xtype *v;                     /* Pointer to next output variance value */ \
+   astDECLARE_GLOBALS            /* Thread-specific data */ \
    double *w;                    /* Pointer to next weight value */ \
-   double a;                     /* Weighted mean of input values */ \
    double mwpip;                 /* Mean weight per input pixel */ \
-   double nn;                    /* Effective no. of i/p pixels combined */ \
+   double neff;                  /* Effective number of contributing input pixels */ \
    double sw;                    /* Sum of weights at output pixel */ \
+   double wgt;                   /* Output pixel weight */ \
    int i;                        /* Loop counter for output pixels */ \
    int idim;                     /* Loop counter for coordinate dimensions */ \
    int ipix_out;                 /* Index into output array */ \
@@ -12205,6 +12069,35 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
          } \
       } \
 \
+/* If the AST__NONORM flag has been supplied, check no incompatible flags have \
+   been specified. */ \
+      if( flags & AST__NONORM ) { \
+         if( ( flags & AST__GENVAR ) && astOK ) { \
+            astError( AST__BDPAR, "astRebinSeq"#X"(%s): Incompatible flags " \
+                      "AST__GENVAR and AST__NONORM have been specified " \
+                      "together (programming error).", status, astGetClass( this ) ); \
+         } else if( ( flags & AST__VARWGT ) && astOK ) { \
+            astError( AST__BDPAR, "astRebinSeq"#X"(%s): Incompatible flags " \
+                      "AST__VARWGT and AST__NONORM have been specified " \
+                      "together (programming error).", status, astGetClass( this ) ); \
+         } else if( ( flags & AST__CONSERVEFLUX ) && astOK ) { \
+            astError( AST__BDPAR, "astRebinSeq"#X"(%s): Incompatible flags " \
+                      "AST__CONSERVEFLUX and AST__NONORM have been specified " \
+                      "together (programming error).", status, astGetClass( this ) ); \
+         } \
+\
+/* If the AST__NONORM flag has not been supplied, check that a weights array \
+   and nused pointer have been supplied. */ \
+      } else if( !weights ){ \
+         astError( AST__BDPAR, "astRebinSeq"#X"(%s): No weights array " \
+                   "supplied (programming error).", status, \
+                   astGetClass( this )  ); \
+      } else if( !nused ){ \
+         astError( AST__BDPAR, "astRebinSeq"#X"(%s): No 'nused' pointer " \
+                   "supplied (programming error).", status, \
+                   astGetClass( this )  ); \
+      } \
+\
 /* If OK, loop to determine how many input pixels are to be binned. */ \
       npix = 1; \
       unsimplified_mapping = this; \
@@ -12236,42 +12129,43 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
 \
 /* If required, initialise the output arrays to hold zeros. */ \
       if( flags & AST__REBININIT ) { \
-         w = weights; \
          d = out; \
          if( out_var ) { \
             v = out_var; \
-            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, d++, v++, w++ ) { \
+            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, d++, v++ ) { \
                *d = 0; \
                *v = 0; \
-               *w = 0; \
             } \
          } else { \
-            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, d++, w++ ) { \
+            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, d++ ) { \
                *d = 0; \
-               *w = 0; \
             } \
          } \
-         if( flags & AST__GENVAR ) { \
-            w = weights + npix_out; \
-            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, w++ ) *w = 0; \
+         if( weights ) { \
+            w = weights; \
+            for( ipix_out = 0; ipix_out < npix_out; ipix_out++, w++ ) { \
+               *w = 0; \
+            } \
+            if( flags & AST__GENVAR ) { \
+               for( ipix_out = 0; ipix_out < npix_out; ipix_out++, w++ ) *w = 0; \
+            } \
          } \
-         *nused = 0; \
+         if( nused ) *nused = 0; \
       } \
 \
-/* Perform the rebinning. Note that we pass all gridded data, the \
-   spread function and the bad pixel value by means of pointer \
-   types that obscure the underlying data type. This is to avoid \
-   having to replicate functions unnecessarily for each data \
-   type. However, we also pass an argument that identifies the data \
-   type we have obscured. */ \
-      RebinAdaptively( simple, ndim_in, lbnd_in, ubnd_in, \
-                       (const void *) in, (const void *) in_var, \
-                       TYPE_##X, spread, \
-                       params, flags, tol, maxpix, \
-                       (const void *) &badval, \
-                       ndim_out, lbnd_out, ubnd_out, \
-                       lbnd, ubnd, npix_out, \
-                       (void *) out, (void *) out_var, weights, nused, status ); \
+/* Paste the input values into the supplied output arrays. */ \
+      if( RebinAdaptively( simple, ndim_in, lbnd_in, ubnd_in, \
+                          (const void *) in, (const void *) in_var, \
+                          TYPE_##X, spread, params, flags, \
+                          tol, maxpix, (const void *) &badval, \
+                          ndim_out, lbnd_out, ubnd_out, lbnd, \
+                          ubnd, npix_out, (void *) out, \
+                          (void *) out_var, weights, nused, status ) ) { \
+         astError( AST__CNFLX, "astRebinSeq"#X"(%s): Flux conservation was " \
+                   "requested but could not be performed because the " \
+                   "forward transformation of the supplied Mapping " \
+                   "is too non-linear.", status, astGetClass( this ) ); \
+      } \
 \
 /* Annul the pointer to the simplified/cloned Mapping. */ \
       simple = astAnnul( simple ); \
@@ -12279,87 +12173,85 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
    } \
 \
 /* If required, finalise the sequence. */ \
-   if( flags & AST__REBINEND ) { \
+   if( ( flags & AST__REBINEND ) && !( flags & AST__NONORM ) && \
+       weights && nused ) { \
 \
 /* Ensure "wlim" is not zero. */ \
       if( wlim < 1.0E-10 ) wlim = 1.0E-10; \
 \
-/* Find the average weight per input pixel, if we do not already know it \
-   to be 1.0. Also scale "wlim" by the mean weight. */ \
-      if( flags & AST__VARWGT ) { \
-         if( *nused > 0 ) { \
-            sw = 0.0; \
-            for( i = 0; i < npix_out; i++ ) { \
-               sw += weights[ i ]; \
-            } \
-            mwpip = sw/( *nused ); \
-         } else { \
-            mwpip = AST__BAD; \
-         } \
-         wlim *= mwpip; \
-\
-      } else { \
-         mwpip = 1.0; \
-      } \
-\
-/* If required set the output variances so that they are estimates of \
-   the variance on the mean of the distribution of input values. */ \
-      if( ( flags & AST__GENVAR ) && !( flags & AST__DISVAR ) ) { \
-\
-/* Calculate the variance. We apply a factor that accounts for the \
-   reduction in the number of degrees of freedom when finding the \
-   variance. This factor is based on the number of input values included \
-   in each output value, and is taken to be the output weight dividided \
-   by the mean weight per input pixel. */ \
+/* If it will be needed, find the average weight per input pixel. */ \
+      if( !( flags & AST__GENVAR ) && *nused > 0 ) { \
+         sw = 0.0; \
          for( i = 0; i < npix_out; i++ ) { \
-            sw = weights[ i ]; \
-            nn = ( mwpip != AST__BAD ) ? sw/mwpip : 0.0; \
-            if( nn > 2.0 && fabs( sw ) >= wlim ) { \
-               a = out[ i ]/sw; \
-               out_var[ i ] = ( out_var[ i ]/sw - a*a )*weights[ i + npix_out ]; \
-               if( out_var[ i ] < 0.0 ) { \
-                  out_var[ i ] = badval; \
-               } else { \
-                  out_var[ i ] *= nn/( nn - 1.0 ); \
-               } \
-            } else { \
-               out_var[ i ] = badval; \
-            } \
+            sw += weights[ i ]; \
          } \
+         mwpip = sw/( *nused ); \
+       } else { \
+         mwpip = AST__BAD; \
+       } \
 \
-/* If required set the output variances so that they are estimates of \
-   the variance of the distribution of input values. */ \
-      } else if( flags & AST__GENVAR ) { \
-         for( i = 0; i < npix_out; i++ ) { \
-            sw = weights[ i ]; \
-            if( fabs( sw ) >= wlim ) { \
-               a = out[ i ]; \
-               out_var[ i ] = ( sw*out_var[ i ] - a*a ); \
-               if( out_var[ i ] < 0.0 ) out_var[ i ] = badval; \
-            } else { \
-               out_var[ i ] = badval; \
-            } \
-         } \
-      } \
-\
-/* Normalise the returned data and variance arrays. */ \
+/* Normalise each output pixel. */ \
       for( i = 0; i < npix_out; i++ ) { \
-         if( fabs( weights[ i ] ) >= wlim && out[ i ] != badval ) { \
-            out[ i ] /= weights[ i ]; \
-         } else { \
-            out[ i ] = badval; \
-         } \
-      } \
-      if( out_var ) { \
-         for( i = 0; i < npix_out; i++ ) { \
-            if( fabs( weights[ i ] ) >= wlim && out_var[ i ] != badval ) { \
-               out_var[ i ] /= ( weights[ i ]*weights[ i ] ); \
+\
+/* Find the effective number of input samples that contribute to the \
+   output sample. To do this properly requires the sum of the squared \
+   weights in each output pixel, but this is only available if AST__GENVAR \
+   flag is in use. In order to avoid changing the API for astRebinSeq, we \
+   honour this long-standing restriction, and use an approximation if \
+   AST__GENVAR is not in use. */ \
+         wgt = weights[ i ]; \
+         if( flags & AST__GENVAR ) { \
+            if( wgt > 0.0 && weights[ i + npix_out ] > 0 ) { \
+               neff = (wgt*wgt)/weights[ i + npix_out ]; \
             } else { \
-               out_var[ i ] = badval; \
+               neff = 0.0; \
+            } \
+\
+/* If the sum of the squared weights is not available, compare the weight \
+   for this output pixel with the mean weight per input pixel. */ \
+         } else { \
+            neff = wgt/mwpip; \
+         } \
+\
+/* Assign bad values to unused output pixels. */ \
+         if( neff < wlim || neff == 0.0 ) { \
+            out[ i ] = badval;  \
+            if( out_var ) out_var[ i ] = badval; \
+\
+/* Otherwise, normalise the returned data value. No need to check "wgt" \
+   since it must be larger than zero since neff is larger than wlim. */ \
+         } else { \
+            out[ i ] /= wgt; \
+\
+/* Normalise the returned variance: propagated from input variances... */ \
+            if( out_var ) { \
+               if( flags & AST__USEVAR ) { \
+                  out_var[ i ] /= wgt*wgt; \
+\
+/* Normalise the returned variance: from spread of input values... */ \
+               } else if( flags & AST__GENVAR && neff > 1.0 ) {  \
+                  out_var[ i ] /= wgt; \
+                  out_var[ i ] -= out[ i ]*out[ i ]; \
+                  if( out_var[ i ] < 0.0 ) out_var[ i ] = 0.0; \
+\
+/* If output variances are estimates of the variance of the distribution \
+   from which the input values were sampled... */ \
+                  if( flags & AST__DISVAR ) { \
+                     out_var[ i ] *= neff/( neff - 1.0 ); \
+\
+/* If output variances are estimates of the error on the mean data value... */ \
+                  } else { \
+                     out_var[ i ] *= 1.0/( neff - 1.0 ); \
+                  } \
+\
+               } else { \
+                  out_var[ i ] = badval; \
+               } \
             } \
          } \
       } \
    } \
+\
 }
 
 /* Expand the above macro to generate a function for each required
@@ -12372,13 +12264,13 @@ MAKE_REBINSEQ(F,float,0)
 MAKE_REBINSEQ(I,int,1)
 
 /* Undefine the macro. */
-#undef MAKE_REBIN
+#undef MAKE_REBINSEQ
 
-static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
+static int RebinWithBlocking( AstMapping *this, const double *linear_fit,
                                int ndim_in, const int *lbnd_in,
                                const int *ubnd_in, const void *in,
-                               const void *in_var, DataType type, int spread,
-                               const double *params, int flags,
+                               const void *in_var, DataType type,
+                               int spread, const double *params, int flags,
                                const void *badval_ptr, int ndim_out,
                                const int *lbnd_out, const int *ubnd_out,
                                const int *lbnd, const int *ubnd, int npix_out,
@@ -12396,16 +12288,16 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
 
 *  Synopsis:
 *     #include "mapping.h"
-*     void RebinWithBlocking( AstMapping *this, const double *linear_fit,
+*     int RebinWithBlocking( AstMapping *this, const double *linear_fit,
 *                             int ndim_in, const int *lbnd_in,
 *                             const int *ubnd_in, const void *in,
-*                             const void *in_var, DataType type, int spread,
-*                             const double *params, int flags,
+*                             const void *in_var, DataType type,
+*                             int spread, const double *params, int flags,
 *                             const void *badval_ptr, int ndim_out,
 *                             const int *lbnd_out, const int *ubnd_out,
 *                             const int *lbnd, const int *ubnd, int npix_out,
 *                             void *out, void *out_var, double *work,
-*                             int *nused )
+*                             int *nused, int *status )
 
 *  Class Membership:
 *     Mapping member function.
@@ -12567,6 +12459,12 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
 *        An optional pointer to an int which will be incremented by the
 *        number of input values pasted into the output array. Ignored if NULL.
 
+*  Returned Value:
+*     A non-zero value is returned if "flags" included AST__CONSERVEFLUX (i.e.
+*     flux conservation was requested), but the supplied linear fit to the
+*     forward transformation of the Mapping had zero determinant (no error
+*     is reported if this happens). Zero is returned otherwise.
+
 */
 
 /* Local Constants: */
@@ -12575,6 +12473,7 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
                                     performance) */
 
 /* Local Variables: */
+   double factor;                /* Flux conservation factor */
    int *dim_block;               /* Pointer to array of block dimensions */
    int *lbnd_block;              /* Pointer to block lower bound array */
    int *ubnd_block;              /* Pointer to block upper bound array */
@@ -12585,9 +12484,13 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
    int lolim;                    /* Lower limit on maximum block dimension */
    int mxdim_block;              /* Maximum block dimension */
    int npix;                     /* Number of pixels in block */
+   int result;                   /* Returned value */
+
+/* Initialise */
+   result = 0;
 
 /* Check the global error status. */
-   if ( !astOK ) return;
+   if ( !astOK ) return result;
 
 /* Allocate workspace. */
    lbnd_block = astMalloc( sizeof( int ) * (size_t) ndim_in );
@@ -12663,16 +12566,33 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
                                     ubnd[ idim ], status );
       }
 
+/* Determine the flux conservation constant if needed. */
+/* --------------------------------------------------- */
+      factor = 1.0;
+      if( flags & AST__CONSERVEFLUX ) {
+         if( linear_fit ) {
+            factor = MatrixDet( ndim_out, ndim_in, linear_fit + ndim_out,
+                                status );
+            if( factor != 0.0 ) {
+               factor = 1.0/factor;
+            } else {
+               result = 1;
+            }
+         } else {
+            result = 1;
+         }
+      }
+
 /* Rebin each block of input pixels. */
 /* --------------------------------- */
 /* Loop to generate the extent of each block of input pixels and to
-   resample them. */
-      done = 0;
+   rebin them. */
+      done = result;
       while ( !done && astOK ) {
 
 /* Rebin the current block, accumulating the sum of bad pixels produced. */
          RebinSection( this, linear_fit, ndim_in, lbnd_in, ubnd_in, in,
-                       in_var, type, spread, params, flags, badval_ptr,
+                       in_var, factor, type, spread, params, flags, badval_ptr,
                        ndim_out, lbnd_out, ubnd_out, lbnd_block, ubnd_block,
                        npix_out, out, out_var, work, nused, status );
 
@@ -12713,6 +12633,9 @@ static void RebinWithBlocking( AstMapping *this, const double *linear_fit,
    lbnd_block = astFree( lbnd_block );
    ubnd_block = astFree( ubnd_block );
    dim_block = astFree( dim_block );
+
+/* Return a flag indicating if there was an error conserving flux. */
+   return result;
 }
 
 static AstMapping *RemoveRegions( AstMapping *this, int *status ) {
@@ -12927,7 +12850,7 @@ c     #include "mapping.h"
 c     int astResample<X>( AstMapping *this, int ndim_in,
 c                         const int lbnd_in[], const int ubnd_in[],
 c                         const <Xtype> in[], const <Xtype> in_var[],
-c                         int interp, void (* finterp)(),
+c                         int interp, void (* finterp)( void ),
 c                         const double params[], int flags,
 c                         double tol, int maxpix,
 c                         <Xtype> badval, int ndim_out,
@@ -13696,7 +13619,7 @@ f     in the Fortran interface to AST.)
 *     pixel value to be scaled by the ratio of the output pixel size to
 *     the input pixel size.
 *
-*     This flag can only be used if the Mapping is succesfully approximated
+*     This flag can only be used if the Mapping is successfully approximated
 *     by one or more linear transformations. Thus an error will be reported
 *     if it used when the
 c     "tol" parameter
@@ -13717,12 +13640,6 @@ f     TOL argument
 *
 *     Note, this flag cannot be used in conjunction with the AST__NOBAD
 *     flag (an error will be reported if both flags are specified).
-*
-*     Flux conservation can only be approximate when using a resampling
-*     algorithm. For accurate flux conservation use the
-c     astRebin<X> or astRebinSeq<X> function
-f     AST_REBIN<X> or AST_REBINSEQ<X> routine
-*     instead.
 
 *  Propagation of Missing Data:
 *     Unless the AST__NOBAD flag is specified, instances of missing data
@@ -13792,7 +13709,7 @@ f     BADVAL
 static int Resample##X( AstMapping *this, int ndim_in, \
                         const int lbnd_in[], const int ubnd_in[], \
                         const Xtype in[], const Xtype in_var[], \
-                        int interp, void (* finterp)(), \
+                        int interp, void (* finterp)( void ), \
                         const double params[], int flags, double tol, \
                         int maxpix, Xtype badval, \
                         int ndim_out, const int lbnd_out[], \
@@ -14024,7 +13941,7 @@ MAKE_RESAMPLE(UB,unsigned char)
 static int ResampleAdaptively( AstMapping *this, int ndim_in,
                                const int *lbnd_in, const int *ubnd_in,
                                const void *in, const void *in_var,
-                               DataType type, int interp, void (* finterp)(),
+                               DataType type, int interp, void (* finterp)( void ),
                                const double *params, int flags, double tol,
                                int maxpix, const void *badval_ptr,
                                int ndim_out, const int *lbnd_out,
@@ -14045,7 +13962,7 @@ static int ResampleAdaptively( AstMapping *this, int ndim_in,
 *     int ResampleAdaptively( AstMapping *this, int ndim_in,
 *                             const int *lbnd_in, const int *ubnd_in,
 *                             const void *in, const void *in_var,
-*                             DataType type, int interp, void (* finterp)(),
+*                             DataType type, int interp, void (* finterp)( void ),
 *                             const double *params, int flags, double tol,
 *                             int maxpix, const void *badval_ptr,
 *                             int ndim_out, const int *lbnd_out,
@@ -14463,7 +14380,7 @@ static int ResampleSection( AstMapping *this, const double *linear_fit,
                             int ndim_in,
                             const int *lbnd_in, const int *ubnd_in,
                             const void *in, const void *in_var,
-                            DataType type, int interp, void (* finterp)(),
+                            DataType type, int interp, void (* finterp)( void ),
                             const double *params, double factor, int flags,
                             const void *badval_ptr, int ndim_out,
                             const int *lbnd_out, const int *ubnd_out,
@@ -14484,7 +14401,7 @@ static int ResampleSection( AstMapping *this, const double *linear_fit,
 *     int ResampleSection( AstMapping *this, const double *linear_fit,
 *                          int ndim_in, const int *lbnd_in, const int *ubnd_in,
 *                          const void *in, const void *in_var,
-*                          DataType type, int interp, void (* finterp)(),
+*                          DataType type, int interp, void (* finterp)( void ),
 *                          const double *params, double factor, int flags,
 *                          const void *badval_ptr, int ndim_out,
 *                          const int *lbnd_out, const int *ubnd_out,
@@ -14698,7 +14615,7 @@ static int ResampleSection( AstMapping *this, const double *linear_fit,
    int result;                   /* Result value to be returned */
    int s;                        /* Temporary variable for strides */
    int usevar;                   /* Process variance array? */
-   void (* gifunc)();            /* General interpolation function */
+   void (* gifunc)( void );      /* General interpolation function */
    void (* kernel)( double, const double [], int, double *, int * ); /* Kernel fn. */
    void (* fkernel)( double, const double [], int, double * ); /* User kernel fn. */
 
@@ -15374,13 +15291,13 @@ static int ResampleSection( AstMapping *this, const double *linear_fit,
 /* Block averaging interpolation. */ \
 /* ------------------------------ */ \
                      case AST__BLOCKAVE: \
-                        gifunc = (void (*)()) InterpolateBlockAverage##X; \
+                        gifunc = (void (*)( void )) InterpolateBlockAverage##X; \
                         break; \
 \
 /* User-supplied sub-pixel interpolation function. */ \
 /* ----------------------------------------------- */ \
                      case AST__UINTERP: \
-                        gifunc = (void (*)()) finterp; \
+                        gifunc = (void (*)( void )) finterp; \
                         break; \
                   } \
 \
@@ -15535,7 +15452,7 @@ static int ResampleWithBlocking( AstMapping *this, const double *linear_fit,
                                  int ndim_in,
                                  const int *lbnd_in, const int *ubnd_in,
                                  const void *in, const void *in_var,
-                                 DataType type, int interp, void (* finterp)(),
+                                 DataType type, int interp, void (* finterp)( void ),
                                  const double *params, int flags,
                                  const void *badval_ptr, int ndim_out,
                                  const int *lbnd_out, const int *ubnd_out,
@@ -15557,7 +15474,7 @@ static int ResampleWithBlocking( AstMapping *this, const double *linear_fit,
 *                               int ndim_in,
 *                               const int *lbnd_in, const int *ubnd_in,
 *                               const void *in, const void *in_var,
-*                               DataType type, int interp, void (* finterp)(),
+*                               DataType type, int interp, void (* finterp)( void ),
 *                               const double *params, int flags,
 *                               const void *badval_ptr, int ndim_out,
 *                               const int *lbnd_out, const int *ubnd_out,
@@ -15838,7 +15755,7 @@ static int ResampleWithBlocking( AstMapping *this, const double *linear_fit,
 /* Determine the flux conservation constant if needed. */
 /* --------------------------------------------------- */
    if( ( flags & AST__CONSERVEFLUX ) && linear_fit ) {
-      factor = MatrixDet( ndim_in, linear_fit + ndim_in, status );
+      factor = MatrixDet( ndim_in, ndim_out, linear_fit + ndim_in, status );
    } else {
       factor = 1.0;
    }
@@ -16926,13 +16843,14 @@ static int SpecialBounds( const MapData *mapdata, double *lbnd, double *ubnd,
 *     void SpreadKernel1<X>( AstMapping *this, int ndim_out,
 *                           const int *lbnd_out, const int *ubnd_out,
 *                           const <Xtype> *in, const <Xtype> *in_var,
-*                           int npoint, const int *offset,
+*                           double infac, int npoint, const int *offset,
 *                           const double *const *coords,
 *                           void (* kernel)( double, const double [], int,
 *                                            double *, int * ),
 *                           int neighb, const double *params, int flags,
-*                           <Xtype> badval, int npix_out,  <Xtype> *out,
-*                           <Xtype> *out_var, double *work, int *nused )
+*                           <Xtype> badval, int npix_out, <Xtype> *out,
+*                           <Xtype> *out_var, double *work, int *nused,
+*                           int *status )
 
 *  Class Membership:
 *     Mapping member function.
@@ -16997,6 +16915,8 @@ static int SpecialBounds( const MapData *mapdata, double *lbnd, double *ubnd,
 *
 *        If no variance estimates are required, a NULL pointer should
 *        be given.
+*     infac
+*        A factor by which to multiply the input data values before use.
 *     npoint
 *        The number of input points which are to be rebinned.
 *     offset
@@ -17094,7 +17014,7 @@ static int SpecialBounds( const MapData *mapdata, double *lbnd, double *ubnd,
 static void SpreadKernel1##X( AstMapping *this, int ndim_out, \
                               const int *lbnd_out, const int *ubnd_out, \
                               const Xtype *in, const Xtype *in_var, \
-                              int npoint, const int *offset, \
+                              double infac, int npoint, const int *offset, \
                               const double *const *coords, \
                               void (* kernel)( double, const double [], \
                                                int, double *, int * ), \
@@ -17116,6 +17036,7 @@ static void SpreadKernel1##X( AstMapping *this, int ndim_out, \
    double *wtprod;               /* Accumulated weight value array pointer */ \
    double *xfilter;              /* Pointer to 1d array of x axis filter values */ \
    double *xnl;                  /* Pointer to previous ofset array (n-d) */ \
+   double pfac;                  /* Input weight with extra supplied factor */ \
    double pixwt;                 /* Weight to apply to individual pixel */ \
    double sum;                   /* Sum of all filter values */ \
    double wgt;                   /* Weight for input value */ \
@@ -17554,15 +17475,21 @@ static void SpreadKernel1##X( AstMapping *this, int ndim_out, \
 \
 /* Retrieve the weight for the current output pixel and normalise it. */ \
                pixwt = wgt*filter[ jx ]; \
+               pfac = pixwt*infac; \
 \
 /* Update the output pixel with the required fraction of the input pixel \
    value. */ \
-               c = CONV(IntType,in_val*pixwt); \
-               out[ off_out ] += c; \
-               if( work ) work[ off_out ] += pixwt; \
+               c = CONV(IntType,pfac*in_val); \
+\
+               if( work ) { \
+                  out[ off_out ] += c; \
+                  work[ off_out ] += pixwt; \
+               } else {\
+                  out[ off_out ] += c; \
+               } \
 \
                if ( Usevar ) { \
-                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pixwt*pixwt); \
+                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
                } else if ( Genvar && pixwt != 0.0 ) { \
                   out_var[ off_out ] += c*c/pixwt; \
                   work[ off_out + npix_out ] += pixwt*pixwt; \
@@ -17819,11 +17746,14 @@ static void SpreadKernel1##X( AstMapping *this, int ndim_out, \
 \
 /* Update the output pixel with the required fraction of the input pixel \
    value. */ \
-                     c = CONV(IntType,in_val*pixwt); \
+                     pfac = pixwt*infac; \
+                     c = CONV(IntType,pfac*in_val); \
+\
                      out[ off_out ] += c; \
                      if( work ) work[ off_out ] += pixwt; \
+\
                      if ( Usevar ) { \
-                        out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pixwt*pixwt); \
+                        out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
                      } else if ( Genvar && pixwt != 0.0 ) { \
                         out_var[ off_out ] += c*c/pixwt; \
                         work[ off_out + npix_out ] += pixwt*pixwt; \
@@ -18084,11 +18014,18 @@ static void SpreadKernel1##X( AstMapping *this, int ndim_out, \
 \
 /* Update the output pixel with the required fraction of the input pixel \
    value. */ \
-               c = CONV(IntType,in_val*pixwt); \
-               out[ off_out ] += c; \
-               if( work ) work[ off_out ] += pixwt; \
+               pfac = pixwt*infac; \
+               c = CONV(IntType,pfac*in_val); \
+\
+               if( work ) { \
+                  out[ off_out ] += c; \
+                  work[ off_out ] += pixwt; \
+               } else {\
+                  out[ off_out ] += c; \
+               } \
+\
                if ( Usevar ) { \
-                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pixwt*pixwt); \
+                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
                } else if ( Genvar && pixwt != 0.0 ) { \
                   out_var[ off_out ] += c*c/pixwt; \
                   work[ off_out + npix_out ] += pixwt*pixwt; \
@@ -18153,7 +18090,7 @@ MAKE_SPREAD_KERNEL1(I,int,1)
 *     void SpreadLinear<X>( int ndim_out,
 *                           const int *lbnd_out, const int *ubnd_out,
 *                           const <Xtype> *in, const <Xtype> *in_var,
-*                           int npoint, const int *offset,
+*                           double infac, int npoint, const int *offset,
 *                           const double *const *coords, int flags,
 *                           <Xtype> badval, int npix_out, <Xtype> *out,
 *                           <Xtype> *out_var, double *work, int *nused  )
@@ -18215,6 +18152,8 @@ MAKE_SPREAD_KERNEL1(I,int,1)
 *
 *        If no variance estimates are required, a NULL pointer should
 *        be given.
+*     infac
+*        A factor by which to multiply the input data values before use.
 *     npoint
 *        The number of input points which are to be rebinned.
 *     offset
@@ -18296,7 +18235,7 @@ MAKE_SPREAD_KERNEL1(I,int,1)
 static void SpreadLinear##X( int ndim_out, \
                             const int *lbnd_out, const int *ubnd_out, \
                             const Xtype *in, const Xtype *in_var, \
-                            int npoint, const int *offset, \
+                            double infac, int npoint, const int *offset, \
                             const double *const *coords, int flags, \
                             Xtype badval, int npix_out, Xtype *out, \
                             Xtype *out_var, double *work, int *nused, int *status ) { \
@@ -18310,11 +18249,12 @@ static void SpreadLinear##X( int ndim_out, \
    double *wtprod;               /* Array of accumulated weights pointer */ \
    double *xn_max;               /* Pointer to upper limits array (n-d) */ \
    double *xn_min;               /* Pointer to lower limits array (n-d) */ \
-   double f;                     /* Total pixel weight */ \
    double frac_hi_x;             /* Pixel weight (x dimension) */ \
    double frac_hi_y;             /* Pixel weight (y dimension) */ \
    double frac_lo_x;             /* Pixel weight (x dimension) */ \
    double frac_lo_y;             /* Pixel weight (y dimension) */ \
+   double pfac;                  /* Scaled pixel weight */ \
+   double pixwt;                 /* Total pixel weight */ \
    double wgt;                   /* Weight for input value */ \
    double x;                     /* x coordinate value */ \
    double xmax;                  /* x upper limit */ \
@@ -18629,23 +18569,25 @@ static void SpreadLinear##X( int ndim_out, \
    lies within the output grid. Where it does, update the output pixel \
    with the required fraction of the input pixel value. */ \
          if ( lo_x >= lbnd_out[ 0 ] ) { \
-            c = CONV(IntType,in_val*frac_lo_x); \
-            out[ off_lo ] += c; \
+            pfac = frac_lo_x*infac; \
+            c = CONV(IntType,pfac*in_val); \
+            out[ off_lo ] += CONV(IntType, c ); \
             if( work ) work[ off_lo ] += frac_lo_x; \
             if ( Usevar ) { \
-               out_var[ off_lo ] += CONV(IntType,in_var[ off_in ]*frac_lo_x*frac_lo_x); \
+               out_var[ off_lo ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
             } else if ( Genvar && frac_lo_x != 0.0 ) { \
                out_var[ off_lo ] += c*c/frac_lo_x; \
                work[ off_lo + npix_out ] += frac_lo_x*frac_lo_x; \
             } \
          } \
          if ( hi_x <= ubnd_out[ 0 ] ) { \
-            c = CONV(IntType,in_val*frac_hi_x); \
-            out[ off_lo + 1 ] += c; \
+            pfac = frac_hi_x*infac; \
+            c = CONV(IntType,pfac*in_val); \
+            out[ off_lo + 1 ] += CONV(IntType, c ); \
             if( work ) work[ off_lo + 1 ] += frac_hi_x; \
             if ( Usevar ) { \
-               out_var[ off_lo + 1 ] += CONV(IntType,in_var[ off_in ]*frac_hi_x*frac_hi_x); \
-            } else if( Genvar && frac_hi_x != 0.0 ) { \
+               out_var[ off_lo + 1 ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+            } else if ( Genvar && frac_hi_x != 0.0 ) { \
                out_var[ off_lo + 1 ] += c*c/frac_hi_x; \
                work[ off_lo + 1 + npix_out ] += frac_hi_x*frac_hi_x; \
             } \
@@ -18738,56 +18680,60 @@ static void SpreadLinear##X( int ndim_out, \
    with the required fraction of the input pixel value. */ \
             if ( lo_y >= lbnd_out[ 1 ] ) { \
                if ( lo_x >= lbnd_out[ 0 ] ) { \
-                  f = frac_lo_x * frac_lo_y; \
-                  c = CONV(IntType,in_val*f); \
-                  out[ off_lo ] += c; \
-                  if( work ) work[ off_lo ] += f; \
+                  pixwt = frac_lo_x * frac_lo_y; \
+                  pfac = pixwt*infac; \
+                  c = CONV(IntType,pfac*in_val); \
+                  out[ off_lo ] += CONV(IntType, c ); \
+                  if( work ) work[ off_lo ] += pixwt; \
                   if ( Usevar ) { \
-                     out_var[ off_lo ] += CONV(IntType,in_var[ off_in ]*f*f); \
-                  } else if ( Genvar && f != 0.0 ) { \
-                     out_var[ off_lo ] += c*c/f; \
-                     work[ off_lo + npix_out ] += f*f; \
+                     out_var[ off_lo ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+                  } else if ( Genvar && pixwt != 0.0 ) { \
+                     out_var[ off_lo ] += c*c/pixwt; \
+                     work[ off_lo + npix_out ] += pixwt*pixwt; \
                   } \
                } \
                if ( hi_x <= ubnd_out[ 0 ] ) { \
-                  f = frac_hi_x * frac_lo_y; \
                   off = off_lo + 1; \
-                  c = CONV(IntType,in_val*f); \
-                  out[ off ] += c; \
-                  if( work ) work[ off ] += f; \
+                  pixwt = frac_hi_x * frac_lo_y; \
+                  pfac = pixwt*infac; \
+                  c = CONV(IntType,pfac*in_val); \
+                  out[ off ] += CONV(IntType, c ); \
+                  if( work ) work[ off ] += pixwt; \
                   if ( Usevar ) { \
-                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*f*f); \
-                  } else if ( Genvar && f != 0.0 ) { \
-                     out_var[ off ] += c*c/f; \
-                     work[ off + npix_out ] += f*f; \
+                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+                  } else if ( Genvar && pixwt != 0.0 ) { \
+                     out_var[ off ] += c*c/pixwt; \
+                     work[ off + npix_out ] += pixwt*pixwt; \
                   } \
                } \
             } \
             if ( hi_y <= ubnd_out[ 1 ] ) { \
                if ( lo_x >= lbnd_out[ 0 ] ) { \
-                  f = frac_lo_x * frac_hi_y; \
                   off = off_lo + ystride; \
-                  c = CONV(IntType,in_val*f); \
-                  out[ off ] += c; \
-                  if( work ) work[ off ] += f; \
+                  pixwt = frac_lo_x * frac_hi_y; \
+                  pfac = pixwt*infac; \
+                  c = CONV(IntType,pfac*in_val); \
+                  out[ off ] += CONV(IntType, c ); \
+                  if( work ) work[ off ] += pixwt; \
                   if ( Usevar ) { \
-                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*f*f ); \
-                  } else if ( Genvar && f != 0.0 ) { \
-                     out_var[ off ] += c*c/f; \
-                     work[ off + npix_out ] += f*f; \
+                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+                  } else if ( Genvar && pixwt != 0.0 ) { \
+                     out_var[ off ] += c*c/pixwt; \
+                     work[ off + npix_out ] += pixwt*pixwt; \
                   } \
                } \
                if ( hi_x <= ubnd_out[ 0 ] ) { \
-                  f = frac_hi_x * frac_hi_y; \
                   off = off_lo + ystride + 1; \
-                  c = CONV(IntType,in_val*f); \
-                  out[ off ] += c; \
-                  if( work ) work[ off ] += f; \
+                  pixwt = frac_hi_x * frac_hi_y; \
+                  pfac = pixwt*infac; \
+                  c = CONV(IntType,pfac*in_val); \
+                  out[ off ] += CONV(IntType, c ); \
+                  if( work ) work[ off ] += pixwt; \
                   if ( Usevar ) { \
-                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*f*f); \
-                  } else if ( Genvar && f != 0.0 ) { \
-                     out_var[ off ] += c*c/f; \
-                     work[ off + npix_out ] += f*f; \
+                     out_var[ off ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+                  } else if ( Genvar && pixwt != 0.0 ) { \
+                     out_var[ off ] += c*c/pixwt; \
+                     work[ off + npix_out ] += pixwt*pixwt; \
                   } \
                } \
             } \
@@ -18900,15 +18846,16 @@ static void SpreadLinear##X( int ndim_out, \
 /* Update the relevent output pixel. The pixel weight is formed by including \
    the weight factor for dimension zero, since this is not included in \
    the "wtprod" array. */ \
-               f = wtprod[ 0 ] * wt[ 0 ]; \
-               c = CONV(IntType,in_val*f); \
-               out[ off_out ] += c; \
-               if( work ) work[ off_out ] += f; \
+               pixwt = wtprod[ 0 ] * wt[ 0 ]; \
+               pfac = pixwt*infac; \
+               c = CONV(IntType,pfac*in_val); \
+               out[ off_out ] += CONV(IntType, c ); \
+               if( work ) work[ off_out ] += pixwt; \
                if ( Usevar ) { \
-                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*f*f); \
-               } else if ( Genvar && f != 0.0 ) { \
-                  out_var[ off_out ] += c*c/f; \
-                  work[ off_out + npix_out ] += f*f; \
+                  out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
+               } else if ( Genvar && pixwt != 0.0 ) { \
+                  out_var[ off_out ] += c*c/pixwt; \
+                  work[ off_out + npix_out ] += pixwt*pixwt; \
                } \
 \
 /* Now update the indices, offset and weight factors to refer to the \
@@ -18976,13 +18923,13 @@ MAKE_SPREAD_LINEAR(I,int,1)
 
 *  Synopsis:
 *     #include "mapping.h"
-*     void SpreadNearest<X>( int ndim_out,
-*                           const int *lbnd_out, const int *ubnd_out,
-*                           const <Xtype> *in, const <Xtype> *in_var,
-*                           int npoint, const int *offset,
-*                           const double *const *coords, int flags,
-*                           <Xtype> badval, int npix_out, <Xtype> *out,
-*                           <Xtype> *out_var, double *work, int *nused )
+*     void SpreadNearest<X>( int ndim_out, const int *lbnd_out,
+*                            const int *ubnd_out, const <Xtype> *in,
+*                            const <Xtype> *in_var, double infac, int npoint,
+*                            const int *offset, const double *const *coords,
+*                            int flags, <Xtype> badval, int npix_out, <Xtype> *out,
+*                            <Xtype> *out_var, double *work, int *nused,
+*                            int *status )
 
 *  Class Membership:
 *     Mapping member function.
@@ -19039,6 +18986,8 @@ MAKE_SPREAD_LINEAR(I,int,1)
 *
 *        If no variance estimates are required, a NULL pointer should
 *        be given.
+*     infac
+*        A factor by which to multiply the input data values before use.
 *     npoint
 *        The number of input points which are to be rebinned.
 *     offset
@@ -19124,7 +19073,7 @@ MAKE_SPREAD_LINEAR(I,int,1)
 static void SpreadNearest##X( int ndim_out, \
                              const int *lbnd_out, const int *ubnd_out, \
                              const Xtype *in, const Xtype *in_var, \
-                             int npoint, const int *offset, \
+                             double infac, int npoint, const int *offset, \
                              const double *const *coords, int flags, \
                              Xtype badval, int npix_out, Xtype *out, \
                              Xtype *out_var, double *work, int *nused, int *status ) { \
@@ -19134,8 +19083,8 @@ static void SpreadNearest##X( int ndim_out, \
    Xtype in_val;                 /* Input data value */ \
    double *xn_max;               /* Pointer to upper limits array (n-d) */ \
    double *xn_min;               /* Pointer to lower limits array (n-d) */ \
-   double cwgt;                  /* Product of input value and weight */ \
-   double wgt;                   /* Weight for input value */ \
+   double pfac;                  /* Input weight with extra supplied factor */ \
+   double pixwt;                 /* Weight for input value */ \
    double x;                     /* x coordinate value */ \
    double xmax;                  /* x upper limit */ \
    double xmin;                  /* x lower limit */ \
@@ -19401,56 +19350,35 @@ static void SpreadNearest##X( int ndim_out, \
    which contains the current input point. */ \
                   off_out = (int) floor( x + 0.5 ) - lbnd_out[ 0 ]; \
 \
-/* Note the input data value. */ \
-                  c = CONV(IntType,in_val); \
-\
 /* If we are using the input data variances as weights, calculate the \
    weight. */ \
                   if( Varwgt ) { \
-                     wgt = 1.0/in_var[ off_in ]; \
+                     pixwt = 1.0/in_var[ off_in ]; \
+                  } else { \
+                     pixwt = 1.0; \
+                  } \
+\
+/* Get the weighted input data value, including any extra scaling. */ \
+                  pfac = pixwt*infac; \
+                  c = CONV(IntType,pfac*in_val); \
 \
 /* Increment the value of this output pixel by the weighted input pixel \
    value, and increment the sum of the weights. */ \
-                     cwgt = c*wgt; \
-                     out[ off_out ] += CONV(IntType, cwgt ); \
-                     work[ off_out ] += wgt; \
+                  out[ off_out ] += CONV(IntType, c ); \
+                  if( work ) work[ off_out ] += pixwt; \
 \
 /* If output variances are being calculated on the basis of the input \
-   variances, then we also store the sum of the weights in "out_var". */ \
-                     if( Usevar ) { \
-                        out_var[ off_out ] += CONV(IntType,wgt); \
+   variances, then we also store the required sum in "out_var". */ \
+                  if( Usevar ) { \
+                     out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
 \
 /* If output variances are being calculated on the basis of the spread of \
    input values, we need the sum of the squared weighted data values, the \
    sum of the weights (already in the first half of the "work" array), and \
    the sum of the squared weights. */ \
-                     } else if( Genvar ) { \
-                        out_var[ off_out ] += CONV(IntType,c*cwgt); \
-                        work[ off_out + npix_out ] += wgt*wgt; \
-                     } \
-\
-/* Now deal with cases where we are not using the input data varainces as \
-   weights. */ \
-                  } else { \
-\
-/* Increment the value of this output pixel by the input pixel value, and \
-   increment the sum of the weights by 1. */ \
-                     out[ off_out ] += c; \
-                     if( work ) work[ off_out ] += 1.0; \
-\
-/* If output variances are being calculated on the basis of the input \
-   variances, then we increment the variance of this output pixel by the \
-   variance of the input pixel. */ \
-                     if ( Usevar ) { \
-                        out_var[ off_out ] += CONV(IntType,in_var[ off_in ]); \
-\
-/* If output variances are being calculated on the basis of the spread of \
-   input values, we need the sum of the squared data values, and the number \
-   of values summed. */ \
-                     } else if( Genvar ) { \
-                        out_var[ off_out ] += c*c; \
-                        work[ off_out + npix_out ] += 1.0; \
-                     } \
+                  } else if( Genvar && pixwt != 0.0 ) { \
+                     out_var[ off_out ] += c*c/pixwt; \
+                     work[ off_out + npix_out ] += pixwt*pixwt; \
                   } \
                } \
             }
@@ -19514,53 +19442,35 @@ static void SpreadNearest##X( int ndim_out, \
 /* Calculate this pixel's offset from the start of the output array. */ \
                      off_out = ix + ystride * iy; \
 \
-/* Note the input data value. */ \
-                     c = CONV(IntType,in_val); \
-\
 /* If we are using the input data variances as weights, calculate the \
    weight. */ \
                      if( Varwgt ) { \
-                        wgt = 1.0/in_var[ off_in ]; \
+                        pixwt = 1.0/in_var[ off_in ]; \
+                     } else { \
+                        pixwt = 1.0; \
+                     } \
+\
+/* Get the weighted input data value, including any extra scaling. */ \
+                     pfac = pixwt*infac; \
+                     c = CONV(IntType,pfac*in_val); \
 \
 /* Increment the value of this output pixel by the weighted input pixel \
    value, and increment the sum of the weights. */ \
-                        cwgt = c*wgt; \
-                        out[ off_out ] += CONV(IntType, cwgt ); \
-                        work[ off_out ] += wgt; \
+                     out[ off_out ] += CONV(IntType, c ); \
+                     if( work ) work[ off_out ] += pixwt; \
 \
 /* If output variances are being calculated on the basis of the input \
-   variances, then we also store the sum of the weights in "out_var". */ \
-                        if( Usevar ) { \
-                           out_var[ off_out ] += CONV(IntType,wgt); \
+   variances, then we also store the required sum in "out_var". */ \
+                     if( Usevar ) { \
+                        out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
 \
 /* If output variances are being calculated on the basis of the spread of \
    input values, we need the sum of the squared weighted data values, the \
    sum of the weights (already in the first half of the "work" array), and \
    the sum of the squared weights. */ \
-                        } else if( Genvar ) { \
-                           out_var[ off_out ] += CONV(IntType,c*cwgt); \
-                           work[ off_out + npix_out ] += wgt*wgt; \
-                        } \
-\
-/* Now deal with cases where we are not using the input data varainces as \
-   weights. */ \
-                     } else { \
-\
-/* Increment the value of this output pixel by the value of the input pixel. */ \
-                        out[ off_out ] += c; \
-                        if( work ) work[ off_out ] += 1.0; \
-\
-/* If required, also increment the variance of this output pixel by the \
-   variance of the input pixel. */ \
-                        if ( Usevar ) { \
-                           out_var[ off_out ] += CONV(IntType,in_var[ off_in ]); \
-\
-/* Alternatively, if generating output variances from the spread of \
-   input values, form the required sum.*/ \
-                        } else if( Genvar ) { \
-                           out_var[ off_out ] += c*c; \
-                           work[ off_out + npix_out ] += 1.0; \
-                        } \
+                     } else if( Genvar && pixwt != 0.0 ) { \
+                        out_var[ off_out ] += c*c/pixwt; \
+                        work[ off_out + npix_out ] += pixwt*pixwt; \
                      } \
                   } \
                } \
@@ -19627,53 +19537,35 @@ static void SpreadNearest##X( int ndim_out, \
 /* Increment the number of input pixels pasted into the output array. */ \
                      if( nused ) (*nused)++; \
 \
-/* Note the input data value. */ \
-                     c = CONV(IntType,in_val); \
-\
 /* If we are using the input data variances as weights, calculate the \
    weight. */ \
                      if( Varwgt ) { \
-                        wgt = 1.0/in_var[ off_in ]; \
+                        pixwt = 1.0/in_var[ off_in ]; \
+                     } else { \
+                        pixwt = 1.0; \
+                     } \
+\
+/* Get the weighted input data value, including any extra scaling. */ \
+                     pfac = pixwt*infac; \
+                     c = CONV(IntType,pfac*in_val); \
 \
 /* Increment the value of this output pixel by the weighted input pixel \
    value, and increment the sum of the weights. */ \
-                        cwgt = c*wgt; \
-                        out[ off_out ] += CONV(IntType, cwgt ); \
-                        work[ off_out ] += wgt; \
+                     out[ off_out ] += CONV(IntType, c ); \
+                     if( work ) work[ off_out ] += pixwt; \
 \
 /* If output variances are being calculated on the basis of the input \
-   variances, then we also store the sum of the weights in "out_var". */ \
-                        if( Usevar ) { \
-                           out_var[ off_out ] += CONV(IntType,wgt); \
+   variances, then we also store the required sum in "out_var". */ \
+                     if( Usevar ) { \
+                        out_var[ off_out ] += CONV(IntType,in_var[ off_in ]*pfac*pfac); \
 \
 /* If output variances are being calculated on the basis of the spread of \
    input values, we need the sum of the squared weighted data values, the \
    sum of the weights (already in the first half of the "work" array), and \
    the sum of the squared weights. */ \
-                        } else if( Genvar ) { \
-                           out_var[ off_out ] += CONV(IntType,c*cwgt); \
-                           work[ off_out + npix_out ] += wgt*wgt; \
-                        } \
-\
-/* Now deal with cases where we are not using the input data varainces as \
-   weights. */ \
-                     } else { \
-\
-/* Increment the value of this output pixel by the value of the input pixel. */ \
-                        out[ off_out ] += c; \
-                        if( work ) work[ off_out ] += 1.0; \
-\
-/* If required, also increment the variance of this output pixel by the \
-   variance of the input pixel. */ \
-                        if ( Usevar ) { \
-                           out_var[ off_out ] += CONV(IntType,in_var[ off_in ]); \
-\
-/* Alternatively, if generating output variances from the spread of \
-   input values, form the required sum.*/ \
-                        } else if( Genvar ) { \
-                           out_var[ off_out ] += c*c; \
-                           work[ off_out + npix_out ] += 1.0; \
-                        } \
+                     } else if( Genvar && pixwt != 0.0 ) { \
+                        out_var[ off_out ] += c*c/pixwt; \
+                        work[ off_out + npix_out ] += pixwt*pixwt; \
                      } \
                   } \
                } \
@@ -23654,7 +23546,7 @@ void astReportPoints_( AstMapping *this, int forward,
 int astResample##X##_( AstMapping *this, int ndim_in, const int *lbnd_in, \
                        const int *ubnd_in, const Xtype *in, \
                        const Xtype *in_var, int interp, \
-                       void (* finterp)(), const double *params, \
+                       void (* finterp)( void ), const double *params, \
                        int flags, double tol, int maxpix, Xtype badval, \
                        int ndim_out, \
                        const int *lbnd_out, const int *ubnd_out, \
@@ -23715,6 +23607,7 @@ MAKE_REBIN_(F,float)
 MAKE_REBIN_(I,int)
 #undef MAKE_REBIN_
 
+
 #define MAKE_REBINSEQ_(X,Xtype) \
 void astRebinSeq##X##_( AstMapping *this, double wlim, int ndim_in, const int *lbnd_in, \
                         const int *ubnd_in, const Xtype *in, \
@@ -23724,7 +23617,8 @@ void astRebinSeq##X##_( AstMapping *this, double wlim, int ndim_in, const int *l
                         int ndim_out, \
                         const int *lbnd_out, const int *ubnd_out, \
                         const int *lbnd, const int *ubnd, Xtype *out, \
-                        Xtype *out_var, double *weights, int *nused, int *status ) { \
+                        Xtype *out_var, double *weights, int *nused, \
+                        int *status ) { \
    if ( !astOK ) return; \
    (**astMEMBER(this,Mapping,RebinSeq##X))( this, wlim, ndim_in, lbnd_in, \
                                          ubnd_in, in, in_var, \
@@ -23732,19 +23626,21 @@ void astRebinSeq##X##_( AstMapping *this, double wlim, int ndim_in, const int *l
                                          flags, tol, maxpix, \
                                          badval, ndim_out, \
                                          lbnd_out, ubnd_out, \
-                                         lbnd, ubnd, \
-                                         out, out_var, weights, nused, status ); \
+                                         lbnd, ubnd, out, out_var, \
+                                         weights, nused, status ); \
 }
+
 #if HAVE_LONG_DOUBLE     /* Not normally implemented */
 MAKE_REBINSEQ_(LD,long double)
 #endif
 MAKE_REBINSEQ_(D,double)
 MAKE_REBINSEQ_(F,float)
 MAKE_REBINSEQ_(I,int)
+
 #undef MAKE_REBINSEQ_
 
 double astRate_( AstMapping *this, double *at, int ax1, int ax2, int *status ){
-   astDECLARE_GLOBALS;
+   astDECLARE_GLOBALS
 
    if ( !astOK ) return AST__BAD;
 
@@ -24451,6 +24347,7 @@ f     MAP.
 /* Return an ID value for the Mapping. */
    *map = astMakeId( *map );
 }
+
 
 
 

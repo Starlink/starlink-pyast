@@ -193,10 +193,25 @@
 
 #if !HAVE_DECL_ISNAN
 #  if HAVE_ISNAN
-     /* Seems that math.h does not include a prototype for isnan */
+     /* Seems that math.h does not include a prototype for isnan etc */
      int isnan( double );
 #  else
+     /* isnan is not available prior to C99 so define
+        alternative macros Note multiple evaluations of "x" in these
+        macros!!! */
 #    define isnan(x) ((x) != (x))
+#  endif
+#endif
+
+#if !HAVE_DECL_ISFINITE
+#  if HAVE_ISFINITE
+     /* Seems that math.h does not include a prototype for isfinite */
+     int isfinite( double );
+#  else
+     /* isfinite is not available prior to C99 so define
+        alternative macros. Note multiple evaluations of "x" in these
+        macros!!! */
+#    define isfinite(x) (!isnan(x) && ((x) != (1.0/0.0)) && ((x) != (-1.0/0.0)))
 #  endif
 #endif
 #endif
@@ -336,10 +351,54 @@
 *  Notes:
 *     - To avoid problems with some compilers, you should not leave
 *     any white space around the macro arguments.
+*     - On some system it is possible that the supplied macro argument
+*     "x" may be evaluated multiple times. Therefore the evaluation of "x"
+*     should have no side effects.
 *-
 */
 
 #define astISNAN(value) isnan(value)
+
+/*
+*+
+*  Name:
+*     astISFINITE
+
+*  Type:
+*     Protected macro.
+
+*  Purpose:
+*     Test if a double is neither NaN nor Inf.
+
+*  Synopsis:
+*     #include "pointset.h"
+*     astISFINITE(value)
+
+*  Class Membership:
+*     Defined by the PointSet class.
+
+*  Description:
+*     This macro expands to a integer valued expression which is zero
+*     if and only if the supplied value equals NaN ("Not a Number") or Inf.
+
+*  Parameters:
+*     value
+*        The value to be tested. This should be a double.
+
+*  Examples:
+*     if( !astISFINITE(x) ) x = AST__BAD;
+*        If "x" is NaN or Inf replace it with AST__BAD.
+
+*  Notes:
+*     - To avoid problems with some compilers, you should not leave
+*     any white space around the macro arguments.
+*     - On some system it is possible that the supplied macro argument
+*     "x" may be evaluated multiple times. Therefore the evaluation of "x"
+*     should have no side effects.
+*-
+*/
+
+#define astISFINITE(value) isfinite(value)
 
 /*
 *+
@@ -350,7 +409,7 @@
 *     Protected macro.
 
 *  Purpose:
-*     Test if a double is neither AST__BAD nor NaN.
+*     Test if a double is neither AST__BAD, NaN or Inf.
 
 *  Synopsis:
 *     #include "pointset.h"
@@ -362,7 +421,7 @@
 *  Description:
 *     This macro expands to a integer valued expression which is zero
 *     if and only if the supplied value equals AST__BAD or is NaN ("Not a
-*     Number").
+*     Number") or "Inf".
 
 *  Parameters:
 *     value
@@ -375,10 +434,13 @@
 *  Notes:
 *     - To avoid problems with some compilers, you should not leave
 *     any white space around the macro arguments.
+*     - On some system it is possible that the supplied macro argument
+*     "x" may be evaluated multiple times. Therefore the evaluation of "x"
+*     should have no side effects.
 *-
 */
 
-#define astISGOOD(value) ( (value) != AST__BAD && !astISNAN(value) )
+#define astISGOOD(value) ( (value) != AST__BAD && astISFINITE(value) )
 
 
 /*
@@ -390,7 +452,7 @@
 *     Protected macro.
 
 *  Purpose:
-*     Test if a double is either AST__BAD or NaN.
+*     Test if a double is either AST__BAD, NaN, or Inf.
 
 *  Synopsis:
 *     #include "pointset.h"
@@ -402,7 +464,7 @@
 *  Description:
 *     This macro expands to a integer valued expression which is non-zero
 *     if and only if the supplied value equals AST__BAD or is NaN ("Not a
-*     Number").
+*     Number"), or is Inf.
 
 *  Parameters:
 *     value
@@ -415,10 +477,13 @@
 *  Notes:
 *     - To avoid problems with some compilers, you should not leave
 *     any white space around the macro arguments.
+*     - On some system it is possible that the supplied macro argument
+*     "x" may be evaluated multiple times. Therefore the evaluation of "x"
+*     should have no side effects.
 *-
 */
 
-#define astISBAD(value) ( (value) == AST__BAD || astISNAN(value) )
+#define astISBAD(value) ( (value) == AST__BAD || !astISFINITE(value))
 
 #endif
 

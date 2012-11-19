@@ -1028,6 +1028,21 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        axes (this prevented the VELO_LSR keyword being created)..
 *     7-MAR-2012 (DSB):
 *        Use iauGc2gd in place of Geod.
+*     22-JUN-2012 (DSB):
+*        - Check for distorted TAN projections that have zero for all PVi_m
+*        coefficients. Issue a warning and ignore the distortion in such
+*        cases.
+*        - Remove all set but unused variables.
+*        - Convert SAO distorted TAN projections (which use COi_j keywords
+*        for polynomial coeffs) to TPN.
+*     26-JUN-2012 (DSB):
+*        Correct call to astKeyFields in SAOTrans (thanks to Bill Joye
+*        for pointing out this error).
+*     8-AUG-2012 (DSB):
+*        Correct assignment to lonpole within CLASSFromStore.
+*     10-AUG-2012 (DSB):
+*        Default DSS keywords CNPIX1 and CNPIX2 to zero if they are
+*        absent, rather than reporting an error.
 *class--
 */
 
@@ -1211,7 +1226,6 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #include "permmap.h"
 #include "pointset.h"
 #include "shiftmap.h"
-#include "skyaxis.h"
 #include "skyframe.h"
 #include "timeframe.h"
 #include "keymap.h"
@@ -1668,7 +1682,7 @@ static int GetMaxJMC( char *****item, char, int * );
 static int GetNcard( AstFitsChan *, int * );
 static int GetNkey( AstFitsChan *, int * );
 static int GetSkip( AstChannel *, int * );
-static int GetUsedPolyTan( AstFitsChan *, int, int, char, int * );
+static int GetUsedPolyTan( AstFitsChan *, AstFitsChan *, int, int, char, const char *, const char *, int * );
 static int GetValue( AstFitsChan *, const char *, int, void *, int, int, const char *, const char *, int * );
 static int GetValue2( AstFitsChan *, AstFitsChan *, const char *, int, void *, int, const char *, const char *, int * );
 static int GoodWarns( const char *, int * );
@@ -1686,6 +1700,7 @@ static int MatchChar( char, char, const char *, const char *, const char *, int 
 static int MatchFront( const char *, const char *, char *, int *, int *, int *, const char *, const char *, const char *, int * );
 static int MoveCard( AstFitsChan *, int, const char *, const char *, int * );
 static int PCFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
+static int SAOTrans( AstFitsChan *, AstFitsChan *, const char *, const char *, int * );
 static int SearchCard( AstFitsChan *, const char *, const char *, const char *, int * );
 static int SetFits( AstFitsChan *, const char *, void *, int, const char *, int, int * );
 static int Similar( const char *, const char *, int * );
@@ -3016,7 +3031,7 @@ static int AIPSFromStore( AstFitsChan *this, FitsStore *store,
       } else {
          rho_b = atan2( -cdlon_lat, cdelt[ axrot2 ] );
       }
-      if( fabs( astDrange( rho_a - rho_b ) ) < 1.0E-2 ){
+      if( fabs( palDrange( rho_a - rho_b ) ) < 1.0E-2 ){
          crota = 0.5*( palDranrm( rho_a ) + palDranrm( rho_b ) );
          coscro = cos( crota );
          sincro = sin( crota );
@@ -3518,7 +3533,7 @@ static int AIPSPPFromStore( AstFitsChan *this, FitsStore *store,
       } else {
          rho_b = atan2( -cdlon_lat, cdelt[ axrot2 ] );
       }
-      if( fabs( astDrange( rho_a - rho_b ) ) < 1.0E-2 ){
+      if( fabs( palDrange( rho_a - rho_b ) ) < 1.0E-2 ){
          crota = 0.5*( palDranrm( rho_a ) + palDranrm( rho_b ) );
          coscro = cos( crota );
          sincro = sin( crota );
@@ -4165,7 +4180,6 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
    int maxm;               /* Largest used "m" value */
    int mlat;               /* Index of latitude axis in main lat coord array */
    int mlon;               /* Index of longitude axis in main lon coord array */
-   int npix;               /* Number of pixel axes */
    int nwcs;               /* Number of WCS axes */
    int nwcsmap;            /* Number of inputs/outputs for the WcsMap */
    int paxis;              /* Axis index within primary Frame */
@@ -4186,8 +4200,7 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
 /* Get a pointer to the WCS Frame. */
    wcsfrm = astGetFrame( fs, AST__CURRENT );
 
-/* Store the number of pixel and WCS axes. */
-   npix = astGetNin( fs );
+/* Store the number of WCS axes. */
    nwcs = astGetNout( fs );
 
 /* Check each axis in the WCS Frame to see if it is a celestial axis. */
@@ -5519,13 +5532,10 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    char s;             /* Co-ordinate version character */
    char sign[2];       /* Fraction's sign character */
    char spectype[MXCTYPELEN];/* Spectral axis CTYPE */
-   const char *srcsys; /* Pointer to rest frame string for source velocity */
    double *cdelt;      /* Pointer to CDELT array */
    double aval[ 2 ];   /* General purpose array */
    double azel[ 2 ];   /* Reference (az,el) values */
    double cdl;         /* CDELT term */
-   double cdlat_lon;   /* Off-diagonal CD element */
-   double cdlon_lat;   /* Off-diagonal CD element */
    double crval[ 3 ];  /* CRVAL values converted to rads, etc */
    double delta;       /* Spectral axis increment */
    double equ;         /* Epoch of reference equinox */
@@ -5564,7 +5574,6 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
 
 /* Initialise */
    specfactor = 1.0;
-   srcsys = NULL;
 
 /* First check that the values in the FitsStore conform to the
    requirements of the CLASS encoding. Assume they do not to begin with. */
@@ -5758,8 +5767,6 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
                   &naxis3, 0, 0, method, class, status ) ) {
       naxis3 = 0;
    }
-   cdlat_lon = 0.0;
-   cdlon_lat = 0.0;
    for( i = 0; i < naxis && ok; i++ ){
       cdl = GetItem( &(store->cdelt), i, 0, s, NULL, method, class, status );
       if( cdl == AST__BAD ) cdl = 1.0;
@@ -5817,7 +5824,7 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    FITS-CLASS imposes a no rotation restriction, it can tolerate lonpole
    values of +/- 180 degrees. */
    if( ok && ( naxis2 != 1 || naxis3 != 1 ) ) {
-      lonpole =  GetItem( &(store->latpole), 0, 0, s, NULL, method, class, status );
+      lonpole =  GetItem( &(store->lonpole), 0, 0, s, NULL, method, class, status );
       if( lonpole != AST__BAD && lonpole != -180.0 && lonpole == 180 ) ok = 0;
       if( GetItem( &(store->latpole), 0, 0, s, NULL, method, class, status )
           != AST__BAD ) ok = 0;
@@ -6276,16 +6283,12 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
 
 /* Local Variables: */
    AstFitsChan *this;            /* Pointer to the FitsChan structure */
-   int len;                      /* Length of attrib string */
 
 /* Check the global error status. */
    if ( !astOK ) return;
 
 /* Obtain a pointer to the FitsChan structure. */
    this = (AstFitsChan *) this_object;
-
-/* Obtain the length of the "attrib" string. */
-   len = strlen( attrib );
 
 /* Check the attribute name and clear the appropriate attribute. */
 
@@ -7047,7 +7050,7 @@ static char *ConcatWAT( AstFitsChan *this, int iaxis, const char *method,
 *  Description:
 *     This function searches the supplied FitsChan for any keywords of
 *     the form "WATi_j", where i and j are integers and i is equal to the
-*     supplied "iaxis" value plus one, and concatenates their strig
+*     supplied "iaxis" value plus one, and concatenates their string
 *     values into a single string. Such keywords are created by IRAF to
 *     describe their non-standard ZPX and TNX projections.
 
@@ -7099,6 +7102,7 @@ static char *ConcatWAT( AstFitsChan *this, int iaxis, const char *method,
    out when the FitsChan is deleted. */
    watlen = 1;
    j = 1;
+   size = 0;
    sprintf( keyname, "WAT%d_%.3d", iaxis + 1, j );
    while( astOK ) {
 
@@ -7541,7 +7545,6 @@ static double DateObs( const char *dateobs, int *status ) {
 
 static void DeleteCard( AstFitsChan *this, const char *method,
                         const char *class, int *status ){
-
 /*
 *  Name:
 *     DeleteCard
@@ -7554,7 +7557,6 @@ static void DeleteCard( AstFitsChan *this, const char *method,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     void DeleteCard( AstFitsChan *this, const char *method,
 *                      const char *class )
 
@@ -8474,9 +8476,13 @@ static void DSSToStore( AstFitsChan *this, FitsStore *store,
 /* Check the inherited status. */
    if( !astOK ) return;
 
+/* Get the optional DSS keywords, supplying defaults for any missing keywords. */
+   cnpix1 = 0.0;
+   cnpix2 = 0.0;
+   GetValue( this, "CNPIX1", AST__FLOAT, &cnpix1, 0, 1, method, class, status );
+   GetValue( this, "CNPIX2", AST__FLOAT, &cnpix2, 0, 1, method, class, status );
+
 /* Get the required DSS keywords. Report an error if any are missing. */
-   GetValue( this, "CNPIX1", AST__FLOAT, &cnpix1, 1, 1, method, class, status );
-   GetValue( this, "CNPIX2", AST__FLOAT, &cnpix2, 1, 1, method, class, status );
    GetValue( this, "PPO3", AST__FLOAT, &ppo3, 1, 1, method, class, status );
    GetValue( this, "PPO6", AST__FLOAT, &ppo6, 1, 1, method, class, status );
    GetValue( this, "XPIXELSZ", AST__FLOAT, &xpixelsz, 1, 1, method, class, status );
@@ -10930,7 +10936,6 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
    int icurr;           /* Current Frame index */
    int ifrm;            /* Next Frame index */
    int primok;          /* Primary Frame stored succesfully? */
-   int secok;           /* Secondary Frame stored succesfully? */
 
 /* Initialise */
    ret = NULL;
@@ -11057,8 +11062,8 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
          for( ifrm = 1; ifrm <= nfrm; ifrm++ ){
             s = sid[ ifrm ];
             if( s != 0 && s != 1 ) {
-               secok = AddVersion( this, fset, ibase, ifrm, ret, dim,
-                                   s, encoding, method, class, status );
+               (void) AddVersion( this, fset, ibase, ifrm, ret, dim,
+                                  s, encoding, method, class, status );
             }
          }
 
@@ -12654,8 +12659,9 @@ f     function is invoked with STATUS set to an error value, or if it
    return result;
 }
 
-static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
-                           char s, int *status ){
+static int GetUsedPolyTan( AstFitsChan *this, AstFitsChan *out, int latax,
+                           int lonax, char s, const char *method,
+                           const char *class, int *status ){
 /*
 *  Name:
 *     GetUsedPolyTan
@@ -12668,8 +12674,9 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
 
 *  Synopsis:
 *     #include "fitschan.h"
-*     int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
-*                         char s, int *status )
+*     int GetUsedPolyTan( AstFitsChan *this, AstFitsChan *out, int latax,
+*                         int lonax, char s, const char *method,
+*                         const char *class, int *status )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -12678,13 +12685,20 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
 *     If the PolyTan attribute is zero or positive, then its value is
 *     returned. If it is negative, the supplied FitsChan is searched for
 *     keywords of the form PVi_m. If any are found on the latitude axis,
-*     or if any are found on the longitude axis with "m" > 4, zero is
-*     returned (meaning "use the distorted TAN conventio"). Otherwise +1
+*     or if any are found on the longitude axis with "m" > 4, +1 is
+*     returned (meaning "use the distorted TAN conventio"). Otherwise 0
 *     is returned (meaning "use the standard TAN convention").
+*
+*     If all the PVi_m values for m > 0 on either axis are zero, a warning is
+*     issued and zero is returned.
 
 *  Parameters:
 *     this
 *        Pointer to the FitsChan.
+*     out
+*        Pointer to a secondary FitsChan. If the PV values in "this" are
+*        found to be unusable, they will be marked as used in both "this"
+*        and "out".
 *     latax
 *        The one-based index of the latitude axis within the FITS header.
 *     lonax
@@ -12693,6 +12707,12 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
 *        A character identifying the co-ordinate version to use. A space
 *        means use primary axis descriptions. Otherwise, it must be an
 *        upper-case alphabetical characters ('A' to 'Z').
+*     method
+*        A pointer to a string holding the name of the calling method.
+*        This is used only in the construction of error messages.
+*     class
+*        A pointer to a string holding the class of the object being
+*        read. This is used only in the construction of error messages.
 *     status
 *        Pointer to the inherited status variable.
 
@@ -12706,10 +12726,15 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
 
 /* Local Variables... */
    char template[ 20 ];
-   int lbnd;
+   double pval;
+   int lbnd_lat;
+   int lbnd_lon;
+   int m;
    int nfound;
+   int ok;
    int ret;
-   int ubnd;
+   int ubnd_lat;
+   int ubnd_lon;
 
 /* Check the global status. */
    if( !astOK ) return 0;
@@ -12727,13 +12752,13 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
       } else {
          sprintf( template, "PV%d_%%d", latax );
       }
-      nfound = astKeyFields( this, template, 1, &ubnd, &lbnd );
+      nfound = astKeyFields( this, template, 1, &ubnd_lat, &lbnd_lat );
 
 /* If any were found, assume the distorted TAN convention is in use. */
       if( nfound ) {
          ret = 1;
 
-/* If no PVi_m keywords were foudn for the latitude axis, see if there
+/* If no PVi_m keywords were found for the latitude axis, see if there
    are any on the longitude axis. */
       } else {
          if( s != ' ' ) {
@@ -12741,12 +12766,106 @@ static int GetUsedPolyTan( AstFitsChan *this, int latax, int lonax,
          } else {
             sprintf( template, "PV%d_%%d", lonax );
          }
-         nfound = astKeyFields( this, template, 1, &ubnd, &lbnd );
+         nfound = astKeyFields( this, template, 1, &ubnd_lon, &lbnd_lon );
 
-/* If any were found with "m" value greater than 4, assume the distirted
+/* If any were found with "m" value greater than 4, assume the distorted
    TAN convention is in use. Otherwise assume the stdanrd TAN convention is
    in use. */
-         ret = ( nfound && ubnd > 4 ) ? 1 : 0;
+         ret = ( nfound && ubnd_lon > 4 ) ? 1 : 0;
+      }
+
+/* If the distorted TAN convention is to be used, check that at least one
+   of the PVi_m values is non-zero on each axis. We ignore the PVi_0
+   (constant) terms in this check. */
+      if( ret > 0 ) {
+
+/* Do the latitude axis first, skipping the first (constant) term. Assume
+   that all latitude pV values are zero until we find one that is not. */
+         ok = 0;
+         for( m = 1; m <= ubnd_lat && !ok; m++ ) {
+
+/* Form the PVi_m keyword name. */
+            if( s != ' ' ) {
+               sprintf( template, "PV%d_%d%c", latax, m, s );
+            } else {
+               sprintf( template, "PV%d_%d", latax, m );
+            }
+
+/* Get it's value. */
+            if( ! GetValue( this, template, AST__FLOAT, &pval, 0, 0,
+                            method,  class, status ) ) {
+
+/* If the PVi_m header is not present in the FitsChan, use a default value. */
+               pval = ( m == 1 ) ? 1.0 : 0.0;
+            }
+
+/* If the PVi_m header has a non-zero value, we can leave the loop. */
+            if( pval != 0.0 ) ok = 1;
+         }
+
+/* If all the latitude PVi_m values are zero, issue a warning and return
+   zero, indicating that a simple undistorted TAN projection should be used. */
+         if( !ok ) {
+            Warn( this, "badpv", "This FITS header describes a distorted TAN "
+                  "projection, but all the distortion coefficients (the "
+                  "PVi_m headers) on the latitude axis are zero.", method,
+                  class, status );
+            ret = 0;
+
+
+/* Also, delete the PV keywords so that no attempt is made to use them. */
+            for( m = 1; m <= ubnd_lat; m++ ) {
+               if( s != ' ' ) {
+                  sprintf( template, "PV%d_%d%c", latax, m, s );
+               } else {
+                  sprintf( template, "PV%d_%d", latax, m );
+               }
+               astClearCard( this );
+               if( FindKeyCard( this, template, method, class, status ) ) {
+                  DeleteCard( this, method, class, status );
+               }
+            }
+
+/* Otherwise, do the same check for the longitude axis. */
+         } else {
+            ok = 0;
+            for( m = 1; m <= ubnd_lon && !ok; m++ ) {
+
+               if( s != ' ' ) {
+                  sprintf( template, "PV%d_%d%c", lonax, m, s );
+               } else {
+                  sprintf( template, "PV%d_%d", lonax, m );
+               }
+
+               if( ! GetValue( this, template, AST__FLOAT, &pval, 0, 0,
+                               method, class, status ) ) {
+
+                  pval = ( m == 1 ) ? 1.0 : 0.0;
+               }
+
+               if( pval != 0.0 ) ok = 1;
+            }
+
+            if( !ok ) {
+               Warn( this, "badpv", "This FITS header describes a distorted TAN "
+                     "projection, but all the distortion coefficients (the "
+                     "PVi_m headers) on the longitude axis are zero.", method,
+                     class, status );
+               ret = 0;
+
+               for( m = 1; m <= ubnd_lon; m++ ) {
+                  if( s != ' ' ) {
+                     sprintf( template, "PV%d_%d%c", lonax, m, s );
+                  } else {
+                     sprintf( template, "PV%d_%d", lonax, m );
+                  }
+                  astClearCard( this );
+                  if( FindKeyCard( this, template, method, class, status ) ) {
+                     DeleteCard( this, method, class, status );
+                  }
+               }
+            }
+         }
       }
    }
 
@@ -13455,7 +13574,6 @@ f     RESULT = AST_FINDFITS( FITSCHAN, 'CRVAL%1d', CARD, .TRUE., STATUS )
 
 static int FindKeyCard( AstFitsChan *this, const char *name,
                         const char *method, const char *class, int *status ){
-
 /*
 *  Name:
 *     FindKeyCard
@@ -13468,7 +13586,6 @@ static int FindKeyCard( AstFitsChan *this, const char *name,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     int FindKeyCard( AstFitsChan *this, const char *name,
 *                      const char *method, const char *class, int *status )
 
@@ -14919,6 +15036,9 @@ static void SetFitsCom( AstFitsChan *this, const char *name,
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Initialisation */
+   size = 0;
+
 /* Ensure the source function has been called */
    ReadFromSource( this, status );
 
@@ -15559,7 +15679,6 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
    AstFitsChan *this;            /* Pointer to the FitsChan structure */
    const char *result;           /* Pointer value to return */
    int ival;                     /* Integer attribute value */
-   int len;                      /* Length of attrib string */
 
 /* Initialise. */
    result = NULL;
@@ -15572,9 +15691,6 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
 
 /* Obtain a pointer to the FitsChan structure. */
    this = (AstFitsChan *) this_object;
-
-/* Obtain the length of the attrib string. */
-   len = strlen( attrib );
 
 /* Card. */
 /* ----- */
@@ -19437,7 +19553,6 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    int icurr;              /* Index of original current Frame in returned FrameSet */
    int ilat;               /* Celestial latitude index within WCS Frame */
    int ilon;               /* Celestial longitude index within WCS Frame */
-   int ispec;              /* SpecFrame axis index within WCS Frame */
    int npix;               /* Number of pixel axes */
    int nwcs;               /* Number of WCS axes */
    int ok;                 /* Is the supplied FrameSet usable? */
@@ -19475,15 +19590,14 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
 /* Obtain a pointer to the primary Frame containing the current WCS axis. */
       astPrimaryFrame( wcsfrm, iax, &pframe, &paxis );
 
-/* If the current axis is a SpecFrame, save a pointer to it, and its WCS
-   index. If we have already found a SpecFrame, abort. */
+/* If the current axis is a SpecFrame, save a pointer to it. If we have already
+   found a SpecFrame, abort. */
       if( astIsASpecFrame( pframe ) ) {
          if( specfrm ) {
             ok = 0;
             break;
          }
          specfrm = astClone( pframe );
-         ispec = iax;
 
 /* If the current axis is a SkyFrame, save a pointer to it, and its WCS
    index. If we have already found a different SkyFrame, abort. */
@@ -22229,13 +22343,10 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
    int icolindex;          /* Index of table column holding index vector */
    int icolmain;           /* Index of table column holding main coord array */
    int interp;             /* Interpolation method for look-up tables */
-   int lin_axis;           /* Is the axis linearly spaced? */
    int log_axis;           /* Is the axis logarithmically spaced? */
-   int nc;                 /* Number of characters */
    int nother;             /* Number of axes still to be described */
    int npix;               /* Number of pixel axes */
    int nwcs;               /* Number of WCS axes */
-   int ok;                 /* Are all remaining axes describable? */
    int tab_axis;           /* Can the axis be described by the -TAB algorithm? */
 
 /* Initialise */
@@ -22290,7 +22401,6 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
 
 /* Loop round all WCS axes, producing descriptions of any axes which have not
    yet been described. */
-      ok = 1;
       for( iax = 0; iax < nwcs && astOK; iax++ ) {
          if( ! axis_done[ iax ] ) {
 
@@ -22303,14 +22413,12 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
             crval = crvals ? crvals[ iax ] : AST__BAD;
             if( crval == AST__BAD ) crval = ptr2[ iax ][ 0 ];
             if( crval == AST__BAD ) {
-               ok = 0;
                break;
             } else {
                SetItem( &(store->crval), fits_i, 0, s, crval, status );
             }
 
 /* Initialise flags indicating the type of the axis. */
-            lin_axis = 0;
             log_axis = 0;
             tab_axis = 0;
 
@@ -22326,7 +22434,6 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
                axmap = AddUnitMaps( tmap0, iax, nwcs, status );
                tmap0 = astAnnul( tmap0 );
                crval = -crval;
-               lin_axis = 1;
 
 /* If it is not linear, see if it is logarithmic. If the "log" algorithm is
    appropriate (as defined in FITS-WCS paper III), the supplied Frame (s) is
@@ -22429,7 +22536,6 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
                axmap = AddUnitMaps( tmap0, iax, nwcs, status );
                tmap0 = astAnnul( tmap0 );
                crval = -crval;
-               lin_axis = 1;
             }
 
 /* Combine the Mapping for this axis in series with those of earlier axes. */
@@ -22448,9 +22554,9 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
 /* The axis symbols are taken as the CTYPE values. Append "-LOG" or "-TAB" if
    the axis is logarithmic or tabular. */
             if( sym && strlen( sym ) ) {
-               nc = sprintf( buf, "%s", sym );
+               (void) sprintf( buf, "%s", sym );
             } else {
-               nc = sprintf( buf, "AXIS%d", iax + 1 );
+               (void) sprintf( buf, "AXIS%d", iax + 1 );
             }
             if( log_axis ) {
                SetAlgCode( buf, "-LOG", status );
@@ -23270,8 +23376,6 @@ f        The global status.
 
 /* Local Variables: */
    const char *a;         /* Pointer to start of next card */
-   const char *class;     /* Object class */
-   const char *method;    /* Current method */
    int clen;              /* Length of supplied string */
    int i;                 /* Card index */
    int ncard;             /* No. of cards supplied */
@@ -23281,11 +23385,6 @@ f        The global status.
 
 /* Ensure the source function has been called */
    ReadFromSource( this, status );
-
-/* Store the current method, and the class of the supplied object for use
-   in error messages.*/
-   method = "astPutCards";
-   class = astGetClass( this );
 
 /* Empty the FitsChan. */
    astEmptyFits( this );
@@ -24647,6 +24746,274 @@ static void RoundFString( char *text, int width, int *status ){
 /* Undefine local constants. */
 #undef NSEQ
 }
+
+static int SAOTrans( AstFitsChan *this, AstFitsChan *out, const char *method,
+                     const char *class, int *status ){
+/*
+*  Name:
+*     SAOTrans
+
+*  Purpose:
+*     Translate an SAO encoded header into a TPN encoded header.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "fitschan.h"
+*     int SAOTrans( AstFitsChan *this, AstFitsChan *out, const char *method,
+*                   const char *class, int *status )
+
+*  Class Membership:
+*     FitsChan member function.
+
+*  Description:
+*     Search "this" for keywords that give a description of a distorted
+*     TAN projection using the SAO representation and, if found, write
+*     keywords to "out" that describe an equivalent projection using TPN
+*     representation. The definition of the SAO polynomial is taken from
+*     the platepos.c file included in Doug Mink's WCSTools.
+
+*  Parameters:
+*     this
+*        Pointer to the FitsChan to read.
+*     out
+*        Pointer to a FitsCHan in which to store translated keywords.
+*     method
+*        Pointer to a string holding the name of the calling method.
+*        This is only for use in constructing error messages.
+*     class
+*        Pointer to a string holding the name of the supplied object class.
+*        This is only for use in constructing error messages.
+*     status
+*        Pointer to the inherited status variable.
+
+*  Returned Value:
+*     Non-zero if "this" contained an SAO encoded header. Zero otherwise.
+
+*/
+
+#define NC 13
+
+/* Local Variables: */
+   char keyname[10];
+   double co[ 2 ][ NC ];
+   double pv;
+   int i;
+   int is_sao;
+   int m;
+   int ok;
+   int result;
+
+/* Initialise */
+   result = 0;
+
+/* Check the inherited status. */
+   if( !astOK ) return result;
+
+/* Check there are exactly two CTYPE keywords in the header. */
+   if( 2 == astKeyFields( this, "CTYPE%d", 0, NULL, NULL ) ){
+
+/* Get the required SAO keywords. */
+      is_sao = 1;
+      ok = 1;
+      for( i = 0; i < 2 && ok && is_sao; i++ ) {
+
+         ok = 0;
+         for( m = 0; m < NC; m++ ) {
+
+/* Get the value of the next "COi_j" keyword. If the keyword is not found
+   in the header, store a default value. If any of the first 3 values are
+   missing on either axis, we assume this is not an SAO header. */
+            sprintf( keyname, "CO%d_%d", i + 1, m + 1 );
+            if( !GetValue( this, keyname, AST__FLOAT, &co[ i ][ m ], 0, 1, method,
+                           class, status ) ) {
+               co[ i ][ m ] = ( m == i + 1 ) ? 1.0 : 0.0;
+               if( m < 3 ) is_sao = 0;
+               break;
+            }
+
+/* Check that we have at least one non-zero coefficient (excluding the
+   first constant term ). */
+            if( co[ i ][ m ] != 0.0 && m > 0 ) ok = 1;
+         }
+      }
+
+/* If this is an SAO header..  */
+      if( is_sao ) {
+
+/* Issue a warning if all coefficients for this axis are zero. */
+         if( !ok ) {
+            Warn( this, "badpv", "This FITS header describes an SAO encoded "
+                  "distorted TAN projection, but all the distortion "
+                  "coefficients for at least one axis are zero.", method, class,
+                  status );
+
+/* Otherwise, calculate and store the equivalent PV projection parameters. */
+         } else {
+            pv = co[ 0 ][ 0 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_0", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 0 ][ 1 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_1", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 0 ][ 2 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_2", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 3 ] != AST__BAD ) pv += co[ 0 ][ 3 ];
+            if( co[ 0 ][ 10 ] != AST__BAD ) pv += co[ 0 ][ 10 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_4", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 0 ][ 5 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_5", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 4 ] != AST__BAD ) pv += co[ 0 ][ 4 ];
+            if( co[ 0 ][ 10 ] != AST__BAD ) pv += co[ 0 ][ 10 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_6", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 6 ] != AST__BAD ) pv += co[ 0 ][ 6 ];
+            if( co[ 0 ][ 11 ] != AST__BAD ) pv += co[ 0 ][ 11 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_7", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 8 ] != AST__BAD ) pv += co[ 0 ][ 8 ];
+            if( co[ 0 ][ 12 ] != AST__BAD ) pv += co[ 0 ][ 12 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_8", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 9 ] != AST__BAD ) pv += co[ 0 ][ 9 ];
+            if( co[ 0 ][ 11 ] != AST__BAD ) pv += co[ 0 ][ 11 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_9", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 0 ][ 7 ] != AST__BAD ) pv += co[ 0 ][ 7 ];
+            if( co[ 0 ][ 12 ] != AST__BAD ) pv += co[ 0 ][ 12 ];
+            if( pv != AST__BAD ) SetValue( out, "PV1_10", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 1 ][ 0 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_0", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 1 ][ 2 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_1", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 1 ][ 1 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_2", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 4 ] != AST__BAD ) pv += co[ 1 ][ 4 ];
+            if( co[ 1 ][ 10 ] != AST__BAD ) pv += co[ 1 ][ 10 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_4", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = co[ 1 ][ 5 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_5", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 3 ] != AST__BAD ) pv += co[ 1 ][ 3 ];
+            if( co[ 1 ][ 10 ] != AST__BAD ) pv += co[ 1 ][ 10 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_6", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 7 ] != AST__BAD ) pv += co[ 1 ][ 7 ];
+            if( co[ 1 ][ 12 ] != AST__BAD ) pv += co[ 1 ][ 12 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_7", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 9 ] != AST__BAD ) pv += co[ 1 ][ 9 ];
+            if( co[ 1 ][ 11 ] != AST__BAD ) pv += co[ 1 ][ 11 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_8", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 8 ] != AST__BAD ) pv += co[ 1 ][ 8 ];
+            if( co[ 1 ][ 12 ] != AST__BAD ) pv += co[ 1 ][ 12 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_9", &pv,
+                                           AST__FLOAT, NULL, status );
+
+            pv = 0.0;
+            if( co[ 1 ][ 6 ] != AST__BAD ) pv += co[ 1 ][ 6 ];
+            if( co[ 1 ][ 11 ] != AST__BAD ) pv += co[ 1 ][ 11 ];
+            if( pv != AST__BAD ) SetValue( out, "PV2_10", &pv,
+                                           AST__FLOAT, NULL, status );
+
+/* From an example header provided by Bill Joye, it seems that the SAO
+   polynomial includes the rotation and scaling effects of the CD matrix.
+   Therefore we mark as read all CDi_j, CDELT and CROTA values. Without
+   this, the rotation and scaling would be applied twice. First, mark the
+   original values as having been used, no matter which FitsChan they are
+   in. */
+            GetValue( this, "CD1_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CD1_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CD2_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CD2_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "PC1_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "PC1_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "PC2_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "PC2_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CDELT1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CDELT2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CROTA1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( this, "CROTA2", AST__FLOAT, &pv, 0, 1, method, class, status );
+
+            GetValue( out, "CD1_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CD1_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CD2_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CD2_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "PC1_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "PC1_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "PC2_1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "PC2_2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CDELT1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CDELT2", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CROTA1", AST__FLOAT, &pv, 0, 1, method, class, status );
+            GetValue( out, "CROTA2", AST__FLOAT, &pv, 0, 1, method, class, status );
+
+/* Now store new default values in the returned FitsChan. */
+            pv = 1.0;
+            SetValue( out, "PC1_1", &pv, AST__FLOAT, NULL,
+                      status );
+            SetValue( out, "PC2_2", &pv, AST__FLOAT, NULL,
+                      status );
+            SetValue( out, "CDELT1", &pv, AST__FLOAT, NULL,
+                      status );
+            SetValue( out, "CDELT2", &pv, AST__FLOAT, NULL,
+                      status );
+
+            pv = 0.0;
+            SetValue( out, "PC1_2", &pv, AST__FLOAT, NULL,
+                      status );
+            SetValue( out, "PC2_1", &pv, AST__FLOAT, NULL,
+                      status );
+
+/* Indicate we have converted an SAO header. */
+            result = 1;
+         }
+      }
+   }
+
+/* Return a flag indicating if an SAO header was found. */
+   return result;
+}
+#undef NC
 
 static int SearchCard( AstFitsChan *this, const char *name,
                        const char *method, const char *class, int *status ){
@@ -26484,7 +26851,6 @@ static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
    int latax;               /* Index of latitude axis in SkyFrame */
    int lonax;               /* Index of longitude axis in SkyFrame */
    int old_ignore_used;     /* Original setting of external ignore_used variable */
-   int radesys;             /* RA/DEC reference frame */
    int ret;                 /* Returned flag */
 
 /* Check the status. */
@@ -26545,50 +26911,40 @@ static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
    reference frame and standard system. */
    if( !Ustrcmp( sys, "FK4", status ) ){
       eq = palEpb( eq );
-      radesys = FK4;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK4", status );
    } else if( !Ustrcmp( sys, "FK4_NO_E", status ) || !Ustrcmp( sys, "FK4-NO-E", status ) ){
       eq = palEpb( eq );
-      radesys = FK4NOE;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK4-NO-E", status );
    } else if( !Ustrcmp( sys, "FK5", status ) ){
       eq = palEpj( eq );
-      radesys = FK5;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "FK5", status );
    } else if( !Ustrcmp( sys, "ICRS", status ) ){
       eq = AST__BAD;
-      radesys = ICRS;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "ICRS", status );
    } else if( !Ustrcmp( sys, "GAPPT", status ) ||
               !Ustrcmp( sys, "Apparent", status ) ||
               !Ustrcmp( sys, "Geocentric", status ) ){
       eq = AST__BAD;
-      radesys = GAPPT;
       isys = RADEC;
       SetItemC( &(store->radesys), 0, 0, s, "GAPPT", status );
    } else if( !Ustrcmp( sys, "Helioecliptic", status ) ){
       eq = AST__BAD;
-      radesys = NORADEC;
       isys = HECLIP;
    } else if( !Ustrcmp( sys, "Galactic", status ) ){
       eq = AST__BAD;
-      radesys = NORADEC;
       isys = GALAC;
    } else if( !Ustrcmp( sys, "Supergalactic", status ) ){
       eq = AST__BAD;
-      radesys = NORADEC;
       isys = SUPER;
    } else if( !Ustrcmp( sys, "AzEl", status ) ){
       eq = AST__BAD;
-      radesys = NORADEC;
       isys = AZEL;
    } else {
       eq = AST__BAD;
-      radesys = NORADEC;
       isys = NOCEL;
    }
 
@@ -27655,9 +28011,12 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
 *
 *     21) Various translations specific to the FITS-CLASS encoding.
 *
-*     21) CTYPE == "LAMBDA" changed to CTYPE = "WAVE"
+*     22) SAO distorted TAN projections (uses COi_j keywords to store
+*     polynomial coefficients) are converted to TPN projections.
+
+*     23) CTYPE == "LAMBDA" changed to CTYPE = "WAVE"
 *
-*     22) if the projection is TAN and the PolyTan attribute is non-zero,
+*     24) if the projection is TAN and the PolyTan attribute is non-zero,
 *     or if the projection is TPV (produced by SCAMP), the projection is
 *     changed to TPN (the AST code for the draft FITS-WCS paper II
 *     conventions for a distorted TAN projection).
@@ -27711,7 +28070,6 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    double dval;                   /* General floating value */
    double lambda;                 /* Ratio of CDELTs */
    double projp;                  /* Projection parameter value */
-   double restfreq;               /* Rest frequency (Hz) */
    double rowsum2;                /* Sum of squared CDi_j row elements */
    double sinrota;                /* Sin( CROTA ) */
    double sinval;                 /* Sin( dec ref ) */
@@ -28372,6 +28730,26 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
       if( encoding == FITSCLASS_ENCODING ) ClassTrans( this, ret, axlat,
                                                        axlon, method, class, status );
 
+/* Convert SAO distorted TAN headers to TPN distorted TAN headers.
+   -------------------------------------------------------------- */
+      if( s == ' ' && !Ustrcmp( prj, "-TAN", status ) ){
+
+/* Translate the COi_m keywords into PV i+m keywords. */
+         if( SAOTrans( this, ret, method, class, status ) ) {
+
+/* Change the CTYPE projection form TAN to TPV. */
+            strcpy( prj, "-TPN" );
+            strcpy( lontype + 4, "-TPN" );
+            cval = lontype;
+            SetValue( ret, FormatKey( "CTYPE", axlon + 1, -1, s, status ),
+                         (void *) &cval, AST__STRING, NULL, status );
+            strcpy( lattype + 4, "-TPN" );
+            cval = lattype;
+            SetValue( ret, FormatKey( "CTYPE", axlat + 1, -1, s, status ),
+                      (void *) &cval, AST__STRING, NULL, status );
+         }
+      }
+
 /* AIPS "NCP" projections
    --------------------- */
 
@@ -28543,7 +28921,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    is non-zero. Also change any TPV projection to TPN projection.
    --------------------------------------------------- */
       if( ( !Ustrcmp( prj, "-TAN", status ) &&
-            GetUsedPolyTan( this, axlat + 1, axlon + 1, s, status ) ) ||
+            GetUsedPolyTan( this, ret, axlat + 1, axlon + 1, s, method, class, status ) ) ||
           !Ustrcmp( prj, "-TPV", status ) ){
          strcpy( prj, "-TPN" );
          strcpy( lontype + 4, "-TPN" );
@@ -28669,7 +29047,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
              GetValue2( ret, this, FormatKey( "CRPIX", axlon + 1, -1, s, status ),
                         AST__FLOAT, (void *) &dval, 0, method, class, status ) ) {
             if( cdelti != 0.0 ) {
-               dval = 0.5 + AST__DR2D*astDrange( AST__DD2R*( dval - 0.5 )*cdelti )/cdelti;
+               dval = 0.5 + AST__DR2D*palDrange( AST__DD2R*( dval - 0.5 )*cdelti )/cdelti;
                SetValue( ret, FormatKey( "CRPIX", axlon + 1, -1, s, status ),
                          (void *) &dval, AST__FLOAT, CardComm( this, status ), status );
             }
@@ -28680,7 +29058,6 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    ---------------------------- */
 
 /* Get any RESTFREQ card, marking it as read. */
-      restfreq = AST__BAD;
       if( s != ' ' ) {
          sprintf( keyname, "RESTFREQ%c", s );
       } else {
@@ -28712,7 +29089,6 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
          if( !GetValue2( ret, this, keyname, AST__STRING, (void *) &cval, 0,
                          method, class, status ) ){
             SetValue( ret, keyname, (void *) &dval, AST__FLOAT, comm, status );
-            restfreq = dval;
          }
       }
 
@@ -30681,7 +31057,6 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
 /* Local Variables: */
    AstFitsChan *this;            /* Pointer to the FitsChan structure */
    int result;                   /* Result value to return */
-   int len;                      /* Length of attrib string */
 
 /* Initialise. */
    result = 0;
@@ -30691,9 +31066,6 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
 
 /* Obtain a pointer to the FitsChan structure. */
    this = (AstFitsChan *) this_object;
-
-/* Obtain the length of the attrib string. */
-   len = strlen( attrib );
 
 /* Card. */
 /* ----- */
@@ -31647,7 +32019,7 @@ static int WATCoeffs( const char *watstr, int iaxis, double **cvals,
 
 /* Other initialisation to avoid compiler warnings. */
    etamin = 0.0;
-   etamin = 0.0;
+   etamax = 0.0;
    ximax = 0.0;
    ximin = 0.0;
    order = 0;
@@ -34416,7 +34788,7 @@ static AstMapping *WcsNative( AstFitsChan *this, FitsStore *store, char s,
 /* Limit the latitude to the range +/- PI/2, issuing a warning if the
    supplied CRVAL value is outside this range. The "alphap" variable is used
    as workspace here. */
-      alphap = astDrange( delta0 );
+      alphap = palDrange( delta0 );
       delta0 = alphap;
       if ( delta0 > AST__DPIBY2 ){
          delta0 = AST__DPIBY2;
@@ -34780,8 +35152,8 @@ static int WcsNatPole( AstFitsChan *this, AstWcsMap *wcsmap, double alpha0,
                } else {
                   t4 = acos( t3 );
                }
-               deltap_1 = astDrange( t1 + t4 );
-               deltap_2 = astDrange( t1 - t4 );
+               deltap_1 = palDrange( t1 + t4 );
+               deltap_2 = palDrange( t1 - t4 );
 
 /* Select which of these two values of deltap to use. Values outside the
    range +/- PI/2 cannot be used. If both values are within this range
@@ -39059,7 +39431,8 @@ astMAKE_TEST(FitsChan,Warnings,( this->warnings != NULL ))
 *     - "BadPV": This condition arises when reading a FrameSet from a
 *     non-Native encoded FitsChan. It is issued if a PVi_m header is found
 *     that refers to a projection parameter that is not used by the
-*     projection type specified by CTYPE.
+*     projection type specified by CTYPE, or the PV values are otherwise
+*     inappropriate for the projection type.
 *
 *     - "BadVal": This condition arises when reading a FrameSet from a
 *     non-Native encoded FitsChan if it is not possible to convert the
