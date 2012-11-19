@@ -1,0 +1,14 @@
+include ast/*.h
+include ast/pal/*.c
+include ast/pal/*.h
+include ast/sofa/*.c
+include ast/sofa/*.h
+include starlink/ast/*.desc
+include ast/sun211.htx_tar
+recursive-include tools *.py
+recursive-include starlink/ast/test *.attr
+recursive-include starlink/ast/test *.box
+recursive-include starlink/ast/test *.head
+recursive-include starlink/ast/test *.fit
+recursive-include starlink/ast/test *.py
+

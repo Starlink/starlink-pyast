@@ -8,6 +8,7 @@ import filecmp
 import string
 import sys
 import os.path
+import os
 
 #  A class that defines Channel source and sink functions that store text
 #  in an internal list.
@@ -698,6 +699,8 @@ class TestAst(unittest.TestCase):
       channel.SinkFile = None
       channel.SourceFile = None
       self.assertTrue( filecmp.cmp("fred.txt", "fred2.txt", shallow=False)  )
+      os.remove("fred.txt")
+      os.remove("fred2.txt")
 
    def test_MyChannel(self):
       ss = DummyStream()
