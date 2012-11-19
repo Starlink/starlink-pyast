@@ -101,8 +101,8 @@ if sys.platform.startswith("darwin"):
    Ast.extra_link_args = [ "-exported_symbols_list", symbol_list]
 
 
-setup (name = 'starlink-ast',
-       version = '2.0',
+setup (name = 'starlink-pyast',
+       version = '2.1',
        description = 'A Python wrapper for the Starlink AST library',
        url = 'http://starlink.jach.hawaii.edu/starlink/Ast',
        author = 'David Berry',
