@@ -45,7 +45,7 @@ external data source is a
 header.<p>
 
 <li>When invoking the <code>read</code> method to read an object from a
-<a href="../sun211.htx/node648.html#xref_FitsChan">
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node648.html?xref_FitsChan">
 FitsChan,</a> the FitsChan's "Card" attribute will be cleared automatically
 before the read is performed. This means it is not necessary to clear
 "Card" explicitly before calling the <code>read</code> method (as is
@@ -60,7 +60,7 @@ FitsChan by doing
 >>> &nbsp;&nbsp;&nbsp;print(card)
 </span>
 <p>
-However, this is achieved by incrementing the <a href="../sun211.htx/node464.html#xref_Card">Card</a>
+However, this is achieved by incrementing the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node464.html?xref_Card">Card</a>
 attribute of the FitsChan. So the looping will be affected by any other operation that changes the
 Card attribute of the FitsChan during the loop.
 
@@ -97,10 +97,10 @@ FitsChan, the new card will be appended to the end of the FitsChan.
 <h3 id="s0">Frame</h3>
 <ul>
 <li>The methods
-<a href="../sun211.htx/node274.html#xref_astGetActiveUnit">astGetActiveUnit</a>
-and <a href="../sun211.htx/node387.html#xref_astSetActiveUnit">astSetActiveUnit</a>
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node274.html?xref_astGetActiveUnit">astGetActiveUnit</a>
+and <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node387.html?xref_astSetActiveUnit">astSetActiveUnit</a>
 are not present in PyAST. Instead, each
-<a href="../sun211.htx/node651.html#xref_Frame">Frame</a>
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node651.html?xref_Frame">Frame</a>
 has a Python property called "ActiveUnit", which takes boolean values
 True or False, and can be set and get just like any other property.
 <p>
@@ -114,7 +114,7 @@ True or False, and can be set and get just like any other property.
 <h3 id="s3">KeyMap</h3>
 <ul>
 <li>Currently, none of the methods available within AST for the
-<a href="../sun211.htx/node656.html#xref_KeyMap">KeyMap</a>
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node656.html?xref_KeyMap">KeyMap</a>
 class are available in Python. However, KeyMaps can be created in the
 usual way, and entries can be written to or read from a KeyMap using the
 syntax of a Python mapping. For instance:
@@ -130,7 +130,7 @@ a string is used, the returned value is the value of the KeyMap entry
 with the specified key. If an integer is used, the returned value is a
 tuple containing the key and value of the corresponding entry in the
 KeyMap (the order in which entries are returned is specified by the
-<a href="../sun211.htx/node597.html#xref_SortBy">
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node597.html?xref_SortBy">
 SortBy</a> attribute of the KeyMap). When setting a value, a
 <code>starlink.Ast.MPIND</code> exception is reported if the specified zero-based
 integer index is greater than or equal to the number of entries in the
@@ -151,7 +151,7 @@ tuple.
 <h3 id="s4">Plot</h3>
 <ul>
 
-<li>The <a href="../sun211.htx/node666.html#xref_Plot">
+<li>The <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node666.html?xref_Plot">
 Plot</a> class does not draw any graphics itself. Instead, it invokes the
 methods of a specified "grf" object to draw lines, text strings, markers,
 etc. A reference to such a "grf" object must be supplied when a Plot is
