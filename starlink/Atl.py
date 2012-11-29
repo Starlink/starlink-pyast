@@ -130,6 +130,7 @@ class PyFITSAdapter:
 
       if self.index == 0 and self.clear:
          self.hdu.header = pyfits.Header()
+         self.hdu.header.clear()
 
       card = pyfits.core.Card.fromstring(card)
       self.hdu.header.update( card.key, card.value, card.comment )
