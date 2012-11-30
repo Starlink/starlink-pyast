@@ -133,7 +133,15 @@ class PyFITSAdapter:
          self.hdu.header.clear()
 
       card = pyfits.core.Card.fromstring(card)
-      self.hdu.header.update( card.key, card.value, card.comment )
+      if card.key == "BLANK":
+         self.hdu.header.add_blank()
+      elif card.key == "COMMENT":
+         self.hdu.header.add_comment(card.value)
+      elif card.key == "HISTORY":
+         self.hdu.header.add_history(card.value)
+      else:
+         self.hdu.header.update( card.key, card.value, card.comment )
+
       self.index += 1
 
 

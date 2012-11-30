@@ -903,6 +903,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
    int dims[ MXDIM ];
    int flags;
    int i;
+   int j;
    int maxpix;
    int ncoord_in;
    int ncoord_out;
@@ -911,6 +912,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
    int spread;
    int type = 0;
    npy_intp *pdims = NULL;
+   npy_intp pdims_out[MXDIM];
    void *pbadval = NULL;
 
    if( PyErr_Occurred() ) return NULL;
@@ -1000,9 +1002,14 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 
       if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd && in ) {
 
-         out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims, type );
-         if( in_var ) out_var = (PyArrayObject *) PyArray_SimpleNew( ndim,
-                                                                 pdims, type );
+         j = ncoord_out - 1;
+         for( i = 0; i < ncoord_out; i++,j-- ) {
+            pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
+         }
+
+         out = (PyArrayObject *) PyArray_SimpleNew( ncoord_out, pdims_out, type );
+         if( in_var ) out_var = (PyArrayObject *) PyArray_SimpleNew( ncoord_out,
+                                                                 pdims_out, type );
 
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
@@ -1329,6 +1336,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
    int dims[ MXDIM ];
    int flags;
    int i;
+   int j;
    int interp;
    int maxpix;
    int ncoord_in;
@@ -1337,6 +1345,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
    int noutpix = 0;
    int nparam;
    int type = 0;
+   npy_intp pdims_out[MXDIM];
    npy_intp *pdims = NULL;
    short int badval_h;
    unsigned char badval_B;
@@ -1446,10 +1455,14 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 
       if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd && in ) {
 
-         out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims, type );
-         if( in_var ) out_var = (PyArrayObject *) PyArray_SimpleNew( ndim,
-                                                                 pdims, type );
+         j = ncoord_out - 1;
+         for( i = 0; i < ncoord_out; i++,j-- ) {
+            pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
+         }
 
+         out = (PyArrayObject *) PyArray_SimpleNew( ncoord_out, pdims_out, type );
+         if( in_var ) out_var = (PyArrayObject *) PyArray_SimpleNew( ncoord_out,
+                                                                 pdims_out, type );
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
             if( type == PyArray_DOUBLE ) {

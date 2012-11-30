@@ -399,16 +399,18 @@ class TestAst(unittest.TestCase):
       self.assertEqual( zoommap.rate( [1,1], 2, 2 ), 2.0 )
       self.assertEqual( zoommap.rate( [1,1], 1, 2 ), 0.0 )
 
-      data_in = numpy.linspace( 1, 9, 9 )
+      data_in = numpy.array( [[ 1., 2., 3.,],
+                              [ 4., 5., 6.],
+                              [ 7., 8., 9.] ] )
       zoommap = starlink.Ast.ZoomMap( 2, 1.0 )
       out,outv = zoommap.rebin( 0.5, [1,0], [3,2], data_in, None,
                                 starlink.Ast.NEAREST, None, starlink.Ast.USEBAD,
                                 0.0, 100, starlink.Ast.BAD, [2,0], [4,2], [1,0],
                                 [3,2] )
 
-      answer = numpy.array( [ 2., 3., starlink.Ast.BAD,
-                              5., 6., starlink.Ast.BAD,
-                              8., 9., starlink.Ast.BAD] )
+      answer = numpy.array( [ [2., 3., starlink.Ast.BAD],
+                              [5., 6., starlink.Ast.BAD],
+                              [8., 9., starlink.Ast.BAD]] )
       d = (answer - out)**2
       self.assertEqual( d.sum(), 0.0 )
       self.assertIsNone( outv )
@@ -439,16 +441,19 @@ class TestAst(unittest.TestCase):
       self.assertEqual( d.sum(), 0.0 )
       self.assertEqual( nused, 12 )
 
-      data_in = numpy.linspace( 1, 9, 9 )
+      data_in = numpy.array( [[ 1., 2., 3.,],
+                              [ 4., 5., 6.],
+                              [ 7., 8., 9.] ] )
+
       zoommap = starlink.Ast.ZoomMap( 2, 1.0 )
       npix,out,outv = zoommap.resample( [1,0], [3,2], data_in, None,
                                    starlink.Ast.NEAREST, None, starlink.Ast.USEBAD,
                                    0.0, 100, starlink.Ast.BAD, [2,0], [4,2], [2,0],
                                    [4,2] )
 
-      answer = numpy.array( [ 2., 3., starlink.Ast.BAD,
-                              5., 6., starlink.Ast.BAD,
-                              8., 9., starlink.Ast.BAD] )
+      answer = numpy.array( [[ 2., 3., starlink.Ast.BAD],
+                             [ 5., 6., starlink.Ast.BAD],
+                             [ 8., 9., starlink.Ast.BAD] ] )
       d = (answer - out)**2
       self.assertEqual( d.sum(), 0.0 )
       self.assertIsNone( outv )
