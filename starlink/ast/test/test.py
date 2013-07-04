@@ -558,6 +558,17 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( cmpmap, starlink.Ast.CmpMap )
       self.assertIsInstance( cmpmap, starlink.Ast.Mapping )
 
+      zoommap = starlink.Ast.ZoomMap( 2, 1.0 )
+      unitmap = starlink.Ast.UnitMap( 1 )
+      cmpmap = starlink.Ast.CmpMap( zoommap, unitmap, False )
+      out,map = cmpmap.mapsplit( 3 )
+
+      self.assertIsInstance( map, starlink.Ast.UnitMap )
+      self.assertEqual( len(out), 3 )
+      self.assertEqual( out[0], 3 )
+      self.assertEqual( out[1], 0 )
+      self.assertEqual( out[2], 0 )
+
    def test_TranMap(self):
       tranmap = starlink.Ast.TranMap( starlink.Ast.UnitMap(2), starlink.Ast.UnitMap(2) )
       self.assertIsInstance( tranmap, starlink.Ast.TranMap )

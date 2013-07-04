@@ -558,6 +558,7 @@ static PyObject *Mapping_decompose( Mapping *self );
 static PyObject *Mapping_invert( Mapping *self );
 static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args );
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args );
+static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args );
 static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args );
 static PyObject *Mapping_rate( Mapping *self, PyObject *args );
 static PyObject *Mapping_rebin( Mapping *self, PyObject *args );
@@ -572,7 +573,8 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args );
 static PyMethodDef Mapping_methods[] = {
    {"decompose", (PyCFunction)Mapping_decompose, METH_NOARGS, "Decompose a Mapping into two component Mappings"},
    {"invert", (PyCFunction)Mapping_invert, METH_NOARGS, "Invert a Mapping"},
-   {"mapbox", (PyCFunction)Mapping_mapbox, METH_VARARGS, " Find a bounding box for a Mapping."},
+   {"mapbox", (PyCFunction)Mapping_mapbox, METH_VARARGS, "Find a bounding box for a Mapping."},
+   {"mapsplit", (PyCFunction)Mapping_mapsplit, METH_VARARGS, "Split a Mapping up into parallel component Mappings."},
    {"linearapprox", (PyCFunction)Mapping_linearapprox, METH_VARARGS, "Obtain a linear approximation to a Mapping, if appropriate."},
    {"quadapprox", (PyCFunction)Mapping_quadapprox, METH_VARARGS, "Obtain a quadratic approximation to a 2D Mapping"},
    {"rate", (PyCFunction)Mapping_rate, METH_VARARGS, "Calculate the rate of change of a Mapping output"},
@@ -785,6 +787,52 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
       Py_XDECREF( ubnd_in );
    }
 
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".mapsplit"
+static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args ) {
+
+/* args: out,map:in */
+
+   PyArrayObject *in = NULL;
+   PyObject *in_object = NULL;
+   PyObject *result = NULL;
+   PyArrayObject *out = NULL;
+   int nin;
+   npy_intp dims[1];
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "O:" NAME, &in_object ) && astOK ) {
+      in = (PyArrayObject *) PyArray_ContiguousFromAny( in_object,
+                                                        PyArray_INT, 0, 100);
+      if( in ) {
+         nin = PyArray_Size( (PyObject *) in );
+         dims[ 0 ] = astGetI( THIS, "Nout" );
+         out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+         if( out ) {
+
+            memset( out->data, 0, dims[ 0 ]*sizeof( int ) );
+
+            AstMapping *map = NULL;
+            astMapSplit( THIS, nin, (const int *)in->data, (int *)out->data,
+                         &map );
+            if( astOK ) {
+               PyObject *map_object = NewObject( (AstObject *) map );
+               if( map_object ) {
+                  result = Py_BuildValue( "OO", out, map_object );
+               }
+               Py_XDECREF( map_object );
+            }
+            if( map ) map = astAnnul( map );
+         }
+         Py_XDECREF( out );
+      }
+      Py_XDECREF( in );
+   }
    TIDY;
    return result;
 }

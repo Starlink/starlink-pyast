@@ -6,7 +6,6 @@ Add following methods:
    GetRegionPoints
    GetTables
    GetUnc
-   MapSplit
    Mask
    Negate
    PutTables
