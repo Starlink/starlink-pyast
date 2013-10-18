@@ -5432,7 +5432,7 @@ f        BADVAL
 *     - A value of zero will be returned if this function is invoked
 *     with the global error status set, or if it should fail for any
 *     reason.
-*     - An error will be reported if the overlap of the Region and 
+*     - An error will be reported if the overlap of the Region and
 *     the array cannot be determined.
 
 *  Data Type Codes:
@@ -5596,14 +5596,13 @@ static int Mask##X( AstRegion *this, AstMapping *map, int inside, int ndim, \
          if( lbndgd[ idim ] != AST__BAD && ubndgd[ idim ] != AST__BAD ) { \
             lbndg[ idim ] = MAX( lbnd[ idim ], (int)( lbndgd[ idim ] + 0.5 ) - 2 ); \
             ubndg[ idim ] = MIN( ubnd[ idim ], (int)( ubndgd[ idim ] + 0.5 ) + 2 ); \
-            npix *= ( ubnd[ idim ] - lbnd[ idim ] + 1 ); \
-            npixg *= ( ubndg[ idim ] - lbndg[ idim ] + 1 ); \
-            if( npixg <= 0 ) break; \
          } else { \
-            astError( AST__PTRNG, "astMask<X>(%s): Cannot determine the overlap of the Region and array.", \
-                      status, astGetClass(this) ); \
-            break; \
+            lbndg[ idim ] = lbnd[ idim ]; \
+            ubndg[ idim ] = ubnd[ idim ]; \
          } \
+         npix *= ( ubnd[ idim ] - lbnd[ idim ] + 1 ); \
+         npixg *= ( ubndg[ idim ] - lbndg[ idim ] + 1 ); \
+         if( npixg <= 0 ) break; \
       } \
 \
 /* If the bounding box is null, return without action. */ \
@@ -8366,8 +8365,8 @@ f        The global status.
 *    returned larger than the upper limit. Note, this is different to an
 *    axis which has a constant value (in which case both lower and upper
 *    limit will be returned set to the constant value).
-*    - If the bounds on an axis cannot be determined, AST__BAD is returned for 
-*    both upper and lower bounds 
+*    - If the bounds on an axis cannot be determined, AST__BAD is returned for
+*    both upper and lower bounds
 
 *--
 */
@@ -8666,6 +8665,7 @@ f     STATUS = INTEGER (Given and Returned)
 f        The global status.
 
 *  Notes:
+*     - An error is reported if the Region is unbounded.
 *     - If the coordinate system represented by the Region has been
 *     changed since it was first created, the returned axis values refer
 *     to the new (changed) coordinate system, rather than the original
@@ -8691,72 +8691,80 @@ f        The global status.
 /* Check the inherited status. */
    if( !astOK ) return;
 
+/* Report an error if the Region is unbounded. */
+   if( !astGetBounded( this ) ) {
+      if( astOK ) astError( AST__MBBNF, "astGetRegionMesh(%s): The supplied %s"
+                            " is unbounded so no mesh can be created to cover "
+                            "it.", status, astGetClass( this ), astGetClass( this ) );
+   } else {
+
 /* Get the mesh or grid as required. If only the size of the mesh or grid
    is required, get it in the base Frame as there is no need to spend the
    extra time transforming it into the current Frame. */
-   if( maxpoint == 0  ){
-      if( surface ) {
-         pset = astRegBaseMesh( this );
+      if( maxpoint == 0  ){
+         if( surface ) {
+            pset = astRegBaseMesh( this );
+         } else {
+            pset = astRegBaseGrid( this );
+         }
       } else {
-         pset = astRegBaseGrid( this );
+         if( surface ) {
+            pset = astRegMesh( this );
+         } else {
+            pset = astRegGrid( this );
+         }
       }
-   } else {
-      if( surface ) {
-         pset = astRegMesh( this );
-      } else {
-         pset = astRegGrid( this );
-      }
-   }
 
 /* Return the number of points in the mesh or grid. */
-   *npoint = astGetNpoint( pset );
+      *npoint = astGetNpoint( pset );
 
 /* Do nothing more unless a non-zero array size was supplied. */
-   if( *npoint > 0 && maxpoint != 0 && astOK ) {
+      if( *npoint > 0 && maxpoint != 0 && astOK ) {
 
 /* Check the supplied array is large enough. */
-      if( *npoint > maxpoint ) {
-         astError( AST__DIMIN, "astGetRegionMesh(%s): The supplied "
-                   "array can hold up to %d points but the %s supplied "
-                   "has %d points on its mesh (programming error).",
-                   status, astGetClass( this ), maxpoint, astGetClass( this ),
-                   *npoint );
-      }
+         if( *npoint > maxpoint ) {
+            astError( AST__DIMIN, "astGetRegionMesh(%s): The supplied "
+                      "array can hold up to %d points but the %s supplied "
+                      "has %d points on its mesh (programming error).",
+                      status, astGetClass( this ), maxpoint, astGetClass( this ),
+                      *npoint );
+         }
 
 /* Get the dimensionality of the PointSet, and get a pointer to the axis
    values. */
-      nc = astGetNcoord( pset );
-      ptr = astGetPoints( pset );
+         nc = astGetNcoord( pset );
+         ptr = astGetPoints( pset );
 
 /* Check pointers can be used safely. */
-      if ( astOK ) {
+         if ( astOK ) {
 
 /* Check the supplied array has room for all the axes. */
-         if( nc > maxcoord ) {
-            astError( AST__DIMIN, "astGetRegionMesh(%s): The supplied "
-                      "array can hold up to %d axes but the %s supplied "
-                      "has %d axes (programming error).", status,
-                      astGetClass( this ), maxcoord, astGetClass( this ), nc );
+            if( nc > maxcoord ) {
+               astError( AST__DIMIN, "astGetRegionMesh(%s): The supplied "
+                         "array can hold up to %d axes but the %s supplied "
+                         "has %d axes (programming error).", status,
+                         astGetClass( this ), maxcoord, astGetClass( this ), nc );
 
 /* If all is OK, copy the current Frame axis values into the supplied array. */
-         } else {
+            } else {
 
 /* Loop round the axes to be copied. */
-            for( j = 0; j < nc; j++ ) {
+               for( j = 0; j < nc; j++ ) {
 
 /* Get points to the first element of the input and output arrays. */
-               p = ptr[ j ];
-               q = points + j*maxpoint;
+                  p = ptr[ j ];
+                  q = points + j*maxpoint;
 
 /* Copying the axis values. */
-               (void) memcpy( q, p, sizeof( double )*( *npoint ) );
+                  (void) memcpy( q, p, sizeof( double )*( *npoint ) );
+               }
             }
          }
       }
-   }
 
 /* Free resources. */
-   pset = astAnnul( pset );
+      pset = astAnnul( pset );
+   }
 }
 
 static void GetRegionPoints( AstRegion *this, int maxpoint, int maxcoord,

@@ -465,4 +465,10 @@ enum { AST__ISNAN           	= 233934362 };	/* messid=451 */
 /* write error */
 enum { AST__WRERR           	= 233934370 };	/* messid=452 */
 
+/* Bad variant Mapping name */
+enum { AST__BDVNM           	= 233934378 };	/* messid=453 */
+
+/* Attempt to add a variant Mapping to a mirror Frame */
+enum { AST__MIRRO           	= 233934386 };	/* messid=454 */
+
 #endif	/* AST_ERROR_DEFINED */

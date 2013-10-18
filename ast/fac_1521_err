@@ -152,3 +152,5 @@ FACILITY AST
 450,NOFIT,Fit failed
 451,ISNAN,A transformation generated one or more NaN values
 452,WRERR,write error
+453,BDVNM,Bad variant Mapping name
+454,MIRRO,Attempt to add a variant Mapping to a mirror Frame

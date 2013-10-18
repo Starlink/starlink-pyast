@@ -613,3 +613,11 @@
       INTEGER AST__WRERR
       PARAMETER ( AST__WRERR = 233934370 )
 
+*     Bad variant Mapping name
+      INTEGER AST__BDVNM
+      PARAMETER ( AST__BDVNM = 233934378 )
+
+*     Attempt to add a variant Mapping to a mirror Frame
+      INTEGER AST__MIRRO
+      PARAMETER ( AST__MIRRO = 233934386 )
+

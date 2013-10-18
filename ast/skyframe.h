@@ -128,6 +128,12 @@
 
 #if defined(astCLASS)            /* Protected */
 
+/* Define values for the different values of the SkyRefIs attribute. */
+#define AST__BAD_REF 	 0
+#define AST__POLE_REF    1
+#define AST__ORIGIN_REF  2
+#define AST__IGNORED_REF 3
+
 /* Values used to represent different System attribute values. */
 #define AST__FK4           1
 #define AST__FK4_NO_E      2
@@ -248,10 +254,6 @@ typedef struct AstSkyFrameVtab {
    int (* TestAlignOffset)( AstSkyFrame *, int * );
    void (* ClearAlignOffset)( AstSkyFrame *, int * );
    void (* SetAlignOffset)( AstSkyFrame *, int, int * );
-
-/* Local Apparent Sidereal Time look-up tables. */
-   int nlast_tables;
-   AstSkyLastTable **last_tables;
 
 } AstSkyFrameVtab;
 

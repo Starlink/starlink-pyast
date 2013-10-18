@@ -6732,7 +6732,7 @@ float fred_() {
            $FC $FCFLAGS $opt -o conftest conftest.f c-conftest.$ac_objext 2>&5
            if test -r conftest
            then
-              star_cv_cnf_f2c_compatible=`eval conftest | sed 's/\ //g'` > /dev/null
+              star_cv_cnf_f2c_compatible=`eval ./conftest | sed 's/\ //g'` > /dev/null
            else
               AC_MSG_ERROR([failed to link program]) 
            fi
@@ -6941,7 +6941,7 @@ C  checks passing 4 byte character string lengths on 64bit compiler.
               $FC $FCFLAGS $opt -o conftest conftest.f 2>&5
               if test -r conftest
               then
-                 star_cv_cnf_trail_type=`eval conftest | sed 's/\ //g'` > /dev/null
+                 star_cv_cnf_trail_type=`eval ./conftest | sed 's/\ //g'` > /dev/null
               else
                  AC_MSG_ERROR([failed to link program]) 
               fi
@@ -7212,10 +7212,10 @@ AC_DEFUN([STAR_LATEX_DOCUMENTATION],
         if $_star_build_docs; then
             AC_FOREACH([DocCode], [$1],
                [m4_if(m4_bregexp(DocCode,[/]), -1,
-                      [STAR@&t@_LATEX_DOCUMENTATION="$STAR@&t@_LATEX_DOCUMENTATION DocCode.tex DocCode.ps DocCode.htx_tar"
+                      [STAR@&t@_LATEX_DOCUMENTATION="$STAR@&t@_LATEX_DOCUMENTATION DocCode.tex DocCode.pdf DocCode.htx_tar"
 ],
                       [m4_define([_T], m4_bpatsubst(DocCode,[/]))dnl
-                       STAR_LATEX_DOCUMENTATION_[]_STAR_UPCASE(_T)="_T.tex _T.ps _T.htx_tar"
+                       STAR_LATEX_DOCUMENTATION_[]_STAR_UPCASE(_T)="_T.tex _T.pdf _T.htx_tar"
                        AC_SUBST(STAR_LATEX_DOCUMENTATION_[]_STAR_UPCASE(_T))])])
         fi
         STAR_DECLARE_DEPENDENCIES([sourceset], [star2html])
@@ -8910,4 +8910,3 @@ AC_SUBST([am__tar])
 AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
-m4_include([acinclude.m4])

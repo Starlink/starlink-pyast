@@ -317,6 +317,19 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 *        - Correct astLoadSkyFrame function so that any axis permutation is
 *        taken into account when loading SkyFrame attributes that have a
 *        separate value for each axis.
+*     25-JUL-2013 (DSB):
+*        Use a single table of cached LAST values for all threads, rather
+*        than a separate table for each thread. The problem with a table per
+*        thread  is that if you have N threads, each table contains only
+*        one N'th of the total number of cached values, resulting in
+*        poorer accuracy, and small variations in interpolated LAST value
+*        depending on the way the cached values are distributed amongst the
+*        N threads.
+*     6-AST-2013 (DSB):
+*        Fix the use of the read-write lock that is used to serialise
+*        access to the table of cached LAST values. This bug could
+*        cause occasional problems where an AST pointer would became
+*        invalid for no apparent reason.
 *class--
 */
 
@@ -338,10 +351,6 @@ f     - AST_SKYOFFSETMAP: Obtain a Mapping from absolute to offset coordinates
 #define SOLSID 1.00273790935
 
 /* Define values for the different values of the SkyRefIs attribute. */
-#define BAD_REF 0
-#define POLE_REF 1
-#define ORIGIN_REF 2
-#define IGNORED_REF 3
 #define POLE_STRING "Pole"
 #define ORIGIN_STRING "Origin"
 #define IGNORED_STRING "Ignored"
@@ -830,6 +839,12 @@ static double deg2rad;
 static double pi;
 static double piby2;
 
+/* Table of cached Local Apparent Sidereal Time values and corresponding
+   epochs. */
+static int nlast_tables = 0;
+static AstSkyLastTable **last_tables = NULL;
+
+
 /* Define macros for accessing each item of thread specific global data. */
 #ifdef THREAD_SAFE
 
@@ -866,6 +881,14 @@ static pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 #define LOCK_MUTEX2 pthread_mutex_lock( &mutex2 );
 #define UNLOCK_MUTEX2 pthread_mutex_unlock( &mutex2 );
 
+/* A read-write lock used to protect the table of cached LAST values so
+   that multiple threads can read simultaneously so long as no threads are
+   writing to the table. */
+static pthread_rwlock_t rwlock1=PTHREAD_RWLOCK_INITIALIZER;
+#define LOCK_WLOCK1 pthread_rwlock_wrlock( &rwlock1 );
+#define LOCK_RLOCK1 pthread_rwlock_rdlock( &rwlock1 );
+#define UNLOCK_RWLOCK1 pthread_rwlock_unlock( &rwlock1 );
+
 /* If thread safety is not needed, declare and initialise globals at static
    variables. */
 #else
@@ -899,8 +922,9 @@ static int class_init = 0;       /* Virtual function table initialised? */
 #define LOCK_MUTEX2
 #define UNLOCK_MUTEX2
 
-#define LOCK_MUTEX2
-#define UNLOCK_MUTEX2
+#define LOCK_WLOCK1
+#define LOCK_RLOCK1
+#define UNLOCK_RWLOCK1
 
 #endif
 
@@ -2646,9 +2670,9 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "skyrefis" ) ) {
       ival = astGetSkyRefIs( this );
       if ( astOK ) {
-         if( ival == POLE_REF ){
+         if( ival == AST__POLE_REF ){
             result = POLE_STRING;
-         } else if( ival == IGNORED_REF ){
+         } else if( ival == AST__IGNORED_REF ){
             result = IGNORED_STRING;
          } else {
             result = ORIGIN_STRING;
@@ -2891,7 +2915,6 @@ static double GetCachedLAST( AstSkyFrame *this, double epoch, double obslon,
 
 /* Local Variables: */
    astDECLARE_GLOBALS
-   AstSkyFrameVtab *vtab;
    AstSkyLastTable *table;
    double *ep;
    double *lp;
@@ -2911,13 +2934,14 @@ static double GetCachedLAST( AstSkyFrame *this, double epoch, double obslon,
 /* Check the global error status. */
    if ( !astOK ) return result;
 
-/* Get a pointer to the SkyFrame virtual function table. */
-   vtab = (AstSkyFrameVtab *) ((AstObject *) this)->vtab;
+/* Wait until the table is not being written to by any thread. This also
+   prevents a thread from writing to the table whilst we are reading it. */
+   LOCK_RLOCK1
 
 /* Loop round every LAST table held in the vtab. Each table refers to a
    different observatory position and/or DUT1 value. */
-   for( itable = 0; itable < vtab->nlast_tables; itable++ ) {
-      table = (vtab->last_tables)[ itable ];
+   for( itable = 0; itable < nlast_tables; itable++ ) {
+      table = last_tables[ itable ];
 
 /* See if the table refers to the given position and dut1 value, allowing
    some small tolerance. */
@@ -2985,6 +3009,9 @@ static double GetCachedLAST( AstSkyFrame *this, double epoch, double obslon,
          break;
       }
    }
+
+/* Indicate that threads may now write to the table. */
+   UNLOCK_RWLOCK1
 
 /* Ensure the returned value is within the range 0 - 2.PI. */
    if( result != AST__BAD ) {
@@ -3519,7 +3546,7 @@ static const char *GetLabel( AstFrame *this, int axis, int *status ) {
          }
 
 /* If the SkyRef attribute has a set value, append " offset" to the label. */
-         if( astGetSkyRefIs( this ) != IGNORED_REF &&
+         if( astGetSkyRefIs( this ) != AST__IGNORED_REF &&
              ( astTestSkyRef( this, 0 ) || astTestSkyRef( this, 1 ) ) ) {
             sprintf( getlabel_buff, "%s offset", result );
             result = getlabel_buff;
@@ -4109,7 +4136,7 @@ static const char *GetSymbol( AstFrame *this, int axis, int *status ) {
 
 /* If the SkyRef attribute had a set value, prepend "D" (for "delta") to the
    Symbol. */
-         if( astGetSkyRefIs( this ) != IGNORED_REF &&
+         if( astGetSkyRefIs( this ) != AST__IGNORED_REF &&
              ( astTestSkyRef( this, 0 ) || astTestSkyRef( this, 1 ) ) ) {
             sprintf( getsymbol_buff, "D%s", result );
             result = getsymbol_buff;
@@ -4326,7 +4353,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 
 /* See if an offset coordinate system is being used.*/
       offset = ( astTestSkyRef( this, 0 ) || astTestSkyRef( this, 1 ) )
-               && ( astGetSkyRefIs( this ) != IGNORED_REF );
+               && ( astGetSkyRefIs( this ) != AST__IGNORED_REF );
 
 /* Use this to determine if the word "coordinates" or "offsets" should be
    used.*/
@@ -4474,7 +4501,7 @@ static const char *GetTitle( AstFrame *this_frame, int *status ) {
 /* If the SkyRef attribute has set values, create a description of the offset
    coordinate system. */
             if( offset ){
-               word = ( astGetSkyRefIs( this ) == POLE_REF )?"pole":"origin";
+               word = ( astGetSkyRefIs( this ) == AST__POLE_REF )?"pole":"origin";
                lextra = sprintf( gettitle_buff2, "%s at %s ", word,
                            astFormat( this, 0, astGetSkyRef( this, 0 ) ) );
                lextra += sprintf( gettitle_buff2 + lextra, "%s",
@@ -4822,11 +4849,6 @@ void astInitSkyFrameVtab_(  AstSkyFrameVtab *vtab, const char *name, int *status
    astSetDelete( vtab, Delete );
    astSetDump( vtab, Dump, "SkyFrame",
                "Description of celestial coordinate system" );
-
-/* Initialise information about the tables of cached Local Apparent
-   Sidereal Time values stored in the vtab. */
-   vtab->nlast_tables = 0;
-   vtab->last_tables = NULL;
 
 /* Initialize constants for converting between hours, degrees and
    radians, etc.. */
@@ -7318,7 +7340,7 @@ f     function is invoked with STATUS set to an error value, or if it
    if ( !astOK ) return result;
 
 /* Return a UnitMap if the offset coordinate system is not defined. */
-   if( astGetSkyRefIs( this ) == IGNORED_REF ||
+   if( astGetSkyRefIs( this ) == AST__IGNORED_REF ||
        ( !astTestSkyRef( this, 0 ) && !astTestSkyRef( this, 1 ) ) ) {
       result = (AstMapping *) astUnitMap( 2, "", status );
 
@@ -7342,7 +7364,7 @@ f     function is invoked with STATUS set to an error value, or if it
 
 /* First deal with cases where the SkyRef attribute holds the standard
    coords at the origin of the offset coordinate system. */
-      if( astGetSkyRefIs( this ) == ORIGIN_REF ) {
+      if( astGetSkyRefIs( this ) == AST__ORIGIN_REF ) {
 
 /* Convert each point into a 3-vector of unit length. The SkyRef position
    defines the X axis in the offset coord system. */
@@ -8522,13 +8544,13 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
                && ( nc >= len ) ) {
 
       if( astChrMatch( setting + offset, POLE_STRING ) ) {
-         astSetSkyRefIs( this, POLE_REF );
+         astSetSkyRefIs( this, AST__POLE_REF );
 
       } else if( astChrMatch( setting + offset, ORIGIN_STRING ) ) {
-         astSetSkyRefIs( this, ORIGIN_REF );
+         astSetSkyRefIs( this, AST__ORIGIN_REF );
 
       } else if( astChrMatch( setting + offset, IGNORED_STRING ) ) {
-         astSetSkyRefIs( this, IGNORED_REF );
+         astSetSkyRefIs( this, AST__IGNORED_REF );
 
       } else if( astOK ) {
          astError( AST__OPT, "astSet(%s): option '%s' is unknown in '%s'.", status,
@@ -8647,7 +8669,6 @@ static void SetCachedLAST( AstSkyFrame *this, double last, double epoch,
 
 /* Local Variables: */
    astDECLARE_GLOBALS
-   AstSkyFrameVtab *vtab;
    AstSkyLastTable *table;
    double *ep;
    double *lp;
@@ -8664,13 +8685,14 @@ static void SetCachedLAST( AstSkyFrame *this, double last, double epoch,
 /* Check the global error status. */
    if ( !astOK ) return;
 
-/* Get a pointer to the SkyFrame virtual function table. */
-   vtab = (AstSkyFrameVtab *) ((AstObject *) this)->vtab;
+/* Ensure no threads are allowed to read the table whilst we are writing
+   to it. */
+   LOCK_WLOCK1
 
 /* Loop round every LAST table held in the vtab. Each table refers to a
    different observatory position and/or DUT1 value. */
-   for( itable = 0; itable < vtab->nlast_tables; itable++ ) {
-      table = (vtab->last_tables)[ itable ];
+   for( itable = 0; itable < nlast_tables; itable++ ) {
+      table = last_tables[ itable ];
 
 /* See if the table refers to the given position and dut1 value, allowing
    some small tolerance. If it does, leave the loop. */
@@ -8688,13 +8710,13 @@ static void SetCachedLAST( AstSkyFrame *this, double last, double epoch,
 
       astBeginPM;
       table = astMalloc( sizeof( AstSkyLastTable ) );
-      itable = (vtab->nlast_tables)++;
-      vtab->last_tables = astGrow( vtab->last_tables, vtab->nlast_tables,
+      itable = nlast_tables++;
+      last_tables = astGrow( last_tables, nlast_tables,
                                    sizeof( AstSkyLastTable * ) );
       astEndPM;
 
       if( astOK ) {
-         (vtab->last_tables)[ itable ] = table;
+         last_tables[ itable ] = table;
          table->obslat = obslat;
          table->obslon = obslon;
          table->obsalt = obsalt;
@@ -8765,6 +8787,10 @@ static void SetCachedLAST( AstSkyFrame *this, double last, double epoch,
          }
       }
    }
+
+/* Indicate other threads are now allowed to read the table. */
+   UNLOCK_RWLOCK1
+
 }
 
 static void SetDut1( AstFrame *this_frame, double val, int *status ) {
@@ -9143,7 +9169,7 @@ static void SetSystem( AstFrame *this_frame, AstSystemType system, int *status )
 /* Also set AlignOffset and SkyRefIs so that the following call to
    astConvert does not align in offset coords. */
       astSetAlignOffset( sfrm, 0 );
-      astSetSkyRefIs( sfrm, IGNORED_REF );
+      astSetSkyRefIs( sfrm, AST__IGNORED_REF );
 
 /* Get the Mapping from the original System to the new System. Invoking
    astConvert will recursively invoke SetSystem again. This is why we need
@@ -9576,10 +9602,10 @@ static int SubFrame( AstFrame *target_frame, AstFrame *template,
    this case we use a UnitMap to connect them. */
       if( ( astGetFrameFlags( target_frame ) & AST__INTFLAG ) == 0 ) {
          if( astGetAlignOffset( target ) &&
-             astGetSkyRefIs( target ) != IGNORED_REF &&
+             astGetSkyRefIs( target ) != AST__IGNORED_REF &&
              template && astIsASkyFrame( template ) ){
             if( astGetAlignOffset( (AstSkyFrame *) template ) &&
-                astGetSkyRefIs( (AstSkyFrame *) template ) != IGNORED_REF ) {
+                astGetSkyRefIs( (AstSkyFrame *) template ) != AST__IGNORED_REF ) {
                match = 1;
                *map = (AstMapping *) astUnitMap( 2, "", status );
             }
@@ -10887,7 +10913,7 @@ astMAKE_CLEAR(SkyFrame,NegLon,neglon,-INT_MAX)
 /* Supply a default of 0 for absolute coords and 1 for offset coords if
    no NegLon value has been set. */
 astMAKE_GET(SkyFrame,NegLon,int,0,( ( this->neglon != -INT_MAX ) ?
-this->neglon : (( astGetSkyRefIs( this ) == ORIGIN_REF )? 1 : 0)))
+this->neglon : (( astGetSkyRefIs( this ) == AST__ORIGIN_REF )? 1 : 0)))
 
 /* Set a NegLon value of 1 if any non-zero value is supplied. */
 astMAKE_SET(SkyFrame,NegLon,int,neglon,( value != 0 ))
@@ -10987,10 +11013,10 @@ astMAKE_TEST(SkyFrame,Projection,( this->projection != NULL ))
 
 *att--
 */
-astMAKE_CLEAR(SkyFrame,SkyRefIs,skyrefis,BAD_REF)
+astMAKE_CLEAR(SkyFrame,SkyRefIs,skyrefis,AST__BAD_REF)
 astMAKE_SET(SkyFrame,SkyRefIs,int,skyrefis,value)
-astMAKE_TEST(SkyFrame,SkyRefIs,( this->skyrefis != BAD_REF ))
-astMAKE_GET(SkyFrame,SkyRefIs,int,IGNORED_REF,(this->skyrefis == BAD_REF ? IGNORED_REF : this->skyrefis))
+astMAKE_TEST(SkyFrame,SkyRefIs,( this->skyrefis != AST__BAD_REF ))
+astMAKE_GET(SkyFrame,SkyRefIs,int,AST__IGNORED_REF,(this->skyrefis == AST__BAD_REF ? AST__IGNORED_REF : this->skyrefis))
 
 /*
 *att++
@@ -11362,11 +11388,11 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
 /* --------- */
    set = TestSkyRefIs( this, status );
    ival = set ? GetSkyRefIs( this, status ) : astGetSkyRefIs( this );
-   if( ival == POLE_REF ) {
+   if( ival == AST__POLE_REF ) {
       astWriteString( channel, "SRefIs", set, 0, POLE_STRING,
                       "Rotated to put pole at ref. pos." );
 
-   } else if( ival == IGNORED_REF ) {
+   } else if( ival == AST__IGNORED_REF ) {
       astWriteString( channel, "SRefIs", set, 0, IGNORED_STRING,
                       "Not rotated (ref. pos. is ignored)" );
 
@@ -11598,7 +11624,7 @@ AstSkyFrame *astInitSkyFrame_( void *mem, size_t size, int init,
       new->projection = NULL;
       new->neglon = -INT_MAX;
       new->alignoffset = -INT_MAX;
-      new->skyrefis = BAD_REF;
+      new->skyrefis = AST__BAD_REF;
       new->skyref[ 0 ] = AST__BAD;
       new->skyref[ 1 ] = AST__BAD;
       new->skyrefp[ 0 ] = AST__BAD;
@@ -11779,13 +11805,13 @@ AstSkyFrame *astLoadSkyFrame_( void *mem, size_t size,
 /* --------- */
       sval = astReadString( channel, "srefis", " " );
       if( sval ){
-         new->skyrefis = BAD_REF;
+         new->skyrefis = AST__BAD_REF;
          if( astChrMatch( sval, POLE_STRING ) ) {
-            new->skyrefis = POLE_REF;
+            new->skyrefis = AST__POLE_REF;
          } else if( astChrMatch( sval, ORIGIN_STRING ) ) {
-            new->skyrefis = ORIGIN_REF;
+            new->skyrefis = AST__ORIGIN_REF;
          } else if( astChrMatch( sval, IGNORED_STRING ) ) {
-            new->skyrefis = IGNORED_REF;
+            new->skyrefis = AST__IGNORED_REF;
          } else if( !astChrMatch( sval, " " ) && astOK ){
 	    astError( AST__INTER, "astRead(SkyFrame): Corrupt SkyFrame contains "
 		      "invalid SkyRefIs attribute value (%s).", status, sval );

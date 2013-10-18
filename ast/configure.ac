@@ -7,7 +7,7 @@ dnl   1.5.  It should work with autoconf versions 2.50 or better, and
 dnl   automake 1.6 or better.
 
 dnl   Initialisation: package name and version number
-AC_INIT(ast, 7.1.0, starlink@jiscmail.ac.uk)
+AC_INIT(ast, 7.3.3, starlink@jiscmail.ac.uk)
 
 dnl   Require autoconf-2.50 at least
 AC_PREREQ(2.50)
@@ -175,7 +175,7 @@ int main() {
 #   satisfy these targets, so give a non-null value
 #   for the second argument, to suppress automatic generation of
 #   rules.
-STAR_LATEX_DOCUMENTATION([sun210 sun211], [sun210.ps sun210.tex sun211.ps sun211.tex sun210.htx_tar sun211.htx_tar])
+STAR_LATEX_DOCUMENTATION([sun210 sun211], [sun210.pdf sun210.tex sun211.pdf sun211.tex sun210.htx_tar sun211.htx_tar])
 STAR_PREDIST_SOURCES(sun_master.tex)
 STAR_CHECK_PROGS(star2html)
 STAR_CHECK_PROGS(prolat, sst)   # prolat is part of SST

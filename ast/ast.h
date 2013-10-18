@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     19-NOV-2012 (makeh):
+*     18-OCT-2013 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -530,12 +530,12 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 7
-#define AST__VMINOR 1
-#define AST__RELEASE 0
+#define AST__VMINOR 3
+#define AST__RELEASE 3
 
 #define AST_MAJOR_VERS 7
-#define AST_MINOR_VERS 1
-#define AST_RELEASE 0
+#define AST_MINOR_VERS 3
+#define AST_RELEASE 3
 
 #include <stdarg.h>
 #include <float.h>
@@ -780,6 +780,8 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define astAppendPoints(this,that) astINVOKE(O,astAppendPoints_(astCheckPointSet(this),astCheckPointSet(that),STATUS_PTR))
 #define astBndPoints(this,lbnd,ubnd) astINVOKE(V,astBndPoints_(astCheckPointSet(this),lbnd,ubnd,STATUS_PTR))
 #define astReplaceNaN(this) astINVOKE(V,astReplaceNaN_(astCheckPointSet(this),STATUS_PTR))
+
+#include <stdint.h>
 #define STATUS_PTR astGetStatusPtr
 
 #define AST__MAPPING_GETATTRIB_BUFF_LEN 50
@@ -814,7 +816,6 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define AST__SOMB (12)
 #define AST__SOMBCOS (13)
 
-#include <stdint.h>
 typedef int64_t INT_BIG;
 typedef uint64_t UINT_BIG;
 typedef struct AstMapping {
@@ -847,7 +848,7 @@ PROTO_GENERIC_ALL(US,unsigned short int)
 
 PROTO_GENERIC_ALL(LD,long double)
 
-#define PROTO_GENERIC_DFI(X,Xtype) void astRebin##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * ); void astRebinSeq##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], double [], int *, int * );
+#define PROTO_GENERIC_DFI(X,Xtype) void astRebin##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * ); void astRebinSeq##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], double [], int64_t *, int * );
 
 PROTO_GENERIC_DFI(D,double)
 PROTO_GENERIC_DFI(F,float)
@@ -1219,6 +1220,10 @@ enum { AST__NOFIT = 233934354 };
 enum { AST__ISNAN = 233934362 };
 
 enum { AST__WRERR = 233934370 };
+
+enum { AST__BDVNM = 233934378 };
+
+enum { AST__MIRRO = 233934386 };
 /* version. */
 /* ======== */
 /* object. */
@@ -1253,6 +1258,7 @@ typedef struct AstMapEntry {
    struct AstMapEntry *snext;
    struct AstMapEntry *sprev;
    int member;
+   int keymember;
    int sortby;
 } AstMapEntry;
 
@@ -1309,6 +1315,7 @@ int astMapGetElemI_( AstKeyMap *, const char *, int, int *, int * );
 int astMapGetElemP_( AstKeyMap *, const char *, int, void **, int * );
 int astMapGetElemS_( AstKeyMap *, const char *, int, short int *, int * );
 int astMapHasKey_( AstKeyMap *, const char *, int * );
+int astMapDefined_( AstKeyMap *, const char *, int * );
 int astMapLenC_( AstKeyMap *, const char *, int * );
 int astMapLength_( AstKeyMap *, const char *, int * );
 int astMapSize_( AstKeyMap *, int * );
@@ -1395,6 +1402,7 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapLength(this,key) astINVOKE(V,astMapLength_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapLenC(this,key) astINVOKE(V,astMapLenC_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapHasKey(this,key) astINVOKE(V,astMapHasKey_(astCheckKeyMap(this),key,STATUS_PTR))
+#define astMapDefined(this,key) astINVOKE(V,astMapDefined_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapKey(this,index) astINVOKE(V,astMapKey_(astCheckKeyMap(this),index,STATUS_PTR))
 #define astMapType(this,key) astINVOKE(V,astMapType_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapGet0P(this,key,value) astINVOKE(V,astMapGet0P_(astCheckKeyMap(this),key,value,STATUS_PTR))
@@ -2011,6 +2019,7 @@ typedef struct AstFrame {
    AstSystemType system;
    AstSystemType alignsystem;
    int flags;
+   struct AstFrameSet *variants;
 } AstFrame;
 typedef struct AstLineDef {
    AstFrame *frame;
@@ -2029,6 +2038,8 @@ struct AstFrameSet;
 #define AST__CURRENT (-1)
 #define AST__NOFRAME (-99)
 #define AST__ALLFRAMES (-199)
+#define AST__FRAMESET_GETALLVARIANTS_BUFF_LEN 200
+#define AST__FRAMESET_GETATTRIB_BUFF_LEN 200
 
 typedef struct AstFrameSet {
 
@@ -2036,6 +2047,7 @@ typedef struct AstFrameSet {
 
    AstFrame **frame;
    AstMapping **map;
+   int *varfrm;
    int *invert;
    int *link;
    int *node;
@@ -2051,6 +2063,8 @@ AstFrameSet *astFrameSetId_( void *, const char *, ... )__attribute__((format(pr
 AstFrame *astGetFrame_( AstFrameSet *, int, int * );
 AstMapping *astGetMapping_( AstFrameSet *, int, int, int * );
 void astAddFrame_( AstFrameSet *, int , AstMapping *, AstFrame *, int * );
+void astAddVariant_( AstFrameSet *, AstMapping *, const char *, int * );
+void astMirrorVariants_( AstFrameSet *, int, int * );
 void astRemapFrame_( AstFrameSet *, int, AstMapping *, int * );
 void astRemoveFrame_( AstFrameSet *, int, int * );
 #define astCheckFrameSet(this) astINVOKE_CHECK(FrameSet,this,0)
@@ -2060,6 +2074,8 @@ void astRemoveFrame_( AstFrameSet *, int, int * );
 
 #define astFrameSet astINVOKE(F,astFrameSetId_)
 #define astAddFrame(this,iframe,map,frame) astINVOKE(V,astAddFrame_(astCheckFrameSet(this),iframe,(((iframe)!=AST__ALLFRAMES)?astCheckMapping(map):NULL),astCheckFrame(frame),STATUS_PTR))
+#define astAddVariant(this,map,name) astINVOKE(V,astAddVariant_(astCheckFrameSet(this),map?astCheckMapping(map):NULL,name,STATUS_PTR))
+#define astMirrorVariants(this,iframe) astINVOKE(V,astMirrorVariants_(astCheckFrameSet(this),iframe,STATUS_PTR))
 #define astGetFrame(this,iframe) astINVOKE(O,astGetFrame_(astCheckFrameSet(this),iframe,STATUS_PTR))
 #define astGetMapping(this,iframe1,iframe2) astINVOKE(O,astGetMapping_(astCheckFrameSet(this),iframe1,iframe2,STATUS_PTR))
 #define astRemapFrame(this,iframe,map) astINVOKE(V,astRemapFrame_(astCheckFrameSet(this),iframe,astCheckMapping(map),STATUS_PTR))
@@ -2084,6 +2100,8 @@ void astNorm_( AstFrame *, double[], int * );
 void astOffset_( AstFrame *, const double[], const double[], double, double[], int * );
 void astResolve_( AstFrame *, const double [], const double [], const double [], double [], double *, double *, int * );
 void astSetActiveUnit_( AstFrame *, int, int * );
+AstFrameSet *astGetFrameVariants_( AstFrame *, int * );
+void astSetFrameVariants_( AstFrame *, AstFrameSet *, int * );
 AstFrame *astPickAxesId_( AstFrame *, int, const int[], AstMapping **, int * );
 const char *astFormatId_( AstFrame *, int, double, int * );
 int astUnformatId_( AstFrame *, int, const char *, double *, int * );

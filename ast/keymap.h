@@ -111,9 +111,10 @@ typedef struct AstMapEntry {
    int nel;                  /* 0 => scalar, >0 => array with "nel" elements */
    const char *comment;      /* Pointer to a comment for the entry */
    int defined;              /* Non-zero if the entry value is defined */
-   struct AstMapEntry *snext; /* Pointer to next structure in sorted list. */
-   struct AstMapEntry *sprev; /* Pointer to previous structure in sorted list. */
-   int member;               /* No. of entries added to KeyMap prior to this one  */
+   struct AstMapEntry *snext;/* Pointer to next structure in sorted list. */
+   struct AstMapEntry *sprev;/* Pointer to previous structure in sorted list. */
+   int member;               /* No. of values added to KeyMap prior to this one  */
+   int keymember;            /* No. of keys added to KeyMap prior to this one  */
    int sortby;               /* Used for comunnication with qsort function */
 } AstMapEntry;
 
@@ -138,7 +139,7 @@ typedef struct AstKeyMap {
    int sortby;                     /* How the keys should be sorted */
    AstMapEntry *first;             /* Pointer to first structure in sorted list. */
    int nsorted;                    /* Length of sorted list */
-   int member_count;               /* Total no. of entries ever added to keyMap */
+   int member_count;               /* Total no. of values ever added to keyMap */
    AstMapEntry *firstA;            /* Pointer to first "AST object"-type entry */
    int iter_itab;                  /* Next hash table entry to return */
    AstMapEntry *iter_entry;        /* Next entry to return */
@@ -215,6 +216,7 @@ typedef struct AstKeyMapVtab {
    int (* MapLenC)( AstKeyMap *, const char *, int * );
    int (* MapType)( AstKeyMap *, const char *, int * );
    int (* MapHasKey)( AstKeyMap *, const char *, int * );
+   int (* MapDefined)( AstKeyMap *, const char *, int * );
    const char *(* MapIterate)( AstKeyMap *, int, int * );
    const char *(* MapKey)( AstKeyMap *, int, int * );
 
@@ -338,6 +340,7 @@ int astMapGetElemI_( AstKeyMap *, const char *, int, int *, int * );
 int astMapGetElemP_( AstKeyMap *, const char *, int, void **, int * );
 int astMapGetElemS_( AstKeyMap *, const char *, int, short int *, int * );
 int astMapHasKey_( AstKeyMap *, const char *, int * );
+int astMapDefined_( AstKeyMap *, const char *, int * );
 int astMapLenC_( AstKeyMap *, const char *, int * );
 int astMapLength_( AstKeyMap *, const char *, int * );
 int astMapSize_( AstKeyMap *, int * );
@@ -492,6 +495,7 @@ astINVOKE(O,astLoadKeyMap_(mem,size,vtab,name,astCheckChannel(channel),STATUS_PT
 #define astMapLength(this,key) astINVOKE(V,astMapLength_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapLenC(this,key) astINVOKE(V,astMapLenC_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapHasKey(this,key) astINVOKE(V,astMapHasKey_(astCheckKeyMap(this),key,STATUS_PTR))
+#define astMapDefined(this,key) astINVOKE(V,astMapDefined_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapKey(this,index) astINVOKE(V,astMapKey_(astCheckKeyMap(this),index,STATUS_PTR))
 #define astMapType(this,key) astINVOKE(V,astMapType_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapGet0P(this,key,value) astINVOKE(V,astMapGet0P_(astCheckKeyMap(this),key,value,STATUS_PTR))

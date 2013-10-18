@@ -1,6 +1,6 @@
 AST Library
 -----------
-   A new release (V7.1.0) of the Starlink AST (astrometry) library is
+   A new release (V7.3.3) of the Starlink AST (astrometry) library is
 now available.
 
    AST provides a comprehensive range of facilities for attaching
@@ -15,6 +15,81 @@ environment-independent.
 
 Main Changes in this Version
 ----------------------------
+
+- When reading FITS-WCS headers that include polynomial distortion in the
+SIP format, any inverse transformation specified in the header is now
+ignored and a new inverse is created to replace it based on the supplied
+forward transformation. Previously, an inverse was created only if the
+header did not include an inverse. The accuracy of the inverse
+transformation has also been improved, although it may now be slower to
+evaluate in some circumstances.
+
+
+Main Changes in V7.3.2
+----------------------
+
+- Fix support for reading GLS projections from FITS headers.
+
+- The KeyMap class has new sorting options "KeyAgeUp" and "KeyAgeDown" that
+retain the position of an existing entry if its value is changed. See the
+SortBy attribute.
+
+- A bug has been fixed in FitsChan that caused CDELT keywords for sky
+axes to be treated as radians rather than degrees when reading a FITS
+header, if the corresponding CTYPE values included no projection code.
+
+
+Main Changes in V7.3.1
+----------------------
+
+- Fix bug that could cause a segmenatation fault when reading a FITS TNX
+header.
+
+Main Changes in V7.3.0
+----------------------
+
+- IMPORTANT! The interface for the astRebinSeq<X> (AST_REBINSEQ) family
+of functions has been changed in order to allow a greater number of
+pixels to be pasted into the output array. In C, the "nused" parameter
+is now a pointer to a "int64_t" variable, instead of a simple "int". In
+Fortran, the NUSED argument for AST_REBINSEQ<X> is now an INTEGER*8.
+
+APPLICATION CODE SHOULD BE CHANGED ACCORDINGLY TO AVOID SEGMENTATION
+FAULTS AND OTHER ERRATIC BEHAVIOUR.
+
+- Added a new facility to the FrameSet class to allow each Frame to be
+associated with multiple Mappings, any one of which can be used to
+connect the Frame to the other Frames in the FrameSet. The choice of
+which Mapping to use is controlled by the new "Variant" attribute of the
+FrameSet class.
+
+- Mappings (but not Frames) that have a value set for their Ident attribute
+are now left unchanged by the astSimplify (AST_SIMPLIFY) function.
+
+Main Changes in V7.2.0
+----------------------
+
+- A new method call astMapDefined has been added to the KeyMap class.
+It checks if a gtiven key name has a defined value in a given KeyMap.
+
+
+Main Changes in V7.1.1
+----------------------
+
+- A bug has been fixed in FitsChan that caused inappropriate CTYPE values
+to be generated when writing a FrameSet to FITS-WCS headers if the
+current Frame describes generalised spherical coordinates (i.e. a
+SkyFrame with System=Unknown).
+
+- When a FitsChan is used to write an "offset" SkyFrame (see attribute
+SkyRefIs) to a FITS-WCS encoded header, two alternate axis descriptions
+are now created - one for the offset coordinates and one for the absolute
+coordinates. If such a header is subsequently read back into AST, the
+original offset SkyFrame is recreated.
+
+
+Main Changes in V7.1.0
+----------------------
 
 - IMPORTANT! The default behaviour of astRebinSeq is now NOT to conserve
 flux. To conserve flux, the AST__CONSERVEFLUX flag should be supplied
