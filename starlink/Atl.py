@@ -1,7 +1,10 @@
 import starlink.Ast as Ast
 import starlink.Grf as Grf
 import matplotlib.pyplot as plt
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -132,7 +135,7 @@ class PyFITSAdapter:
          self.hdu.header = pyfits.Header()
          self.hdu.header.clear()
 
-      card = pyfits.core.Card.fromstring(card)
+      card = pyfits.Card.fromstring(card)
       if card.key == "BLANK":
          self.hdu.header.add_blank()
       elif card.key == "COMMENT":
