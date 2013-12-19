@@ -1,6 +1,9 @@
 from __future__ import print_function
 
-import pyfits
+try:
+    from astrop.io import fits as pyfits
+except ImportError:
+    import pyfits
 import starlink.Atl as Atl
 import starlink.Ast as Ast
 import matplotlib.pyplot
