@@ -135,7 +135,7 @@ class PyFITSAdapter:
          self.hdu.header = pyfits.Header()
          self.hdu.header.clear()
 
-      card = pyfits.core.Card.fromstring(card)
+      card = pyfits.Card.fromstring(card)
       if card.key == "BLANK":
          self.hdu.header.add_blank()
       elif card.key == "COMMENT":
