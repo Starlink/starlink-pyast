@@ -115,6 +115,8 @@ f     encodings), then write operations using AST_WRITE will
 *
 *     - AllWarnings: A list of the available conditions
 *     - Card: Index of current FITS card in a FitsChan
+*     - CardComm: The comment of the current FITS card in a FitsChan
+*     - CardName: The keyword name of the current FITS card in a FitsChan
 *     - CardType: The data type of the current FITS card in a FitsChan
 *     - CarLin: Ignore spherical rotations on CAR projections?
 *     - CDMatrix: Use a CD matrix instead of a PC matrix?
@@ -149,6 +151,7 @@ c     - astReadFits: Read cards in through the source function
 c     - astRemoveTables: Remove one or more FitsTables from a FitsChan
 c     - astRetainFits: Ensure current card is retained in a FitsChan
 c     - astSetFits<X>: Store a new keyword value in a FitsChan
+c     - astShowFits: Display the contents of a FitsChan on standard output
 c     - astTableSource: Register a source function for FITS table access
 c     - astTestFits: Test if a keyword has a defined value in a FitsChan
 c     - astWriteFits: Write all cards out to the sink function
@@ -166,6 +169,7 @@ f     - AST_READFITS: Read cards in through the source function
 f     - AST_REMOVETABLES: Remove one or more FitsTables from a FitsChan
 f     - AST_RETAINFITS: Ensure current card is retained in a FitsChan
 f     - AST_SETFITS<X>: Store a new keyword value in a FitsChan
+c     - AST_SHOWFITS: Display the contents of a FitsChan on standard output
 f     - AST_TABLESOURCE: Register a source function for FITS table access
 f     - AST_TESTFITS: Test if a keyword has a defined value in a FitsChan
 f     - AST_WRITEFITS: Write all cards out to the sink function
@@ -1087,6 +1091,20 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        inverse for each point. People were seeing bad round-trip errors
 *        when transforming points outside the image because the fit was
 *        being used when it was not very accurate.
+*     12-NOV-2013 (DSB):
+*        Added CardName and CardComm attributes.
+*     13-NOV-2013 (DSB):
+*        Use a zero-length string for the CardComm attribute if the card
+*        has no comment.
+*     15-NOV-2013 (DSB):
+*        - Added method astShowFits.
+*        - Ensure PurgeWcs removes WCS cards even if an error occurs when
+*        reading FrameSets from the FitsChan.
+*        - Change IsMapTab1D to improve chances of a -TAB mapping being found.
+*     6-JAN-2014 (DSB):
+*        - Allow default options for newly created FitsChans to be
+*        specified by the FITSCHAN_OPTIONS environment variable.
+*        - Ensure the used CarLin value is not changed by a trailing frequency axis.
 *class--
 */
 
@@ -1674,6 +1692,8 @@ static char *UnPreQuote( const char *, int * );
 static char GetMaxS( double ****item, int * );
 static const char *GetAllWarnings( AstFitsChan *, int * );
 static const char *GetAttrib( AstObject *, const char *, int * );
+static const char *GetCardComm( AstFitsChan *, int * );
+static const char *GetCardName( AstFitsChan *, int * );
 static const char *GetFitsSor( const char *, int * );
 static const char *IsSpectral( const char *, char[5], char[5], int * );
 static double **OrthVectorSet( int, int, double **, int * );
@@ -1829,6 +1849,7 @@ static void SetItemC( char *****, int, int, char, const char *, int * );
 static void SetSourceFile( AstChannel *, const char *, int * );
 static void SetValue( AstFitsChan *, const char *, void *, int, const char *, int * );
 static void Shpc1( double, double, int, double *, double *, int * );
+static void ShowFits( AstFitsChan *, int * );
 static void SinkWrap( void (*)( const char * ), const char *, int * );
 static void SkyPole( AstWcsMap *, AstMapping *, int, int, int *, char, FitsStore *, const char *, const char *, int * );
 static void TableSource( AstFitsChan *, void (*)( AstFitsChan *, const char *, int, int, int * ), int * );
@@ -3817,7 +3838,6 @@ static char *CardComm( AstFitsChan *this, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     char *CardComm( AstFitsChan *this, int *status )
 
 *  Class Membership:
@@ -3984,7 +4004,6 @@ static int *CardFlags( AstFitsChan *this, int *status ){
 }
 
 static char *CardName( AstFitsChan *this, int *status ){
-
 /*
 *  Name:
 *     CardName
@@ -3997,7 +4016,6 @@ static char *CardName( AstFitsChan *this, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     char *CardName( AstFitsChan *this, int *status )
 
 *  Class Membership:
@@ -4042,7 +4060,6 @@ static char *CardName( AstFitsChan *this, int *status ){
 }
 
 static int CardType( AstFitsChan *this, int *status ){
-
 /*
 *  Name:
 *     CardType
@@ -4055,7 +4072,6 @@ static int CardType( AstFitsChan *this, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     int CardType( AstFitsChan *this, int *status )
 
 *  Class Membership:
@@ -6494,7 +6510,6 @@ static int CnvValue( AstFitsChan *this, int type, int undef, void *buff,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     int CnvValue( AstFitsChan *this, int type, int undef, void *buff,
 *                   const char *method, int *status )
 
@@ -15787,6 +15802,16 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
          result = getattrib_buff;
       }
 
+/* CardComm. */
+/* --------- */
+   } else if ( !strcmp( attrib, "cardcomm" ) ) {
+      result = astGetCardComm( this );
+
+/* CardName. */
+/* --------- */
+   } else if ( !strcmp( attrib, "cardname" ) ) {
+      result = astGetCardName( this );
+
 /* CardType. */
 /* --------- */
    } else if ( !strcmp( attrib, "cardtype" ) ) {
@@ -16007,6 +16032,105 @@ static int GetCard( AstFitsChan *this, int *status ){
 
 /* Return the card index. */
    return index;
+}
+
+static const char *GetCardComm( AstFitsChan *this, int *status ){
+/*
+*+
+*  Name:
+*     GetCardComm
+
+*  Purpose:
+*     Get the value of the CardComm attribute.
+
+*  Type:
+*     Protected virtual function.
+
+*  Synopsis:
+*     #include "fitschan.h"
+*     const char *astGetCardComm( AstFitsChan *this)
+
+*  Class Membership:
+*     FitsChan method.
+
+*  Description:
+*     This function returns the value of the CardComm attribute for the
+*     supplied FitsChan. This is the comment for the current card.
+
+*  Parameters:
+*     this
+*        Pointer to the FitsChan.
+
+*  Returned Value:
+*     A pointer to a static string holding the comment. A zero-length
+*     string is returned if the card has no comment.
+
+*  Notes:
+*     - A value of NULL will be returned if an error has already
+*     occurred, or if this function should fail for any reason.
+*-
+*/
+
+/* Local Variables */
+   const char *result = NULL;
+
+/* Check inherited status */
+   if( !astOK ) return result;
+
+/* Ensure the source function has been called */
+   ReadFromSource( this, status );
+
+/* Get the comment for the current card. */
+   result = CardComm( this, status );
+
+/* Return a zero-length string if the card has no comment. */
+   if( astOK && !result ) result = "";
+
+/* Return the comment. */
+   return result;
+}
+
+static const char *GetCardName( AstFitsChan *this, int *status ){
+/*
+*+
+*  Name:
+*     GetCardName
+
+*  Purpose:
+*     Get the value of the CardName attribute.
+
+*  Type:
+*     Protected virtual function.
+
+*  Synopsis:
+*     #include "fitschan.h"
+*     const char *astGetCardName( AstFitsChan *this)
+
+*  Class Membership:
+*     FitsChan method.
+
+*  Description:
+*     This function returns the value of the CardName attribute for the
+*     supplied FitsChan. This is the keyword name for the current card.
+
+*  Parameters:
+*     this
+*        Pointer to the FitsChan.
+
+*  Returned Value:
+*     A pointer to a static string holding the keyword name.
+
+*  Notes:
+*     - A value of NULL will be returned if an error has already
+*     occurred, or if this function should fail for any reason.
+*-
+*/
+
+/* Ensure the source function has been called */
+   ReadFromSource( this, status );
+
+/* Return the keyword name of the current card. */
+   return CardName( this, status );
 }
 
 static int GetCardType( AstFitsChan *this, int *status ){
@@ -17240,6 +17364,7 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->FindFits = FindFits;
    vtab->KeyFields = KeyFields;
    vtab->ReadFits = ReadFits;
+   vtab->ShowFits = ShowFits;
    vtab->WriteFits = WriteFits;
    vtab->EmptyFits = EmptyFits;
    vtab->FitsEof = FitsEof;
@@ -17295,6 +17420,8 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->SetWarnings = SetWarnings;
    vtab->GetWarnings = GetWarnings;
    vtab->GetCardType = GetCardType;
+   vtab->GetCardName = GetCardName;
+   vtab->GetCardComm = GetCardComm;
    vtab->GetNcard = GetNcard;
    vtab->GetNkey = GetNkey;
    vtab->GetAllWarnings = GetAllWarnings;
@@ -18178,11 +18305,13 @@ static AstMapping *IsMapTab1D( AstMapping *map, double scale, const char *unit,
 */
 
 /* Local Variables: */
+   AstCmpMap *cm;          /* CmpMap pointer */
    AstMapping **map_list;  /* Mapping array pointer */
    AstMapping *postmap;    /* Total Mapping after LutMap */
    AstMapping *premap;     /* Total Mapping before LutMap */
    AstMapping *ret;        /* Returned WCS axis Mapping */
    AstMapping *tmap;       /* Temporary Mapping */
+   AstPermMap *pm;         /* PermMap pointer */
    char cellname[ 20 ];    /* Buffer for cell name */
    char colname[ 20 ];     /* Buffer for column name */
    double *lut;            /* Pointer to table of Y values */
@@ -18194,13 +18323,20 @@ static AstMapping *IsMapTab1D( AstMapping *map, double scale, const char *unit,
    double x[ 2 ];          /* X values at start and end of interval */
    int *ins;               /* Array of "map" input indices */
    int *invert_list;       /* Invert array pointer */
+   int *outs;              /* Array of "map" output indices */
    int dims[ 2 ];          /* Dimensions of the tab coords array */
+   int iin;                /* Index of Mapping input */
    int ilut;               /* Index of the LutMap within the mappings list */
    int imap;               /* Index of current Mapping in list */
+   int iout;               /* Index of Mapping output */
+   int jout;               /* Index of Mapping output */
+   int nin;                /* Number of Mapping inputs */
    int nlut;               /* Number of elements in "lut" array */
    int nmap;               /* Number of Mappings in the list */
+   int nout;               /* Number of Mapping outputs */
    int ok;                 /* Were columns added to the table? */
    int old_invert;         /* Original value for Mapping's Invert flag */
+   int outperm;            /* Index of input that feeds the single output */
 
 /* Initialise */
    ret = NULL;
@@ -18220,22 +18356,80 @@ static AstMapping *IsMapTab1D( AstMapping *map, double scale, const char *unit,
    need to invert the Mapping first so we can split off a specified output.  */
    astInvert( map );
    ins = astMapSplit( map, 1, &iax, &ret );
+   astInvert( map );
 
-/* If the Mapping could not be split, try again on a copy of the Mapping
-   in which all PermMaps provide an alternative implementation of the
-   astMapSplit method. */
+/* If the Mapping could not be split, try a different approach in which
+   each input is checked in turn to see if it feeds the specified output. */
    if( !ins ) {
+
+/* Loop round each input of "map". */
+      nin = astGetNin( map );
+      for( iin = 0; iin < nin && !ins; iin++ ) {
+
+/* Attempt to find a group of outputs (of "map") that are fed by just
+   this one input. */
+         outs = astMapSplit( map, 1, &iin, &ret );
+
+/* If successful, "ret" will be a Mapping with one input corresponding to
+   input "iin" of "map, and one or more outputs. We loop round these
+   outputs to see if any of them correspond to output "iax" of "map". */
+         if( outs ) {
+            nout = astGetNout( ret );
+            for( iout = 0; iout < nout; iout++ ) {
+               if( outs[ iout ] == iax ) break;
+            }
+
+/* Did input "iin" feed the output "iax" (and possibly other outputs)? */
+            if( iout < nout ) {
+
+/* The "ret" Mapping is now a 1-input (pixel) N-output (WCS) Mapping in which
+   output "iout" corresponds to output "iax" of Mapping. To be compatible
+   with the previous approach, we want "ret" to be a 1-input  (WCS) to
+   1-output (pixel) Mapping in which the input corresponds to output
+   "iax" of Mapping. To get "ret" into this form, we first append a PermMap
+   to "ret" that selects a single output ("iout"), and then invert the
+   whole CmpMap. */
+               for( jout = 0; jout < nout; jout++ ) {
+                  outs[ jout ] = -1;
+               }
+               outs[ iout ] = 0;
+               outperm = iout;
+
+               pm = astPermMap( nout, outs, 1, &outperm, NULL, "", status );
+               cm = astCmpMap( ret, pm, 1, " ", status );
+               (void) astAnnul( ret );
+               pm = astAnnul( pm );
+               ret = (AstMapping *) cm;
+               astInvert( ret );
+
+/* The earlier approach leves ins[ 0 ] holding the index of the input to
+   "map" that feeds output iax. Ensure we have this too. */
+               ins = outs;
+               ins[ 0 ] = iin;
+
+/* Free resources if the current input did not feed the required output. */
+            } else {
+               outs = astFree( outs );
+               ret = astAnnul( ret );
+            }
+         }
+      }
+   }
+
+/* If the Mapping still could not be split, try again on a copy of the
+   Mapping in which all PermMaps provide an alternative implementation of
+   the astMapSplit method. */
+   if( !ins ) {
+      astInvert( map );
       tmap = astCopy( map );
       ChangePermSplit( tmap, status );
       ins = astMapSplit( tmap, 1, &iax, &ret );
       tmap = astAnnul( tmap );
+      astInvert( map );
    }
 
 /* Assume the Mapping cannot be represented by -TAB */
    ok = 0;
-
-/* Revert the Mapping Invert attribute to its original value. */
-   astInvert( map );
 
 /* Check a Mapping was returned by astMapSplit. If so, it will be the
    mapping from the requested output of "map" (the WCS axis) to the
@@ -18585,9 +18779,15 @@ static AstMapping *IsMapTab2D( AstMapping *map, double scale, const char *unit,
 */
 
 /* Local Variables: */
-   AstMapping *ret;        /* Returned WCS axis Mapping */
    AstMapping *ret1;       /* WCS->IWC Mapping for first output */
    AstMapping *ret2;       /* WCS->IWC Mapping for second output */
+   AstMapping *ret;        /* Returned WCS axis Mapping */
+   AstMapping *tmap;
+   AstPermMap *pm;
+   int *pix_axes;          /* Zero-based indicies of corresponding pixel axes */
+   int wcs_axes[ 2 ];      /* Zero-based indicies of selected WCS axes */
+   int inperm[ 1 ];
+   int outperm[ 2 ];
 
 /* Initialise */
    ret = NULL;
@@ -18610,8 +18810,46 @@ static AstMapping *IsMapTab2D( AstMapping *map, double scale, const char *unit,
       *max1 = 1;
       *max2 = 1;
 
-/* Combine the Mappings in parallel to form the returned Mapping. */
-      ret = (AstMapping *) astCmpMap( ret1, ret2, 0, " ", status );
+/* Get a Mapping from the required pair of WCS axes to the corresponding
+   pair of grid axes. First try to split the supplied grid->wcs mapping. */
+      wcs_axes[ 0 ] = iax1;
+      wcs_axes[ 1 ] = iax2;
+
+      astInvert( map );
+      pix_axes = astMapSplit( map, 2, wcs_axes, &ret );
+      astInvert( map );
+
+      if( pix_axes ) {
+         pix_axes = astFree( pix_axes );
+         if( astGetNout( ret ) > 2 ) {
+            ret = astAnnul( ret );
+
+/* If the two output WCS axes are fed by the same grid axis, we need to
+   add another pixel axis to form the pair. */
+         } else if( astGetNout( ret ) == 1 ) {
+            inperm[ 0 ] = 0;
+            outperm[ 0 ] = 0;
+            outperm[ 1 ] = 0;
+            pm = astPermMap( 1, inperm, 2, outperm, NULL, " ", status );
+            tmap = (AstMapping *) astCmpMap( ret, pm, 1, " ", status );
+            ret = astAnnul( ret );
+            pm = astAnnul( pm );
+            ret = tmap;
+         }
+      }
+
+/* If this was unsuccessful, combine the Mappings returned by IsMapTab1D.
+   We only do this if the above astMapSplit call failed, since the IsMapTab1D
+   mappings may well not be independent of each other, and we may end up
+   sticking together in parallel two mappings that are basically the same
+   except for ending with PermMapa that select different axes. Is is hard
+   then to simplify such a parallel CmpMap back into the simpler form
+   that uses only one of the two identical mappings, without a PermMap. */
+      if( !ret ) {
+         ret = (AstMapping *) astCmpMap( ret1, ret2, 0, " ", status );
+      }
+
+/* Free resources. */
       ret1 = astAnnul( ret1 );
       ret2 = astAnnul( ret2 );
 
@@ -23435,12 +23673,23 @@ f        The global status.
 
 /* Local Variables: */
    AstObject *obj;
+   int oldclean;
 
 /* Check the global status. */
    if( !astOK ) return;
 
 /* Ensure the source function has been called */
    ReadFromSource( this, status );
+
+/* Ensure the Clean attribute is set so that WCS keywords are removed
+   even if an error occurs. */
+   if( astTestClean( this ) ) {
+      oldclean = astGetClean( this );
+      astSetClean( this, 1 );
+   } else {
+      astSetClean( this, 1 );
+      oldclean = -1;
+   }
 
 /* Loop round attempting to read AST objects form the FitsChan. This will
    flag cards as used that are involved in the creation of these object
@@ -23476,6 +23725,14 @@ f        The global status.
 
 /* Rewind the FitsChan. */
    astClearCard( this );
+
+/* Reset the Clean attribute. */
+   if( oldclean == -1 ) {
+      astClearClean( this );
+   } else {
+      astSetClean( this, oldclean );
+   }
+
 }
 
 static void PutCards( AstFitsChan *this, const char *cards, int *status ) {
@@ -25487,6 +25744,8 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
    if a read-only attribute has been specified. */
    } else if ( MATCH( "ncard" ) ||
                MATCH( "cardtype" ) ||
+               MATCH( "cardcomm" ) ||
+               MATCH( "cardname" ) ||
                MATCH( "nkey" ) ||
                MATCH( "allwarnings" ) ){
       astError( AST__NOWRT, "astSet: The setting \"%s\" is invalid for a %s.", status,
@@ -26294,6 +26553,85 @@ static void Shpc1( double xmin, double xmax, int n, double *d, double *w,
    "w[-1]" is zero. */
       w[ 0 ] = d[ n - i - 1 ] + b*w[ 0 ];
    }
+
+}
+
+static void ShowFits( AstFitsChan *this, int *status ){
+
+/*
+*++
+*  Name:
+c     astShowFits
+f     AST_SHOWFITS
+
+*  Purpose:
+*     Display the contents of a FitsChan on standard output.
+
+*  Type:
+*     Public virtual function.
+
+*  Synopsis:
+c     #include "fitschan.h"
+c     void astShowFits( AstFitsChan *this )
+f     CALL AST_SHOWFITS( THIS, STATUS )
+
+*  Class Membership:
+*     FitsChan method.
+
+*  Description:
+c     This function
+f     This routine
+*     formats and displays all the cards in a FitsChan on standard output.
+
+*  Parameters:
+c     this
+f     THIS = INTEGER (Given)
+*        Pointer to the FitsChan.
+f     STATUS = INTEGER (Given and Returned)
+f        The global status.
+
+*--
+*/
+
+/* Local Variables: */
+   astDECLARE_GLOBALS           /* Declare the thread specific global data */
+   char card[ AST__FITSCHAN_FITSCARDLEN + 1]; /* Buffer for header card */
+   int icard;                   /* Current card index on entry */
+   int old_ignore_used;         /* Original value of external variable ignore_used */
+
+/* Check the global status. */
+   if( !astOK ) return;
+
+/* Get a pointer to the structure holding thread-specific global data. */
+   astGET_GLOBALS(this);
+
+/* Store the current card index. */
+   icard = astGetCard( this );
+
+/* Indicate that cards which have been read into an AST object should skipped
+   over by the functions which navigate the linked list of cards. */
+   old_ignore_used = ignore_used;
+   ignore_used = 1;
+
+/* Ensure that the first card in the FitsChan will be the next one to be
+   read. */
+   astSetCard( this, 1 );
+
+/* Loop round obtaining and writing out each card, until all cards have been
+   processed. */
+   while( !astFitsEof( this ) && astOK ){
+
+/* Get the current card, and display it. The call to astFindFits increments
+   the current card. */
+      if( astFindFits( this, "%f", card, 1 ) ) printf( "%s\n", card );
+   }
+
+/* Re-instate the original flag indicating if cards marked as having been
+   read should be skipped over. */
+   ignore_used = old_ignore_used;
+
+/* Set the current card index back to what it was on entry. */
+   astSetCard( this, icard );
 
 }
 
@@ -28194,7 +28532,7 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
 *        to a CDj_is array.
 *
 *     7) EQUINOX keywords with string values equal to a date preceded
-*        by the leter B or J (eg "B1995.0"). These are converted to the
+*        by the letter B or J (eg "B1995.0"). These are converted to the
 *        corresponding Julian floating point value without any epoch
 *        specifier.
 *
@@ -31353,6 +31691,8 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
    } else if ( !strcmp( attrib, "ncard" ) ||
                !strcmp( attrib, "nkey" ) ||
                !strcmp( attrib, "cardtype" ) ||
+               !strcmp( attrib, "cardcomm" ) ||
+               !strcmp( attrib, "cardname" ) ||
                !strcmp( attrib, "allwarnings" ) ){
       result = 0;
 
@@ -32837,21 +33177,6 @@ static AstMapping *WcsCelestial( AstFitsChan *this, FitsStore *store, char s,
          Warn( this, "noctype", buf, method, class, status );
       } else {
 
-/* Find the projection type as specified by the last 4 characters
-   in the CTYPE keyword value. AST__WCSBAD is stored in "prj" if the
-   last 4 characters do not specify a known WCS projection, but no error
-   is reported. Assume simple linear axes if no projection code is
-   supplied. Note, AST__WCSBAD is used to indicate a TAB header. */
-         ctlen = strlen( ctype );
-         if( ctlen > 4 ) {
-            prj = astWcsPrjType( ctype + ctlen - 4 );
-         } else if( tabmap && *tabmap ) {
-            prj = AST__WCSBAD;
-         } else {
-            prj = AST__CAR;
-            carlin = 1;
-         }
-
 /* See if this is a longitude axis (e.g. if the first 4 characters of CTYPE
    are "RA--" or "xLON" or "yzLN" ). If so, store the value of "x" or "yz"
    (or "EQU" for equatorial coordinates) in variable "type" to indicate which
@@ -32879,6 +33204,21 @@ static AstMapping *WcsCelestial( AstFitsChan *this, FitsStore *store, char s,
 
 /* Check that this is the first longitude axis to be found. */
             if( axlon == -1 ){
+
+/* Find the projection type as specified by the last 4 characters
+   in the CTYPE keyword value. AST__WCSBAD is stored in "prj" if the
+   last 4 characters do not specify a known WCS projection, but no error
+   is reported. Assume simple linear axes if no projection code is
+   supplied. Note, AST__WCSBAD is used to indicate a TAB header. */
+               ctlen = strlen( ctype );
+               if( ctlen > 4 ) {
+                  prj = astWcsPrjType( ctype + ctlen - 4 );
+               } else if( tabmap && *tabmap ) {
+                  prj = AST__WCSBAD;
+               } else {
+                  prj = AST__CAR;
+                  carlin = 1;
+               }
 
 /* Report an error if the projection is unknown. */
                if( prj == AST__WCSBAD && ctlen > 4 ){
@@ -32925,6 +33265,16 @@ static AstMapping *WcsCelestial( AstFitsChan *this, FitsStore *store, char s,
          }
          if( gotax ){
             if( axlat == -1 ){
+               ctlen = strlen( ctype );
+               if( ctlen > 4 ) {
+                  prj = astWcsPrjType( ctype + ctlen - 4 );
+               } else if( tabmap && *tabmap ) {
+                  prj = AST__WCSBAD;
+               } else {
+                  prj = AST__CAR;
+                  carlin = 1;
+               }
+
                if( prj == AST__WCSBAD && ctlen > 4 ){
                   astError( AST__BDFTS, "%s(%s): FITS keyword '%s' refers to "
                         "an unknown projection type '%s'.", status, method, class,
@@ -38187,7 +38537,6 @@ static void WriteObject( AstChannel *this_channel, const char *name,
 }
 
 static void WriteToSink( AstFitsChan *this, int *status ){
-
 /*
 *  Name:
 *     WriteToSink
@@ -38200,7 +38549,6 @@ static void WriteToSink( AstFitsChan *this, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     void WriteToSink( AstFitsChan *this, int *status )
 
 *  Class Membership:
@@ -39005,15 +39353,15 @@ f     data will be written to the FitsChan and AST_WRITE will return
 *     until such time as an agreed method for describing projection
 *     distortions within FITS-WCS has been published.
 *
-*     AST extends the range of celestial coordinate sytstems which may be
-*     described using this encoding by inclusion of the allowing the use of
+*     AST extends the range of celestial coordinate systems which may be
+*     described using this encoding by allowing the inclusion of
 *     "AZ--" and "EL--" as the coordinate specification within CTYPE
 *     values. These form a longitude/latitude pair of axes which describe
 *     azimuth and elevation. The geographic position of the observer
 *     should be supplied using the OBSGEO-X/Y/Z keywords described in FITS-WCS
 *     paper III. Currently, a simple model is used which includes diurnal
 *     aberration, but ignores atmospheric refraction, polar motion, etc.
-*     These may be added in a leter release.
+*     These may be added in a later release.
 *
 *     If an AST SkyFrame that represents offset rather than absolute
 *     coordinates (see attribute SkyRefIs) is written to a FitsChan using
@@ -39022,7 +39370,7 @@ f     data will be written to the FitsChan and AST_WRITE will return
 *     "OFLT" as the axis codes in the CTYPE keywords. The other will
 *     describe absolute coordinates as specified by the System attribute
 *     of the SkyFrame, using the usual CTYPE codes ("RA--"/"DEC-", etc).
-*     Inaddition, the absolute coordinates description will contain
+*     In addition, the absolute coordinates description will contain
 *     AST-specific keywords (SREF1/2, SREFP1/2 and SREFIS) that allow the
 *     header to be read back into AST in order to reconstruct the original
 *     SkyFrame.
@@ -39454,10 +39802,7 @@ astMAKE_TEST(FitsChan,TabOK,( this->tabok != -INT_MAX ))
 *     coordinates to celestial coordinates is a simple linear transformation
 *     (hence the attribute name "CarLin"). This is appropriate for some older
 *     FITS data which claims to have a "CAR" projection, but which in fact do
-*     not conform to the conventions of the FITS-WCS paper. Furthermore, if
-*     CarLin is non-zero, it is assumed that CDELT and CD keywords are
-*     in units of degrees rather than radians (as required by the
-*     FITS-WCS papers).
+*     not conform to the conventions of the FITS-WCS paper.
 *
 *     The FITS-WCS paper specifies that headers which include a CAR projection
 *     represent a linear mapping from pixel coordinates to "native spherical
@@ -39728,6 +40073,60 @@ astMAKE_CLEAR(FitsChan,FitsDigits,fitsdigits,DBL_DIG)
 astMAKE_GET(FitsChan,FitsDigits,int,DBL_DIG,this->fitsdigits)
 astMAKE_SET(FitsChan,FitsDigits,int,fitsdigits,value)
 astMAKE_TEST(FitsChan,FitsDigits,( this->fitsdigits != DBL_DIG ))
+
+/* CardComm */
+/* ======== */
+
+/*
+*att++
+*  Name:
+*     CardComm
+
+*  Purpose:
+*     The comment for the current card in a FitsChan.
+
+*  Type:
+*     Public attribute.
+
+*  Synopsis:
+*     String, read-only.
+
+*  Description:
+*     This attribute gives the comment for the current card of the
+*     FitsChan. A zero-length string is returned if the card has no comment.
+
+*  Applicability:
+*     FitsChan
+*        All FitsChans have this attribute.
+*att--
+*/
+
+/* CardName */
+/* ======== */
+
+/*
+*att++
+*  Name:
+*     CardName
+
+*  Purpose:
+*     The keyword name of the current card in a FitsChan.
+
+*  Type:
+*     Public attribute.
+
+*  Synopsis:
+*     String, read-only.
+
+*  Description:
+*     This attribute gives the name of the keyword for the
+*     current card of the FitsChan.
+
+*  Applicability:
+*     FitsChan
+*        All FitsChans have this attribute.
+*att--
+*/
 
 /* CardType */
 /* ======== */
@@ -40600,6 +40999,9 @@ c        order to supply values to be substituted for these
 c        specifiers. The rules for supplying these are identical to
 c        those for the astSet function (and for the C "printf"
 c        function).
+*
+*        Note, the FITSCHAN_OPTIONS environment variable may be used
+*        to specify default options for all newly created FitsChans.
 f     STATUS = INTEGER (Given and Returned)
 f        The global status.
 
@@ -40657,6 +41059,10 @@ f     pointer.
    if ( astOK ) {
       class_init = 1;
 
+/* Apply any default options specified by "<class>_OPTIONS" environment
+   variable. */
+      astEnvSet( new );
+
 /* Obtain the variable argument list and pass it along with the
    options string to the astVSet method to initialise the new
    FitsChan's attributes. */
@@ -40671,6 +41077,7 @@ f     pointer.
 /* Return a pointer to the new FitsChan. */
    return new;
 }
+
 AstFitsChan *astFitsChanId_( const char *(* source)( void ),
                              void (* sink)( const char * ),
                              const char *options, ... ) {
@@ -40743,6 +41150,10 @@ AstFitsChan *astFitsChanId_( const char *(* source)( void ),
    if ( astOK ) {
       class_init = 1;
 
+/* Apply any default options specified by "<class>_OPTIONS" environment
+   variable. */
+      astEnvSet( new );
+
 /* Obtain the variable argument list and pass it along with the
    options string to the astVSet method to initialise the new
    FitsChan's attributes. */
@@ -40757,6 +41168,7 @@ AstFitsChan *astFitsChanId_( const char *(* source)( void ),
 /* Return an ID value for the new FitsChan. */
    return astMakeId( new );
 }
+
 AstFitsChan *astFitsChanForId_( const char *(* source)( void ),
                               char *(* source_wrap)( const char *(*)( void ), int * ),
                               void (* sink)( const char * ),
@@ -40924,6 +41336,10 @@ AstFitsChan *astFitsChanForId_( const char *(* source)( void ),
    if ( astOK ) {
       class_init = 1;
 
+/* Apply any default options specified by "<class>_OPTIONS" environment
+   variable. */
+      astEnvSet( new );
+
 /* Obtain the variable argument list and pass it along with the
    options string to the astVSet method to initialise the new
    FitsChan's attributes. */
@@ -40938,6 +41354,7 @@ AstFitsChan *astFitsChanForId_( const char *(* source)( void ),
 /* Return an ID value for the new FitsChan. */
    return astMakeId( new );
 }
+
 AstFitsChan *astInitFitsChan_( void *mem, size_t size, int init,
                                AstFitsChanVtab *vtab, const char *name,
                                const char *(* source)( void ),
@@ -41481,6 +41898,11 @@ void astEmptyFits_( AstFitsChan *this, int *status ){
    (**astMEMBER(this,FitsChan,EmptyFits))(this, status );
 }
 
+void astShowFits_( AstFitsChan *this, int *status ){
+   if( !this ) return;
+   (**astMEMBER(this,FitsChan,ShowFits))(this, status );
+}
+
 void astPutCards_( AstFitsChan *this, const char *cards, int *status ){
    if( !astOK ) return;
    (**astMEMBER(this,FitsChan,PutCards))(this,cards, status );
@@ -41619,6 +42041,16 @@ int astGetNcard_( AstFitsChan *this, int *status ){
 int astGetCardType_( AstFitsChan *this, int *status ){
    if( !this ) return AST__NOTYPE;
    return (**astMEMBER(this,FitsChan,GetCardType))( this, status );
+}
+
+const char *astGetCardComm_( AstFitsChan *this, int *status ){
+   if( !this ) return NULL;
+   return (**astMEMBER(this,FitsChan,GetCardComm))( this, status );
+}
+
+const char *astGetCardName_( AstFitsChan *this, int *status ){
+   if( !this ) return NULL;
+   return (**astMEMBER(this,FitsChan,GetCardName))( this, status );
 }
 
 int astGetNkey_( AstFitsChan *this, int *status ){

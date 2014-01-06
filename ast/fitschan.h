@@ -240,6 +240,7 @@ typedef struct AstFitsChanVtab {
    void (* ReadFits)( AstFitsChan *, int * );
    void (* WriteFits)( AstFitsChan *, int * );
    void (* EmptyFits)( AstFitsChan *, int * );
+   void (* ShowFits)( AstFitsChan *, int * );
    void (* PurgeWCS)( AstFitsChan *, int * );
    void (* PutCards)( AstFitsChan *, const char *, int * );
    void (* PutFits)( AstFitsChan *, const char [81], int, int * );
@@ -286,6 +287,8 @@ typedef struct AstFitsChanVtab {
    int (* GetNcard)( AstFitsChan *, int * );
 
    int (* GetCardType)( AstFitsChan *, int * );
+   const char *(* GetCardName)( AstFitsChan *, int * );
+   const char *(* GetCardComm)( AstFitsChan *, int * );
 
    int (* GetNkey)( AstFitsChan *, int * );
 
@@ -433,6 +436,7 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    void astReadFits_( AstFitsChan *, int * );
    void astWriteFits_( AstFitsChan *, int * );
    void astEmptyFits_( AstFitsChan *, int * );
+   void astShowFits_( AstFitsChan *, int * );
    void astPurgeWCS_( AstFitsChan *, int * );
    void astPutCards_( AstFitsChan *, const char *, int * );
    void astPutFits_( AstFitsChan *, const char [81], int, int * );
@@ -529,6 +533,8 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    int astGetNcard_( AstFitsChan *, int * );
 
    int astGetCardType_( AstFitsChan *, int * );
+   const char *astGetCardName_( AstFitsChan *, int * );
+   const char *astGetCardComm_( AstFitsChan *, int * );
 
    int astGetNkey_( AstFitsChan *, int * );
 
@@ -689,6 +695,9 @@ astINVOKE(V,astWriteFits_(astCheckFitsChan(this),STATUS_PTR))
 #define astEmptyFits(this) \
 astINVOKE(V,astEmptyFits_(astCheckFitsChan(this),STATUS_PTR))
 
+#define astShowFits(this) \
+astINVOKE(V,astShowFits_(astCheckFitsChan(this),STATUS_PTR))
+
 #define astTableSource(this,tabsource) \
 astINVOKE(V,astTableSource_(astCheckFitsChan(this),tabsource,STATUS_PTR))
 
@@ -801,6 +810,12 @@ astINVOKE(V,astGetAllWarnings_(astCheckFitsChan(this),STATUS_PTR))
 
 #define astGetCardType(this) \
 astINVOKE(V,astGetCardType_(astCheckFitsChan(this),STATUS_PTR))
+
+#define astGetCardName(this) \
+astINVOKE(V,astGetCardName_(astCheckFitsChan(this),STATUS_PTR))
+
+#define astGetCardComm(this) \
+astINVOKE(V,astGetCardComm_(astCheckFitsChan(this),STATUS_PTR))
 
 #define astGetNcard(this) \
 astINVOKE(V,astGetNcard_(astCheckFitsChan(this),STATUS_PTR))

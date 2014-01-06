@@ -19,15 +19,15 @@
 % Variable part - replace [xxx] as appropriate.
 \newcommand{\stardocnumber}    {210.27}
 \newcommand{\stardocauthors}   {R.F. Warren-Smith \& D.S. Berry}
-\newcommand{\stardocdate}      {13th August 2012}
+\newcommand{\stardocdate}      {29th April 2013}
 \newcommand{\stardoctitle}     {AST\\
                                 A Library for Handling\\
                                 World Coordinate Systems\\
                                 in Astronomy}
-\newcommand{\stardoccopyright} {Copyright (C) 2012 Science \& Technology Facilities Council}
+\newcommand{\stardoccopyright} {Copyright (C) 2013 Science \& Technology Facilities Council}
 \newcommand{\stardoctitlehtml} {AST - A Library for Handling World Coordinate
                                       Systems in Astronomy}
-\newcommand{\stardocversion}   {V7.1}
+\newcommand{\stardocversion}   {V7.3}
 \newcommand{\stardocmanual}    {Programmer's Guide\\(Fortran Version)}
 \newcommand{\stardocmanualhtml}{Programmer's Guide (Fortran Version)}
 \newcommand{\stardocabstract}  {
@@ -562,9 +562,9 @@ environment-independent.
 % ? Add picture here if required for the LaTeX version.
    \begin{center}
    \mbox{}\hfill
-   \includegraphics[scale=0.25,angle=-90]{sun210_figures/fronta_bw.eps}\hfill
-   \includegraphics[scale=0.25,angle=-90]{sun210_figures/frontb_bw.eps}\hfill
-   \includegraphics[scale=0.25,angle=-90]{sun210_figures/frontc_bw.eps}\hfill
+   \includegraphics[scale=0.25,angle=-90]{sun210_figures/fronta_bw}\hfill
+   \includegraphics[scale=0.25,angle=-90]{sun210_figures/frontb_bw}\hfill
+   \includegraphics[scale=0.25,angle=-90]{sun210_figures/frontc_bw}\hfill
    \mbox{}
    \end{center}
 % ? End of picture
@@ -585,9 +585,9 @@ environment-independent.
    \begin{rawhtml} </H1> \end{rawhtml}
 
 % ? Add picture here if required for the hypertext version.
-   \includegraphics[scale=0.3,angle=-90]{sun210_figures/fronta.eps}\hfill
-   \includegraphics[scale=0.3,angle=-90]{sun210_figures/frontb.eps}\hfill
-   \includegraphics[scale=0.3,angle=-90]{sun210_figures/frontc.eps}
+   \includegraphics[scale=0.3,angle=-90]{sun210_figures/fronta}\hfill
+   \includegraphics[scale=0.3,angle=-90]{sun210_figures/frontb}\hfill
+   \includegraphics[scale=0.3,angle=-90]{sun210_figures/frontc}
 % ? End of picture
 
    \begin{rawhtml} <H1> \end{rawhtml}
@@ -878,7 +878,7 @@ coordinate system to another related one.
    coordinates.
    \begin{figure}[bhtp]
    \begin{center}
-   \includegraphics[scale=0.7]{sun210_figures/mapping.eps}
+   \includegraphics[scale=0.7]{sun210_figures/mapping}
    \caption{A Mapping viewed as a ``black box'' for transforming coordinates.}
    \label{fig:mapping}
    \end{center}
@@ -890,7 +890,7 @@ coordinate system to another related one.
    \begin{quote}
    \begin{figure}[bhtp]
    \label{fig:mapping}
-   \includegraphics[scale=1.2]{sun210_figures/mapping.eps}
+   \includegraphics[scale=1.2]{sun210_figures/mapping}
    \caption{A Mapping viewed as a ``black box'' for transforming coordinates.}
    \end{figure}
    \end{quote}
@@ -980,7 +980,7 @@ CmpMap is therefore a container for another pair of Mappings.
    Figure~\ref{fig:seriescmpmap}.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.5]{sun210_figures/series.eps}
+   \includegraphics[scale=0.5]{sun210_figures/series}
    \caption{A CmpMap (compound Mapping) composed of two component
    Mappings joined in series. The output coordinates of the first Mapping
    feed into the input coordinates of the second one, so that the whole
@@ -996,7 +996,7 @@ CmpMap is therefore a container for another pair of Mappings.
    \begin{quote}
    \begin{figure}
    \label{fig:seriescmpmap}
-   \includegraphics[scale=1.0]{sun210_figures/series.eps}
+   \includegraphics[scale=1.0]{sun210_figures/series}
    \caption{A CmpMap (compound Mapping) composed of two component
    Mappings joined in series. The output coordinates of the first Mapping
    feed into the input coordinates of the second one, so that the whole
@@ -1011,7 +1011,7 @@ CmpMap is therefore a container for another pair of Mappings.
    Figure~\ref{fig:parallelcmpmap}.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.75]{sun210_figures/parallel.eps}
+   \includegraphics[scale=0.75]{sun210_figures/parallel}
    \caption{A CmpMap composed of two Mappings joined in parallel. Each
    component Mapping acts on a complementary subset of the input and
    output coordinates.}
@@ -1027,7 +1027,7 @@ CmpMap is therefore a container for another pair of Mappings.
    \begin{quote}
    \begin{figure}
    \label{fig:parallelcmpmap}
-   \includegraphics[scale=1.0]{sun210_figures/parallel.eps}
+   \includegraphics[scale=1.0]{sun210_figures/parallel}
    \caption{A CmpMap composed of two Mappings joined in parallel. Each
    component Mapping acts on a complementary subset of the input and
    output coordinates.}
@@ -1049,7 +1049,7 @@ transformation of another to produce a single Mapping.}
    a hierarchical manner out of simper ones.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.6]{sun210_figures/complex.eps}
+   \includegraphics[scale=0.6]{sun210_figures/complex}
    \caption{CmpMaps (compound Mappings) may be nested in order to
    construct complex Mappings out of simpler building blocks.}
    \label{fig:complexcmpmap}
@@ -1069,7 +1069,7 @@ transformation of another to produce a single Mapping.}
    \begin{quote}
    \begin{figure}
    \label{fig:complexcmpmap}
-   \includegraphics[scale=0.8]{sun210_figures/complex.eps}
+   \includegraphics[scale=0.8]{sun210_figures/complex}
    \caption{CmpMaps (compound Mappings) may be nested in order to
    construct complex Mappings out of simpler building blocks.}
    \end{figure}
@@ -1089,7 +1089,7 @@ see \secref{ss:cmpmaps}. Also see the CmpMap entry in
    (Figure~\ref{fig:frames}).
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.75]{sun210_figures/frames.eps}
+   \includegraphics[scale=0.75]{sun210_figures/frames}
    \caption{(a) A basic \htmlref{Frame}{Frame} is used to represent a Cartesian coordinate
    system, here 2-dimensional. (b) A \htmlref{SkyFrame}{SkyFrame} represents a (spherical)
    celestial coordinate system. (c) The axis order of any Frame may be
@@ -1106,7 +1106,7 @@ see \secref{ss:cmpmaps}. Also see the CmpMap entry in
    \begin{quote}
    \begin{figure}
    \label{fig:frames}
-   \includegraphics[scale=1.5]{sun210_figures/frames.eps}
+   \includegraphics[scale=1.5]{sun210_figures/frames}
    \caption{(a) A basic Frame is used to represent a Cartesian coordinate
    system, here 2-dimensional. (b) A SkyFrame represents a (spherical)
    celestial coordinate system. (c) The axis order of any Frame may be
@@ -1151,7 +1151,7 @@ domain, and these may be selected by setting appropriate attributes.
    represents them.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.85]{sun210_figures/cmpframe.eps}
+   \includegraphics[scale=0.85]{sun210_figures/cmpframe}
    \caption{A CmpFrame (compound Frame) formed by combining two simpler
    Frames. Note how the special relationship which exists between the RA
    and Dec axes is preserved within this data structure. As with compound
@@ -1172,7 +1172,7 @@ domain, and these may be selected by setting appropriate attributes.
    \begin{quote}
    \begin{figure}
    \label{fig:cmpframe}
-   \includegraphics[scale=1.5]{sun210_figures/cmpframe.eps}
+   \includegraphics[scale=1.5]{sun210_figures/cmpframe}
    \caption{A CmpFrame (compound Frame) formed by combining two simpler
    Frames. Note how the special relationship which exists between the RA
    and Dec axes is preserved within this data structure. As with compound
@@ -1195,7 +1195,7 @@ SpecFrame, TimeFrame and CmpFrame entries in \appref{ss:classdescriptions}.
    coordinate systems (Figure~\ref{fig:frameset}).
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.75]{sun210_figures/frameset.eps}
+   \includegraphics[scale=0.75]{sun210_figures/frameset}
    \caption{A \htmlref{FrameSet}{FrameSet} is a network of Frames inter-connected by Mappings
    such that there is exactly one conversion path, {\em{via}} Mappings,
    between any pair of Frames.}
@@ -1210,7 +1210,7 @@ SpecFrame, TimeFrame and CmpFrame entries in \appref{ss:classdescriptions}.
    \begin{quote}
    \begin{figure}
    \label{fig:frameset}
-   \includegraphics[scale=1.0]{sun210_figures/frameset.eps}
+   \includegraphics[scale=1.0]{sun210_figures/frameset}
    \caption{A FrameSet is a network of Frames inter-connected by Mappings
    such that there is exactly one conversion path, {\em{via}} Mappings,
    between any pair of Frames.}
@@ -1341,7 +1341,7 @@ class includes an option for axes to be plotted logarithmically.
    fully annotated coordinate grids ({\em{e.g.}}\ Figure~\ref{fig:gridplot}).
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.8,angle=-90]{sun210_figures/gridplot_bw.eps}
+   \includegraphics[scale=0.8,angle=-90]{sun210_figures/gridplot_bw}
    \caption{A labelled coordinate grid for an all-sky zenithal equal area
    projection in ecliptic coordinates. This was composed and drawn
    {\em{via}} a Plot using a
@@ -1356,7 +1356,7 @@ class includes an option for axes to be plotted logarithmically.
    \begin{quote}
    \begin{figure}
    \label{fig:gridplot}
-   \includegraphics[scale=1.2,angle=-90]{sun210_figures/gridplot.eps}
+   \includegraphics[scale=1.2,angle=-90]{sun210_figures/gridplot}
    \caption{A labelled coordinate grid for an all-sky zenithal equal area
    projection in ecliptic coordinates. This was composed and drawn
    {\em{via}} a Plot using a
@@ -2184,7 +2184,7 @@ should read \secref{ss:nativefits} and \secref{ss:foreignfits}.
    over the displayed image.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.7]{sun210_figures/overgrid_bw.eps}
+   \includegraphics[scale=0.7]{sun210_figures/overgrid_bw}
    \caption{An example of a displayed image with a coordinate grid
    plotted over it.}
    \label{fig:overgrid}
@@ -2198,7 +2198,7 @@ should read \secref{ss:nativefits} and \secref{ss:foreignfits}.
    \begin{quote}
    \begin{figure}[bhtp]
    \label{fig:overgrid}
-   \includegraphics[scale=0.8]{sun210_figures/overgrid.eps}
+   \includegraphics[scale=0.8]{sun210_figures/overgrid}
    \caption{An example of a displayed image with a coordinate grid
    plotted over it.}
    \end{figure}
@@ -3931,7 +3931,7 @@ and will handle CmpMaps nested to any depth
    Mappings shown in Figure~\ref{fig:simplifyexample}.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.65]{sun210_figures/simpexamp.eps}
+   \includegraphics[scale=0.65]{sun210_figures/simpexamp}
    \caption{An over-complex compound \htmlref{Mapping}{Mapping}, consisting of PermMaps,
    ZoomMaps and a \htmlref{UnitMap}{UnitMap}, which can be simplified to become a single
    UnitMap.  The enclosing nested CmpMaps have been omitted for clarity.}
@@ -3945,7 +3945,7 @@ and will handle CmpMaps nested to any depth
    \begin{quote}
    \begin{figure}
    \label{fig:simplifyexample}
-   \includegraphics[scale=1.1]{sun210_figures/simpexamp.eps}
+   \includegraphics[scale=1.1]{sun210_figures/simpexamp}
    \caption{An over-complex compound Mapping, consisting of PermMaps,
    ZoomMaps and a UnitMap, which can be simplified to become a single
    UnitMap.  The enclosing nested CmpMaps have been omitted for clarity.}
@@ -7172,7 +7172,7 @@ when no longer required.
    the arrangement shown in Figure~\ref{fig:fsexample}.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.6]{sun210_figures/fsexample.eps}
+   \includegraphics[scale=0.6]{sun210_figures/fsexample}
    \caption{An example FrameSet, in which Frames~2 and 3 are related to
    Frame~1 by multiplying its coordinates by factors of 10 and 5
    respectively. The FrameSet's \htmlref{Base}{Base} attribute has the value 1 and its
@@ -7191,7 +7191,7 @@ when no longer required.
    \begin{quote}
    \begin{figure}
    \label{fig:fsexample}
-   \includegraphics[scale=0.9]{sun210_figures/fsexample.eps}
+   \includegraphics[scale=0.9]{sun210_figures/fsexample}
    \caption{An example FrameSet, in which Frames~2 and 3 are related to
    Frame~1 by multiplying its coordinates by factors of 10 and 5
    respectively. The FrameSet's Base attribute has the value 1 and its
@@ -7511,7 +7511,7 @@ SkyFrames:
    Figure~\ref{fig:fsconvert}.
    \begin{figure}[bhtp]
    \begin{center}
-   \includegraphics[scale=0.65]{sun210_figures/fsconvert.eps}
+   \includegraphics[scale=0.65]{sun210_figures/fsconvert}
    \caption{The FrameSet produced when AST\_CONVERT is used to convert
    between the coordinate systems represented by two SkyFrames. The
    source \htmlref{SkyFrame}{SkyFrame} becomes the base Frame, while the destination SkyFrame
@@ -7527,7 +7527,7 @@ SkyFrames:
    \begin{quote}
    \begin{figure}[bhtp]
    \label{fig:fsconvert}
-   \includegraphics[scale=1.0]{sun210_figures/fsconvert.eps}
+   \includegraphics[scale=1.0]{sun210_figures/fsconvert}
    \caption{The FrameSet produced when AST\_CONVERT is used to convert
    between the coordinate systems represented by two SkyFrames. The
    source SkyFrame becomes the base Frame, while the destination SkyFrame
@@ -7568,7 +7568,7 @@ Mapping may be extracted for use on its own if necessary, using
    will show, and is illustrated in Figure~\ref{fig:fsalign}.
    \begin{figure}
    \begin{center}
-   \includegraphics[scale=0.6]{sun210_figures/fsalign.eps}
+   \includegraphics[scale=0.6]{sun210_figures/fsalign}
    \caption{Conversion between two FrameSets is performed by establishing
    a link between a pair of Frames, one from each \htmlref{FrameSet}{FrameSet}. If conversion
    between these two Frames is possible, then a route for converting
@@ -7588,7 +7588,7 @@ Mapping may be extracted for use on its own if necessary, using
    \begin{quote}
    \begin{figure}
    \label{fig:fsconvert}
-   \includegraphics[scale=1.0]{sun210_figures/fsalign.eps}
+   \includegraphics[scale=1.0]{sun210_figures/fsalign}
    \caption{Conversion between two FrameSets is performed by establishing
    a link between a pair of Frames, one from each FrameSet. If conversion
    between these two Frames is possible, then a route for converting
@@ -7877,7 +7877,7 @@ current Frame.
    other Frames within the FrameSet (Figure~\ref{fig:fsremap}).
    \begin{figure}[hbtp]
    \begin{center}
-   \includegraphics[scale=0.6]{sun210_figures/fsremap.eps}
+   \includegraphics[scale=0.6]{sun210_figures/fsremap}
    \caption{The effect of \htmlref{AST\_REMAPFRAME}{AST_REMAPFRAME} is to interpose a Mapping between
    a nominated Frame within a FrameSet and the remaining contents of the
    FrameSet. This effectively ``re-defines'' the coordinate system
@@ -7897,7 +7897,7 @@ current Frame.
    \begin{quote}
    \begin{figure}[hbtp]
    \label{fig:fsremap}
-   \includegraphics[scale=0.9]{sun210_figures/fsremap.eps}
+   \includegraphics[scale=0.9]{sun210_figures/fsremap}
    \caption{The effect of AST\_REMAPFRAME is to interpose a Mapping between
    a nominated Frame within a FrameSet and the remaining contents of the
    FrameSet. This effectively ``re-defines'' the coordinate system
@@ -8092,7 +8092,7 @@ AST\_REMAPFRAME.
    FrameSets (Figure~\ref{fig:fsmerge}).
    \begin{figure}[hbtp]
    \begin{center}
-   \includegraphics[scale=0.6]{sun210_figures/fsmerge.eps}
+   \includegraphics[scale=0.6]{sun210_figures/fsmerge}
    \caption{Two FrameSets in the process of being merged using
    \htmlref{AST\_ADDFRAME}{AST_ADDFRAME}. FrameSet~B is being added to FrameSet~A by supplying a
    new \htmlref{Mapping}{Mapping} which inter-relates a nominated \htmlref{Frame}{Frame} in A (here number~1)
@@ -8114,7 +8114,7 @@ AST\_REMAPFRAME.
    \begin{quote}
    \begin{figure}[hbtp]
    \label{fig:fsmerge}
-   \includegraphics[scale=0.75]{sun210_figures/fsmerge.eps}
+   \includegraphics[scale=0.75]{sun210_figures/fsmerge}
    \caption{Two FrameSets in the process of being merged using
    AST\_ADDFRAME. FrameSet~B is being added to FrameSet~A by supplying a
    new Mapping which inter-relates a nominated Frame in A (here number~1)
@@ -12124,6 +12124,70 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_ADDVARIANT\sstlabel{AST_ADDVARIANT}
+}{
+   Store a new variant Mapping for the current Frame in a FrameSet
+}{
+   \sstdescription{
+      This routine
+      allows a new variant \htmlref{Mapping}{Mapping} to be stored with the current \htmlref{Frame}{Frame}
+      in a \htmlref{FrameSet}{FrameSet}. See the {\tt{"}}\htmlref{Variant}{Variant}{\tt{"}} attribute for more details. It can
+      also be used to rename the currently selected variant Mapping.
+   }
+   \sstinvocation{
+      CALL AST\_ADDVARIANT( THIS, MAP, NAME, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the FrameSet.
+      }
+      \sstsubsection{
+         MAP = INTEGER (Given)
+      }{
+         Pointer to a Mapping which describes how to convert
+         coordinates from the current Frame to the new variant of the
+         current Frame. If
+         AST\_\_NULL
+         is supplied, then the name associated with the currently selected
+         variant of the current Frame is set to the value supplied for
+         NAME, but no new variant is added.
+      }
+      \sstsubsection{
+         NAME = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         The name to associate with the new variant Mapping (or the currently
+         selected variant Mapping if
+         MAP is AST\_\_NULL).
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+         The newly added Variant becomes the current variant on exit (this is
+         equivalent to setting the Variant attribute to the value supplied for
+         NAME).
+
+         \sstitem
+         An error is reported if a variant with the supplied name already
+         exists in the current Frame.
+
+         \sstitem
+         An error is reported if the current Frame is a mirror for the
+         variant Mappings in another Frame. This is only the case if the
+         \htmlref{AST\_MIRRORVARIANTS}{AST_MIRRORVARIANTS} routine
+         has been called to make the current Frame act as a mirror.
+      }
+   }
+}
+\sstroutine{
    AST\_ANGLE\sstlabel{AST_ANGLE}
 }{
    Calculate the angle subtended by two points at a third point
@@ -16008,6 +16072,9 @@ Object             - Base class for all AST Objects
          list of attribute assignments to be used for initialising the
          new FitsChan. The syntax used is identical to that for the
          \htmlref{AST\_SET}{AST_SET} routine.
+
+         Note, the FITSCHAN\_OPTIONS environment variable may be used
+         to specify default options for all newly created FitsChans.
       }
       \sstsubsection{
          STATUS = INTEGER (Given and Returned)
@@ -17303,6 +17370,52 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_GETREGIONFRAMESET\sstlabel{AST_GETREGIONFRAMESET}
+}{
+   Obtain a pointer to the encapsulated FrameSet within a Region
+}{
+   \sstdescription{
+      This function returns a pointer to the \htmlref{FrameSet}{FrameSet} encapsulated by a
+      \htmlref{Region}{Region}. The base \htmlref{Frame}{Frame} is the Frame in which the box was originally
+      defined, and the current Frame is the Frame into which the Region
+      is currently mapped (i.e. it will be the same as the Frame returned
+      by \htmlref{AST\_GETREGIONFRAME}{AST_GETREGIONFRAME}).
+   }
+   \sstinvocation{
+      RESULT = AST\_GETREGIONFRAMESET( THIS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the Region.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_GETREGIONFRAMESET = INTEGER
+      }{
+         A pointer to a deep copy of the FrameSet represented by the Region.
+         Using this pointer to modify the FrameSet will have no effect on
+         the Region.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+         A null \htmlref{Object}{Object} pointer (AST\_\_NULL) will be returned if this
+         function is invoked with STATUS set to an error value, or if it
+         should fail for any reason.
+      }
+   }
+}
+\sstroutine{
    AST\_GETREGIONMESH\sstlabel{AST_GETREGIONMESH}
 }{
    Return a mesh of points covering the surface or volume of a Region
@@ -17372,6 +17485,9 @@ Object             - Base class for all AST Objects
    }
    \sstnotes{
       \sstitemlist{
+
+         \sstitem
+         An error is reported if the Region is unbounded.
 
          \sstitem
          If the coordinate system represented by the Region has been
@@ -19831,6 +19947,49 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_MAPDEFINED$<$X$>$\sstlabel{AST_MAPDEFINEDX}
+}{
+   Check if a KeyMap contains a defined value for a key
+}{
+   \sstdescription{
+      This function checks to see if a \htmlref{KeyMap}{KeyMap} contains a defined value for
+      a given key. If the key is present in the KeyMap but has an
+      undefined value it returns
+      .FALSE. (unlike \htmlref{AST\_MAPHASKEY}{AST_MAPHASKEY} which would return .TRUE.).
+   }
+   \sstinvocation{
+      RESULT = AST\_MAPDEFINED( THIS, KEY, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the KeyMap.
+      }
+      \sstsubsection{
+         KEY = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         The character string identifying the value to be retrieved. Trailing
+         spaces are ignored. The supplied string is converted to upper
+         case before use if the \htmlref{KeyCase}{KeyCase} attribute is currently set to zero.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_MAPDEFINED = LOGICAL
+      }{
+         .TRUE.
+         is returned if the requested key name is present in the KeyMap
+         and has a defined value.
+      }
+   }
+}
+\sstroutine{
    AST\_MAPGET0$<$X$>$\sstlabel{AST_MAPGET0X}
 }{
    Get a scalar value from a KeyMap
@@ -20242,7 +20401,8 @@ Object             - Base class for all AST Objects
          .TRUE.
          is returned if the key exists but has an undefined value (that is,
          the returned value does not depend on whether the entry has a
-         defined value or not).
+         defined value or not). See also
+         AST\_MAPDEFINED, which returns zero in such a case.
 
          \sstitem
          A function value of
@@ -22336,6 +22496,84 @@ Object             - Base class for all AST Objects
       parameter at the end of the parameter list descirbed above. This
       parameter is a pointer to the integer inherited status
       variable: {\tt{"}}int $*$status{\tt{"}}.
+   }
+}
+\sstroutine{
+   AST\_MIRRORVARIANTS\sstlabel{AST_MIRRORVARIANTS}
+}{
+   Make the current Frame mirror the variant Mappings in another Frame
+}{
+   \sstdescription{
+      This routine
+      indicates that all access to the \htmlref{Variant}{Variant} attribute of the current
+      \htmlref{Frame}{Frame} should should be forwarded to some other nominated Frame in
+      the \htmlref{FrameSet}{FrameSet}. For instance, if a value is set subsequently for the
+      Variant attribute of the current Frame, the current Frame will be left
+      unchanged and the setting is instead applied to the nominated Frame.
+      Likewise, if the value of the Variant attribute is requested, the
+      value returned is the value stored for the nominated Frame rather
+      than the current Frame itself.
+
+      This provides a mechanism for propagating the effects of variant
+      Mappings around a FrameSet. If a new Frame is added to a FrameSet
+      by connecting it to an pre-existing Frame that has two or more variant
+      Mappings, then it may be appropriate to set the new Frame so that it
+      mirrors the variants Mappings of the pre-existing Frame. If this is
+      done, then it will be possible to select a specific variant \htmlref{Mapping}{Mapping}
+      using either the pre-existing Frame or the new Frame.
+   }
+   \sstinvocation{
+      CALL AST\_MIRRORVARIANTS( THIS, IFRAME, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the FrameSet.
+      }
+      \sstsubsection{
+         IFRAME = INTEGER (Given)
+      }{
+         The index of the Frame within the FrameSet which is to be
+         mirrored by the current Frame. This value should lie in the range
+         from 1 to the number of Frames in the FrameSet (as given by its
+         \htmlref{Nframe}{Nframe} attribute). If AST\_\_NOFRAME is supplied (or the current
+         Frame is specified), then any mirroring established by a previous
+         call to this
+         routine
+         is disabled.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+         Mirrors can be chained. That is, if Frame B is set to be a mirror
+         of Frame A, and Frame C is set to be a mirror of Frame B, then
+         Frame C will act as a mirror of Frame A.
+
+         \sstitem
+         Variant Mappings cannot be added to the current Frame if it is
+         mirroring another Frame. So calls to the
+         \htmlref{AST\_ADDVARIANT}{AST_ADDVARIANT} routine
+         will cause an error to be reported if the current Frame is
+         mirroring another Frame.
+
+         \sstitem
+         A value of AST\_\_BASE may be given for the
+         IFRAME argument
+         to specify the base Frame.
+
+         \sstitem
+         Any variant Mappings explicitly added to the current Frame using
+         AST\_ADDVARIANT
+         will be ignored if the current Frame is mirroring another Frame.
+      }
    }
 }
 \sstroutine{
@@ -26200,7 +26438,7 @@ Object             - Base class for all AST Objects
          (i.e. normal Fortran array storage order).
       }
       \sstsubsection{
-         NUSED = INTEGER (Given and Returned)
+         NUSED = INTEGER$*$8 (Given and Returned)
       }{
          The
          number of input data values that have been added into the output
@@ -26473,6 +26711,11 @@ Object             - Base class for all AST Objects
          axes. To achieve this, a new Frame must be added to the FrameSet
          (\htmlref{AST\_ADDFRAME}{AST_ADDFRAME}) and the original one removed if necessary
          (\htmlref{AST\_REMOVEFRAME}{AST_REMOVEFRAME}).
+
+         \sstitem
+         Any variant Mappings associated with the remapped Frame (except
+         for the current variant) will be lost as a consequence of calling this
+         method (see attribute {\tt{"}}\htmlref{Variant}{Variant}{\tt{"}}).
       }
    }
 }
@@ -28661,6 +28904,31 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_SHOWFITS\sstlabel{AST_SHOWFITS}
+}{
+   Display the contents of a FitsChan on standard output
+}{
+   \sstdescription{
+      This routine
+      formats and displays all the cards in a \htmlref{FitsChan}{FitsChan} on standard output.
+   }
+   \sstinvocation{
+      CALL AST\_SHOWFITS( THIS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the FitsChan.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+}
+\sstroutine{
    AST\_SHOWMESH\sstlabel{AST_SHOWMESH}
 }{
    Display a mesh of points covering the surface of a Region
@@ -28766,6 +29034,12 @@ Object             - Base class for all AST Objects
    }
    \sstnotes{
       \sstitemlist{
+
+         \sstitem
+         Mappings that have a set value for their \htmlref{Ident}{Ident} attribute are
+         left unchanged after simplification. This is so that their
+         individual identity is preserved. This restriction does not
+         apply to the simplification of Frames.
 
          \sstitem
          This function can safely be applied even to Mappings which
@@ -33811,6 +34085,29 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AllVariants\sstlabel{AllVariants}
+}{
+   A list of the variant Mappings associated with the current Frame
+}{
+   \sstdescription{
+      This attrbute gives a space separated list of the names of all the
+      variant Mappings associated with the current \htmlref{Frame}{Frame} (see attribute
+      {\tt{"}}\htmlref{Variant}{Variant}{\tt{"}}). If the current Frame has no variant Mappings, then the
+      list will hold a single entry equal to the \htmlref{Domain}{Domain} name of the
+      current Frame.
+   }
+   \sstattributetype{
+      String, read-only.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         \htmlref{FrameSet}{FrameSet}
+      }{
+         All FrameSets have this attribute.
+      }
+   }
+}
+\sstroutine{
    AllWarnings\sstlabel{AllWarnings}
 }{
    A list of all currently available condition names
@@ -34171,10 +34468,7 @@ Object             - Base class for all AST Objects
       coordinates to celestial coordinates is a simple linear transformation
       (hence the attribute name {\tt{"}}CarLin{\tt{"}}). This is appropriate for some older
       FITS data which claims to have a {\tt{"}}CAR{\tt{"}} projection, but which in fact do
-      not conform to the conventions of the FITS-WCS paper. Furthermore, if
-      CarLin is non-zero, it is assumed that CDELT and CD keywords are
-      in units of degrees rather than radians (as required by the
-      FITS-WCS papers).
+      not conform to the conventions of the FITS-WCS paper.
 
       The FITS-WCS paper specifies that headers which include a CAR projection
       represent a linear mapping from pixel coordinates to {\tt{"}}native spherical
@@ -34222,6 +34516,46 @@ Object             - Base class for all AST Objects
    }
    \sstattributetype{
       Integer.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         FitsChan
+      }{
+         All FitsChans have this attribute.
+      }
+   }
+}
+\sstroutine{
+   CardComm\sstlabel{CardComm}
+}{
+   The comment for the current card in a FitsChan
+}{
+   \sstdescription{
+      This attribute gives the comment for the current card of the
+      \htmlref{FitsChan}{FitsChan}. A zero-length string is returned if the card has no comment.
+   }
+   \sstattributetype{
+      String, read-only.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         FitsChan
+      }{
+         All FitsChans have this attribute.
+      }
+   }
+}
+\sstroutine{
+   CardName\sstlabel{CardName}
+}{
+   The keyword name of the current card in a FitsChan
+}{
+   \sstdescription{
+      This attribute gives the name of the keyword for the
+      current card of the \htmlref{FitsChan}{FitsChan}.
+   }
+   \sstattributetype{
+      String, read-only.
    }
    \sstapplicability{
       \sstsubsection{
@@ -35316,7 +35650,7 @@ Object             - Base class for all AST Objects
          \sstitem
          Otherwise, FITS-CLASS is used if the FitsChan contains a DELTAV
          keyword and a keyword of the form VELO-xxx, where xxx indicates one
-         of the rest frames used by class (e.g. {\tt{"}}VELO-LSR{\tt{"}}).
+         of the rest frames used by class (e.g. {\tt{"}}VELO-LSR{\tt{"}}), or {\tt{"}}VLSR{\tt{"}}.
 
          \sstitem
          Otherwise, if the FitsChan contains a CTYPE keyword which
@@ -35472,15 +35806,27 @@ Object             - Base class for all AST Objects
       until such time as an agreed method for describing projection
       distortions within FITS-WCS has been published.
 
-      AST extends the range of celestial coordinate sytstems which may be
-      described using this encoding by inclusion of the allowing the use of
+      AST extends the range of celestial coordinate systems which may be
+      described using this encoding by allowing the inclusion of
       {\tt{"}}AZ--{\tt{"}} and {\tt{"}}EL--{\tt{"}} as the coordinate specification within CTYPE
       values. These form a longitude/latitude pair of axes which describe
       azimuth and elevation. The geographic position of the observer
       should be supplied using the OBSGEO-X/Y/Z keywords described in FITS-WCS
       paper III. Currently, a simple model is used which includes diurnal
       aberration, but ignores atmospheric refraction, polar motion, etc.
-      These may be added in a leter release.
+      These may be added in a later release.
+
+      If an AST SkyFrame that represents offset rather than absolute
+      coordinates (see attribute \htmlref{SkyRefIs}{SkyRefIs}) is written to a FitsChan using
+      FITS-WCS encoding, two alternate axis descriptions will be created.
+      One will describe the offset coordinates, and will use {\tt{"}}OFLN{\tt{"}} and
+      {\tt{"}}OFLT{\tt{"}} as the axis codes in the CTYPE keywords. The other will
+      describe absolute coordinates as specified by the \htmlref{System}{System} attribute
+      of the SkyFrame, using the usual CTYPE codes ({\tt{"}}RA--{\tt{"}}/{\tt{"}}DEC-{\tt{"}}, etc).
+      In addition, the absolute coordinates description will contain
+      AST-specific keywords (SREF1/2, SREFP1/2 and SREFIS) that allow the
+      header to be read back into AST in order to reconstruct the original
+      SkyFrame.
 
       When reading a FITS-WCS encoded Object (using AST\_READ), the FitsChan
       concerned must initially be positioned at the first card (its
@@ -40306,12 +40652,28 @@ Object             - Base class for all AST Objects
          be maintained and used.
 
          \sstitem
-         {\tt{"}}AgeDown{\tt{"}}: The keys are returned in the order in which they were
-         stored in the \htmlref{KeyMap}{KeyMap}, with the most recent key being returned last.
+         {\tt{"}}AgeDown{\tt{"}}: The keys are returned in the order in which values were
+         stored in the \htmlref{KeyMap}{KeyMap}, with the key for the most recent value being
+         returned last. If the value of an existing entry is changed, it goes
+         to the end of the list.
 
          \sstitem
-         {\tt{"}}AgeUp{\tt{"}}: The keys are returned in the order in which they were
-         stored in the KeyMap, with the most recent key being returned first.
+         {\tt{"}}AgeUp{\tt{"}}: The keys are returned in the order in which values were
+         stored in the KeyMap, with the key for the most recent value being
+         returned first. If the value of an existing entry is changed, it goes
+         to the top of the list.
+
+         \sstitem
+         {\tt{"}}KeyAgeDown{\tt{"}}: The keys are returned in the order in which they
+         were originally stored in the KeyMap, with the most recent key being
+         returned last. If the value of an existing entry is changed, its
+         position in the list does not change.
+
+         \sstitem
+         {\tt{"}}KeyAgeUp{\tt{"}}: The keys are returned in the order in which they
+         were originally stored in the KeyMap, with the most recent key being
+         returned first. If the value of an existing entry is changed, its
+         position in the list does not change.
 
          \sstitem
          {\tt{"}}KeyDown{\tt{"}}: The keys are returned in alphabetical order, with {\tt{"}}A...{\tt{"}}
@@ -42250,6 +42612,108 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   Variant\sstlabel{Variant}
+}{
+   Indicates which variant of the current Frame is to be used
+}{
+   \sstdescription{
+      This attribute can be used to change the \htmlref{Mapping}{Mapping} that connects the
+      current \htmlref{Frame}{Frame} to the other Frames in the \htmlref{FrameSet}{FrameSet}. By default, each
+      Frame in a FrameSet is connected to the other Frames by a single
+      Mapping that can only be changed by using the
+      \htmlref{AST\_REMAPFRAME}{AST_REMAPFRAME}
+      method. However, it is also possible to associate multiple Mappings
+      with a Frame, each Mapping having an identifying name. If this is
+      done, the {\tt{"}}Variant{\tt{"}} attribute can be set to indicate the name of
+      the Mapping that is to be used with the current Frame.
+
+      A possible (if unlikely) use-case is to create a FrameSet that can
+      be used to describe the WCS of an image formed by co-adding images
+      of two different parts of the sky. In such an image, each pixel contains
+      flux from two points on the sky.and so the WCS for the image should
+      ideally contain one pixel Frame and two SkyFrames - one describing
+      each of the two co-added images. There is nothing to prevent a
+      FrameSet containing two explicit SkyFrames, but the problem then arises
+      of how to distinguish between them. The two primary characteristics of
+      a Frame that distinguishes it from other Frames  ar eits class and its
+      \htmlref{Domain}{Domain} attribute value. The class of a Frame cannot be changed, but we
+      could in principle use two different Domain values to distinguish the
+      two SkyFrames. However, in practice it is not uncommon for application
+      software to assume that SkyFrames will have the default Domain value
+      of {\tt{"}}SKY{\tt{"}}. That is, instead of searching for Frames that have a class
+      of {\tt{"}}\htmlref{SkyFrame}{SkyFrame}{\tt{"}}, such software searches for Frames that have a Domain
+      of {\tt{"}}SKY{\tt{"}}. To alleviate this problem, it is possible to add a single
+      SkyFrame to the FrameSet, but specifying two alternate Mappings to
+      use with the SkyFrame. Setting the {\tt{"}}Variant{\tt{"}} attribute to the name
+      of one or the other of these alternate Mappings will cause the
+      SkyFrame to be remapped within the FrameSet so that it uses the
+      specified Mapping. The same facility can be used with any class of
+      Frame, not just SkyFrames.
+
+      To use this facility, the Frame should first be added to the
+      FrameSet in the usual manner using the
+      \htmlref{AST\_ADDFRAME}{AST_ADDFRAME} method. By default, the Mapping supplied to \htmlref{AST\_ADDVARIANT}{AST_ADDVARIANT}
+      is assigned a name equal to the Domain name of the Frame. To assign a
+      different name to it, the
+      AST\_ADDVARIANT
+      method should then be called specifying the required name and a NULL
+      Mapping. The
+      AST\_ADDFRAME
+      method should then be called repeatedly to add each required extra
+      Mapping to the current Frame, supplying a unique name for each one.
+
+      Each Frame in a FrameSet can have its own set of variant Mappings.
+      To control the Mappings in use with a specific Frame, you need first
+      to make it the current Frame in the FrameSet.
+
+      The
+      \htmlref{AST\_MIRRORVARIANTS}{AST_MIRRORVARIANTS} routine
+      allows the effects of variant Mappings associated with a nominated
+      Frame to be propagated to other Frames in the FrameSet.
+
+      Once this has been done, setting a new value for the {\tt{"}}Variant{\tt{"}}
+      attribute of a FrameSet will cause the current Frame in the
+      FrameSet to be remapped to use the specified variant Mapping. An
+      error will be reported if the current Frame has no variant Mapping
+      with the supplied name.
+
+      Getting the value of the {\tt{"}}Variant{\tt{"}} attribute will return the name
+      of the variant Mapping currently in use with the current Frame. If
+      the Frame has no variant Mappings, the value will default to the
+      Domain name of the current Frame.
+
+      Clearing the {\tt{"}}Variant{\tt{"}} attribute will have the effect of removing
+      all variant Mappings (except for the currently selected Mapping) from
+      the current Frame.
+
+      Testing the {\tt{"}}Variant{\tt{"}} attribute will return
+      .TRUE.
+      if the current Frame contains any variant Mappings, and
+      .FALSE.
+      otherwise.
+
+      A complete list of the names associated with all the available
+      variant Mappings in the current Frame can be obtained from the
+      \htmlref{AllVariants}{AllVariants} attribute.
+
+      If a Frame with variant Mappings is remapped using the
+      AST\_REMAPFRAME
+      method, the currently selected variant Mapping is used by
+      AST\_REMAPFRAME
+      and the other variant Mappings are removed from the Frame.
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         FrameSet
+      }{
+         All FrameSets have this attribute.
+      }
+   }
+}
+\sstroutine{
    Warnings\sstlabel{Warnings}
 }{
    Controls the issuing of warnings about various conditions
@@ -43278,6 +43742,12 @@ Object             - Base class for all AST Objects
          \htmlref{Card}{Card}: Index of current FITS card in a FitsChan
 
          \sstitem
+         \htmlref{CardComm}{CardComm}: The comment of the current FITS card in a FitsChan
+
+         \sstitem
+         \htmlref{CardName}{CardName}: The keyword name of the current FITS card in a FitsChan
+
+         \sstitem
          \htmlref{CardType}{CardType}: The data type of the current FITS card in a FitsChan
 
          \sstitem
@@ -43745,6 +44215,9 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
+         \htmlref{AllVariants}{AllVariants}: List of all variant mappings store with current Frame
+
+         \sstitem
          \htmlref{Base}{Base}: FrameSet base Frame index
 
          \sstitem
@@ -43752,6 +44225,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
          \htmlref{Nframe}{Nframe}: Number of Frames in a FrameSet
+
+         \sstitem
+         \htmlref{Variant}{Variant}: Name of variant mapping in use by current Frame
 
       }
       Every FrameSet also inherits any further attributes that belong
@@ -43774,10 +44250,16 @@ Object             - Base class for all AST Objects
          system
 
          \sstitem
+         \htmlref{AST\_ADDVARIANT}{AST_ADDVARIANT}: Add a variant Mapping to the current Frame
+
+         \sstitem
          \htmlref{AST\_GETFRAME}{AST_GETFRAME}: Obtain a pointer to a specified Frame in a FrameSet
 
          \sstitem
          \htmlref{AST\_GETMAPPING}{AST_GETMAPPING}: Obtain a Mapping between two Frames in a FrameSet
+
+         \sstitem
+         \htmlref{AST\_MIRRORVARIANTS}{AST_MIRRORVARIANTS}: Make the current Frame mirror variant Mappings in another Frame
 
          \sstitem
          \htmlref{AST\_REMAPFRAME}{AST_REMAPFRAME}: Modify a Frame's relationship to the other Frames in a
@@ -44011,6 +44493,9 @@ Object             - Base class for all AST Objects
       following routines may also be applied to all KeyMaps:
 
       \sstitemlist{
+
+         \sstitem
+         AST\_MAPDEFINED: Does a KeyMap contain a defined value for a key?
 
          \sstitem
          \htmlref{AST\_MAPGET0$<$X$>$}{AST_MAPGET0X}: Get a named scalar entry from a KeyMap
@@ -45393,6 +45878,12 @@ Object             - Base class for all AST Objects
 
          \sstitem
          \htmlref{AST\_GETREGIONFRAME}{AST_GETREGIONFRAME}: Get a copy of the Frame represent by a Region
+
+         \sstitem
+         astGetRegionFrameSet: Get a copy of the Frameset encapsulated by a Region
+
+         \sstitem
+         \htmlref{AST\_GETREGIONFRAMESET}{AST_GETREGIONFRAMESET}: Get a copy of the Frameset encapsulated by a Region
 
          \sstitem
          \htmlref{AST\_GETREGIONMESH}{AST_GETREGIONMESH}: Get a mesh of points covering a Region
@@ -50172,12 +50663,10 @@ and CNPIX2 now default to zero if absent. Previously an error was reported.
 \end{enumerate}
 
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V7.1.0}
+\subsection{Changes Introduced in V7.1.0}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V7.0.6 and V7.1.0 (the
-current version):
+The following describes the most significant changes which occurred in the
+AST library between versions V7.0.6 and V7.1.0:
 
 \begin{enumerate}
 
@@ -50201,6 +50690,121 @@ IFRAME argument.
 \item The
 \htmlref{AST\_RATE}{AST_RATE} function
 has been re-written to make it faster and more reliable.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.1.1}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.1.0 and V7.1.1:
+
+\begin{enumerate}
+
+\item When a \htmlref{FitsChan}{FitsChan} is used to write an ``offset'' \htmlref{SkyFrame}{SkyFrame} (see attribute
+\htmlref{SkyRefIs}{SkyRefIs}) to a FITS-WCS encoded header, two alternate axis descriptions
+are now created - one for the offset coordinates and one for the absolute
+coordinates. If such a header is subsequently read back into AST, the
+original offset SkyFrame is recreated.
+
+\item A bug has been fixed in FitsChan that caused inappropriate CTYPE values
+to be generated when writing a \htmlref{FrameSet}{FrameSet} to FITS-WCS headers if the
+current \htmlref{Frame}{Frame} describes generalised spherical coordinates (i.e. a
+SkyFrame with \htmlref{System}{System}=Unknown).
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.2.0}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.1.1 and V7.2.0:
+
+\begin{enumerate}
+
+\item A new method call
+AST\_MAPDEFINED
+has been added to the \htmlref{KeyMap}{KeyMap} class. It checks if a gtiven key name has
+a defined value in a given KeyMap.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.3.0}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.2.0 and V7.3.0:
+
+\begin{enumerate}
+
+\item The interface for the AST\_REBINSEQ<X> family of routines has
+been changed in order to allow a greater number of pixels to be pasted
+into the output array. The NUSED parameter is now an INTEGER*8 variable,
+instead of an INTEGER. APPLICATION CODE SHOULD BE CHANGED ACCORDINGLY TO
+AVOID SEGMENTATION FAULTS AND OTHER ERRATIC BEHAVIOUR.
+
+\item Added a new facility to the \htmlref{FrameSet}{FrameSet} class to allow each \htmlref{Frame}{Frame} to be
+associated with multiple Mappings, any one of which can be used to
+connect the Frame to the other Frames in the FrameSet. The choice of
+which \htmlref{Mapping}{Mapping} to use is controlled by the new ``\htmlref{Variant}{Variant}'' attribute of the
+FrameSet class.
+
+\item Mappings (but not Frames) that have a value set for their \htmlref{Ident}{Ident}
+attribute are now left unchanged by the
+c astSimplify function.
+f \htmlref{AST\_SIMPLIFY}{AST_SIMPLIFY} routine.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.3.1}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.3.0 and V7.3.1:
+
+\begin{enumerate}
+
+\item Fix a bug that could cauise a segmentation violation when reading
+certain FITS headers that use a TNX projection.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.3.2}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.3.1 and V7.3.2:
+
+\begin{enumerate}
+
+\item Fix support for reading FITS header that use a GLS projection.
+Previously, an incorrect transformation was used for such projections if
+any CRVAL or CROTA value was non-zero.
+
+\item The \htmlref{KeyMap}{KeyMap} class has new sorting options ``KeyAgeUp'' and
+``KeyAgeDown'' that retain the position of an existing entry if its value
+is changed. See the \htmlref{SortBy}{SortBy} attribute.
+
+\item A bug has been fixed in the \htmlref{FitsChan}{FitsChan} class that caused CDELT keywords
+for sky axes to be treated as radians rather than degrees when reading a
+FITS header, if the corresponding CTYPE values included no projection code.
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V7.3.3}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V7.3.2 and V7.3.3 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{FitsChan}{FitsChan} class has new attributes \htmlref{CardName}{CardName} and \htmlref{CardComm}{CardComm}, which hold
+the keyword name and comment of the current card.
+
+\item When using the FitsChan class to read FITS-WCS headers that include
+polynomial distortion in the SIP format, any inverse transformation specified
+in the header is now ignored and a new inverse is created to replace it based
+on the supplied forward transformation. Previously, an inverse was created
+only if the header did not include an inverse. The accuracy of the inverse
+transformation has also been improved, although it may now be slower to
+evaluate in some circumstances.
 
 \end{enumerate}
 

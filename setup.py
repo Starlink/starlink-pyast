@@ -102,7 +102,7 @@ if sys.platform.startswith("darwin"):
 
 
 setup (name = 'starlink-pyast',
-       version = '2.5',
+       version = '2.6',
        description = 'A Python wrapper for the Starlink AST library',
        url = 'http://starlink.jach.hawaii.edu/starlink/AST',
        author = 'David Berry',

@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     18-OCT-2013 (makeh):
+*     6-JAN-2014 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -1528,6 +1528,7 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
    void astReadFits_( AstFitsChan *, int * );
    void astWriteFits_( AstFitsChan *, int * );
    void astEmptyFits_( AstFitsChan *, int * );
+   void astShowFits_( AstFitsChan *, int * );
    void astPurgeWCS_( AstFitsChan *, int * );
    void astPutCards_( AstFitsChan *, const char *, int * );
    void astPutFits_( AstFitsChan *, const char [81], int, int * );
@@ -1615,6 +1616,8 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
 #define astWriteFits(this) astINVOKE(V,astWriteFits_(astCheckFitsChan(this),STATUS_PTR))
 
 #define astEmptyFits(this) astINVOKE(V,astEmptyFits_(astCheckFitsChan(this),STATUS_PTR))
+
+#define astShowFits(this) astINVOKE(V,astShowFits_(astCheckFitsChan(this),STATUS_PTR))
 
 #define astTableSource(this,tabsource) astINVOKE(V,astTableSource_(astCheckFitsChan(this),tabsource,STATUS_PTR))
 typedef struct AstFitsTable {
@@ -2283,6 +2286,7 @@ typedef struct AstRegion {
 astPROTO_CHECK(Region)
 astPROTO_ISA(Region)
 AstFrame *astGetRegionFrame_( AstRegion *, int * );
+AstFrameSet *astGetRegionFrameSet_( AstRegion *, int * );
 int astOverlap_( AstRegion *, AstRegion *, int * );
 void astNegate_( AstRegion *, int * );
 
@@ -2311,6 +2315,7 @@ AstRegion *astMapRegionId_( AstRegion *, AstMapping *, AstFrame *, int * );
 
 #define astIsARegion(this) astINVOKE_ISA(Region,this)
 #define astGetRegionFrame(this) astINVOKE(O,astGetRegionFrame_(astCheckRegion(this),STATUS_PTR))
+#define astGetRegionFrameSet(this) astINVOKE(O,astGetRegionFrameSet_(astCheckRegion(this),STATUS_PTR))
 #define astNegate(this) astINVOKE(V,astNegate_(astCheckRegion(this),STATUS_PTR))
 #define astOverlap(this,that) astINVOKE(V,astOverlap_(astCheckRegion(this),astCheckRegion(that),STATUS_PTR))
 

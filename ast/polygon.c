@@ -85,6 +85,18 @@ f     - AST_OUTLINE<X>: Create a Polygon outlining values in a pixel array
 *        Added astOutline<X>.
 *     30-JUN-2009 (DSB):
 *        Override astGetBounded.
+*     4-NOV-2013 (DSB):
+*        Modify RegPins so that it can handle uncertainty regions that straddle
+*        a discontinuity. Previously, such uncertainty Regions could have a huge
+*        bounding box resulting in matching region being far too big.
+*     6-DEC-2013 (DSB):
+*        Reverse the order of the vertices when the Polygon is created,
+*        if necessary, to ensure that the unnegated Polygon is bounded.
+*        The parent Region class assumes that unnegated regions are
+*        bounded.
+*     6-JAN-2014 (DSB):
+*        Free edges when clearing the cache, not when establishing a new
+*        cache, as the number of edges may have changed.
 *class--
 */
 
@@ -292,6 +304,7 @@ static void Cache( AstPolygon *, int * );
 static void Copy( const AstObject *, AstObject *, int * );
 static void Delete( AstObject *, int * );
 static void Dump( AstObject *, AstChannel *, int * );
+static void EnsureInside( AstPolygon *, int * );
 static void FindMax( Segment *, AstFrame *, double *, double *, int, int, int * );
 static void RegBaseBox( AstRegion *this, double *, double *, int * );
 static void ResetCache( AstRegion *this, int * );
@@ -969,6 +982,102 @@ static AstPointSet *DownsizePoly( AstPointSet *pset, double maxerr,
 
 /* Return the result. */
    return result;
+}
+
+static void EnsureInside( AstPolygon *this, int *status ){
+/*
+*  Name:
+*     EnsureInside
+
+*  Purpose:
+*     Ensure the unnegated Polygon represents the inside of the polygon.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "polygon.h"
+*     void EnsureInside( AstPolygon *this, int *status )
+
+*  Class Membership:
+*     Polygon member function
+
+*  Description:
+*     Reversing the order of the vertices of a Polygon is like negating
+*     the Polygon. But the parent Region class assumes that an unnegated
+*     region bounded by closed curves (e.g. boxes, circles, ellipses, etc)
+*     is bounded. So we need to have a way to ensure that a Polygon also
+*     follows this convention. So this function reverses the order of the
+*     vertices in the Polygon, if necessary, to ensure that the unnegated
+*     Polygon is bounded.
+
+*  Parameters:
+*     this
+*        The Polygon.
+*     status
+*        Pointer to the inherited status variable.
+
+*/
+
+/* Local Variables: */
+   AstRegion *this_region;
+   double **ptr;
+   double *p;
+   double *q;
+   double tmp;
+   int bounded;
+   int i;
+   int j;
+   int jmid;
+   int negated;
+   int np;
+
+/* Check the global error status. */
+   if ( !astOK ) return;
+
+/* Is the unnegated Polygon unbounded? If so, we need to reverse the
+   vertices. */
+   bounded = astGetBounded( this );
+   negated = astGetNegated( this );
+   if( ( bounded && negated ) || ( !bounded && !negated ) ) {
+      this_region = (AstRegion *) this;
+
+/* Get a pointer to the arrays holding the coordinates at the Polygon
+   vertices. */
+      ptr = astGetPoints( this_region->points );
+
+/* Get the number of vertices. */
+      np = astGetNpoint( this_region->points );
+
+/* Store the index of the last vertex to swap. For odd "np" the central
+   vertex does not need to be swapped. */
+      jmid = np/2;
+
+/* Loop round the two axes spanned by the Polygon. */
+      for( i = 0; i < 2; i++ ) {
+
+/* Get pointers to the first pair of axis values to be swapped - i.e. the
+   first and last axis values. */
+         p = ptr[ i ];
+         q = p + np - 1;
+
+/* Loop round all pairs of axis values. */
+         for( j = 0; j < jmid; j++ ) {
+
+/* Swap the pair. */
+            tmp = *p;
+            *(p++) = *q;
+            *(q--) = tmp;
+         }
+      }
+
+/* Invert the value of the "Negated" attribute to cancel out the effect
+   of the above vertex reversal. */
+      astNegate( this );
+
+/* Indicate the cached information in the Polygon structure is stale. */
+      this->stale = 1;
+   }
 }
 
 /*
@@ -3046,6 +3155,7 @@ static int RegPins( AstRegion *this_region, AstPointSet *pset, AstRegion *unc,
    double **ptr1;               /* Pointer to axis values in "pset1" */
    double **ptr2;               /* Pointer to axis values in "pset2" */
    double **vptr;               /* Pointer to axis values at vertices */
+   double *safe;                /* An interior point in "this" */
    double edge_len;             /* Length of current edge */
    double end[2];               /* Position of end of current edge */
    double l1;                   /* Length of bounding box diagonal */
@@ -3112,13 +3222,19 @@ static int RegPins( AstRegion *this_region, AstPointSet *pset, AstRegion *unc,
 /* Create a mask array if required. */
    if( mask ) *mask = astMalloc( sizeof(int)*(size_t) np );
 
+/* Get the centre of the region in the base Frame. We use this as a "safe"
+   interior point within the region. */
+   safe = astRegCentre( this, NULL, NULL, 0, AST__BASE );
+
 /* We now find the maximum distance on each axis that a point can be from the
    boundary of the Polygon for it still to be considered to be on the boundary.
    First get the Region which defines the uncertainty within the Polygon
-   being checked (in its base Frame), and get its bounding box. The current
-   Frame of the uncertainty Region is the same as the base Frame of the
-   Polygon. */
+   being checked (in its base Frame), re-centre it on the interior point
+   found above (to avoid problems if the uncertainty region straddles a
+   discontinuity), and get its bounding box. The current Frame of the
+   uncertainty Region is the same as the base Frame of the Polygon. */
    tunc = astGetUncFrm( this, AST__BASE );
+   if( safe ) astRegCentre( tunc, safe, NULL, 0, AST__CURRENT );
    astGetRegionBounds( tunc, lbnd_tunc, ubnd_tunc );
 
 /* Find the geodesic length within the base Frame of "this" of the diagonal of
@@ -3126,9 +3242,12 @@ static int RegPins( AstRegion *this_region, AstPointSet *pset, AstRegion *unc,
    frm = astGetFrame( this_region->frameset, AST__BASE );
    l1 = astDistance( frm, lbnd_tunc, ubnd_tunc );
 
-/* Also get the Region which defines the uncertainty of the supplied points
-   and get its bounding box in the same Frame. */
+/* Also get the Region which defines the uncertainty of the supplied
+   points and get its bounding box. First re-centre the uncertainty at the
+   interior position to avoid problems from uncertainties that straddle a
+   discontinuity. */
    if( unc ) {
+      if( safe ) astRegCentre( unc, safe, NULL, 0, AST__CURRENT );
       astGetRegionBounds( unc, lbnd_unc, ubnd_unc );
 
 /* Find the geodesic length of the diagonal of this bounding box. */
@@ -3213,6 +3332,7 @@ static int RegPins( AstRegion *this_region, AstPointSet *pset, AstRegion *unc,
 /* Free resources. */
    tunc = astAnnul( tunc );
    frm = astAnnul( frm );
+   safe = astFree( safe );
    pset1 = astAnnul( pset1 );
    pset2 = astAnnul( pset2 );
 
@@ -3463,7 +3583,7 @@ static Segment *RemoveFromChain( Segment *head, Segment *seg, int *status ){
    return head;
 }
 
-static void ResetCache( AstRegion *this, int *status ){
+static void ResetCache( AstRegion *this_region, int *status ){
 /*
 *  Name:
 *     ResetCache
@@ -3492,10 +3612,33 @@ static void ResetCache( AstRegion *this, int *status ){
 *     status
 *        Pointer to the inherited status variable.
 */
+
+/* Local Variables: */
+   AstPolygon *this;
+   int i;
+   int nv;
+
+/* Get a pointer to the Polygon structure. */
+   this = (AstPolygon *) this_region;
+
+/* If a Polygon was supplied, indicate cached information needs to be
+   recalculated. */
    if( this ) {
-      ( (AstPolygon *) this )->stale = 1;
-      ( (AstPolygon *) this )->lbnd[ 0 ] = AST__BAD;
-      (*parent_resetcache)( this, status );
+      this->stale = 1;
+      this->lbnd[ 0 ] = AST__BAD;
+
+/* Free any edge structures (number of vertices may be about to change so
+   this cannot be left until the next call to "Cache()". */
+      if( this->edges ) {
+         nv = astGetNpoint( this_region->points );
+         for( i = 0; i < nv; i++ ) {
+            this->edges[ i ] = astFree( this->edges[ i ] );
+         }
+         this->edges = astFree( this->edges );
+      }
+
+/* Clear the cache of the parent class. */
+      (*parent_resetcache)( this_region, status );
    }
 }
 
@@ -3535,15 +3678,16 @@ static void SetPointSet( AstPolygon *this, AstPointSet *pset, int *status ){
 /* Check the global error status. */
    if ( !astOK ) return;
 
-/* Annul the pointer to the PointSet already in the supplied Polygon. */
-   (void) astAnnul( ((AstRegion *) this)->points );
-
-/* Store a clone of the supplie dnew PointSet pointer. */
-   ((AstRegion *) this)->points = astClone( pset );
-
 /* Indicate the cached information in the polygon will need to be
    re-calculated when needed. */
    astResetCache( this );
+
+/* Annul the pointer to the PointSet already in the supplied Polygon. */
+   (void) astAnnul( ((AstRegion *) this)->points );
+
+/* Store a clone of the supplied new PointSet pointer. */
+   ((AstRegion *) this)->points = astClone( pset );
+
 }
 
 static void SetRegFS( AstRegion *this_region, AstFrame *frm, int *status ) {
@@ -3584,12 +3728,13 @@ static void SetRegFS( AstRegion *this_region, AstFrame *frm, int *status ) {
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Indicate cached information eeds re-calculating. */
+   astResetCache( this_region );
+
 /* Invoke the parent method to store the FrameSet in the parent Region
    structure. */
    (* parent_setregfs)( this_region, frm, status );
 
-/* Indicate cached information eeds re-calculating. */
-   astResetCache( this_region );
 }
 
 static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
@@ -4615,14 +4760,12 @@ static void Copy( const AstObject *objin, AstObject *objout, int *status ) {
 */
 
 /* Local Variables: */
-   AstPolygon *in;                /* Pointer to input Polygon */
    AstPolygon *out;               /* Pointer to output Polygon  */
 
 /* Check the global error status. */
    if ( !astOK ) return;
 
-/* Obtain pointers to the input and output Polygons. */
-   in = (AstPolygon *) objin;
+/* Obtain pointers to the output Polygon. */
    out = (AstPolygon *) objout;
 
 /* For safety, first clear any references to the input memory from
@@ -4729,14 +4872,8 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
 *        Pointer to the inherited status variable.
 */
 
-/* Local Variables: */
-   AstPolygon *this;                 /* Pointer to the Polygon structure */
-
 /* Check the global error status. */
    if ( !astOK ) return;
-
-/* Obtain a pointer to the Polygon structure. */
-   this = (AstPolygon *) this_object;
 
 /* Write out values representing the instance variables for the
    Polygon class.  Accompany these with appropriate comment strings,
@@ -5217,6 +5354,10 @@ AstPolygon *astInitPolygon_( void *mem, size_t size, int init, AstPolygonVtab *v
          new->acw = 1;
          new->stale = 1;
 
+/* Ensure the vertices are stored such that the unnegated Polygon
+   represents the inside of the polygon. */
+         EnsureInside( new, status );
+
 /* If an error occurred, clean up by deleting the new Polygon. */
          if ( !astOK ) new = astDelete( new );
       }
@@ -5374,6 +5515,10 @@ AstPolygon *astLoadPolygon_( void *mem, size_t size, AstPolygonVtab *vtab,
    convention, negate the Polygon so that it is consistent with the
    current conevtion (based on STC). */
       if( ! order ) astNegate( new );
+
+/* Ensure the vertices are stored such that the unnegated Polygon
+   represents the inside of the polygon. */
+      EnsureInside( new, status );
 
 /* If an error occurred, clean up by deleting the new Polygon. */
       if ( !astOK ) new = astDelete( new );
