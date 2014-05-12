@@ -57,20 +57,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*    You should have received a copy of the GNU General Public License
-*    along with this program; if not, write to the Free Software
-*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*    USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -78,7 +78,7 @@
 */
 
 #include "pal.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palAmpqk ( double ra, double da, double amprms[21], double *rm,
                 double *dm ){
@@ -97,10 +97,10 @@ void palAmpqk ( double ra, double da, double amprms[21], double *rm,
    }
 
 /* Apparent RA,Dec to Cartesian */
-   iauS2c( ra, da, p3 );
+   eraS2c( ra, da, p3 );
 
 /* Precession and nutation */
-   iauTrxp( (double(*)[3]) &amprms[12], p3, p2 );
+   eraTrxp( (double(*)[3]) &amprms[12], p3, p2 );
 
 /* Aberration */
    ab1p1 = ab1 + 1.0;
@@ -108,19 +108,19 @@ void palAmpqk ( double ra, double da, double amprms[21], double *rm,
       p1[i] = p2[i];
    }
    for( j = 0; j < 2; j++ ) {
-      p1dv = iauPdp( p1, abv );
+      p1dv = eraPdp( p1, abv );
       p1dvp1 = 1.0 + p1dv;
       w = 1.0 + p1dv / ab1p1;
       for( i = 0; i < 3; i++ ) {
          p1[i] = ( p1dvp1 * p2[i] - w * abv[i] ) / ab1;
       }
-      iauPn( p1, &w, p3 );
+      eraPn( p1, &w, p3 );
       for( i = 0; i < 3; i++ ) {
          p1[i] = p3[i];
       }
    }
 
 /* Mean RA,Dec */
-   iauC2s( p1, rm, dm );
-   *rm = iauAnp( *rm );
+   eraC2s( p1, rm, dm );
+   *rm = eraAnp( *rm );
 }

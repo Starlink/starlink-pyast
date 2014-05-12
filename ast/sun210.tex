@@ -19,15 +19,15 @@
 % Variable part - replace [xxx] as appropriate.
 \newcommand{\stardocnumber}    {210.27}
 \newcommand{\stardocauthors}   {R.F. Warren-Smith \& D.S. Berry}
-\newcommand{\stardocdate}      {29th April 2013}
+\newcommand{\stardocdate}      {25th February 2013}
 \newcommand{\stardoctitle}     {AST\\
                                 A Library for Handling\\
                                 World Coordinate Systems\\
                                 in Astronomy}
-\newcommand{\stardoccopyright} {Copyright (C) 2013 Science \& Technology Facilities Council}
+\newcommand{\stardoccopyright} {Copyright (C) 2014 Science \& Technology Facilities Council}
 \newcommand{\stardoctitlehtml} {AST - A Library for Handling World Coordinate
                                       Systems in Astronomy}
-\newcommand{\stardocversion}   {V7.3}
+\newcommand{\stardocversion}   {V8.0}
 \newcommand{\stardocmanual}    {Programmer's Guide\\(Fortran Version)}
 \newcommand{\stardocmanualhtml}{Programmer's Guide (Fortran Version)}
 \newcommand{\stardocabstract}  {
@@ -778,9 +778,9 @@ are described here:
 \begin{enumerate}
 \item {\bf{Minimum Software Dependencies.}}
 The AST library depends on no other other software\footnote{It comes with
-bundled copies of the IAU SOFA and Starlink PAL libraries which are built
+bundled copies of the ERFA and Starlink PAL libraries which are built
 at the same time as the other AST internal libraries. Alternatively, external
-PAL and SOFA libraries may be used by specifying the ``{\tt
+PAL and ERFA libraries may be used by specifying the ``{\tt
 --with-external\_pal}'' option when configuring AST}.
 
 \item {\bf{Environment Independence.}}
@@ -14252,6 +14252,193 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_CONVEX$<$X$>$\sstlabel{AST_CONVEXX}
+}{
+   Create a new Polygon representing the convex hull of a 2D data grid
+}{
+   \sstdescription{
+      This is a set of functions that create the shortest \htmlref{Polygon}{Polygon} that
+      encloses all pixels with a specified value within a gridded
+      2-dimensional data array (e.g. an image).
+
+      A basic 2-dimensional \htmlref{Frame}{Frame} is used to represent the pixel coordinate
+      system in the returned Polygon. The \htmlref{Domain}{Domain} attribute is set to
+      {\tt{"}}PIXEL{\tt{"}}, the \htmlref{Title}{Title} attribute is set to {\tt{"}}Pixel coordinates{\tt{"}}, and the
+      Unit attribute for each axis is set to {\tt{"}}pixel{\tt{"}}. All other
+      attributes are left unset. The nature of the pixel coordinate system
+      is determined by parameter
+      STARPIX.
+
+      You should use a function which matches the numerical type of the
+      data you are processing by replacing $<$X$>$ in the generic function
+      name
+      AST\_CONVEX$<$X$>$
+      are procesing data with type
+      REAL, you should use the function AST\_CONVEXR
+      (see the {\tt{"}}Data Type Codes{\tt{"}} section below for the codes appropriate to
+      other numerical types).
+   }
+   \sstinvocation{
+      RESULT = AST\_CONVEX$<$X$>$( VALUE, OPER, ARRAY, LBND, UBND, STARPIX, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         VALUE = $<$Xtype$>$ (Given)
+      }{
+         A data value that specifies the pixels to be included within the
+         convex hull.
+      }
+      \sstsubsection{
+         OPER = INTEGER (Given)
+      }{
+         Indicates how the
+         VALUE
+         parameter is used to select the required pixels. It can
+         have any of the following values:
+         \sstitemlist{
+
+            \sstitem
+            AST\_\_LT: include pixels with value less than VALUE.
+
+            \sstitem
+            AST\_\_LE: include pixels with value less than or equal to VALUE.
+
+            \sstitem
+            AST\_\_EQ: include pixels with value equal to VALUE.
+
+            \sstitem
+            AST\_\_NE: include pixels with value not equal to VALUE.
+
+            \sstitem
+            AST\_\_GE: include pixels with value greater than or equal to VALUE.
+
+            \sstitem
+            AST\_\_GT: include pixels with value greater than VALUE.
+         }
+      }
+      \sstsubsection{
+         ARRAY( $*$ ) = $<$Xtype$>$ (Given)
+      }{
+         A
+         2-dimensional array containing the data to be processed.  The
+         numerical type of this array should match the 1- or
+         2-character type code appended to the function name (e.g. if
+         you are using AST\_CONVEXR, the type of each array element
+         should be REAL).
+
+         The storage order of data within this array should be such
+         that the index of the first grid dimension varies most
+         rapidly and that of the second dimension least rapidly
+         (i.e. normal Fortran array storage order).
+      }
+      \sstsubsection{
+         LBND( 2 ) = INTEGER (Given)
+      }{
+         An array
+         containing the coordinates of the centre of the first pixel
+         in the input grid along each dimension.
+      }
+      \sstsubsection{
+         UBND( 2) = INTEGER (Given)
+      }{
+         An array
+         containing the coordinates of the centre of the last pixel in
+         the input grid along each dimension.
+
+         Note that LBND and UBND together define the shape
+         and size of the input grid, its extent along a particular
+         (J'th) dimension being UBND(J)-LBND(J)$+$1. They also define
+         the input grid's coordinate system, each pixel having unit
+         extent along each dimension with integral coordinate values
+         at its centre or upper corner, as selected by parameter
+         STARPIX.
+      }
+      \sstsubsection{
+         STARPIX = LOGICAL (Given)
+      }{
+         A flag indicating the nature of the pixel coordinate system used
+         to describe the vertex positions in the returned Polygon. If
+         .TRUE.,
+         the standard Starlink definition of pixel coordinate is used in
+         which a pixel with integer index I spans a range of pixel coordinate
+         from (I-1) to I (i.e. pixel corners have integral pixel coordinates).
+         If .FALSE.,
+         the definition of pixel coordinate used by other AST functions
+         such as AST\_RESAMPLE, AST\_MASK,
+         etc., is used. In this definition, a pixel with integer index I
+         spans a range of pixel coordinate from (I-0.5) to (I$+$0.5) (i.e.
+         pixel centres have integral pixel coordinates).
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_CONVEX$<$X$>$ = INTEGER
+      }{
+         A pointer to the required Polygon.
+         AST\_\_NULL
+         is returned without error if the array contains no pixels that
+         satisfy the criterion specified by
+         VALUE and OPER.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+         AST\_\_NULL
+         will be returned if this function is invoked with the global
+         error status set, or if it should fail for any reason.
+      }
+   }
+   \sstdiytopic{
+      Data Type Codes
+   }{
+      To select the appropriate masking function, you should
+      replace $<$X$>$ in the generic function name AST\_CONVEX$<$X$>$ with a
+      1- or 2-character data type code, so as to match the numerical
+      type $<$Xtype$>$ of the data you are processing, as follows:
+      \sstitemlist{
+
+         \sstitem
+         D: DOUBLE PRECISION
+
+         \sstitem
+         R: REAL
+
+         \sstitem
+         I: INTEGER
+
+         \sstitem
+         UI: INTEGER (treated as unsigned)
+
+         \sstitem
+         S: INTEGER$*$2 (short integer)
+
+         \sstitem
+         US: INTEGER$*$2 (short integer, treated as unsigned)
+
+         \sstitem
+         B: BYTE (treated as signed)
+
+         \sstitem
+         UB: BYTE (treated as unsigned)
+
+      }
+      For example, AST\_CONVEXD would be used to process DOUBLE
+      PRECISION data, while AST\_CONVEXS would be used to process
+      short integer data (stored in an INTEGER$*$2 array), etc.
+
+      For compatibility with other Starlink facilities, the codes W
+      and UW are provided as synonyms for S and US respectively (but
+      only in the Fortran interface to AST).
+   }
+}
+\sstroutine{
    AST\_COPY\sstlabel{AST_COPY}
 }{
    Copy an Object
@@ -23170,14 +23357,6 @@ Object             - Base class for all AST Objects
          pixel centres have integral pixel coordinates).
       }
       \sstsubsection{
-         BOXSIZE = INTEGER (Given)
-      }{
-         The full width in pixels of a smoothing box to be applied to the
-         polygon vertices before downsizing the polygon to a smaller number
-         of vertices. If an even number is supplied, the next larger odd
-         number is used. Values of one or zero result in no smoothing.
-      }
-      \sstsubsection{
          STATUS = INTEGER (Given and Returned)
       }{
          The global status.
@@ -23187,9 +23366,7 @@ Object             - Base class for all AST Objects
       \sstsubsection{
          AST\_OUTLINE$<$X$>$ = INTEGER
       }{
-         The number of pixels to which a value of
-         BADVAL
-         has been assigned.
+         A pointer to the required Polygon.
       }
    }
    \sstnotes{
@@ -23209,9 +23386,9 @@ Object             - Base class for all AST Objects
          value requirement. Such holes will be ignored by this function.
 
          \sstitem
-         A value of zero will be returned if this function is invoked
-         with the global error status set, or if it should fail for any
-         reason.
+         AST\_\_NULL
+         will be returned if this function is invoked with the global
+         error status set, or if it should fail for any reason.
       }
    }
    \sstdiytopic{
@@ -40277,6 +40454,37 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   SimpVertices\sstlabel{SimpVertices}
+}{
+   Simplify a Polygon by transforming its vertices?
+}{
+   \sstdescription{
+      This attribute controls the behaviour of the
+      \htmlref{AST\_SIMPLIFY}{AST_SIMPLIFY}
+      method when applied to a \htmlref{Polygon}{Polygon}. The simplified Polygon is created
+      by transforming the vertices from the \htmlref{Frame}{Frame} in which the Polygon
+      was originally defined into the Frame currently represented by the
+      Polygon. If SimpVertices is non-zero (the default) then this
+      simplified Polygon is returned without further checks. If SimpVertices
+      is zero, a check is made that the edges of the new Polygon do not
+      depart significantly from the edges of the original Polygon (as
+      determined by the uncertainty associated with the Polygon). This
+      could occur, for instance, if the \htmlref{Mapping}{Mapping} frrm the original to the
+      current Frame is highly non-linear. If this check fails, the
+      original unsimplified Polygon is returned without change.
+   }
+   \sstattributetype{
+      Integer (boolean).
+   }
+   \sstapplicability{
+      \sstsubsection{
+         Polygon
+      }{
+         All Polygons have this attribute.
+      }
+   }
+}
+\sstroutine{
    SinkFile\sstlabel{SinkFile}
 }{
    Output file to which to data should be written
@@ -45649,8 +45857,13 @@ Object             - Base class for all AST Objects
    \sstdiytopic{
       Attributes
    }{
-      The Polygon class does not define any new attributes beyond
-      those which are applicable to all Regions.
+      In addition to those attributes common to all Regions, every
+      Polygon also has the following attributes:
+      \sstitemlist{
+
+         \sstitem
+         \htmlref{SimpVertices}{SimpVertices}: Simplify by transforming the vertices?
+      }
    }
    \sstdiytopic{
       Functions
@@ -45662,6 +45875,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
          \htmlref{AST\_DOWNSIZE}{AST_DOWNSIZE}: Reduce the number of vertices in a Polygon.
+
+         \sstitem
+         \htmlref{AST\_CONVEX$<$X$>$}{AST_CONVEXX}: Create a Polygon giving the convex hull of a pixel array
 
          \sstitem
          \htmlref{AST\_OUTLINE$<$X$>$}{AST_OUTLINEX}: Create a Polygon outlining values in a pixel array
@@ -47561,16 +47777,15 @@ in a non-standard location.} is on your PATH.
       }
    }
    \sstdiytopic{
-      SOFA \& PAL
+      ERFA \& PAL
    }{
-      The AST distribution includes bundled copies of the IAU SOFA and
-      Starlink PAL libraries. These will be used for fundamental
-      positional astronomy calculations unless the {\tt{"}}--with-external\_pal{\tt{"}}
-      option was used when AST was configured. If {\tt{"}}--with-external\_pal{\tt{"}}
-      is used, this script will include {\tt{"}}-lpal{\tt{"}} in the returned list of
-      linking options, and the user should then ensure that extrnal copies
-      of the PAL and SOFA libraries are available (SOFA functions are used
-      within PAL).
+      The AST distribution includes bundled copies of the ERFA and PAL
+      libraries. These will be used for fundamental positional astronomy
+      calculations unless the {\tt{"}}--with-external\_pal{\tt{"}} option was used when
+      AST was configured. If {\tt{"}}--with-external\_pal{\tt{"}} is used, this script
+      will include {\tt{"}}-lpal{\tt{"}} in the returned list of linking options, and
+      the user should then ensure that external copies of the PAL and
+      ERFA libraries are available (ERFA functions are used within PAL).
    }
 }
 \sstroutine{
@@ -50786,12 +51001,10 @@ FITS header, if the corresponding CTYPE values included no projection code.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V7.3.3}
+\subsection{Changes Introduced in V7.3.3}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V7.3.2 and V7.3.3 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V7.3.2 and V7.3.3:
 
 \begin{enumerate}
 
@@ -50805,6 +51018,43 @@ on the supplied forward transformation. Previously, an inverse was created
 only if the header did not include an inverse. The accuracy of the inverse
 transformation has also been improved, although it may now be slower to
 evaluate in some circumstances.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V7.3.4}
+
+The following describes the most significant changes which
+occurred in the AST library between versions V7.3.3 and V7.3.4:
+
+\begin{enumerate}
+
+\item By default, the simplification of Polygons no longer checks that the
+edges are not bent by the simplification. A new attribute, \htmlref{SimpVertices}{SimpVertices},
+can be set to zero in order to re-instate this check.
+
+\item The \htmlref{Polygon}{Polygon} class has a new mathod,
+AST\_CONVEX,
+that returns a Polygon representing the shortest polygon (i.e. convex
+hull) enclosing a specified set of pixel values within a supplied array.
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V8.0.0}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V7.3.4 and V8.0.0 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{PolyMap}{PolyMap} class now uses files copied from the C/C++ Minpack
+package (see http://devernay.free.fr/hacks/cminpack/index.html) to perform
+least squares fitting of N-dimensional polynomials.
+
+\item Use of the IAU SOFA library has been replaced by ERFA library, which is
+a re-badged copy of SOFA distributed under a less restrictive license. A
+copy of ERFA is included within AST.
 
 \end{enumerate}
 

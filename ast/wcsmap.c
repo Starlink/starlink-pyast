@@ -76,20 +76,20 @@ f     The WcsMap class does not define any new routines beyond those
 *     Research Councils
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     DSB: D.S. Berry (Starlink)
@@ -207,6 +207,14 @@ f     The WcsMap class does not define any new routines beyond those
 *     24-MAY-2011 (DSB):
 *        Added protected FITSProj and TPNTan attributes (they should be
 *        removed when the PolyMap class has an iterative inverse).
+*     6-MAR-2014 (DSB):
+*        Revert the change made on 18-AUG-2003 since setting the
+*        longitude arbitrarily to zero for points close to the pole
+*        causes significant round trip errors when doing pixel->sky->pixel
+*        transformation for points very close to the pole, if the pixel
+*        size is very small. The longitude at the pole is indeterminate,
+*        but whatever random numerical value is returned by atan2 is
+*        no less useful (and no more useful) than a fixed value of zero.
 *class--
 */
 
@@ -2812,9 +2820,6 @@ static int Map( AstWcsMap *this, int forward, int npoint, double *in0,
                if( ( cyclic || ( longitude < longhi &&
                                  longitude >= longlo ) ) &&
                    fabs( latitude ) <= 90.0 ){
-
-/* Assign zero longitude to positions very close to a pole. */
-                  if( fabs( latitude ) > 89.999998 ) longitude = 0.0;
 
                   out0[ point ] = (AST__DD2R/factor)*longitude;
                   out1[ point ] = (AST__DD2R/factor)*latitude;

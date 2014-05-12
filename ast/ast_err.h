@@ -471,4 +471,7 @@ enum { AST__BDVNM           	= 233934378 };	/* messid=453 */
 /* Attempt to add a variant Mapping to a mirror Frame */
 enum { AST__MIRRO           	= 233934386 };	/* messid=454 */
 
+/* Error in cminpack Levenberg-Marquardt code */
+enum { AST__MNPCK           	= 233934394 };	/* messid=455 */
+
 #endif	/* AST_ERROR_DEFINED */

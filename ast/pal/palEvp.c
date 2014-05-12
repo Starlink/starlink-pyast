@@ -36,7 +36,7 @@
 *  Description:
 *     Returns the barycentric and heliocentric velocity and position of the
 *     Earth at a given epoch, given with respect to a specified equinox.
-*     For information about accuracy, see the function iauEpv00.
+*     For information about accuracy, see the function eraEpv00.
 
 *  Authors:
 *     PTW: Pat Wallace (STFC)
@@ -52,20 +52,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*    You should have received a copy of the GNU General Public License
-*    along with this program; if not, write to the Free Software
-*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*    USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -74,7 +74,7 @@
 
 #include "pal.h"
 #include "palmac.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palEvp( double date, double deqx, double dvb[3], double dpb[3],
              double dvh[3], double dph[3] ){
@@ -84,18 +84,18 @@ void palEvp( double date, double deqx, double dvb[3], double dpb[3],
    double pvh[2][3], pvb[2][3], d1, d2, r[3][3];
 
 /* BCRS PV-vectors. */
-   iauEpv00 ( 2400000.5, date, pvh, pvb );
+   eraEpv00 ( 2400000.5, date, pvh, pvb );
 
 /* Was precession to another equinox requested? */
    if ( deqx > 0.0 ) {
 
 /* Yes: compute precession matrix from J2000.0 to deqx. */
-      iauEpj2jd ( deqx, &d1, &d2 );
-      iauPmat06 ( d1, d2, r );
+      eraEpj2jd ( deqx, &d1, &d2 );
+      eraPmat06 ( d1, d2, r );
 
 /* Rotate the PV-vectors. */
-      iauRxpv ( r, pvh, pvh );
-      iauRxpv ( r, pvb, pvb );
+      eraRxpv ( r, pvh, pvh );
+      eraRxpv ( r, pvb, pvb );
    }
 
 /* Return the required vectors. */

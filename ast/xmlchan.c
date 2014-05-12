@@ -56,20 +56,20 @@ f     The XmlChan class does not define any new routines beyond those
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     DSB: David Berry (Starlink)
@@ -222,7 +222,7 @@ f     The XmlChan class does not define any new routines beyond those
 #include "object.h"              /* Base Object class */
 #include "wcsmap.h"              /* Angular conversion constants */
 #include "xml.h"                 /* AST XML facilities */
-#include "sofa.h"                /* IAU SOFA functions */
+#include "erfa.h"                /* ERFA functions */
 #include "stcresourceprofile.h"  /* IVOA StcResourceProfile class */
 #include "stcsearchlocation.h"   /* IVOA SearchLocation class */
 #include "stccatalogentrylocation.h"/* IVOA CatalogEntryLocation class */
@@ -5928,7 +5928,7 @@ static AstPointList *ObservatoryLocationReader( AstXmlChan *this,
          pos[ 2 ] *= A0;
 
 /* Get the corresponding geodetic lon/lat. */
-         iauGc2gd( 1, pos, &lambda, &phi, &height );
+         eraGc2gd( 1, pos, &lambda, &phi, &height );
       }
 
       if( lambda != AST__BAD ) {

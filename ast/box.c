@@ -40,20 +40,20 @@ f     The Box class does not define any new routines beyond those
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     DSB: David S. Berry (Starlink)
@@ -99,6 +99,10 @@ f     The Box class does not define any new routines beyond those
 *        Modify RegPins so that it can handle uncertainty regions that straddle
 *        a discontinuity. Previously, such uncertainty Regions could have a huge
 *        bounding box resulting in matching region being far too big.
+*     10-APR-2014 (DSB):
+*        More work (in function Cache() ) on handling uncertainty regions that straddle
+*        a discontinuity. This time ensure that the extent of the box on each axis takes 
+*        account of the possibly cyclic nature of the base Frame.
 *class--
 */
 
@@ -751,16 +755,18 @@ static void Cache( AstBox *this, int lohi, int *status ){
 /* Calculate the geodesic half-dimensions of the box. */
       frm = astGetFrame( ((AstRegion *) this)->frameset, AST__BASE );
       GeoLengths( frm, nc, centre, hi, geolen, status );
-      frm = astAnnul( frm );
 
 /* Calculate the half-width and store in the above array. Also store the
    shrunk half-widths, and the shrunk lower and upper bounds. */
       for( i = 0; i < nc; i++ ) {
-         extent[ i ] = fabs( ptr[ i ][ 1 ] - centre[ i ] );
+         extent[ i ] = fabs( astAxDistance( frm, i + 1, ptr[ i ][ 1 ],
+                                            centre[ i ] ) );
          shextent[ i ] = extent[ i ]*this->shrink;
          lo[ i ] = centre[ i ] - shextent[ i ];
          hi[ i ] = centre[ i ] + shextent[ i ];
       }
+
+      frm = astAnnul( frm );
 
 /* Store the pointers to these arrays in the Box structure, and indicate
    the information is usable. */

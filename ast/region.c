@@ -139,20 +139,20 @@ f     - AST_SHOWMESH: Display a mesh of points on the surface of a Region
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     DSB: David S. Berry (STARLINK)
@@ -217,6 +217,8 @@ f     - AST_SHOWMESH: Display a mesh of points on the surface of a Region
 *        Guard against division by zero in RegBase Grid if "ipr" is zero.
 *     7-NOV-2013 (DSB):
 *        Added method astGetRegionFrameSet.
+*     3-FEB-2014 (DSB):
+*        Fix bug masking regions that have no overlap with the supplied array.
 *class--
 
 *  Implementation Notes:
@@ -5665,12 +5667,21 @@ static int Mask##X( AstRegion *this, AstMapping *map, int inside, int ndim, \
             ubndg[ idim ] = ubnd[ idim ]; \
          } \
          npix *= ( ubnd[ idim ] - lbnd[ idim ] + 1 ); \
-         npixg *= ( ubndg[ idim ] - lbndg[ idim ] + 1 ); \
-         if( npixg <= 0 ) break; \
+         if( npixg >= 0 ) npixg *= ( ubndg[ idim ] - lbndg[ idim ] + 1 ); \
       } \
 \
+/* If the bounding box is null, fill the mask with the supplied value if \
+   we assigning the value to the outside of the region (do the opposite if \
+   the Region has been negated). */ \
+      if( npixg <= 0 && astOK ) { \
+         if( ( inside != 0 ) == ( astGetNegated( used_region ) != 0 ) ) { \
+            c = in; \
+            for( ipix = 0; ipix < npix; ipix++ ) *(c++) = val; \
+            result = npix; \
+         } \
+\
 /* If the bounding box is null, return without action. */ \
-      if( npixg > 0 && astOK ) { \
+      } else if( npixg > 0 && astOK ) { \
 \
 /* All points outside this box are either all inside, or all outside, the \
    Region. So we can speed up processing by setting all the points which are \

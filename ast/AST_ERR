@@ -621,3 +621,7 @@
       INTEGER AST__MIRRO
       PARAMETER ( AST__MIRRO = 233934386 )
 
+*     Error in cminpack Levenberg-Marquardt code
+      INTEGER AST__MNPCK
+      PARAMETER ( AST__MNPCK = 233934394 )
+

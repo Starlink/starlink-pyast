@@ -42,20 +42,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*    You should have received a copy of the GNU General Public License
-*    along with this program; if not, write to the Free Software
-*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*    USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -64,7 +64,7 @@
 
 #include "pal.h"
 #include "palmac.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palPrenut ( double epoch, double date, double rmatpn[3][3] ){
 
@@ -91,20 +91,20 @@ void palPrenut ( double epoch, double date, double rmatpn[3][3] ){
    double zetaa;
 
 /* Specified Julian epoch as a 2-part JD. */
-   iauEpj2jd( epoch, &d1, &d2 );
+   eraEpj2jd( epoch, &d1, &d2 );
 
 /* P matrix, from specified epoch to J2000.0. */
-   iauP06e( d1, d2, &eps0, &psia, &oma, &bpa, &bqa, &pia, &bpia, &epsa,
+   eraP06e( d1, d2, &eps0, &psia, &oma, &bpa, &bqa, &pia, &bpia, &epsa,
             &chia, &za, &zetaa, &thetaa, &pa, &gam, &phi, &psi );
-   iauIr( r1 );
-   iauRz( -chia, r1 );
-   iauRx( oma, r1 );
-   iauRz( psia, r1 );
-   iauRx( -eps0, r1 );
+   eraIr( r1 );
+   eraRz( -chia, r1 );
+   eraRx( oma, r1 );
+   eraRz( psia, r1 );
+   eraRx( -eps0, r1 );
 
 /* NPB matrix, from J2000.0 to date. */
-   iauPnm06a( PAL__MJD0, date, r2 );
+   eraPnm06a( PAL__MJD0, date, r2 );
 
 /* NPB matrix, from specified epoch to date. */
-   iauRxr( r2, r1, rmatpn );
+   eraRxr( r2, r1, rmatpn );
 }

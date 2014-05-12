@@ -154,3 +154,4 @@ FACILITY AST
 452,WRERR,write error
 453,BDVNM,Bad variant Mapping name
 454,MIRRO,Attempt to add a variant Mapping to a mirror Frame
+455,MNPCK,Error in cminpack Levenberg-Marquardt code

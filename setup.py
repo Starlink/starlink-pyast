@@ -25,13 +25,17 @@ if not os.path.exists( 'sun211.htx'):
    tar.extractall()
    tar.close()
 
+#  List the cminpack source files required by AST:
+cminpack_c = ( 'enorm.c', 'lmder.c', 'qrfac.c', 'dpmpar.c', 'lmder1.c',
+               'lmpar.c', 'qrsolv.c' )
+
 #  List the C source files for implemeneted AST classes:
 ast_c = ( 'axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
           'cmpmap.c', 'cmpregion.c', 'dsbspecframe.c', 'dssmap.c',
 	  'ellipse.c', 'error.c', 'fitschan.c', 'fluxframe.c', 'frame.c',
 	  'frameset.c', 'globals.c', 'grf3d.c', 'grf_2.0.c', 'grf_3.2.c',
 	  'grf_5.6.c', 'grismmap.c', 'interval.c', 'keymap.c',
-	  'levmar.c', 'loader.c', 'lutmap.c', 'mapping.c', 'mathmap.c',
+	  'loader.c', 'lutmap.c', 'mapping.c', 'mathmap.c',
 	  'matrixmap.c', 'memory.c', 'normmap.c', 'nullregion.c',
 	  'object.c', 'pal.c', 'pcdmap.c', 'permmap.c', 'plot.c',
 	  'pointlist.c', 'pointset.c', 'polygon.c', 'polymap.c',
@@ -55,6 +59,8 @@ sources = [os.path.join('starlink', 'ast', 'Ast.c')]
 #  Append all the .c and .h files needed to build the AST library locally.
 for cfile in ast_c:
    sources.append( os.path.join( 'ast', cfile ) )
+for cfile in cminpack_c:
+   sources.append( os.path.join( os.path.join( 'ast', 'cminpack' ) , cfile ) )
 for cfile in ast_c_extra:
    sources.append( os.path.join( 'ast', cfile ) )
 
@@ -113,7 +119,7 @@ setup (name = 'starlink-pyast',
        py_modules=['starlink.Grf','starlink.Atl'],
        classifiers=[
           'Intended Audience :: Developers',
-          'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+          'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
           'Programming Language :: Python',
           'Programming Language :: C',
           'Topic :: Scientific/Engineering :: Astronomy'

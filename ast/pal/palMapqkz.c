@@ -69,20 +69,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*    You should have received a copy of the GNU General Public License
-*    along with this program; if not, write to the Free Software
-*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*    USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -90,7 +90,7 @@
 */
 
 #include "pal.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palMapqkz ( double rm, double dm, double amprms[21], double *ra,
                  double *da ){
@@ -106,10 +106,10 @@ void palMapqkz ( double rm, double dm, double amprms[21], double *ra,
    }
 
 /* Spherical to x,y,z. */
-   iauS2c( rm, dm, p );
+   eraS2c( rm, dm, p );
 
 /* Aberration. */
-   p1dv = iauPdp( p, abv );
+   p1dv = eraPdp( p, abv );
    p1dvp1 = p1dv + 1.0;
    w = 1.0 + p1dv / ( ab1 + 1.0 );
    for( i = 0; i < 3; i++ ) {
@@ -117,9 +117,9 @@ void palMapqkz ( double rm, double dm, double amprms[21], double *ra,
    }
 
 /* Precession and nutation. */
-   iauRxp( (double(*)[3]) &amprms[12], p2, p3 );
+   eraRxp( (double(*)[3]) &amprms[12], p2, p3 );
 
 /* Geocentric apparent RA,dec. */
-   iauC2s( p3, ra, da );
-   *ra = iauAnp( *ra );
+   eraC2s( p3, ra, da );
+   *ra = eraAnp( *ra );
 }

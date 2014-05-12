@@ -181,20 +181,20 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     DSB: David Berry (Starlink)
@@ -1292,7 +1292,7 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #include "timeframe.h"
 #include "keymap.h"
 #include "pal.h"
-#include "sofa.h"
+#include "erfa.h"
 #include "slamap.h"
 #include "specframe.h"
 #include "dsbspecframe.h"
@@ -7396,7 +7396,7 @@ static void CreateKeyword( AstFitsChan *this, const char *name,
 /* Copy the name supplied into the output array, converting to upper
    case. Leave space for two characters to encode a sequence
    number. Terminate the resulting string. */
-   for( nc = 0; name[ nc ] && ( nc < ( FITSNAMLEN - 2 ) ); nc++ ) {
+   for( nc = 0; ( nc < ( FITSNAMLEN - 2 ) ) && name[ nc ]; nc++ ) {
       keyword[ nc ] = toupper( name[ nc ] );
    }
    keyword[ nc ] = '\0';
@@ -27630,7 +27630,7 @@ static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
       geolat = astGetObsLat( skyfrm );
       h = astGetObsAlt( skyfrm );
       if( geolat != AST__BAD && geolon != AST__BAD && h != AST__BAD ) {
-         iauGd2gc( 1, geolon, geolat, h, xyz );
+         eraGd2gc( 1, geolon, geolat, h, xyz );
          SetItem( &(store->obsgeox), 0, 0, ' ', xyz[0], status );
          SetItem( &(store->obsgeoy), 0, 0, ' ', xyz[1], status );
          SetItem( &(store->obsgeoz), 0, 0, ' ', xyz[2], status );
@@ -28390,7 +28390,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
                   geolat = astGetObsLat( specfrm );
                   h = astGetObsAlt( specfrm );
                   if( geolat != AST__BAD && geolon != AST__BAD && h != AST__BAD ) {
-                     iauGd2gc( 1, geolon, geolat, h, xyz );
+                     eraGd2gc( 1, geolon, geolat, h, xyz );
                      SetItem( &(store->obsgeox), 0, 0, ' ', xyz[0], status );
                      SetItem( &(store->obsgeoy), 0, 0, ' ', xyz[1], status );
                      SetItem( &(store->obsgeoz), 0, 0, ' ', xyz[2], status );
@@ -36743,7 +36743,7 @@ static AstSkyFrame *WcsSkyFrame( AstFitsChan *this, FitsStore *store, char s,
       if( obsgeo[ 0 ] != AST__BAD &&
           obsgeo[ 1 ] != AST__BAD &&
           obsgeo[ 2 ] != AST__BAD ) {
-         iauGc2gd( 1, obsgeo, &geolon, &geolat, &h );
+         eraGc2gd( 1, obsgeo, &geolon, &geolat, &h );
          astSetObsLat( ret, geolat );
          astSetObsLon( ret, geolon );
          astSetObsAlt( ret, h );
@@ -36959,7 +36959,7 @@ static AstMapping *WcsSpectral( AstFitsChan *this, FitsStore *store, char s,
             if( obsgeo[ 0 ] != AST__BAD &&
                 obsgeo[ 1 ] != AST__BAD &&
                 obsgeo[ 2 ] != AST__BAD ) {
-               iauGc2gd( 1, obsgeo, &geolon, &geolat, &h );
+               eraGc2gd( 1, obsgeo, &geolon, &geolat, &h );
                astSetObsLat( specfrm, geolat );
                astSetObsLon( specfrm, geolon );
                astSetObsAlt( specfrm, h );

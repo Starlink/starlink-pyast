@@ -95,20 +95,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*     You should have received a copy of the GNU General Public License
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*     USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -117,7 +117,7 @@
 
 #include "pal.h"
 #include "palmac.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palFk45z( double r1950, double d1950, double bepoch, double *r2000,
                double *d2000 ){
@@ -147,7 +147,7 @@ void palFk45z( double r1950, double d1950, double bepoch, double *r2000,
 
 
 /* Spherical to Cartesian. */
-   iauS2c( r1950, d1950, r0 );
+   eraS2c( r1950, d1950, r0 );
 
 /* Adjust vector A to give zero proper motion in FK5. */
    w = ( bepoch - 1950.0 )/PAL__PMF;
@@ -177,8 +177,8 @@ void palFk45z( double r1950, double d1950, double bepoch, double *r2000,
    }
 
 /* Revert to spherical coordinates. */
-   iauC2s( v2, &w, d2000 );
-   *r2000 = iauAnp( w );
+   eraC2s( v2, &w, d2000 );
+   *r2000 = eraAnp( w );
 }
 
 

@@ -58,19 +58,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*     You should have received a copy of the GNU General Public License
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*     USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -78,7 +79,7 @@
 */
 
 #include "pal.h"
-#include "sofa.h"
+#include "erfa.h"
 
 void palSubet ( double rc, double dc, double eq, double *rm, double *dm ) {
   double a[3];   /* The E-terms */
@@ -92,18 +93,18 @@ void palSubet ( double rc, double dc, double eq, double *rm, double *dm ) {
   palEtrms( eq, a );
 
   /* Spherical to Cartesian */
-  iauS2c( rc, dc, v );
+  eraS2c( rc, dc, v );
 
   /* Include the E-terms */
-  f = 1.0 + iauPdp( v, a );
+  f = 1.0 + eraPdp( v, a );
   for (i=0; i<3; i++) {
     v[i] = f*v[i] - a[i];
   }
 
   /* Cartesian to spherical */
-  iauC2s( v, rm, dm );
+  eraC2s( v, rm, dm );
 
   /* Bring RA into conventional range */
-  *rm = iauAnp( *rm );
+  *rm = eraAnp( *rm );
 
 }

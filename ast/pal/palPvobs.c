@@ -47,20 +47,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*     You should have received a copy of the GNU General Public License
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*     USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -70,7 +70,7 @@
 #include "pal.h"
 #include "palmac.h"
 #include "palmac.h"
-#include "sofam.h"
+#include "erfam.h"
 
 void palPvobs( double p, double h, double stl, double pv[6] ){
 
@@ -78,11 +78,11 @@ void palPvobs( double p, double h, double stl, double pv[6] ){
    double xyz[3], z, r, s, c, v;
 
 /* Geodetic to geocentric conversion (WGS84 reference ellipsoid). */
-   iauGd2gc( 1, 0.0, p, h, xyz );
+   eraGd2gc( 1, 0.0, p, h, xyz );
 
 /* Convert from metres to AU */
-   r = xyz[ 0 ]/DAU;
-   z = xyz[ 2 ]/DAU;
+   r = xyz[ 0 ]/ERFA_DAU;
+   z = xyz[ 2 ]/ERFA_DAU;
 
 /* Functions of ST. */
    s = sin( stl );

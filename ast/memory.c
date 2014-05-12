@@ -20,20 +20,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public Licence as
-*     published by the Free Software Foundation; either version 2 of
-*     the Licence, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful,but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public Licence for more details.
-*
-*     You should have received a copy of the GNU General Public Licence
-*     along with this program; if not, write to the Free Software
-*     Foundation, Inc., 51 Franklin Street,Fifth Floor, Boston, MA
-*     02110-1301, USA
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Authors:
 *     RFWS: R.F. Warren-Smith (Starlink)
@@ -149,6 +149,9 @@
 *        Correct matchend value returned by astChrSplitRE.
 *     6-JAN-2014 (DSB):
 *        Optimise access to cache to avoid valgrind warnings.
+*     16-JAN-2014 (DSB):
+*        Dump details of all active memory blocks if the total memory allocation
+*        specified by astMemoryWarning is exceeded.
 */
 
 /* Configuration results. */
@@ -2004,6 +2007,10 @@ void *astFreeDouble_( void *ptr, int *status ) {
 *     the supplied pointer is a pointer to an array of pointers. Each
 *     of these pointers is first freed, and then the supplied pointer
 *     is freed.
+*
+*     Note, this routine should not be used with arrays allocated
+*     by astGrow since astGrow over-allocates and so there may be
+*     non-initialised pointers at the end of the array.
 
 *  Parameters:
 *     ptr
@@ -4831,9 +4838,32 @@ static void Issue( Memory *mem, int *status ) {
    debugger breakpoint to be set. */
    if( Current_Usage > Warn_Usage &&
        Warn_Usage > 0 ) {
-      printf( "Warning - AST memory allocation has exceeded %ld bytes\n",
+      printf( "Warning - AST memory allocation has exceeded %ld bytes - "
+              "dumping catalogue of active memory blocks to file 'memory.dump'\n",
               Warn_Usage );
-      astMemoryWarning( 0 );
+
+/* Create a file holding the details of all currently active memory blocks. It can be
+   examined using topcat. */
+      FILE *fd = fopen( "memory.dump", "w" );
+      if( fd ) {
+         Memory *next;
+
+         fprintf( fd, "# id size perm file line\n");
+         next = Active_List;
+         if( next ) {
+            while( next ) {
+               if( !next->perm ) {
+                  fprintf( fd, "%d %zu %d %s %d\n", next->id, next->size,
+                           next->perm, next->file, next->line );
+               }
+               next = next->next;
+            }
+         }
+
+         fclose(fd );
+      }
+
+      Warn_Usage  = 0;
    }
 
    UNLOCK_DEBUG_MUTEX;

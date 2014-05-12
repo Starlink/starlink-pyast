@@ -63,20 +63,20 @@
 *     All Rights Reserved.
 
 *  Licence:
-*     This program is free software; you can redistribute it and/or
-*     modify it under the terms of the GNU General Public License as
-*     published by the Free Software Foundation; either version 3 of
-*     the License, or (at your option) any later version.
-*
-*     This program is distributed in the hope that it will be
-*     useful, but WITHOUT ANY WARRANTY; without even the implied
-*     warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-*     PURPOSE. See the GNU General Public License for more details.
-*
-*    You should have received a copy of the GNU General Public License
-*    along with this program; if not, write to the Free Software
-*    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
-*    USA.
+*     This program is free software: you can redistribute it and/or
+*     modify it under the terms of the GNU Lesser General Public
+*     License as published by the Free Software Foundation, either
+*     version 3 of the License, or (at your option) any later
+*     version.
+*     
+*     This program is distributed in the hope that it will be useful,
+*     but WITHOUT ANY WARRANTY; without even the implied warranty of
+*     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*     GNU Lesser General Public License for more details.
+*     
+*     You should have received a copy of the GNU Lesser General
+*     License along with this program.  If not, see
+*     <http://www.gnu.org/licenses/>.
 
 *  Bugs:
 *     {note_any_bugs_here}
@@ -85,7 +85,7 @@
 
 #include "pal.h"
 #include "palmac.h"
-#include "sofa.h"
+#include "erfa.h"
 
 #include <string.h>
 
@@ -104,13 +104,13 @@ void palMappa( double eq, double date, double amprms[21] ){
    memset( amprms, 0, 21*sizeof( *amprms ) );
 
 /* Time interval for proper motion correction. */
-   amprms[ 0 ] = iauEpj( PAL__MJD0, date ) - eq;
+   amprms[ 0 ] = eraEpj( PAL__MJD0, date ) - eq;
 
 /* Get Earth barycentric and heliocentric position and velocity. */
    palEvp( date, eq, ebd, &amprms[ 1 ], ehd, eh );
 
 /* Heliocentric direction of Earth (normalized) and modulus. */
-   iauPn( eh, &e, &amprms[ 4 ] );
+   eraPn( eh, &e, &amprms[ 4 ] );
 
 /* Light deflection parameter */
    amprms[7] = GR2 / e;
@@ -119,7 +119,7 @@ void palMappa( double eq, double date, double amprms[21] ){
    for( i = 0; i < 3; i++ ) {
       amprms[ i + 8 ] = ebd[ i ]*PAL__CR;
    }
-   iauPn( &amprms[8], &vm, vn );
+   eraPn( &amprms[8], &vm, vn );
    amprms[ 11 ] = sqrt( 1.0 - vm*vm );
 
 /* NPB matrix. */
