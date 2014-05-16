@@ -1,8 +1,7 @@
 include ast/*.h
-include ast/pal/*.c
-include ast/pal/*.h
-include ast/sofa/*.c
-include ast/sofa/*.h
+include ast/pal/*
+include ast/erfa/*
+include ast/cminpack/*
 include starlink/ast/*.desc
 include ast/sun211.htx_tar
 recursive-include tools *.py
