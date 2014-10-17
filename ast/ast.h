@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     12-MAY-2014 (makeh):
+*     17-OCT-2014 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -413,6 +413,9 @@ struct AstPrjPrm {
    int astHPXset(struct AstPrjPrm *);
    int astHPXfwd(const double, const double, struct AstPrjPrm *, double *, double *);
    int astHPXrev(const double, const double, struct AstPrjPrm *, double *, double *);
+   int astXPHset(struct AstPrjPrm *);
+   int astXPHfwd(const double, const double, struct AstPrjPrm *, double *, double *);
+   int astXPHrev(const double, const double, struct AstPrjPrm *, double *, double *);
 
    int astTPNset(struct AstPrjPrm *);
    int astTPNfwd(const double, const double, struct AstPrjPrm *, double *, double *);
@@ -472,7 +475,7 @@ void *astStore_( void *, const void *, size_t, int * );
 size_t astChrLen_( const char *, int * );
 double astChr2Double_( const char *, int * );
 void astRemoveLeadingBlanks_( char *, int * );
-char *astAppendString_( char *, int *, const char *, int * );
+char *astAppendString_( char *, int *, const char *, ... )__attribute__((format(printf,3,4)));
 char *astChrSub_( const char *, const char *, const char *[], int, int * );
 #define astCalloc(nmemb,size) astERROR_INVOKE(astCalloc_(nmemb,size,STATUS_PTR))
 #define astChrMatch(str1,str2) astERROR_INVOKE(astChrMatch_(str1,str2,STATUS_PTR))
@@ -487,7 +490,7 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 #define astIsDynamic(ptr) astERROR_INVOKE(astIsDynamic_(ptr,STATUS_PTR))
 #define astTSizeOf(ptr) astERROR_INVOKE(astTSizeOf_(ptr,STATUS_PTR))
 #define astStore(ptr,data,size) astERROR_INVOKE(astStore_(ptr,data,size,STATUS_PTR))
-#define astAppendString(ptr,len,text) astERROR_INVOKE(astAppendString_(ptr,len,text,STATUS_PTR))
+#define astAppendString astAppendString_
 #define astString(chars,nchars) astERROR_INVOKE(astString_(chars,nchars,STATUS_PTR))
 #define astStringArray(chars,nel,len) astERROR_INVOKE(astStringArray_(chars,nel,len,STATUS_PTR))
 #define astStringCase(string,toupper) astERROR_INVOKE(astStringCase_(string,toupper,STATUS_PTR))
@@ -525,11 +528,11 @@ char *astChrSub_( const char *, const char *, const char *[], int, int * );
 /* ===== */
 #define AST__VMAJOR 8
 #define AST__VMINOR 0
-#define AST__RELEASE 0
+#define AST__RELEASE 2
 
 #define AST_MAJOR_VERS 8
 #define AST_MINOR_VERS 0
-#define AST_RELEASE 0
+#define AST_RELEASE 2
 
 #include <stdarg.h>
 #include <float.h>
@@ -847,6 +850,8 @@ PROTO_GENERIC_ALL(LD,long double)
 PROTO_GENERIC_DFI(D,double)
 PROTO_GENERIC_DFI(F,float)
 PROTO_GENERIC_DFI(I,int)
+PROTO_GENERIC_DFI(B,char)
+PROTO_GENERIC_DFI(UB,unsigned char)
 
 PROTO_GENERIC_DFI(LD,long double)
 
@@ -877,9 +882,13 @@ void astMapSplitId_( AstMapping *, int, const int *, int *, AstMapping **, int *
 #define astRebinD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astRebinF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinF_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astRebinI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinI_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinUB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astRebinSeqD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
 #define astRebinSeqF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqF_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
 #define astRebinSeqI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqI_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqUB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
 #define astResampleD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleF(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleF_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 #define astResampleL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
@@ -1479,6 +1488,7 @@ typedef struct AstFitsChan {
    int iwc;
    int clean;
    int fitsdigits;
+   char *fitsaxisorder;
    char *warnings;
    void *card;
    void *head;
@@ -2459,7 +2469,8 @@ AstUnitMap *astUnitMapId_( int, const char *, ... )__attribute__((format(printf,
 #define AST__GLS 28
 #define AST__TPN 29
 #define AST__HPX 30
-#define AST__WCSBAD 31
+#define AST__XPH 31
+#define AST__WCSBAD 32
 typedef struct AstWcsMap {
 
    AstMapping mapping;

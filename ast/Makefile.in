@@ -107,8 +107,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/build-aux/ltmain.sh \
 	$(top_srcdir)/build-aux/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
-	$(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -1069,6 +1068,7 @@ STAR_PAL_FILES = \
     pal/palRvlsrk.c \
     pal/palSubet.c \
     pal/palSupgal.c \
+    pal/pal1sofa.h \
     pal/palmac.h
 
 ERFA_FILES = \
@@ -1209,6 +1209,7 @@ ERFA_FILES = \
     erfa/pvup.c \
     erfa/pvxpv.c \
     erfa/pxp.c \
+    erfa/refco.c \
     erfa/rm2v.c \
     erfa/rv2m.c \
     erfa/rx.c \
@@ -1404,7 +1405,7 @@ astbad_SOURCES = astbad.c pointset.h
 # configure.ac, and so is not distributed automatically.
 #
 # makeh is required in order to build ast.h after distribution (see below).
-EXTRA_DIST = ast_par.source sun210_figures sun211_figures pal erfa cminpack
+EXTRA_DIST = ast_par.source sun210_figures/ sun211_figures/ pal/ erfa/ cminpack/
 
 # AST_ERR and ast_err.h are `generated source files', and so must be
 # generated before any other compilations are done.  Note that these

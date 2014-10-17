@@ -24,7 +24,7 @@
 *        of memory). After calling this routine "a" contains the
 *        inverse of the matrix.
 *     y = double[] (Given & Returned)
-*        The vector of N unknowns. On exit this vector contains the
+*        On input the vector of N knowns. On exit this vector contains the
 *        N solutions.
 *     d = double * (Returned)
 *        The determinant.
@@ -33,6 +33,8 @@
 *        is returned.  If the matrix is singular, jf=-1 & d=0.0 are
 *        returned.  In the latter case, the contents of array "a" on
 *        return are undefined.
+*     iw = int[] (Given)
+*        Integer workspace of size N.
 
 *  Description:
 *     Matrix inversion & solution of simultaneous equations
@@ -50,6 +52,7 @@
 *     2012-02-11 (TIMJ):
 *        Combination of a port of the Fortran and a comparison
 *        with the obfuscated GPL C routine.
+*        Adapted with permission from the Fortran SLALIB library.
 *     {enter_further_changes_here}
 
 *  Notes:
@@ -68,12 +71,12 @@
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.

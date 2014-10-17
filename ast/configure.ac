@@ -7,7 +7,7 @@ dnl   1.5.  It should work with autoconf versions 2.50 or better, and
 dnl   automake 1.6 or better.
 
 dnl   Initialisation: package name and version number
-AC_INIT([ast],[8.0.0],[starlink@jiscmail.ac.uk])
+AC_INIT([ast],[8.0.2],[starlink@jiscmail.ac.uk])
 AC_CONFIG_AUX_DIR([build-aux])
 
 dnl   Require autoconf-2.50 at least
@@ -93,6 +93,9 @@ AC_CHECK_FUNCS([backtrace])
 
 # Do we have reentrant strerror and strtok?
 AC_CHECK_FUNCS([strerror_r strtok_r])
+
+# Do we have vsnprintf?
+AC_CHECK_FUNCS([vsnprintf])
 
 #  See if we have long doubles (used by the Mapping and Region classes)
 AC_CHECK_TYPES([long double])

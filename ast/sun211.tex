@@ -779,7 +779,8 @@ are described here:
 \begin{enumerate}
 \item {\bf{Minimum Software Dependencies.}}
 The AST library depends on no other other software\footnote{It comes with
-bundled copies of the ERFA and Starlink PAL libraries which are built
+bundled copies of the ERFA and
+\xref{Starlink PAL libraries}{sun268}{} which are built
 at the same time as the other AST internal libraries. Alternatively, external
 PAL and ERFA libraries may be used by specifying the ``{\tt
 --with-external\_pal}'' option when configuring AST}.
@@ -6287,7 +6288,7 @@ Format(axis) value has been set to override the default.
 \subsection{Representing Offsets from a Specified Sky Position}
 A \htmlref{SkyFrame}{SkyFrame} can be modified so that its longitude and latitude axes are
 referred to an origin at any specified sky position. Such a coordinate
-system is referred to as an ``offset'' coordinate syetem. First, the \htmlref{System}{System}
+system is referred to as an ``offset'' coordinate system. First, the \htmlref{System}{System}
 attribute should be set to represent the celestial coordinate system in
 which the origin is to be specified. Then the SkyRef attribute should be
 set to hold the coordinates of the origin within the selected celestial
@@ -6822,7 +6823,7 @@ supplied without making any correction for daylight saving.
 
 \item[\htmlref{TimeOrigin}{TimeOrigin}]\mbox{}\\
 This specifies the zero point from which time values are measured, within
-the system specified by the System attribute. Thus, a value ofzero (the
+the system specified by the System attribute. Thus, a value of zero (the
 default) indicates that time values represent absolute times. Non-zero
 values may be used to indicate that the TimeFrame represents elapsed time
 since the specified origin.
@@ -9612,7 +9613,7 @@ The value should be the path to a text file holding a set of FITS header
 cards, one per line. When the SourceFile value is set (using
 astSetC or \htmlref{astSet}{astSet}),
 the file is opened and the headers copied from it into the FitsChan.
-The file is then imemdiately closed.
+The file is then immediately closed.
 
 \item You may specify a source function which reads data from some
 external store of FITS cards, just like the source associated with a
@@ -9632,7 +9633,7 @@ which will have the effect of removing those cards from the FitsChan
 which describe the Object (\secref{ss:readingnativefits}).
 
 \item You may assign a value to the FitsChan's \htmlref{SinkFile}{SinkFile} attribute. When
-the FitsCHan is deleted, any remaining headers are written out to a text
+the FitsChan is deleted, any remaining headers are written out to a text
 file with path equal to the value of the SinkFile attribute.
 
 \item Alternatively, you may specify a sink function which writes data to some
@@ -20641,7 +20642,7 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
-   astMapDefined$<$X$>$\sstlabel{astMapDefinedX}
+   astMapDefined\sstlabel{astMapDefined}
 }{
    Check if a KeyMap contains a defined value for a key
 }{
@@ -21120,7 +21121,7 @@ Object             - Base class for all AST Objects
          is returned if the key exists but has an undefined value (that is,
          the returned value does not depend on whether the entry has a
          defined value or not). See also
-         astMapDefined, which returns zero in such a case.
+         \htmlref{astMapDefined}{astMapDefined}, which returns zero in such a case.
 
          \sstitem
          A function value of
@@ -26666,6 +26667,12 @@ Object             - Base class for all AST Objects
          \sstitem
          I: int
 
+         \sstitem
+         B: byte (signed char)
+
+         \sstitem
+         UB: unsigned byte (unsigned char)
+
       }
       For example, astRebinD would be used to process {\tt{"}}double{\tt{"}}
       data, while astRebinI would be used to process {\tt{"}}int{\tt{"}}
@@ -27199,6 +27206,12 @@ Object             - Base class for all AST Objects
 
          \sstitem
          I: int
+
+         \sstitem
+         B: byte (signed char)
+
+         \sstitem
+         UB: unsigned byte (unsigned char)
 
       }
       For example, astRebinSeqD would be used to process {\tt{"}}double{\tt{"}}
@@ -35393,6 +35406,13 @@ Object             - Base class for all AST Objects
       regarded as the {\tt{"}}base{\tt{"}} Frame within a \htmlref{FrameSet}{FrameSet}. The default is
       the first Frame added to the FrameSet when it is created (this
       Frame always has an index of 1).
+
+      When setting a new value for this attribute, a string may be
+      supplied instead of an integer index. In this case a search
+      is made within the FrameSet for a Frame that has its \htmlref{Domain}{Domain}
+      attribute value equal to the supplied string (the comparison is
+      case-insensitive). If found, the Frame is made the base Frame.
+      Otherwise an error is reported.
    }
    \sstattributetype{
       Integer.
@@ -36063,6 +36083,13 @@ Object             - Base class for all AST Objects
       regarded as the {\tt{"}}current{\tt{"}} Frame within a \htmlref{FrameSet}{FrameSet}. The default
       is the most recent Frame added to the FrameSet (this Frame
       always has an index equal to the FrameSet's \htmlref{Nframe}{Nframe} attribute).
+
+      When setting a new value for this attribute, a string may be
+      supplied instead of an integer index. In this case a search
+      is made within the FrameSet for a Frame that has its \htmlref{Domain}{Domain}
+      attribute value equal to the supplied string (the comparison is
+      case-insensitive). If found, the Frame is made the current Frame.
+      Otherwise an error is reported.
    }
    \sstattributetype{
       Integer.
@@ -37571,6 +37598,49 @@ Object             - Base class for all AST Objects
       }{
          The default FillFactor for an Stc is the FillFactor of its
          encapsulated Region.
+      }
+   }
+}
+\sstroutine{
+   FitsAxisOrder\sstlabel{FitsAxisOrder}
+}{
+   Frame title
+}{
+   \sstdescription{
+      This attribute specifies the order for the WCS axes in any new
+      FITS-WCS headers created using the
+      \htmlref{astWrite}{astWrite}
+      method.
+
+      The value of the FitsAxisOrder attribute can be either {\tt{"}}$<$auto$>${\tt{"}}
+      (the default value), {\tt{"}}$<$copy$>${\tt{"}} or a space-separated list of axis
+      symbols:
+
+      {\tt{"}}$<$auto$>${\tt{"}}: causes the WCS axis order to be chosen automatically so that
+      the i'th WCS axis in the new FITS header is the WCS axis which is
+      more nearly parallel to the i'th pixel axis.
+
+      {\tt{"}}$<$copy$>${\tt{"}}: causes the WCS axis order to be set so that the i'th WCS
+      axis in the new FITS header is the i'th WCS axis in the current
+      \htmlref{Frame}{Frame} of the \htmlref{FrameSet}{FrameSet} being written out to the header.
+
+      {\tt{"}}Sym1 Sym2...{\tt{"}}: the space-separated list is seached in turn for
+      the Symbol attribute of each axis in the current Frame of the
+      FrameSet. The order in which these Symbols occur within the
+      space-separated list defines the order of the WCS axes in the
+      new FITS header. An error is reported if Symbol for a current
+      Frame axis is not present in the supplied list. However, no error
+      is reported if the list contains extra words that do not correspond
+      to the Symbol of any current Frame axis.
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         \htmlref{FitsChan}{FitsChan}
+      }{
+         All FitsChans have this attribute.
       }
    }
 }
@@ -44905,6 +44975,9 @@ Object             - Base class for all AST Objects
          \htmlref{Encoding}{Encoding}: System for encoding Objects as FITS headers
 
          \sstitem
+         \htmlref{FitsAxisOrder}{FitsAxisOrder}: Sets the order of WCS axes within new FITS-WCS headers
+
+         \sstitem
          \htmlref{FitsDigits}{FitsDigits}: Digits of precision for floating-point FITS values
 
          \sstitem
@@ -45640,7 +45713,7 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
-         astMapDefined: Does a KeyMap contain a defined value for a key?
+         \htmlref{astMapDefined}{astMapDefined}: Does a KeyMap contain a defined value for a key?
 
          \sstitem
          \htmlref{astMapGet0$<$X$>$}{astMapGet0X}: Get a named scalar entry from a KeyMap
@@ -45840,6 +45913,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
          \htmlref{astRebin$<$X$>$}{astRebinX}: Rebin a region of a data grid
+
+         \sstitem
+         \htmlref{astRebinSeq$<$X$>$}{astRebinSeqX}: Rebin a region of a sequence of data grids
 
          \sstitem
          \htmlref{astResample$<$X$>$}{astResampleX}: Resample a region of a data grid
@@ -48962,7 +49038,7 @@ values for this variable are:
       accommodate the new characters (plus the final null).
    }
    \sstsynopsis{
-      char $*$astAppendString( char $*$str1, int $*$nc, const char $*$str2 )
+      char $*$astAppendString( char $*$str1, int $*$nc, const char $*$str2, ... )
    }
    \sstparameters{
       \sstsubsection{
@@ -48991,7 +49067,16 @@ values for this variable are:
          str2
       }{
          Pointer to a constant null-terminated string, a copy of which
-         is to be appended to {\tt{"}}str1{\tt{"}}.
+         is to be appended to {\tt{"}}str1{\tt{"}}. It may contain conversion
+         specifications such as used with the C {\tt{"}}printf{\tt{"}} family of
+         functions.
+      }
+      \sstsubsection{
+         ...
+      }{
+         Additional optional arguments (as used by e.g. {\tt{"}}printf{\tt{"}})
+         which specify values which are to be substituted into the {\tt{"}}str2{\tt{"}}
+         string in place of any conversion specifications.
       }
    }
    \sstreturnedvalue{
@@ -50379,7 +50464,8 @@ whose meaning is defined or extended by FITS-WCS paper II.
 
 \fitskey{CTYPE\emph{ia}}{All coordinate systems and projection types
 listed in paper II are supported (note, ``CUBEFACE'' axes are treated as
-unknown linear axes). In addition, "-HPX" (HEALPix) is supported.}{Determined by the \htmlref{System}{System} attribute
+unknown linear axes). In addition, "-HPX" (HEALPix) and "-XPH" (polar
+HEALPix) are supported.}{Determined by the \htmlref{System}{System} attribute
 of the SkyFrame and the \htmlref{WcsType}{WcsType} attribute of the
 \htmlref{WcsMap}{WcsMap} within the FrameSet.}
 
@@ -53004,7 +53090,7 @@ occurred in the AST library between versions V6.0-1 and V7.0.0:
 \begin{enumerate}
 
 \item Fundamental positional astronomy calculations are now performed
-using the IAU SOFA library where possible, and the Starlink PAL library
+using the IAU SOFA library where possible, and the Starlink PAL library \xref{SUN/268}{sun268}{}
 otherwise (the PAL library contains a subset of the Fortran Starlink SLALIB
 library re-written in C). Copies of these libraries are bundled with AST
 and so do not need to be obtained or built separately, although external
@@ -53167,7 +53253,7 @@ occurred in the AST library between versions V7.1.1 and V7.2.0:
 \begin{enumerate}
 
 \item A new method call
-astMapDefined
+\htmlref{astMapDefined}{astMapDefined}
 has been added to the \htmlref{KeyMap}{KeyMap} class. It checks if a gtiven key name has
 a defined value in a given KeyMap.
 
@@ -53271,14 +53357,14 @@ hull) enclosing a specified set of pixel values within a supplied array.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V8.0.0}
+\subsection{Changes Introduced in V8.0.0}
 
-The following describes the most significant changes which have
-occurred in the AST library between versions V7.3.4 and V8.0.0 (the
-current version):
+The following describes the most significant changes which
+occurred in the AST library between versions V7.3.4 and V8.0.0:
 
 \begin{enumerate}
+
+\item AST is now distributed under the Lesser GPL licence.
 
 \item The \htmlref{PolyMap}{PolyMap} class now uses files copied from the C/C++ Minpack
 package (see http://devernay.free.fr/hacks/cminpack/index.html) to perform
@@ -53287,6 +53373,28 @@ least squares fitting of N-dimensional polynomials.
 \item Use of the IAU SOFA library has been replaced by ERFA library, which is
 a re-badged copy of SOFA distributed under a less restrictive license. A
 copy of ERFA is included within AST.
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V8.0.1}
+
+The following describes the most significant changes which have
+occurred in the AST library between versions V8.0.0 and V8.0.1 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{Base}{Base} and \htmlref{Current}{Current} attributes of a \htmlref{FrameSet}{FrameSet} may now be set using the
+  \htmlref{Domain}{Domain} name or the index of the required \htmlref{Frame}{Frame}.
+\item The order of WCS axes within new FITS-WCS headers created by \htmlref{astWrite}{astWrite}
+  can now be controlled using a new attribute called \htmlref{FitsAxisOrder}{FitsAxisOrder}.
+\item Supported added for FITS XPH (polar HEALPIX) projection.
+\item The macro used to invoke the \htmlref{astAppendString}{astAppendString} utility function has
+  changed to allow printf-style converstions to be included in the
+  supplied text. Any code that uses this macro must be re-compiled.
+\item The astRebin and astRebinSeq family of functions now include support
+  for arrays with char (byte) and unsigned char (unsigned byte) data types.
 
 \end{enumerate}
 

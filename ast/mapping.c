@@ -52,7 +52,7 @@ c     - astMapSplit: Split a Mapping up into parallel component Mappings
 c     - astQuadApprox: Calculate a quadratic approximation to a 2D Mapping
 c     - astRate: Calculate the rate of change of a Mapping output
 c     - astRebin<X>: Rebin a region of a data grid
-f     - astRebinSeq<X>: Rebin a region of a sequence of data grids
+c     - astRebinSeq<X>: Rebin a region of a sequence of data grids
 c     - astResample<X>: Resample a region of a data grid
 c     - astRemoveRegions: Remove any Regions from a Mapping
 c     - astSimplify: Simplify a Mapping
@@ -87,12 +87,12 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.
@@ -361,6 +361,12 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *     18-JUL-2013 (DSB):
 *        Correct logic for determining whether to divide or not in
 *        RebinAdaptively. The old logic could lead to infinite recursion.
+*     1-SEP-2014 (DSB):
+*        Modify astLinearAPprox to avoid using regularly placed
+*        test points, as such regular placement may result in
+*        non-representative behaviour.
+*     25-SEP-2014 (DSB):
+*        Add support for B and UB data types to astRebin and astRebinSeq.
 *class--
 */
 
@@ -619,6 +625,8 @@ static void SpreadNearest##X( int, const int *, const int *, const Xtype *, \
 DECLARE_GENERIC(D,double)
 DECLARE_GENERIC(F,float)
 DECLARE_GENERIC(I,int)
+DECLARE_GENERIC(UB,unsigned char)
+DECLARE_GENERIC(B,char)
 
 #if HAVE_LONG_DOUBLE     /* Not normally implemented */
 DECLARE_GENERIC(LD,long double)
@@ -2479,6 +2487,8 @@ VTAB_GENERIC(LD)
 VTAB_GENERIC(D)
 VTAB_GENERIC(F)
 VTAB_GENERIC(I)
+VTAB_GENERIC(B)
+VTAB_GENERIC(UB)
 
 #if HAVE_LONG_DOUBLE     /* Not normally implemented */
 VTAB_GENERIC(LD)
@@ -6688,26 +6698,28 @@ f     - A value of .FALSE.
                                          frac * ubnd[ 0 ];
             }
 
-/* Otherwise, generate one point at the grid centre. */
+/* Otherwise, generate one point at the grid centre (offset slightly
+   since the exact centre may not be very representative). */
          } else {
             point = 0;
             for ( coord_in = 0; coord_in < ndim_in; coord_in++ ) {
                ptr_in_t[ coord_in ][ point ] =
-                  0.5 * ( lbnd[ coord_in ] + ubnd[ coord_in ] );
+                  0.49 * lbnd[ coord_in ] + 0.51 * ubnd[ coord_in ];
             }
             point++;
 
 /* Similarly generate a point half way between the grid centre and the
-   centre of each face. */
+   centre of each face. Again introduce some small random offsets to break
+   any regularity in the grid. */
             for ( face = 0; face < ( 2 * ndim_in ); face++ ) {
                for ( coord_in = 0; coord_in < ndim_in; coord_in++ ) {
                   ptr_in_t[ coord_in ][ point ] =
-                     0.5 * ( lbnd[ coord_in ] + ubnd[ coord_in ] );
+                     0.48 * lbnd[ coord_in ] + 0.52 * ubnd[ coord_in ];
                }
                ptr_in_t[ face / 2 ][ point ] =
-                  0.5 * ( ( ( ( face % 2 ) ? ubnd[ face / 2 ] :
+                        ( 0.51 * ( ( ( face % 2 ) ? ubnd[ face / 2 ] :
                                              lbnd[ face / 2 ] ) ) +
-                          ptr_in_t[ face / 2 ][ 0 ] );
+                          0.49 * ptr_in_t[ face / 2 ][ 0 ] );
                point++;
             }
 
@@ -6731,8 +6743,8 @@ f     - A value of .FALSE.
 
 /* Also place one half way between the grid centre and each vertex. */
                      ptr_in_t[ coord_in ][ point + 1 ] =
-                        0.5 * ( ptr_in_t[ coord_in ][ point ] +
-                                ptr_in_t[ coord_in ][ 0 ] );
+                             ( 0.52 * ptr_in_t[ coord_in ][ point ] +
+                               0.48 * ptr_in_t[ coord_in ][ 0 ] );
                   }
                   point += 2;
 
@@ -9574,9 +9586,13 @@ f     replace <X> in the generic function name AST_REBIN<X> with a
 c     - D: double
 c     - F: float
 c     - I: int
+c     - B: byte (signed char)
+c     - UB: unsigned byte (unsigned char)
 f     - D: DOUBLE PRECISION
 f     - R: REAL
 f     - I: INTEGER
+f     - B: BYTE (treated as signed)
+f     - UB: BYTE (treated as unsigned)
 *
 c     For example, astRebinD would be used to process "double"
 c     data, while astRebinI would be used to process "int"
@@ -9996,6 +10012,8 @@ MAKE_REBIN(LD,long double,0)
 MAKE_REBIN(D,double,0)
 MAKE_REBIN(F,float,0)
 MAKE_REBIN(I,int,1)
+MAKE_REBIN(B,char,1)
+MAKE_REBIN(UB,unsigned char,1)
 
 /* Undefine the macro. */
 #undef MAKE_REBIN
@@ -11052,16 +11070,16 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_NEAREST(D,double)
                CASE_NEAREST(F,float)
                CASE_NEAREST(I,int)
+               CASE_NEAREST(B,char)
+               CASE_NEAREST(UB,unsigned char)
 
                case ( TYPE_L ): break;
                case ( TYPE_K ): break;
-               case ( TYPE_B ): break;
                case ( TYPE_S ): break;
                case ( TYPE_UL ): break;
                case ( TYPE_UI ): break;
                case ( TYPE_UK ): break;
                case ( TYPE_US ): break;
-               case ( TYPE_UB ): break;
             }
             break;
 
@@ -11095,16 +11113,16 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_LINEAR(D,double)
                CASE_LINEAR(F,float)
                CASE_LINEAR(I,int)
+               CASE_LINEAR(B,char)
+               CASE_LINEAR(UB,unsigned char)
 
                case ( TYPE_L ): break;
                case ( TYPE_K ): break;
-               case ( TYPE_B ): break;
                case ( TYPE_S ): break;
                case ( TYPE_UL ): break;
                case ( TYPE_UI ): break;
                case ( TYPE_UK ): break;
                case ( TYPE_US ): break;
-               case ( TYPE_UB ): break;
             }
             break;
 
@@ -11294,16 +11312,16 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_KERNEL1(D,double)
                CASE_KERNEL1(F,float)
                CASE_KERNEL1(I,int)
+               CASE_KERNEL1(B,char)
+               CASE_KERNEL1(UB,unsigned char)
 
                case ( TYPE_L ): break;
                case ( TYPE_K ): break;
-               case ( TYPE_B ): break;
                case ( TYPE_S ): break;
                case ( TYPE_UL ): break;
                case ( TYPE_UI ): break;
                case ( TYPE_UK ): break;
                case ( TYPE_US ): break;
-               case ( TYPE_UB ): break;
             }
             break;
 
@@ -11331,16 +11349,16 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_ERROR(D)
                CASE_ERROR(F)
                CASE_ERROR(I)
+               CASE_ERROR(B)
+               CASE_ERROR(UB)
 
                case ( TYPE_L ): break;
                case ( TYPE_K ): break;
-               case ( TYPE_B ): break;
                case ( TYPE_S ): break;
                case ( TYPE_UL ): break;
                case ( TYPE_UI ): break;
                case ( TYPE_UK ): break;
                case ( TYPE_US ): break;
-               case ( TYPE_UB ): break;
             }
             break;
 
@@ -11782,9 +11800,13 @@ f     replace <X> in the generic function name AST_REBINSEQ<X> with a
 c     - D: double
 c     - F: float
 c     - I: int
+c     - B: byte (signed char)
+c     - UB: unsigned byte (unsigned char)
 f     - D: DOUBLE PRECISION
 f     - R: REAL
 f     - I: INTEGER
+f     - B: BYTE (treated as signed)
+f     - UB: BYTE (treated as unsigned)
 *
 c     For example, astRebinSeqD would be used to process "double"
 c     data, while astRebinSeqI would be used to process "int"
@@ -11990,25 +12012,27 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
       npix_out *= ubnd_out[ idim ] - lbnd_out[ idim ] + 1; \
    } \
 \
+/* Obtain values for the Nin and Nout attributes of the Mapping. */ \
+   nin = astGetNin( this ); \
+   nout = astGetNout( this ); \
+\
+/* If OK, also check that the number of output grid dimensions matches \
+   the number required by the Mapping and is at least 1. Report an \
+   error if necessary. */ \
+   if ( astOK && ( ( ndim_out != nout ) || ( ndim_out < 1 ) ) ) { \
+      astError( AST__NGDIN, "astRebinSeq"#X"(%s): Bad number of output grid " \
+                "dimensions (%d).", status, astGetClass( this ), ndim_out ); \
+      if ( ndim_out != nout ) { \
+         astError( AST__NGDIN, "The %s given generates %s%d coordinate " \
+                   "value%s for each output position.", status, astGetClass( this ), \
+                   ( nout < ndim_out ) ? "only " : "", nout, \
+                   ( nout == 1 ) ? "" : "s" ); \
+      } \
+   } \
+\
 /* If no input data was supplied, jump to the normalisation section. */ \
    simple = NULL; \
    if( in ) { \
-\
-/* Ensure any supplied "in_var" pointer is ignored if no input variances are \
-   needed. */ \
-      if( !( flags & AST__USEVAR ) && !( flags & AST__VARWGT ) ) { \
-         in_var = NULL; \
-      } \
-\
-/* Ensure any supplied "out_var" pointer is ignored if no output variances \
-   being created. */ \
-      if( !( flags & AST__USEVAR ) && !( flags & AST__GENVAR ) ) { \
-         out_var = NULL; \
-      } \
-\
-/* Obtain values for the Nin and Nout attributes of the Mapping. */ \
-      nin = astGetNin( this ); \
-      nout = astGetNout( this ); \
 \
 /* If OK, check that the number of input grid dimensions matches the \
    number required by the Mapping and is at least 1. Report an error \
@@ -12023,34 +12047,32 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
          } \
       } \
 \
-/* If OK, also check that the number of output grid dimensions matches \
-   the number required by the Mapping and is at least 1. Report an \
-   error if necessary. */ \
-      if ( astOK && ( ( ndim_out != nout ) || ( ndim_out < 1 ) ) ) { \
-         astError( AST__NGDIN, "astRebinSeq"#X"(%s): Bad number of output grid " \
-                   "dimensions (%d).", status, astGetClass( this ), ndim_out ); \
-         if ( ndim_out != nout ) { \
-            astError( AST__NGDIN, "The %s given generates %s%d coordinate " \
-                      "value%s for each output position.", status, astGetClass( this ), \
-                      ( nout < ndim_out ) ? "only " : "", nout, \
-                      ( nout == 1 ) ? "" : "s" ); \
-         } \
-      } \
-\
 /* Check that the lower and upper bounds of the input grid are \
    consistent. Report an error if any pair is not. */ \
       if ( astOK ) { \
          for ( idim = 0; idim < ndim_in; idim++ ) { \
             if ( lbnd_in[ idim ] > ubnd_in[ idim ] ) { \
-               astError( AST__GBDIN, "astRebinSeq"#X"(%s): Lower bound of " \
-                         "input grid (%d) exceeds corresponding upper bound " \
-                         "(%d).", status, astGetClass( this ), \
-                         lbnd_in[ idim ], ubnd_in[ idim ] ); \
-               astError( AST__GBDIN, "Error in input dimension %d.", status, \
-                         idim + 1 ); \
-               break; \
+              astError( AST__GBDIN, "astRebinSeq"#X"(%s): Lower bound of " \
+                        "input grid (%d) exceeds corresponding upper bound " \
+                        "(%d).", status, astGetClass( this ), \
+                        lbnd_in[ idim ], ubnd_in[ idim ] ); \
+              astError( AST__GBDIN, "Error in input dimension %d.", status, \
+                        idim + 1 ); \
+              break; \
             } \
          } \
+      } \
+\
+/* Ensure any supplied "in_var" pointer is ignored if no input variances are \
+   needed. */ \
+      if( !( flags & AST__USEVAR ) && !( flags & AST__VARWGT ) ) { \
+         in_var = NULL; \
+      } \
+\
+/* Ensure any supplied "out_var" pointer is ignored if no output variances \
+   being created. */ \
+      if( !( flags & AST__USEVAR ) && !( flags & AST__GENVAR ) ) { \
+         out_var = NULL; \
       } \
 \
 /* Check that the positional accuracy tolerance supplied is valid and \
@@ -12355,6 +12377,8 @@ MAKE_REBINSEQ(LD,long double,0)
 MAKE_REBINSEQ(D,double,0)
 MAKE_REBINSEQ(F,float,0)
 MAKE_REBINSEQ(I,int,1)
+MAKE_REBINSEQ(B,char,1)
+MAKE_REBINSEQ(UB,unsigned char,1)
 
 /* Undefine the macro. */
 #undef MAKE_REBINSEQ
@@ -18165,6 +18189,8 @@ MAKE_SPREAD_KERNEL1(LD,long double,0)
 MAKE_SPREAD_KERNEL1(D,double,0)
 MAKE_SPREAD_KERNEL1(F,float,0)
 MAKE_SPREAD_KERNEL1(I,int,1)
+MAKE_SPREAD_KERNEL1(B,char,1)
+MAKE_SPREAD_KERNEL1(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
 #undef KERNEL_ND
@@ -19002,6 +19028,8 @@ MAKE_SPREAD_LINEAR(LD,long double,0)
 MAKE_SPREAD_LINEAR(D,double,0)
 MAKE_SPREAD_LINEAR(F,float,0)
 MAKE_SPREAD_LINEAR(I,int,1)
+MAKE_SPREAD_LINEAR(B,char,1)
+MAKE_SPREAD_LINEAR(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
 #undef LINEAR_1D
@@ -19684,6 +19712,8 @@ MAKE_SPREAD_NEAREST(LD,long double,0)
 MAKE_SPREAD_NEAREST(D,double,0)
 MAKE_SPREAD_NEAREST(F,float,0)
 MAKE_SPREAD_NEAREST(I,int,1)
+MAKE_SPREAD_NEAREST(B,char,1)
+MAKE_SPREAD_NEAREST(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
 #undef NEAR_ND
@@ -23709,6 +23739,8 @@ MAKE_REBIN_(LD,long double)
 MAKE_REBIN_(D,double)
 MAKE_REBIN_(F,float)
 MAKE_REBIN_(I,int)
+MAKE_REBIN_(B,char)
+MAKE_REBIN_(UB,unsigned char)
 #undef MAKE_REBIN_
 
 
@@ -23740,6 +23772,8 @@ MAKE_REBINSEQ_(LD,long double)
 MAKE_REBINSEQ_(D,double)
 MAKE_REBINSEQ_(F,float)
 MAKE_REBINSEQ_(I,int)
+MAKE_REBINSEQ_(B,char)
+MAKE_REBINSEQ_(UB,unsigned char)
 
 #undef MAKE_REBINSEQ_
 
