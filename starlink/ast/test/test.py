@@ -416,30 +416,28 @@ class TestAst(unittest.TestCase):
       self.assertIsNone( outv )
 
       data_in = numpy.array( [[1,2,3],[4,5,6],[7,8,9]], dtype=numpy.intc )
-      data_out = numpy.empty( (3,3), dtype=numpy.intc )
-      weights = numpy.zeros( (3,3), dtype=numpy.double )
+      data_out = numpy.empty( (3,2), dtype=numpy.intc )  # 3 rows 2 cols
+      weights = numpy.zeros( (3,2), dtype=numpy.double ) # 3 rows 2 cols
 
+#  The bounds supplied to AST here are in the form [col num, row num]
       flags = starlink.Ast.USEBAD | starlink.Ast.REBININIT
       nused = 0
       nused = zoommap.rebinseq( 0.5, [1,0], [3,2], data_in, None,
                                 starlink.Ast.LINEAR, None, flags,
-                                0.0, 100, -999, [2,0], [4,2],
-                                [1,0], [3,2], data_out, None, weights,
+                                0.0, 100, -999, [3,0], [4,2],
+                                [1,1], [3,2], data_out, None, weights,
                                 nused )
       flags = starlink.Ast.USEBAD | starlink.Ast.REBINEND
       nused = zoommap.rebinseq( 0.5, [1,0], [3,2], data_in, None,
                                 starlink.Ast.LINEAR, None, flags,
-                                0.0, 100, -999, [2,0], [4,2],
-                                [1,0], [3,2], data_out, None, weights,
+                                0.0, 100, -999, [3,0], [4,2],
+                                [1,1], [3,2], data_out, None, weights,
                                 nused )
 
-
-      answer = numpy.array( [[ 2., 3., -999],
-                             [ 5., 6., -999],
-                             [ 8., 9., -999]] )
+      answer = numpy.array( [[-999,-999], [ 6., -999], [ 9., -999]] )
       d = (answer - data_out)**2
       self.assertEqual( d.sum(), 0.0 )
-      self.assertEqual( nused, 12 )
+      self.assertEqual( nused, 4 )
 
       data_in = numpy.array( [[ 1., 2., 3.,],
                               [ 4., 5., 6.],

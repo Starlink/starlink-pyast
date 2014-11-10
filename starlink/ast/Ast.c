@@ -1167,7 +1167,6 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
    int spread;
    int type = 0;
    int wdims[ MXDIM + 1 ];
-   npy_intp *pdims = NULL;
    void *pbadval = NULL;
 
    if( PyErr_Occurred() ) return NULL;
@@ -1211,9 +1210,12 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                           numpydtype2str(type));
          }
 
-/* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) in_object)->nd;
-         pdims = ((PyArrayObject*) in_object)->dimensions;
+/* Also record the number of axes and dimensions that the input array
+   should have. Reverse the dimensions since we will be using "dims" to
+   check the dimensions of the python array objects. */
+         lbnd_in = GetArray1I( lbnd_in_object, &ncoord_in, "lbnd_in", NAME );
+         ubnd_in = GetArray1I( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
+         ndim = ncoord_in;
          if( ndim > MXDIM ) {
             sprintf( buf, "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
@@ -1222,7 +1224,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
             pbadval = NULL;
          } else {
             for( i = 0; i < ndim; i++ ) {
-               dims[ i ] = pdims[ i ];
+               dims[ ndim - i - 1 ] = ((int*)ubnd_in->data)[ i ] - ((int*)lbnd_in->data)[ i ] + 1;
             }
          }
 
@@ -1245,9 +1247,6 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                          &lbnd_object, &ubnd_object, &out_object,
                          &out_var_object, &weights_object, &nused ) && pbadval ) {
 
-      lbnd_in = GetArray1I( lbnd_in_object, &ncoord_in, "lbnd_in", NAME );
-      ubnd_in = GetArray1I( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
-
       in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
       if( in_var_object != Py_None ) {
          in_var = GetArray( in_var_object, type, 1, ndim, dims, "in_var", NAME );
@@ -1258,11 +1257,24 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          params = GetArray1D( params_object, &nparam, "params", NAME );
       }
 
+      lbnd = GetArray1I( lbnd_object, &ncoord_in, "lbnd", NAME );
+      ubnd = GetArray1I( ubnd_object, &ncoord_in, "ubnd", NAME );
+
       lbnd_out = GetArray1I( lbnd_out_object, &ncoord_out, "lbnd_out", NAME );
       ubnd_out = GetArray1I( ubnd_out_object, &ncoord_out, "ubnd_out", NAME );
 
-      lbnd = GetArray1I( lbnd_object, &ncoord_in, "lbnd", NAME );
-      ubnd = GetArray1I( ubnd_object, &ncoord_in, "ubnd", NAME );
+      ndim = ncoord_out;
+      if( ndim > MXDIM ) {
+         sprintf( buf, "The 'out' array supplied to " NAME " has too "
+                  "many (%d) dimensions (must be no more than %d).",
+                  ndim, MXDIM );
+         PyErr_SetString( PyExc_ValueError, buf );
+         pbadval = NULL;
+      } else {
+         for( i = 0; i < ndim; i++ ) {
+            dims[ ndim - i - 1 ] = ((int*)ubnd_out->data)[ i ] - ((int*)lbnd_out->data)[ i ] + 1;
+         }
+      }
 
       out = GetArray( out_object, type, 1, ndim, dims, "out", NAME );
       if( out_var_object != Py_None ) {
