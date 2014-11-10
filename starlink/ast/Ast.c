@@ -1149,7 +1149,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
    PyObject *ubnd_out_object = NULL;
    PyObject *weights_object = NULL;
    char buf[200];
-   char format[] = "dOOOOiOididOOOOOOOi:" NAME;
+   char format[] = "dOOOOiOididOOOOOOOl:" NAME;
    double badval_d;
    double tol;
    double wlim;
@@ -1163,10 +1163,11 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
    int ncoord_out;
    int ndim = 0;
    int nparam;
-   int nused;
+   int64_t nused;
    int spread;
    int type = 0;
    int wdims[ MXDIM + 1 ];
+   long int lnused;
    void *pbadval = NULL;
 
    if( PyErr_Occurred() ) return NULL;
@@ -1185,7 +1186,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                          &spread, &params_object, &flags, &tol, &maxpix,
                          &badval_d, &lbnd_out_object, &ubnd_out_object,
                          &lbnd_object, &ubnd_object, &out_object,
-                         &out_var_object, &weights_object, &nused ) && astOK ) {
+                         &out_var_object, &weights_object, &lnused ) && astOK ) {
 
       if( !PyArray_Check(  in_object ) ) {
          PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
@@ -1239,13 +1240,14 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
    }
 
 /* Parse the arguments again, this time with the correct code for
-   badval. */
+   badval. It seems that PyArg_ParseTuple has no format code for an int64_t, so use "l" 
+   (long int) and hope for the best. */
    if( PyArg_ParseTuple( args, format, &wlim, &lbnd_in_object,
                          &ubnd_in_object, &in_object, &in_var_object,
                          &spread, &params_object, &flags, &tol, &maxpix,
                          pbadval, &lbnd_out_object, &ubnd_out_object,
                          &lbnd_object, &ubnd_object, &out_object,
-                         &out_var_object, &weights_object, &nused ) && pbadval ) {
+                         &out_var_object, &weights_object, &lnused ) && pbadval ) {
 
       in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
       if( in_var_object != Py_None ) {
@@ -1295,6 +1297,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 
       if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd &&
           in && out && weights ) {
+         nused = lnused;
 
          if( type == PyArray_DOUBLE ) {
             astRebinSeqD( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
@@ -1334,7 +1337,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 
          if( astOK ) {
             if( !out_var ) out_var = (PyArrayObject *) Py_None;
-            result = Py_BuildValue( "i", nused );
+            result = Py_BuildValue( "l", nused );
          }
 
       }
