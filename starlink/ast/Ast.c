@@ -5463,6 +5463,7 @@ typedef struct {
 /* Prototypes for class functions */
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
+static PyObject *Region_negate( Region *self );
 static PyObject *Region_overlap( Region *self, PyObject *args );
 static PyObject *Region_mapregion( Region *self, PyObject *args );
 
@@ -5489,6 +5490,7 @@ static PyMethodDef Region_methods[] = {
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
   {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
   {"mapregion", (PyCFunction)Region_mapregion, METH_VARARGS, "Transform a Region into a new Frame using a given Mapping"},
+  {"negate", (PyCFunction)Region_negate, METH_NOARGS, "Negate the area represented by a Region"},
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
   {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -5610,6 +5612,17 @@ static PyObject *Region_mapregion( Region *self, PyObject * args ) {
 
    TIDY;
    return result;
+}
+
+#undef NAME
+#define NAME CLASS ".negate"
+static PyObject *Region_negate( Region *self ) {
+  PyObject *result = NULL;
+  if (PyErr_Occurred() ) return NULL;
+  astNegate( THIS );
+  if ( astOK ) result = Py_None;
+  TIDY;
+  return result;
 }
 
 #undef NAME
