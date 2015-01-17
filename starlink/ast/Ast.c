@@ -8261,7 +8261,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 
 /* Set the value of a given entry in a KeyMap. */
 static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
-   char *key;
+   char *key = NULL;
    int ival;
    int nval;
    int result = 0;
