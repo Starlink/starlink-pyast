@@ -484,7 +484,7 @@ static PyObject *Object_set( Object *self, PyObject *args ) {
    const char *settings;
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "s:" NAME, &settings ) ) {
-      astSet( THIS, settings );
+      astSet( THIS, "%s", settings );
       if( astOK ) result = Py_None;
    }
    TIDY;
@@ -1240,7 +1240,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
    }
 
 /* Parse the arguments again, this time with the correct code for
-   badval. It seems that PyArg_ParseTuple has no format code for an int64_t, so use "l" 
+   badval. It seems that PyArg_ParseTuple has no format code for an int64_t, so use "l"
    (long int) and hope for the best. */
    if( PyArg_ParseTuple( args, format, &wlim, &lbnd_in_object,
                          &ubnd_in_object, &in_object, &in_var_object,
@@ -1934,7 +1934,7 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "id|s:" CLASS, &ncoord, &zoom, &options ) ) {
-      AstZoomMap *this = astZoomMap( ncoord, zoom, options );
+      AstZoomMap *this = astZoomMap( ncoord, zoom, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2092,7 +2092,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
 
       if( nfwd > 0 && ninv > 0 && astOK ) {
          AstMathMap *this = astMathMap( nin, nout, nfwd, fwd, ninv, inv,
-                                        options );
+                                        "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -2181,7 +2181,7 @@ static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstSphMap *this = astSphMap( options );
+      AstSphMap *this = astSphMap( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2279,7 +2279,7 @@ static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstGrismMap *this = astGrismMap( options );
+      AstGrismMap *this = astGrismMap( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2372,7 +2372,7 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
       int ncoord = 2;
       pcdcen = GetArray1D( pcdcen_object, &ncoord, "pcdcen", NAME );
       if (pcdcen) {
-	this = astPcdMap( disco, (const double *)pcdcen->data, options );
+	this = astPcdMap( disco, (const double *)pcdcen->data, "%s", options );
 	result = SetProxy( (AstObject *) this, (Object *) self );
 	this = astAnnul( this );
       }
@@ -2475,7 +2475,7 @@ static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "|iiiis:" CLASS, &ncoord,
                         &type, &lonax, &latax, &options ) ) {
       AstWcsMap * this = NULL;
-      this = astWcsMap( ncoord, type, lonax, latax, options );
+      this = astWcsMap( ncoord, type, lonax, latax, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2552,7 +2552,7 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "i|s:" CLASS, &ncoord, &options ) ) {
-      AstUnitMap *this = astUnitMap( ncoord, options );
+      AstUnitMap *this = astUnitMap( ncoord, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2639,7 +2639,7 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
       if (flags != 0) {
          PyErr_SetString( PyExc_ValueError, "The TimeMap flags argument must currently always be zero");
       } else {
-         AstTimeMap *this = astTimeMap( flags, options );
+         AstTimeMap *this = astTimeMap( flags, "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -2753,7 +2753,7 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!|iis:" CLASS, &MappingType, (PyObject**)&other,
 			&ax1, &ax2, &options ) ) {
-      AstRateMap *this = astRateMap( THAT, ax1, ax2, options );
+      AstRateMap *this = astRateMap( THAT, ax1, ax2, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2833,7 +2833,7 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!O!|is:" CLASS, &MappingType, (PyObject**)&other,
                         &MappingType, (PyObject**)&another, &series, &options ) ) {
-      AstCmpMap *this = astCmpMap( THAT, ANOTHER, series, options );
+      AstCmpMap *this = astCmpMap( THAT, ANOTHER, series, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -2912,7 +2912,7 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!O!|s:" CLASS, &MappingType, (PyObject**)&other,
                         &MappingType, (PyObject**)&another, &options ) ) {
-      AstTranMap *this = astTranMap( THAT, ANOTHER, options );
+      AstTranMap *this = astTranMap( THAT, ANOTHER, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -3016,7 +3016,7 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
                             PyArray_Size( (PyObject*)outperm),
                             (const int *)outperm->data,
                             (constant ? (const double*)constant->data : NULL),
-                            options);
+                            "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -3107,7 +3107,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
          AstShiftMap * this = NULL;
          this = astShiftMap( PyArray_Size( (PyObject*)shift),
                             (const double *)shift->data,
-                            options);
+                            "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -3198,7 +3198,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
          AstLutMap * this = NULL;
          this = astLutMap( PyArray_Size( (PyObject*)lut),
                            (const double *)lut->data,
-                           start, inc, options);
+                           start, inc, "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -3307,7 +3307,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
                              (const double *)inb->data,
                              (const double *)outa->data,
                              (const double *)outb->data,
-                             options);
+                             "%s", options );
            result = SetProxy( (AstObject *) this, (Object *) self );
            this = astAnnul( this );
          } else {
@@ -3494,7 +3494,7 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
    int naxes;
 
    if( PyArg_ParseTuple(args, "i|s:" CLASS, &naxes, &options ) ) {
-      AstFrame *this = astFrame( naxes, options );
+      AstFrame *this = astFrame( naxes, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -4146,10 +4146,10 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
          int ndim = matrix->nd;
          if( ndim == 1 ) {
             this = astMatrixMap( matrix->dimensions[0], matrix->dimensions[0],
-                                 1, (const double *) matrix->data, options );
+                                 1, (const double *) matrix->data, "%s", options );
          } else if( ndim == 2 ) {
             this = astMatrixMap( matrix->dimensions[1], matrix->dimensions[0],
-                                 0, (const double *) matrix->data, options );
+                                 0, (const double *) matrix->data, "%s", options );
          } else {
             PyErr_Format( PyExc_ValueError, "The supplied array of matrix "
                           "elements must be either 1 or 2 dimensional, not "
@@ -4329,7 +4329,7 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
       } else {
          AstPolyMap *this = astPolyMap( coeff_f?nin1:nin2, coeff_f?nout1:nout2,
                                         ncoeff_f, coeff_f, ncoeff_i, coeff_i,
-                                        options );
+                                        "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -4460,7 +4460,7 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!|s:" CLASS, &FrameType, (PyObject**)&other,
                         &options ) ) {
-      AstNormMap *this = astNormMap( THAT, options );
+      AstNormMap *this = astNormMap( THAT, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -4565,7 +4565,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "O!|s:" CLASS, &FrameType, (PyObject**)&other, &options ) ) {
-      AstFrameSet *this = astFrameSet( THAT, options );
+      AstFrameSet *this = astFrameSet( THAT, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -4767,7 +4767,7 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!O!|s:" CLASS, &FrameType, (PyObject**)&other,
                         &FrameType, (PyObject**)&another, &options ) ) {
-      AstCmpFrame *this = astCmpFrame( THAT, ANOTHER, options );
+      AstCmpFrame *this = astCmpFrame( THAT, ANOTHER, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -4880,7 +4880,7 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstSkyFrame *this = astSkyFrame( options );
+      AstSkyFrame *this = astSkyFrame( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5017,7 +5017,7 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstSpecFrame *this = astSpecFrame( options );
+      AstSpecFrame *this = astSpecFrame( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5156,7 +5156,7 @@ static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstDSBSpecFrame *this = astDSBSpecFrame( options );
+      AstDSBSpecFrame *this = astDSBSpecFrame( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5253,7 +5253,7 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstTimeFrame *this = astTimeFrame( options );
+      AstTimeFrame *this = astTimeFrame( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5359,7 +5359,7 @@ static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "|dO!s:" CLASS, &specval,
 			&SpecFrameType, (PyObject**)&other, &options ) ) {
-      AstFluxFrame *this = astFluxFrame( specval, THAT, options );
+      AstFluxFrame *this = astFluxFrame( specval, THAT, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5439,7 +5439,7 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
    if( PyArg_ParseTuple(args, "O!O!|s:" CLASS,
 			&SpecFrameType, (PyObject**)&other,
 			&FluxFrameType, (PyObject**)&another, &options ) ) {
-      AstSpecFluxFrame *this = astSpecFluxFrame( THAT, ANOTHER, options );
+      AstSpecFluxFrame *this = astSpecFluxFrame( THAT, ANOTHER, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5731,7 +5731,7 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
       point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
       point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
       this = astBox( THAT, form, (const double*)point1->data,
-                     (const double*)point2->data, unc, options );
+                     (const double*)point2->data, unc, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -5827,7 +5827,7 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
       point = GetArray1D( point_object, &naxes, "point", NAME );
       if (centre && point) {
         this = astCircle( THAT, form, (const double*)centre->data,
-                          (const double*)point->data, unc, options );
+                          (const double*)point->data, unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
       }
@@ -5930,7 +5930,7 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
          if( another ) unc = (AstRegion *) ANOTHER;
          AstPolygon *this = astPolygon( THAT, dims[ 1 ], dims[ 1 ],
                                         (const double*)points->data, unc,
-                                        options );
+                                        "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
          Py_DECREF( points );
@@ -6062,7 +6062,7 @@ static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
          if( another ) unc = (AstRegion *) ANOTHER;
          AstPointList *this = astPointList( THAT, dims[ 1 ], ncoord, dims[ 1 ],
                                         (const double*)points->data, unc,
-                                        options );
+                                        "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
          Py_DECREF( points );
@@ -6164,7 +6164,7 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
         this = astEllipse( THAT, form, (const double*)centre->data,
 			   (const double*)point1->data,
 			   (const double*)point2->data,
-			   unc, options );
+			   unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
       }
@@ -6259,7 +6259,7 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
       ubnd = GetArray1D( ubnd_object, &naxes, "ubnd", NAME );
       if (lbnd && ubnd) {
         this = astInterval( THAT, (const double*)lbnd->data,
-                          (const double*)ubnd->data, unc, options );
+                          (const double*)ubnd->data, unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
       }
@@ -6343,7 +6343,7 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
       AstNullRegion * this = NULL;
       AstRegion * unc = NULL;
       if (another) unc = (AstRegion *) ANOTHER;
-      this = astNullRegion( THAT, unc, options );
+      this = astNullRegion( THAT, unc, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -6423,7 +6423,7 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!O!|is:" CLASS, &RegionType, (PyObject**)&other,
                         &RegionType, (PyObject**)&another, &oper, &options ) ) {
-      AstCmpRegion *this = astCmpRegion( THAT, ANOTHER, oper, options );
+      AstCmpRegion *this = astCmpRegion( THAT, ANOTHER, oper, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -6502,7 +6502,7 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O!O!|s:" CLASS, &RegionType, (PyObject**)&other,
                         &RegionType, (PyObject**)&another, &options ) ) {
-      AstPrism *this = astPrism( THAT, ANOTHER, options );
+      AstPrism *this = astPrism( THAT, ANOTHER, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -6646,7 +6646,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
 
 /* Create the channel using the above selected wrapper functions. */
       if( result == 0 ) {
-         AstChannel *this = astChannel( source_wrap, sink_wrap, options );
+         AstChannel *this = astChannel( source_wrap, sink_wrap, "%s", options );
 
 /* Store a pointer to the PyObject Channel in the AST Channel so that the
    source and sink wrapper functions can get at it. */
@@ -7127,7 +7127,7 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 
 /* Create the FitsChan using the above selected wrapper functions. */
       if( result == 0 ) {
-         AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, options );
+         AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, "%s", options );
 
 /* Store a pointer to the PyObject FitsChan in the AST FitsChan so that the
    source and sink wrapper functions can get at it. */
@@ -7863,7 +7863,7 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
 
 /* Create the StcsChan using the above selected wrapper functions. */
       if( result == 0 ) {
-         AstStcsChan *this = astStcsChan( source_wrap, sink_wrap, options );
+         AstStcsChan *this = astStcsChan( source_wrap, sink_wrap, "%s", options );
 
 /* Store a pointer to the PyObject StcsChan in the AST StcsChan so that the
    source and sink wrapper functions can get at it. */
@@ -7996,7 +7996,7 @@ static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
       self->current_key = 0;
-      AstKeyMap *this = astKeyMap( options );
+      AstKeyMap *this = astKeyMap( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -8640,7 +8640,7 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
             graphbox[ 2 ] = ((const double *)gbox->data)[ 2 ];
             graphbox[ 3 ] = ((const double *)gbox->data)[ 3 ];
             AstPlot *this = astPlot( AST(frame), graphbox,
-                                     (const double *)bbox->data, options );
+                                     (const double *)bbox->data, "%s", options );
             result = SetProxy( (AstObject *) this, (Object *) self );
             if( result == 0 ) result = setGrf( self, grf_object );
             this = astAnnul( this );
@@ -9463,7 +9463,7 @@ static int Table_init( Table *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
-      AstTable *this = astTable( options );
+      AstTable *this = astTable( "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -9905,7 +9905,7 @@ static int FitsTable_init( FitsTable *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "|O!s:" CLASS, &FitsChanType, &header, &options ) ) {
       AstFitsTable *this = astFitsTable( (header != Py_None) ? LAST(header) : NULL,
-                                         options );
+                                         "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -11554,7 +11554,7 @@ static char *DumpToString( AstObject *this, const char *options ){
 
    if( !astOK ) return result;
 
-   ch = astChannel( NULL, Sinka, options );
+   ch = astChannel( NULL, Sinka, "%s", options );
    astPutChannelData( ch, &result );
    astWrite( ch, this );
    ch = astAnnul( ch );
