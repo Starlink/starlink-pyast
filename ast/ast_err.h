@@ -474,4 +474,7 @@ enum { AST__MIRRO           	= 233934386 };	/* messid=454 */
 /* Error in cminpack Levenberg-Marquardt code */
 enum { AST__MNPCK           	= 233934394 };	/* messid=455 */
 
+/* Supplied array has too many pixels */
+enum { AST__EXSPIX          	= 233934402 };	/* messid=456 */
+
 #endif	/* AST_ERROR_DEFINED */

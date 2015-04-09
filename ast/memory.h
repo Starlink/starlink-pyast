@@ -50,6 +50,8 @@
 *           Convert a string to upper or lower case.
 *        astChrLen
 *           Returns length of a string without trailing white space, etc.
+*        astChrTrunc
+*           Terminate a string to exclude trailing spaces.
 *        astSscanf
 *           Like sscanf, but fixes certain platform-specific bugs in the
 *           native sscanf implementation.
@@ -113,6 +115,8 @@
 *        Added astChrSub.
 *     19-MAY-2010 (DSB):
 *        Added astStringCase.
+*     26-MAR-2015 (DSB):
+*        Added astChrTrunc.
 
 *-
 */
@@ -223,8 +227,10 @@ void *astStore_( void *, const void *, size_t, int * );
 size_t astChrLen_( const char *, int * );
 double astChr2Double_( const char *, int * );
 void astRemoveLeadingBlanks_( char *, int * );
-char *astAppendString_( char *, int *, const char *, ... )__attribute__((format(printf,3,4)));
+char *astAppendString_( char *, int *, const char *, int * );
+char *astAppendStringf_( char *, int *, const char *, ... )__attribute__((format(printf,3,4)));
 char *astChrSub_( const char *, const char *, const char *[], int, int * );
+void astChrTrunc_( char *, int * );
 
 #ifdef MEM_PROFILE
 void astStartTimer_( const char *, int, const char *, int * );
@@ -268,11 +274,13 @@ void astEndPM_( int * );
 #define astIsDynamic(ptr) astERROR_INVOKE(astIsDynamic_(ptr,STATUS_PTR))
 #define astTSizeOf(ptr) astERROR_INVOKE(astTSizeOf_(ptr,STATUS_PTR))
 #define astStore(ptr,data,size) astERROR_INVOKE(astStore_(ptr,data,size,STATUS_PTR))
-#define astAppendString astAppendString_
+#define astAppendString(str1,nc,str2) astERROR_INVOKE(astAppendString_(str1,nc,str2,STATUS_PTR))
+#define astAppendStringf astAppendStringf_
 #define astString(chars,nchars) astERROR_INVOKE(astString_(chars,nchars,STATUS_PTR))
 #define astStringArray(chars,nel,len) astERROR_INVOKE(astStringArray_(chars,nel,len,STATUS_PTR))
 #define astStringCase(string,toupper) astERROR_INVOKE(astStringCase_(string,toupper,STATUS_PTR))
 #define astChrLen(string) astERROR_INVOKE(astChrLen_(string,STATUS_PTR))
+#define astChrTrunc(string) astERROR_INVOKE(astChrTrunc_(string,STATUS_PTR))
 #define astChr2Double(string) astERROR_INVOKE(astChr2Double_(string,STATUS_PTR))
 #define astRemoveLeadingBlanks(string) astERROR_INVOKE(astRemoveLeadingBlanks_(string,STATUS_PTR))
 #define astChrSub(test,template,subs,nsub) astERROR_INVOKE(astChrSub_(test,template,subs,nsub,STATUS_PTR))
