@@ -153,11 +153,11 @@ if sys.platform.startswith("darwin"):
 
 
 setup (name = 'starlink-pyast',
-       version = '3.4',
+       version = '3.5',
        description = 'A Python wrapper for the Starlink AST library',
-       url = 'http://starlink.jach.hawaii.edu/starlink/AST',
+       url = 'http://www.starlink.ac.uk/ast',
        author = 'David Berry',
-       author_email = 'd.berry@jach.hawaii.edu',
+       author_email = 'd.berry@eaobservatory.org',
        packages =['starlink'],
        package_data = { 'starlink': [os.path.join('include','star','pyast.h')] },
        ext_modules=[Ast],
