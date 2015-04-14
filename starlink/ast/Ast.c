@@ -319,7 +319,10 @@ static PyObject *Object_clear( Object *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
       astClear( THIS, attrib);
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -449,7 +452,10 @@ static PyObject *Object_lock( Object *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "|i:" NAME, &wait ) ) {
       astLock( THIS, wait );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -485,7 +491,10 @@ static PyObject *Object_set( Object *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "s:" NAME, &settings ) ) {
       astSet( THIS, "%s", settings );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -499,7 +508,10 @@ static PyObject *Object_show( Object *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astShow( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -533,7 +545,10 @@ static PyObject *Object_unlock( Object *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "|i:" NAME, &report ) ) {
       astUnlock( THIS, report );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -685,7 +700,10 @@ static PyObject *Mapping_invert( Mapping *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astInvert( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -2673,7 +2691,10 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
                                                            PyArray_DOUBLE, 0, 100);
     if (astargs) {
       astTimeAdd( THIS, cvt, (const double *)astargs->data );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
     }
     Py_XDECREF( astargs );
   }
@@ -3935,7 +3956,10 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
     perm = GetArray1I( perm_object, &naxes, "perm", NAME );
     if (perm) {
       astPermAxes( THIS, (const int *)perm->data );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
     }
     Py_XDECREF( perm );
   }
@@ -4378,6 +4402,7 @@ static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args ) {
                new = astAnnul( new );
             } else {
                result = Py_None;
+               Py_INCREF(Py_None);
             }
          }
 
@@ -4591,7 +4616,10 @@ static PyObject *FrameSet_addframe( FrameSet *self, PyObject *args ) {
                        &MappingType, (PyObject**)&other,
                        &FrameType, (PyObject**)&another ) && astOK ) {
       astAddFrame( THIS, iframe, THAT, ANOTHER );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -4670,7 +4698,10 @@ static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args ) {
   if( PyArg_ParseTuple(args, "iO!:" NAME, &iframe,
                        &MappingType, (PyObject**)&other ) && astOK ) {
       astRemapFrame( THIS, iframe, THAT );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -4690,7 +4721,10 @@ static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
 
   if( PyArg_ParseTuple(args, "|i:" NAME, &iframe ) && astOK ) {
       astRemoveFrame( THIS, iframe );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -5043,7 +5077,10 @@ static PyObject *SpecFrame_setrefpos( SpecFrame *self, PyObject *args ) {
                        &SkyFrameType, (PyObject**)&other,
                        &lon, &lat ) && astOK ) {
       astSetRefPos( THIS, THAT, lon, lat );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -5620,7 +5657,10 @@ static PyObject *Region_negate( Region *self ) {
   PyObject *result = NULL;
   if (PyErr_Occurred() ) return NULL;
   astNegate( THIS );
-  if ( astOK ) result = Py_None;
+  if( astOK ) {
+     Py_INCREF(Py_None);
+     result = Py_None;
+  }
   TIDY;
   return result;
 }
@@ -6738,6 +6778,7 @@ static PyObject *Channel_read( Channel *self, PyObject *args ){
             Py_XDECREF(object);
          } else {
             result = Py_None;
+            Py_INCREF(Py_None);
          }
       }
       if( obj ) obj = astAnnul( obj );
@@ -7502,7 +7543,10 @@ static PyObject *FitsChan_delfits( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astDelFits( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -7514,7 +7558,10 @@ static PyObject *FitsChan_writefits( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astWriteFits( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -7526,7 +7573,10 @@ static PyObject *FitsChan_readfits( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astReadFits( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -7538,7 +7588,10 @@ static PyObject *FitsChan_emptyfits( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astEmptyFits( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -7634,7 +7687,10 @@ static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if ( PyArg_ParseTuple( args, "s:" NAME, &cards ) && astOK ) {
       astPutCards( THIS, cards );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -7654,7 +7710,10 @@ static PyObject *FitsChan_putfits( FitsChan *self, PyObject *args ) {
 
    if ( PyArg_ParseTuple( args, "s|i:" NAME, &card, &overwrite ) && astOK ) {
       astPutFits( THIS, card, overwrite );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -7677,7 +7736,10 @@ static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { 
    if ( PyArg_ParseTuple( args, "s" #fmt "|si:" NAME ".setfits" #typecode, \
                           &name, value, value + 1, &comment, &overwrite) && astOK ) { \
       astSetFits##typecode( THIS, name, value, comment, overwrite ); \
-      if( astOK ) result = Py_None; \
+      if( astOK ) { \
+         Py_INCREF(Py_None); \
+         result = Py_None; \
+      } \
    } \
    TIDY; \
    return result; \
@@ -7700,7 +7762,10 @@ static PyObject *FitsChan_setfits##typecode( FitsChan *self, PyObject *args ) { 
    if ( PyArg_ParseTuple( args, "s" #fmt "si:" NAME ".setfits" #typecode, \
                           &name, &value, &comment, &overwrite) && astOK ) { \
       astSetFits##typecode( THIS, name, valexp, comment, overwrite ); \
-      if( astOK ) result = Py_None; \
+      if( astOK ) { \
+         Py_INCREF(Py_None); \
+         result = Py_None; \
+      } \
    } \
    TIDY; \
    return result; \
@@ -7743,7 +7808,10 @@ static PyObject *FitsChan_retainfits( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astRetainFits( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -7755,7 +7823,10 @@ static PyObject *FitsChan_purgewcs( FitsChan *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astPurgeWCS( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -8197,14 +8268,19 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
             if( astOK ) {
                PyObject *object;
                for( ival = 0; ival < nval; ival++ ) {
-                  vals[ ival ] = Py_None;
                   if( buf[ ival ] ) {
                      object = NewObject( buf[ ival ] );
                      if( object ) {
                         vals[ ival ] = Py_BuildValue( "O", object );
                         Py_DECREF( object );
+                     } else {
+                        vals[ ival ] = Py_None;
+                        Py_INCREF(Py_None);
                      }
                      buf[ ival ] = astAnnul( buf[ ival ] );
+                  } else {
+                     vals[ ival ] = Py_None;
+                     Py_INCREF(Py_None);
                   }
                }
             }
@@ -8704,7 +8780,10 @@ static PyObject *Plot_grid( Plot *self, PyObject *args ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astGrid( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -8718,7 +8797,10 @@ static PyObject *Plot_bbuf( Plot *self, PyObject *args ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astBBuf( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -8784,14 +8866,20 @@ static PyObject *Plot_clip( Plot *self, PyObject *args ) {
          if( lbnd && ubnd ) {
             astClip( THIS, iframe, (const double *)lbnd->data,
                      (const double *)ubnd->data );
-            if( astOK ) result = Py_None;
+            if( astOK ) {
+               Py_INCREF(Py_None);
+               result = Py_None;
+            }
          }
          Py_XDECREF( lbnd );
          Py_XDECREF( ubnd );
 
       } else {
          astClip( THIS, iframe, NULL, NULL );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
    }
 
@@ -8820,7 +8908,10 @@ static PyObject *Plot_curve( Plot *self, PyObject *args ) {
       if( start && finish ) {
          astCurve( THIS, (const double *)start->data,
                        (const double *)finish->data );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
       Py_XDECREF( start );
       Py_XDECREF( finish );
@@ -8850,7 +8941,10 @@ static PyObject *Plot_gridline( Plot *self, PyObject *args ) {
       PyArrayObject *start = GetArray1D( start_object, &naxes, "start", NAME );
       if( start ) {
          astGridLine( THIS, axis, (const double *)start->data, length );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
       Py_XDECREF( start );
    }
@@ -8868,7 +8962,10 @@ static PyObject *Plot_ebuf( Plot *self, PyObject *args ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return result;
    astEBuf( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -8886,7 +8983,10 @@ static PyObject *Plot_gencurve( Plot *self, PyObject *args ){
 
    if( PyArg_ParseTuple(args, "O!:" NAME, &MappingType, (PyObject**) &map ) ) {
       astGenCurve( THIS, AST(map) );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -8913,7 +9013,10 @@ static PyObject *Plot_mark( Plot *self, PyObject *args ) {
       if( in ) {
          astMark( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
                        (const double *)in->data, type );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
       Py_XDECREF( in );
    }
@@ -8942,7 +9045,10 @@ static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
       if( in ) {
          astPolyCurve( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
                        (const double *)in->data );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
       Py_XDECREF( in );
    }
@@ -8995,7 +9101,10 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
             fup[ 1 ] = 1.0;
          }
          astText( THIS, text, (const double *)pos->data, fup, just?just:"CC" );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
       }
 
       text = astFree( text );
@@ -9492,7 +9601,10 @@ static PyObject *Table_addcolumn( Table *self, PyObject *args ) {
       PyArrayObject *dims = GetArray1I( dims_object, &ndim, "dims", NAME );
       if( dims ) {
          astAddColumn( THIS, name, type, ndim, (int *) dims->data, unit );
-         if( astOK ) result = Py_None;
+         if( astOK ) {
+            Py_INCREF(Py_None);
+            result = Py_None;
+         }
          Py_DECREF( dims );
       }
    }
@@ -9514,7 +9626,10 @@ static PyObject *Table_addparameter( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple(args, "s:" NAME, &name ) && astOK ) {
       astAddParameter( THIS, name );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -9642,7 +9757,10 @@ static PyObject *Table_purgerows( Table *self ) {
    PyObject *result = NULL;
    if( PyErr_Occurred() ) return NULL;
    astPurgeRows( THIS );
-   if( astOK ) result = Py_None;
+   if( astOK ) {
+      Py_INCREF(Py_None);
+      result = Py_None;
+   }
    TIDY;
    return result;
 }
@@ -9661,7 +9779,10 @@ static PyObject *Table_removecolumn( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       astRemoveColumn( THIS, column );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -9682,7 +9803,10 @@ static PyObject *Table_removeparameter( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &name ) && astOK ) {
       astRemoveParameter( THIS, name );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -9702,7 +9826,10 @@ static PyObject *Table_removerow( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "i:" NAME, &index ) && astOK ) {
       astRemoveRow( THIS, index );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -9998,7 +10125,10 @@ static PyObject *FitsTable_puttableheader( FitsTable *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple(args, "O!:" NAME, &FitsChanType, &header ) && astOK ) {
       astPutTableHeader( THIS, LAST(header) );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -10043,7 +10173,10 @@ static PyObject *FitsChan_puttable( FitsChan  *self, PyObject *args ) {
 
    if( PyArg_ParseTuple(args, "O!s:" NAME, &FitsTableType, &table, &extnam ) && astOK ) {
       astPutTable( THIS, LAST(table), extnam );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -10063,7 +10196,10 @@ static PyObject *FitsChan_puttables( FitsChan  *self, PyObject *args ) {
 
    if( PyArg_ParseTuple(args, "O!:" NAME, &KeyMapType, &tables ) && astOK ) {
       astPutTables( THIS, LAST(tables) );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -10083,7 +10219,10 @@ static PyObject *FitsChan_removetables( FitsChan  *self, PyObject *args ) {
 
    if( PyArg_ParseTuple(args, "s:" NAME, &key ) && astOK ) {
       astRemoveTables( THIS, key );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;
@@ -10127,7 +10266,11 @@ static PyObject *FitsChan_tablesource( FitsChan  *self, PyObject *args ) {
          self->tabsource = NULL;
       }
 
-      if( astOK && !PyErr_Occurred() ) result = Py_None;
+      if( astOK && !PyErr_Occurred() ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
+
    }
 
    TIDY;
@@ -10416,7 +10559,10 @@ static PyObject *PyAst_activememory( PyObject *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple(args, "s:" NAME, &label ) ) {
       astActiveMemory( label );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -10430,7 +10576,10 @@ static PyObject *PyAst_watchmemory( PyObject *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple(args, "i:" NAME, &id ) ) {
       astWatchMemory( id );
-      if( astOK ) result = Py_None;
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
    TIDY;
    return result;
@@ -11205,6 +11354,7 @@ static PyObject *NewObject( AstObject *this ) {
 /* If a NULL pointer is supplied, return Py_None. */
    if( ! this ) {
       result = Py_None;
+      Py_INCREF(Py_None);
 
 /* If the supplied AST object has an associated proxy object, return it. */
    } else {

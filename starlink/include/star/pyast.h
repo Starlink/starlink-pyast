@@ -89,6 +89,7 @@ static PyObject *isa_##class( Object *self ); \
 static PyObject *isa_##class( Object *self ){ \
    PyObject *result = astIsA##class( self->ast_object ) ?  Py_True : Py_False; \
    TIDY; \
+   Py_INCREF(result); \
    return result; \
 }
 
@@ -149,6 +150,7 @@ static PyObject *get##attrib( class *self, void *closure ){ \
    char att_buf[ MXATTR_LEN ]; \
    PyObject *result = (getval); \
    TIDY; \
+   Py_INCREF( result ); \
    return result; \
 }
 
