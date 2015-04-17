@@ -515,7 +515,7 @@ ERFA_FILES = \
     erfa/zr.c
 
 PAL_FILES = \
-    pal.c \
+    palwrap.c \
     pal.h \
     erfa.h \
     erfam.h
@@ -688,7 +688,7 @@ AST_PAR: ast_par.source astbad
 # configure.ac, and so is not distributed automatically.
 #
 # makeh is required in order to build ast.h after distribution (see below).
-EXTRA_DIST = ast_par.source sun210_figures/ sun211_figures/ pal/ erfa/ cminpack/
+EXTRA_DIST = ast_par.source sun210_figures sun211_figures pal erfa cminpack
 
 # ast.h depends on the error-facility files.  ast.h _could_ be made
 # before distribution, but since it's generated from other distributed
@@ -744,7 +744,9 @@ install-exec-hook: libast.la
 @PREDIST@    -e 's,@PACKAGE_VERSION_MAJOR\@,$(PACKAGE_VERSION_MAJOR),' \
 @PREDIST@    -e 's,@PACKAGE_VERSION_MINOR\@,$(PACKAGE_VERSION_MINOR),' \
 @PREDIST@    -e 's,@PACKAGE_VERSION_RELEASE\@,$(PACKAGE_VERSION_RELEASE),' \
-@PREDIST@    -e 's,@PERL\@,$(PERL),'
+@PREDIST@    -e 's,@PERL\@,$(PERL),' \
+@PREDIST@    -e 's,@STARLINK\@,$(STARLINK),'
+
 @PREDIST@version.h: version.h.in configure.ac
 @PREDIST@	rm -f $@; $(predist_subs) version.h.in >$@
 @PREDIST@builddocs: builddocs.in configure.ac

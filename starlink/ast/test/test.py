@@ -1133,6 +1133,14 @@ class TestAst(unittest.TestCase):
       self.assertEqual( mygrf.textj, ['CC'] )
       self.assertEqual( mygrf.ntext, 1 )
 
+      mygrf.Reset()
+      circle = starlink.Ast.Circle( plot, 0, [0.5,0.5],[0.5,0.7] )
+      plot.regionoutline( circle )
+      self.assertAlmostEqual(max( mygrf.linex), 0.7 )
+      self.assertAlmostEqual(min( mygrf.linex), 0.3 )
+      self.assertAlmostEqual(max( mygrf.liney), 0.7 )
+      self.assertAlmostEqual(min( mygrf.liney), 0.3 )
+
    def test_MatrixMap(self):
 
       with self.assertRaises(ValueError):

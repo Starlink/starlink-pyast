@@ -477,4 +477,7 @@ enum { AST__MNPCK           	= 233934394 };	/* messid=455 */
 /* Supplied array has too many pixels */
 enum { AST__EXSPIX          	= 233934402 };	/* messid=456 */
 
+/* No mapping found between coordinate systems */
+enum { AST__NOCNV           	= 233934410 };	/* messid=457 */
+
 #endif	/* AST_ERROR_DEFINED */

@@ -8521,6 +8521,7 @@ static PyObject *Plot_ebuf( Plot *self, PyObject *args );
 static PyObject *Plot_gencurve( Plot *self, PyObject *args );
 static PyObject *Plot_mark( Plot *self, PyObject *args );
 static PyObject *Plot_polycurve( Plot *self, PyObject *args );
+static PyObject *Plot_regionoutline( Plot *self, PyObject *args );
 static PyObject *Plot_text( Plot *self, PyObject *args );
 static void Plot_dealloc( Plot *self );
 static int setGrf( Plot *self, PyObject *value );
@@ -8553,6 +8554,7 @@ static PyMethodDef Plot_methods[] = {
    {"gridline", (PyCFunction)Plot_gridline, METH_VARARGS, "Draw a grid line (or axis) for a Plot"},
    {"mark", (PyCFunction)Plot_mark, METH_VARARGS, "Draw a set of markers for a Plot"},
    {"polycurve", (PyCFunction)Plot_polycurve, METH_VARARGS, "Draw a series of connected geodesic curves"},
+   {"regionoutline", (PyCFunction)Plot_regionoutline, METH_VARARGS, "Draw the outline of an AST Region"},
    {"text", (PyCFunction)Plot_text, METH_VARARGS, "Draw a text string for a Plot"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -9051,6 +9053,29 @@ static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
          }
       }
       Py_XDECREF( in );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".regionoutline"
+static PyObject *Plot_regionoutline( Plot *self, PyObject *args ) {
+
+/* args: :region */
+
+   Object *other = NULL;
+   PyObject *result = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "O!:" NAME, &RegionType, (PyObject**)&other ) && astOK ) {
+      astRegionOutline( THIS, THAT );
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
    }
 
    TIDY;

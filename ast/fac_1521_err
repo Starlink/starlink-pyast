@@ -155,3 +155,5 @@ FACILITY AST
 453,BDVNM,Bad variant Mapping name
 454,MIRRO,Attempt to add a variant Mapping to a mirror Frame
 455,MNPCK,Error in cminpack Levenberg-Marquardt code
+456,EXSPIX,Supplied array has too many pixels
+457,NOCNV,No mapping found between coordinate systems
