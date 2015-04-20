@@ -6,11 +6,23 @@
 #  Purpose:
 #    Produce the HTML docs for starlink.Ast
 
+#  Usage:
+#    make_doc <sun211.tex>
+
+#  Paramaters:
+#    <sun211.tex>
+#       The full path to a copy of file sun211.tex (the C docs for AST).
+#       Defaults to /star/docs/sun211.tex if not supplied.
+
 #  Description:
 #    This script is not intended to be distributed to PyAST users. It
 #    auto-generates some of the docs files from the C source code, which
 #    are committed in the repository as separate items and are distributed
 #    to pyast users.
+#
+#    Pyast docs are stored in the same github repository as the pyast
+#    code, but on branch "gh-pages". Github ensures that these pages
+#    are published automatically on URL http://timj.github.io/starlink-pyast/
 #
 #    It should probably be re-written in Python, but since it is not
 #    distributed, the langiage is not too important.
@@ -26,13 +38,34 @@
 #       pyast.htx/node2.html - A list of the unimplemented functions with
 #       links to the corresponding section of SUN/211.
 #
-#    The contents of dochead.html and doctail.html are copied to the start
-#    and end of pyast.htx/pyast.html. The middle is generated automatically
-#    and is a collection of links to fragments of node1.html that describe
-#    all the implemented functions.
+#       pyast.htx/pyast.html - The contents of dochead.html and doctail.html
+#       are copied to the start and end of pyast.htx/pyast.html. The middle
+#       is generated automatically and is a collection of links to fragments
+#       of node1.html that describe all the implemented functions.
+
+#  Get the path to a local copy of the C docs (SUN/211).
+$sun211 = $ARGV[0];
+if( not defined $sun211 ) {
+   $sun211 = "/star/docs/sun211.tex";
+}
+
+#  Identify all public AST functions by examining the tex source for
+#  SUN/211. We create several hashes containing information about the
+#  subset of public functions for which pyast provides a wrapper. These
+#  hashes are keyed by the function name (e.g. "AddFrame", etc). The
+#  hashes are:
+#
+#  "invokes": Each entry describes an invocation of the corresponding pyast function.
+#  "notes": Each entry contains any notes for the pyast function, read from Ast.c.
+#  "static": Non-zero if the function is a static (i.e. class) function.
+
+#  The following hash has entries for all AST functions, whether a pyast
+#  wrapper exists or not:
+#
+#  "purpose": A brief description of the purpose of each function.
 
 
-open( IN, "</star/docs/sun211.tex" );
+open( IN, $sun211 ) or die "Cannot open $sun211";
 $state = 0;
 $iline = 0;
 $pur = "";
@@ -40,11 +73,16 @@ while( $line = <IN> ){
    chomp($line);
    $iline++;
 
+#  Check if we have found the start of the section containing the function
+#  descriptions.
    if( $state == 0 ) {
       if( $line =~ /^\\section\{.*AST Function Descriptions.*\}$/ ) {
          $state = 1;
       }
 
+#  Check if we have found the start of a new function description. Leave the
+#  loop when all functions have been done (i.e. when a new section is
+#  encountered).
    } elsif( $state == 1 ) {
       if( $line =~ /^\\section/ ) {
          last;
@@ -52,13 +90,14 @@ while( $line = <IN> ){
          $state = 2;
       }
 
+#  Look for the function name (label).
    } elsif( $state == 2 ) {
-      if( $line =~ / *ast(\w+)(\$.*\$)?\\sstlabel\{(.+)\}/ ) {
+      if( $line =~ / *ast(\w+)(\$.*\$)?/ ) {
          $funcname = $1;
-         $xref = $3;
       }
       $state = 3;
 
+#  Skip the following "}{" line.
    } elsif( $state == 3 ) {
       if( $line =~ /\}\{/ ) {
          $state = 4;
@@ -67,9 +106,15 @@ while( $line = <IN> ){
          exit;
       }
 
+#  Read the rest of the function docs. The current $line should be the function
+#  purpose text.
    } elsif( $state == 4 ) {
+
+#  Arrive here once the function purpose has been read.
       if( $line =~ /\}\{/ ) {
 
+#  Construct regular expressions which match the three possible forms in which
+#  the function may be declared within the pyast interface file (Ast.c).
          if( $funcname eq "TranN" ) {
             $meth = "tran";
          } else {
@@ -79,6 +124,8 @@ while( $line = <IN> ){
          $method_gpat = "^static .* +\\*?(\\w+)_$meth##\\w+\\(.*\\{";
          $constructor_pat = "^static +int +".$funcname."_init\\(.*\\{";
 
+#  Open the pyast interface file (Ast.c) and read through it until we find a
+#  line that matches one of the above regular expressions.
          open( IN2, "<starlink/ast/Ast.c" );
          $found = 0;
          $isgeneric = 0;
@@ -92,11 +139,13 @@ while( $line = <IN> ){
             chomp($line2);
             $line2 =~ s/ *\\ *$//;
 
+#  If we have not yet found a match, check now. Note some properties
+#  of the function if a match is found.
             if( !$found ) {
                if( $line2 =~ /$method_pat/ ) {
                   $iscon = 0;
                   $class = lc($1);
-                  if( lc($class) eq "pyast" ) {
+                  if( $class eq "pyast" ) {
                      $class = "starlink.Ast";
                      $isstatic = 1;
                   }
@@ -112,6 +161,8 @@ while( $line = <IN> ){
                   $found = 1;
                }
 
+#  If we have previously found a match, read the special comment line that
+#  gives information about the python inputs and outputs.
             } elsif ( $line2 =~ /\/\* +args: (.*):(.*) *\*\//i ) {
                $got_args = 1;
                @outs = split( / *, */, $1 );
@@ -122,19 +173,26 @@ while( $line = <IN> ){
                }
                $inlist = join( ', ', split( / *, */, $2 ) );
 
-            } elsif ( $line2 =~ /\/\* +Note: *(.*)$/i ) {
+#  If we have previously found a match, read the special comment lines that
+#  contain any notes to be included with the function in the python docs.
+           } elsif ( $line2 =~ /\/\* +Note: *(.*)$/i ) {
                $note = $1;
 
+#  If we reach a line containing PyObject, then Ast.c is missing the special
+#  "args:" line for this function!!
             } elsif( $line2 =~ /PyObject/ ){
                if( !$got_args ) {
                   print("No args list found for $funcname\n");
                }
                last;
 
+#  Extend any note to include text from the new line.
             } elsif ( $note ne ' ' ){
                $note .= " ".$line2;
             }
 
+#  Each note is a separate comment in Ast.c. Store all notes in
+#  the "items" array.
             if ( $note =~ /(.*)\*\// ){
                $note = join( ' ', split( /\s+/, $1 ) );
                push( @items, $note );
@@ -143,7 +201,7 @@ while( $line = <IN> ){
          }
          close(IN2);
 
-
+#  If the function name was found in Ast.C, include it in the following hashes.
          if( $found ) {
             if( $iscon ) {
                $invokes{$funcname} = "$meth = starlink.Ast.$class( $inlist )";
@@ -159,13 +217,18 @@ while( $line = <IN> ){
             }
          }
 
+#  Store the purpose of every sun/211 function (whether or not it has a pyast wrapper).
          $purposes{$funcname} = $pur;
-         $xrefs{$funcname} = $xref;
+
+#  Start looking for the next function within sun/211.
          $pur = "";
          $state = 1;
 
+#  Put the function purpose text into $pur.
       } elsif( $line =~ /^ *(.*) *$/ ) {
          $pur .= "$1 ";
+
+#  Should never get here...
       } else {
          print("Unexpected text at line $iline:\n$line");
          exit;
@@ -175,8 +238,22 @@ while( $line = <IN> ){
 
 
 
+
+
+
+#  Having gathered all the required information from sun/211 and
+#  Ast.c, we now generate the output HTML files.
+
+#  The URL of the starlink documents server - used to access on-line
+#  version of SUN/211. This service determines the current URL of the page
+#  describing a particular method.
+$stardocs = "http://www.starlink.ac.uk/cgi-bin/htxserver";
+
+#  "node1.html" contains information about all the AST functions for
+#  which pyast provides wrappers.
 open( OUT, ">pyast.htx/node1.html" );
 
+#  A static header...
 print OUT <<EOF;
 <html>
 <head>
@@ -211,7 +288,7 @@ the "ast..." function name to display the AST reference documentation
 from SUN/211.
 <p>
 For examples of calling these wrappers, see the PyAST test script
-(starlink/ast/test/test.py).
+(file starlink/ast/test/test.py within the pyast source distribution).
 <p>
 General Notes:
 <ul>
@@ -230,16 +307,21 @@ that provides the method.
 <p>
 EOF
 
+#  Now add a descrption of each AST function for which a pyast wrapper exists.
 foreach $key (sort keys %purposes) {
    if( $invokes{$key} ) {
       print OUT "<div class=\"implemented\" id=\"$key\">\n";
-      print OUT "&#149; &nbsp; <a href=\"/star/docs/sun211.htx/#xref_$xrefs{$key}\">ast$key</a> - $purposes{$key}\n";
+      print OUT "&#149; &nbsp; <a href=\"$stardocs/sun211.htx/?xref_ast$key\">ast$key</a> - $purposes{$key}\n";
       print OUT "<ul>\n";
       print OUT "<li><span class=inv>$invokes{$key}</span></li>\n";
       if( $isstat{$key} ) {
          print OUT "<li class=\"note\">This is a static module function.</li>\n";
       }
+
+#  Check notes for references to ast functions (e.g. "<*astGetC*>", and replace
+#  them with links to the SUN/211 docs.
       foreach $note (split /zzz/, $notes{$key} ) {
+         $note =~ s/<\*(\S+)\*>/<a href="$stardocs\/sun211.htx\/?xref_$1">$1<\/a>/g;
          print OUT "<li class=\"note\">$note</li>\n";
       }
       print OUT "</ul>\n";
@@ -247,6 +329,7 @@ foreach $key (sort keys %purposes) {
    }
 }
 
+#  Static footer.
 print OUT <<EOF;
 </body>
 </html>
@@ -254,18 +337,28 @@ EOF
 
 close( OUT );
 
+
+
+
+
+
+#  "node2.html" contains a list of all the AST functions for which no
+#  pyast wrapper has yet been written.
 open( OUT, ">pyast.htx/node2.html" );
 
+#  Static header...
 print OUT <<EOF;
 <html>
 <head>
 </head>
 <body>
 <h2>AST functions with no python wrapper</h2>
-The following AST functions cannot currently be used in python.
+The following AST functions cannot currently be used in python. Further functions
+will be added to pyast as and when people ask for them.
 <p><ul>
 EOF
 
+#  List each AST function name for which there is a purpose but no pyast invocation.
 foreach $key (sort keys %purposes) {
    if( ! $invokes{$key} ) {
 
@@ -275,11 +368,12 @@ foreach $key (sort keys %purposes) {
          $extra = '';
       }
       print OUT "<div class=\"unimplemented\">\n";
-      print OUT "<a href=\"/star/docs/sun211.htx/#xref_$xrefs{$key}\">ast$key - $purposes{$key}</a>$extra<br>\n";
+      print OUT "<a href=\"$stardocs/sun211.htx/?xref_ast$key\">ast$key - $purposes{$key}</a>$extra<br>\n";
       print OUT "</div>\n";
    }
 }
 
+#  Static footer...
 print OUT <<EOF;
 </ul></body>
 </html>
@@ -288,15 +382,51 @@ EOF
 close( OUT );
 
 
+
+
+
+#  "pyast.html" is the top-level pyast docs page.
 open( OUT, ">pyast.htx/pyast.html" );
+
+#  Since it is larger, read in the static header from a separate file
+#  "dochead.html" rather than including it verbatim within this file.
+#  Substitute date and pyast version number into the html.
+
+($day, $month, $year) = (localtime)[3,4,5];
+
+$tens = $day/10;
+$units = $day%10;
+if( $tens == 1 ) {
+  $ord = "th";
+} elsif( $units == 1 ) {
+  $ord = "st";
+} elsif( $units == 2 ) {
+  $ord = "nd";
+} elsif( $units == 3 ) {
+  $ord = "rd";
+} else {
+  $ord = "th";
+}
+@MONTHS = ("January","February","March","April","May","June","July","August","September","October","November","December");
+$year += 1900;
+$date = "$day$ord $MONTHS[$month] $year";
+
+open(FILE,"setup.py");
+local $/ = undef;
+$lines = <FILE>;
+close(FILE);
+$lines =~ / +version *= *'(\S+)',/;
+$version = $1;
+
 open( IN, "<dochead.html" );
-while(<IN>){
-   print OUT;
+while( $line = <IN> ){
+   $line =~ s/<\*date\*>/$date/;
+   $line =~ s/<\*version\*>/$version/;
+   print OUT $line;
 }
 close( IN );
 
-print OUT "<li><A href=\"node2.html\">Unimplemented AST functions</A>\n";
-print OUT "<li><A href=\"node1.html\">Implemented AST functions</A>\n";
+#  Add links to all implemented wrappers within "node1.html".
 print OUT "<ul>\n";
 foreach $key (sort keys %purposes) {
    if( $invokes{$key} ) {
@@ -305,7 +435,7 @@ foreach $key (sort keys %purposes) {
 }
 print OUT "</ul>\n";
 
-
+#  Static footer...
 open( IN, "<doctail.html" );
 while(<IN>){
    print OUT;
@@ -313,33 +443,4 @@ while(<IN>){
 close( IN );
 close( OUT );
 
-
-
-$ENV{HTX_PATH} = " ";
-
-print( "Enter Y to create docs for web or N to create docs for distribution: " );
-$ans = <STDIN>;
-chomp($ans);
-if( $ans eq "Y" || $ans eq "y" ) {
-   print("Renaming sun211.htx\n");
-   rename( "sun211.htx", "sun211.tmp" );
-
-} elsif( $ans eq "N" || $ans eq "n" ) {
-   $ENV{HTX_PATH} = $ENV{PWD};
-
-} else {
-   print( "Answer Y or N - not $ans \n" );
-   exit
-}
-
-
-unlink("pyast.htx/htx.index");
-unlink("htx.log");
-system( "/star/bin/hlink ." );
-
-
-if( $ans eq "Y" || $ans eq "y" ) {
-   print("Renaming sun211.htx\n");
-   rename( "sun211.tmp", "sun211.htx" );
-}
 

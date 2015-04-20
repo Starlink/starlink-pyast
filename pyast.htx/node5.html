@@ -46,7 +46,7 @@ Reads an AST FrameSet from a FITS header.
 The header from the specified <a
 href="http://www.stsci.edu/resources/software_hardware/pyfits">
 PyFITS</a> HDU is read, and an AST
-<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node652.html?xref_FrameSet">FrameSet</a> describing the WCS
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing the WCS
 information in the header is returned. <code>None</code> is returned instead of a
 FrameSet if WCS information cannot be read from the header. A string
 identifying the scheme used to describe WCS information in the header
@@ -66,13 +66,13 @@ an element of the hdulist, then the primary HDU (element zero) will be
 used.</dd>
 
 <dt><code>frameset</code></dt><dd>
-A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node652.html?xref_FrameSet">FrameSet</a> describing
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing
 the pixel and world coordinate systems read from the FITS header, or <code>None</code>
 if no WCS could be read.</dd>
 
 <dt><code>encoding</code></dt><dd>
 Indicates how the WCS information was encoded in the header. For possible
-values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node488.html?xref_Encoding">
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
 Encoding</a>" attribute in SUN/211.
 
 </dl></ul>
@@ -147,7 +147,7 @@ draw the axes.</dd>
 <dt><big><code id="plotframeset">plotframeset:</code></big></dt><dd>
 Plot an annotated coordinate
 grid in a <a href="http://matplotlib.sourceforge.net/">matplotlib</A> axes area.The function returns a reference to the
-<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node666.html?xref_Plot">Plot</a> that was used to draw the
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Plot">Plot</a> that was used to draw the
 axes.
 
 <p>Synopsis:<ul>
@@ -209,8 +209,8 @@ draw the axes.</dd>
 <dt><big><code id="writefitswcs">writefitswcs:</code></big></dt><dd>
 Writes an AST FrameSet to a FITS header.
 <p>
-The WCS information described by the supplied <a 
-href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node652.html?xref_FrameSet">FrameSet</a> is converted
+The WCS information described by the supplied <a
+href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> is converted
 into a set of FITS header cards which are stored in the supplied
 <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
 PyFITS</a> HDU (all cards in the header are first removed).
@@ -223,7 +223,7 @@ nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
 <dl>
 
 <dt><code>frameset</code></dt><dd>
-A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node652.html?xref_FrameSet">FrameSet</a>
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a>
 to be written out to the FITS header.
 
 <dt><code>hdu</code></dt><dd>
@@ -235,7 +235,7 @@ primary HDU (element zero) will be used.</dd>
 
 <dt><code>encoding</code></dt><dd>
 Indicates how the WCS information is to be encoded in the header. For possible
-values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node488.html?xref_Encoding">
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
 Encoding</a>" attribute in SUN/211.
 
 <dt><code>nobj</code></dt><dd>
@@ -284,7 +284,7 @@ headers using the requested encoding, and zero otherwise.
 This class allows a
 <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
 PyFITS</a> HDU to be used as the source or sink object with a
-<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/node648.html?xref_FitsChan">FitsChan</a>.
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">FitsChan</a>.
 <p>
 When used as a FitsChan source, the PyFITSAdapter will allow the
 FitsChan to read each of the cards in the associated PyFITS header,

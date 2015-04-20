@@ -404,8 +404,7 @@ static PyObject *Object_deepcopy( Object *self, PyObject *args ) {
 static PyObject *Object_get( Object *self, PyObject *args ) {
 
 /* args: result:attrib */
-/* Note: The starlink.Ast.get() method is equivalent to
-   <a href="/star/docs/sun211.htx/#xref_astGetC">astGetC</a>
+/* Note: The starlink.Ast.get() method is equivalent to <*astGetC*>
    in that it always returns the string representation of the AST
    attribute value. By contrast, each Python property returns the
    attribute value using the native data type of the AST attribute
@@ -5654,6 +5653,9 @@ static PyObject *Region_mapregion( Region *self, PyObject * args ) {
 #undef NAME
 #define NAME CLASS ".negate"
 static PyObject *Region_negate( Region *self ) {
+
+/* args: : */
+
   PyObject *result = NULL;
   if (PyErr_Occurred() ) return NULL;
   astNegate( THIS );
