@@ -12,9 +12,7 @@ To test it, do:
 
 python starlink/ast/test/test.py
 
-To view documentation, open pyast.htx/pyast.html in your favourite
-browser, or view the docs online at
-http://dsberry.github.com/starlink/pyast.html
+User docs are available at http://timj.github.io/starlink-pyast/pyast.html
 
 
 
