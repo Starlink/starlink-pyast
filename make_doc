@@ -7,12 +7,15 @@
 #    Produce the HTML docs for starlink.Ast
 
 #  Usage:
-#    make_doc <sun211.tex>
+#    make_doc <sun211.tex>  <Ast.c>
 
 #  Paramaters:
 #    <sun211.tex>
 #       The full path to a copy of file sun211.tex (the C docs for AST).
 #       Defaults to /star/docs/sun211.tex if not supplied.
+#    <Ast.c>
+#       The full path to a copy of Ast.c - the main pyast wrapper file.
+#       Stored in starlink/ast/Ast.c on the main pyast branch.
 
 #  Description:
 #    This script is not intended to be distributed to PyAST users. It
@@ -28,9 +31,9 @@
 #    distributed, the langiage is not too important.
 #
 #    It gets a list of all public AST functions by scanning
-#    /star/docs/sun211.tex. It then scans starlink/ast/Ast.c to see
-#    which of these functions are implemented. It then produces the
-#    following output HTML files:
+#    /star/docs/sun211.tex. It then scans Ast.c to see which of these
+#    functions are implemented. It then produces the following output HTML
+#    files:
 #
 #       node1.html - A list of the implemented functions with
 #       their Python API and links to the corresponding section of SUN/211
@@ -43,11 +46,28 @@
 #       is generated automatically and is a collection of links to fragments
 #       of node1.html that describe all the implemented functions.
 
-#  Get the path to a local copy of the C docs (SUN/211).
-$sun211 = $ARGV[0];
-if( not defined $sun211 ) {
-   $sun211 = "/star/docs/sun211.tex";
+#  Get the path to a local copy of the C docs (SUN/211), and the path to the
+#  main pyast wrapper file (Ast.c).
+if( @argv < 2 ) {
+   print( "Path to sun211.tex (/star/docs/sun211.tex): " );
+   $sun211 = <>;
+   chomp($sun211);
+   if( $sun211 eq "" ) {
+      $sun211 = "/star/docs/sun211.tex";
+   }
+
+   print( "Path to Ast.c (./Ast.c): " );
+   $astc = <>;
+   chomp($astc);
+   if( $astc eq "" ) {
+      $astc = "./Ast.c";
+   }
+
+} else {
+   $sun211 = $ARGV[0];
+   $astc = $ARGV[1];
 }
+
 
 #  Identify all public AST functions by examining the tex source for
 #  SUN/211. We create several hashes containing information about the
@@ -65,7 +85,7 @@ if( not defined $sun211 ) {
 #  "purpose": A brief description of the purpose of each function.
 
 
-open( IN, $sun211 ) or die "Cannot open $sun211";
+open( IN, $sun211 ) or die "Cannot open SUN/211 tex source file $sun211";
 $state = 0;
 $iline = 0;
 $pur = "";
@@ -126,7 +146,7 @@ while( $line = <IN> ){
 
 #  Open the pyast interface file (Ast.c) and read through it until we find a
 #  line that matches one of the above regular expressions.
-         open( IN2, "<starlink/ast/Ast.c" );
+         open( IN2, $astc ) or die "Cannot open pyast wrapper file $astc";
          $found = 0;
          $isgeneric = 0;
          $isstatic = 0;
@@ -390,7 +410,7 @@ open( OUT, ">pyast.html" );
 
 #  Since it is larger, read in the static header from a separate file
 #  "dochead.html" rather than including it verbatim within this file.
-#  Substitute date and pyast version number into the html.
+#  Substitute date into the html.
 
 ($day, $month, $year) = (localtime)[3,4,5];
 
@@ -411,17 +431,9 @@ if( $tens == 1 ) {
 $year += 1900;
 $date = "$day$ord $MONTHS[$month] $year";
 
-open(FILE,"setup.py");
-local $/ = undef;
-$lines = <FILE>;
-close(FILE);
-$lines =~ / +version *= *'(\S+)',/;
-$version = $1;
-
 open( IN, "<dochead.html" );
 while( $line = <IN> ){
    $line =~ s/<\*date\*>/$date/;
-   $line =~ s/<\*version\*>/$version/;
    print OUT $line;
 }
 close( IN );
