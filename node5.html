@@ -1,0 +1,363 @@
+<html>
+<head>
+<style type="text/css">
+pre.pycode {display:inline-block;
+             background-color:#FFFFDD;
+             padding-top:10px;
+             padding-bottom:10px;
+             padding-left:13px;
+             padding-right:13px;
+             font-family: monospace;
+             border:1px solid #DDD;}
+</style>
+</head>
+<body>
+
+<h2>High level functions</h2>
+The <code>starlink.Atl</code> module within PyAST provides a small number
+of high level functions and classes that wrap up various other PyAST
+calls to perform commonly required operations.
+
+<ul>
+- <a href="#funs">Utility functions</a><br>
+<ul>
+<li><a href="#readfitswcs">readfitswcs: Reads an AST FrameSet from a FITS header.</a>
+<li><a href="#writefitswcs">writefitswcs: Write an AST FrameSet to a FITS file.</a>
+<li><a href="#plotframeset">plotframeset: Plot an annotated coordinate grid in a matplotlib axes area.</a>
+<li><a href="#plotfitswcs">plotfitswcs: Read WCS from a PyFITS HDU and
+       plot an annotated coordinate grid in a matplotlib axes area.</a>
+</ul>
+
+- <a href="#cls">Utility classes</a>
+
+<ul>
+<li><a href="#pyfitsadapter">PyFITSAdapter: Allows PyAST FitsChan objects
+to read and write headers to and from a PyFITS HDU. </a>
+</ul>
+
+</ul>
+<dl>
+
+<hr><h4 id="funs">Utility functions</h4>
+
+<dt><big><code id="readfitswcs">readfitswcs:</code></big></dt><dd>
+Reads an AST FrameSet from a FITS header.
+<p>
+The header from the specified <a
+href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU is read, and an AST
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing the WCS
+information in the header is returned. <code>None</code> is returned instead of a
+FrameSet if WCS information cannot be read from the header. A string
+identifying the scheme used to describe WCS information in the header
+(the encoding) is also returned.
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+(frameset,encoding) = starlink.Atl.readfitswcs( hdu )
+</pre>
+<p>
+<dl>
+
+<dt><code>hdu</code></dt><dd>
+An element of the hdulist associated with a FITS file opened using
+<code>pyfits.open()</code>. If the entire hdulist is supplied, rather than
+an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
+
+<dt><code>frameset</code></dt><dd>
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> describing
+the pixel and world coordinate systems read from the FITS header, or <code>None</code>
+if no WCS could be read.</dd>
+
+<dt><code>encoding</code></dt><dd>
+Indicates how the WCS information was encoded in the header. For possible
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
+Encoding</a>" attribute in SUN/211.
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>>
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> frameset = Atl.readfitswcs( hdulist )
+>>> if frameset == None:
+>>>    print( "Cannot read WCS from test.fit" )
+</pre>
+</ul>
+
+</dd>
+
+<dt><big><code id="plotfitswcs">plotfitswcs:</code></big></dt><dd>
+Read WCS from a <a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU and plot an annotated coordinate grid
+in a <a href="http://matplotlib.sourceforge.net/">matplotlib</A> axes
+area. The grid covers the entire image. The function returns a reference to
+the Plot that was used to draw the axes.
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+plot = starlink.Atl.plotfitswcs( axes, gbox, hdu, options="" )
+</pre>
+<p>
+<dl>
+
+<dt><code>axes</code></dt><dd>A matplot lib "Axes" object. The annotated axes
+normally produced by matplotlib will be removed, and axes will instead be
+drawn by the AST Plot class</dd>
+
+<dt><code>gbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the matplotlib Axes object. The supplied values
+should be in the order (xleft,ybottom,xright,ytop) and should be given in
+the matplotlib "axes" coordinate system.</dd>
+
+<dt><code>hdu</code></dt><dd>
+An element of the hdulist associated with a FITS file opened using
+<code>pyfits.open()</code>. If the entire hdulist is supplied, rather than
+an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
+
+<dt><code>options</code></dt><dd>An optional string holding a comma-separated list of
+Plot attribute settings. These control the appearance of the annotated
+axes.</dd>
+
+<dt><code>plot</code></dt><dd>A reference to the Ast.Plot that was used to
+draw the axes.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import matplotlib.pyplot
+>>>
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
+>>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
+>>> matplotlib.pyplot.show()
+</pre>
+</ul>
+
+</dd>
+
+<dt><big><code id="plotframeset">plotframeset:</code></big></dt><dd>
+Plot an annotated coordinate
+grid in a <a href="http://matplotlib.sourceforge.net/">matplotlib</A> axes area.The function returns a reference to the
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Plot">Plot</a> that was used to draw the
+axes.
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+plot =  starlink.Atl.plotframeset( axes, gbox, bbox, frameset, options="" )
+</pre>
+<p>
+<dl>
+
+<dt><code>axes</code></dt><dd>A matplotlib "Axes" object. The annotated axes
+normally produced by matplotlib will be removed, and axes will instead be
+drawn by the AST Plot class</dd>
+
+<dt><code>gbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the matplotlib Axes object. The supplied values
+should be in the order (xleft,ybottom,xright,ytop) and should be given in
+the matplotlib "axes" coordinate system.</dd>
+
+<dt><code>bbox</code></dt><dd>A list of four values giving the bounds of the new
+annotated axes within the coordinate system represented by the base Frame
+of the supplied FrameSet. The supplied values should be in the order
+(xleft,ybottom,xright,ytop).
+
+<dt><code>frameset</code></dt><dd>An AST FrameSet such as returned by the
+<code>starlink.Atl.readfits</code> function. Its base Frame should be
+2-dimensional.
+
+<dt><code>options</code></dt><dd>An optional string holding a comma-separated list of
+Plot attribute settings. These control the appearance of the annotated
+axes.</dd>
+
+<dt><code>plot</code></dt><dd>A reference to the Ast.Plot that was used to
+draw the axes.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import matplotlib.pyplot
+>>>
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> frameset = starlink.Atl.readfitswcs( hdulist )
+>>> if frameset != None:
+>>>    naxis1 = hdulist[0].header['NAXIS1']
+>>>    naxis2 = hdulist[0].header['NAXIS2']
+>>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
+>>>                      [ 0.1, 0.1, 0.9, 0.9 ],
+>>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
+>>>    matplotlib.pyplot.show()
+</pre>
+</ul>
+
+</dd>
+
+
+
+<dt><big><code id="writefitswcs">writefitswcs:</code></big></dt><dd>
+Writes an AST FrameSet to a FITS header.
+<p>
+The WCS information described by the supplied <a
+href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a> is converted
+into a set of FITS header cards which are stored in the supplied
+<a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU (all cards in the header are first removed).
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
+</pre>
+<p>
+<dl>
+
+<dt><code>frameset</code></dt><dd>
+A reference to the <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FrameSet">FrameSet</a>
+to be written out to the FITS header.
+
+<dt><code>hdu</code></dt><dd>
+An element of the PyFITS hdulist associated with a FITS file. The header
+cards generated from the FrameSet are stored in the header associated with
+this HDU. All cards are first removed from the header. If the entire
+hdulist is supplied, rather than an element of the hdulist, then the
+primary HDU (element zero) will be used.</dd>
+
+<dt><code>encoding</code></dt><dd>
+Indicates how the WCS information is to be encoded in the header. For possible
+values, see the documentation for the "<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_Encoding">
+Encoding</a>" attribute in SUN/211.
+
+<dt><code>nobj</code></dt><dd>
+Returned equal to 1 if the FrameSet was converted successfully to FITS
+headers using the requested encoding, and zero otherwise.
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import starlink.Atl as Atl
+>>>
+>>> (frameset,encoding) = Atl.readfitswcs( hdu1 )
+>>> if Atl.writefitswcs( frameset, hdu2, encoding="FITS-AIPS" ) == 0:
+>>> if frameset == None:
+>>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
+</pre>
+</ul>
+
+</dd>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<hr><h4 id="cls">Utility classes</h4>
+
+<dt><big><code id="pyfitsadapter">PyFITSAdapter:</code></big></dt><dd>
+
+This class allows a
+<a href="http://www.stsci.edu/resources/software_hardware/pyfits">
+PyFITS</a> HDU to be used as the source or sink object with a
+<a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_FitsChan">FitsChan</a>.
+<p>
+When used as a FitsChan source, the PyFITSAdapter will allow the
+FitsChan to read each of the cards in the associated PyFITS header,
+thus allowing the cards to be copied into the FitsChan. This happens
+when the newly created, empty FitsChan is used for the first time
+(i.e. when any of its methods is invoked), and subsequently whenever
+the <code>FitsChan.readfits()</code> method is invoked.
+<p>
+When used as a FitsChan sink, the PyFITSAdapter will allow the
+FitsChan to copy its own header cards into the PyFITS header. This
+happens when the FitsChan is deleted or when the <code>FitsChan.writefits()</code>
+method is invoked. If the PyFITSAdapter.clear property is true, then
+the PyFITS header is first emptied of all existing headers, and the
+contents of the FitsChan are then stored in the PyFITS header.  If the
+PyFITSAdapter.clear property is False, the original contents of the
+PyFITS header are retained. In this case each FitsChan card replaces any
+existing card that refers to the same keyword (if there is no card
+for the keyword already in the PyFITS header, the FitsChan card will
+be appended to the end of the header).
+<p>
+The class provides a public constructor, but no public methods.
+
+<p>Synopsis:<ul>
+<pre class="pycode">
+pyfitsadapter =  starlink.Atl.PyFITSAdapter( hdu, clear=True )
+</pre>
+<p>
+<dl>
+
+<dt><code>hdu</code></dt>
+<dd>An element of the <code>hdulist</code> associated with a FITS file opened
+using "</code>pyfits.open()</code>". If the entire hdulist is supplied, rather
+than an element of the hdulist, then the primary HDU (element zero) will be
+used.</dd>
+
+<dt><code>clear</code></dt>
+<dd> This value is only used when using the PyFITSAdapter as a sink
+function with a FitsChan. If "clear" is True, the original contents of
+the PyFITS header are deleted immediately before the first FitsChan card
+is copied into the PyFITS header. If "clear" is False, the original
+contents of the PyFITS heasder are retained, with the FitsChan keywords
+over-writing any existing values for the same keywords.</dd>
+
+</dl></ul>
+
+<p>Example:<ul>
+<pre class="pycode">
+>>> import pyfits
+>>> import starlink.Atl as Atl
+>>> import starlink.Ast as Ast
+>>>
+>>> hdulist = pyfits.open( 'test.fit' )
+>>> adapter = Atl.PyFITSAdapter( hdulist[ 1 ] )
+>>> fc = Ast.FitsChan( adapter, adapter )
+>>> frameset = fc.read()
+>>> fc.writefits()
+</pre>
+<p>
+This example fills a FitsChan with the headers from the first extension
+in 'test.fit'. It then reads WCS information from the FitsChan. Since
+FitsChan reads are destructive, this causes all the WCS-related keywords
+to be deleted from the FitsChan. The remaining non-WCS keywords are then
+written out to the original PyAST header (the PyAST header is empted
+first). The net effect is to remove all WCS keywords from the PyAST header.
+</ul>
+</dd>
+
+
+
+
+
+
+
+</dl>
+</body>
+</html>
