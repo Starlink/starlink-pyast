@@ -1,4 +1,5 @@
 import starlink.Ast as Ast
+import matplotlib
 import matplotlib.pyplot
 import matplotlib.lines
 import math
@@ -28,6 +29,7 @@ class grf_matplotlib(object):
    def __init__(self,axes):
       if isinstance(axes,matplotlib.axes.Axes):
          self.axes = axes
+         self.renderer = None
 
 #  Save the current axis scales.
          self.Scales()
@@ -126,6 +128,34 @@ class grf_matplotlib(object):
             c = m + "." + c
          raise TypeError("The supplied axes object is a "+c+", it should "
                          "an instance of matplotlib.axes.Axes or a subclass")
+
+#------------------------------------------------------------------------
+#  Some backends, such as TkAgg, have the get_renderer method, which #makes this
+#  easy. Other backends do not have the get_renderer method, so we have a work
+#  around to find the renderer.  Print the figure to a temporary file #object,
+#  and then grab the renderer that was used. This trick is stolen from the
+#  matplotlib backend_bases.py print_figure() method.
+
+   def find_renderer( self, fig ):
+
+      if not self.renderer:
+         if hasattr(fig, "canvas"):
+            if hasattr(fig.canvas, "get_renderer"):
+               self.renderer = fig.canvas.get_renderer()
+            else:
+               try:
+                  import io
+                  fig.canvas.print_pdf(io.BytesIO())
+                  self.renderer = fig._cachedRenderer
+               except:
+                  pass
+
+      if not self.renderer:
+         raise AttributeError("No renderer available using matplotlib "
+                              "backend {0} - use a different backend".
+                              format(matplotlib.get_backend()) )
+
+      return(self.renderer)
 
 #------------------------------------------------------------------------
    def Attr( self, attr, value, prim ):
@@ -334,7 +364,7 @@ class grf_matplotlib(object):
 #------------------------------------------------------------------------
    def TxExt( self, text, x, y, just, upx, upy ):
       otext = self.Text( text, x, y, just, upx, upy, boxprops={"boxstyle":"square,pad=0.0"} )
-      renderer = self.axes.get_figure().canvas.get_renderer()
+      renderer = self.find_renderer( self.axes.get_figure() )
       otext.draw(renderer)
       pix_verts = otext.get_bbox_patch().get_verts()
       wcs_verts = otext.get_transform().inverted().transform(pix_verts)
@@ -342,4 +372,5 @@ class grf_matplotlib(object):
 
       return (wcs_verts[0][0], wcs_verts[1][0], wcs_verts[2][0], wcs_verts[3][0],
               wcs_verts[0][1], wcs_verts[1][1], wcs_verts[2][1], wcs_verts[3][1])
+
 
