@@ -5502,6 +5502,7 @@ static PyObject *Region_getregionbounds( Region *self );
 static PyObject *Region_negate( Region *self );
 static PyObject *Region_overlap( Region *self, PyObject *args );
 static PyObject *Region_mapregion( Region *self, PyObject *args );
+static PyObject *Region_getregionpoints( Region *self, PyObject *args );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -5528,6 +5529,7 @@ static PyMethodDef Region_methods[] = {
   {"mapregion", (PyCFunction)Region_mapregion, METH_VARARGS, "Transform a Region into a new Frame using a given Mapping"},
   {"negate", (PyCFunction)Region_negate, METH_NOARGS, "Negate the area represented by a Region"},
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
+  {"getregionpoints", (PyCFunction)Region_getregionpoints, METH_VARARGS, "Get the positions that define a Region"},
   {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -5687,6 +5689,51 @@ static PyObject *Region_overlap( Region *self, PyObject * args ) {
   TIDY;
   return result;
 }
+
+#undef NAME
+#define NAME CLASS ".getregionpoints"
+static PyObject *Region_getregionpoints( Region *self, PyObject *args ) {
+
+/* args: points: */
+/* Note: The returned "points" array will be a 2-dimensional array
+         with shape (ncoord,npoint), where "ncoord" is the number of
+         axes within the Frame represented by the Region, and "npoint"
+         is the number of points used to define the Region. */
+
+   PyObject *result = NULL;
+   int naxes;
+   int npoint;
+   npy_intp dims[2];
+   PyArrayObject *points = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* Get the number of points used to define the Region. */
+   astGetRegionPoints( THIS, 0, 0, &npoint, NULL );
+
+/* Get the number of axes within the Frame represented by the Region. */
+   naxes = astGetI( THIS, "Naxes" );
+
+/* Create the returned array. */
+   dims[0] = naxes;
+   dims[1] = npoint;
+   points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+
+/* If successful, put the axis values at the required positions into the
+   array. */
+   if( points ) {
+      astGetRegionPoints( THIS, 0, 0, &npoint, NULL );
+      astGetRegionPoints( THIS, npoint, naxes, &npoint,
+                          (double *) points->data );
+
+      if( astOK ) result = Py_BuildValue("O", PyArray_Return(points) );
+  }
+  Py_XDECREF(points);
+
+  TIDY;
+  return result;
+}
+
 
 /* Box */
 /* === */
