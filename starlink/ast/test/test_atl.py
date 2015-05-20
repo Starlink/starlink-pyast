@@ -37,6 +37,6 @@ fc.writefits()
 #  Display the headers now in the pyfits primary hdu.
 print()
 print("The non-WCS cards in cobe.fit: ")
-for v in ffile[0].header.ascard:
+for v in ffile[0].header.cards:
    print(v)
 
