@@ -110,8 +110,8 @@ class PyFITSAdapter:
       indicate that there are no more header cards to read.
       """
 
-      if self.index < len( self.hdu.header.ascard ):
-         result = self.hdu.header.ascard[ self.index ].ascardimage()
+      if self.index < len( self.hdu.header.cards ):
+         result = self.hdu.header.cards[ self.index ].image
          self.index += 1
       else:
          result = None
