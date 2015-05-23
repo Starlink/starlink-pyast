@@ -381,7 +381,7 @@ MAKE_GET(class,attrib, \
 */
 
 #define SETCODEL(attrib) \
-   if( PyBool_Check( self ) ) { \
+   if( PyBool_Check( value ) ) { \
       astSetI( ((Object*)self)->ast_object, ATTNORM(#attrib), ( value == Py_True ) ); \
       if( astOK ) result = 0; \
    }
