@@ -44,6 +44,8 @@ static char *GetString( void *mem, PyObject *value );
 static char *PyAst_ToString( PyObject *self );
 static const char *AttNorm( const char *att, char *buff );
 static void Sinka( const char *text );
+static const char *FormatObject( PyObject *o );
+const char *GetObjectType( PyObject *o );
 
 /* Macros used in this file */
 #define PYAST_MODULE
@@ -8574,6 +8576,8 @@ static PyObject *Plot_regionoutline( Plot *self, PyObject *args );
 static PyObject *Plot_text( Plot *self, PyObject *args );
 static void Plot_dealloc( Plot *self );
 static int setGrf( Plot *self, PyObject *value );
+static const char *IntToColour( Plot *self, int colour );
+static int ColourToInt( Plot *self, const char *colour );
 
 /* Wrappers for external Python Grf functions */
 static int Attr_wrapper( AstObject *grfcon, int attr, double value, double *old_value, int prim );
@@ -9191,7 +9195,85 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
    return result;
 }
 
+/* A function to convert a text colour name into an integer, using the
+   Grf object. */
+static int ColourToInt( Plot *self, const char *colour ){
+   int ret = -1;
 
+   if( self && self->grf ) {
+      if( PyObject_HasAttrString(self->grf, "ColToInt") ){
+         PyObject *result = PyObject_CallMethod( self->grf, "ColToInt", "s", colour );
+
+         if( result ) {
+            if( result != Py_None ) ret = PyLong_AsLong( result );
+            Py_DECREF( result );
+         } else {
+            PyErr_Format( PyExc_ValueError, "Cannot convert colour %s to "
+                          "an integer - no such colour is known.", colour );
+         }
+
+      } else if( sscanf( colour, "%d", &ret ) != 1 ) {
+         PyErr_SetString( PyExc_TypeError, "Cannot convert a colour name to "
+                          "a colour index since the supplied Grf object "
+                          "has no ColToInt method." );
+      }
+
+   } else if( ! self ) {
+      PyErr_SetString( PyExc_TypeError, "Cannot convert a colour name to "
+                       "an integer since no Plot was supplied." );
+
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Cannot convert a colour name to "
+                       "an integer since the supplied object is not a "
+                       "Plot or has no Grf object." );
+   }
+
+   if( PyErr_Occurred() ) ret = -1;
+   return ret;
+}
+
+/* A function to convert a colour number into a colour name, using the
+   Grf object. An empty string is returned if the colour name cannot be
+   found or returned. */
+#define MAXLENCOL 49
+static const char *IntToColour( Plot *self, int colour ){
+   const char *ret = NULL;
+   static char buf[MAXLENCOL + 1];
+   buf[0] = 0;
+
+   if( self && self->grf ) {
+      if( PyObject_HasAttrString(self->grf, "IntToCol") ){
+         PyObject *result = PyObject_CallMethod( self->grf, "IntToCol", "i", colour );
+
+         if( result && result != Py_None) {
+            char *p = GetString( NULL, result );
+            if( p ){
+               if( strlen( p ) > MAXLENCOL ) {
+                  PyErr_Format( PyExc_ValueError, "The name of colour %d ('%s') "
+                                "is too long.", colour, p );
+               } else {
+                  strcpy( buf, p );
+                  ret = buf;
+               }
+               p = astFree( p );
+            }
+            Py_DECREF( result );
+         }
+      }
+
+   } else if( ! self ) {
+      PyErr_SetString( PyExc_TypeError, "Cannot convert a colour index to "
+                       "a colour name since no Plot was supplied." );
+
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Cannot convert a colour index to "
+                       "a colour name since the supplied object is not a "
+                       "Plot or has no Grf object." );
+   }
+
+   return ret;
+}
+#undef MAXLENCOL
 
 /* Check a supplied Grf object has all the required methods, and store it
    in the Plot. */
@@ -11825,4 +11907,48 @@ static const char *AttNorm( const char *att, char *buff ){
    return result;
 }
 
+
+const char *FormatObject( PyObject *o ){
+/*
+*  Name:
+*     FormatObject
+
+*  Purpose:
+*     Return a formatted representation of an arbitrary PyObject.
+*     The returned pointer points to static memory and must not be
+*     freed.
+
+*/
+   const char *result;
+   PyObject *repr = PyObject_Repr( o );
+
+   if( PyUnicode_Check( repr ) ) {
+      PyObject *bytes = PyUnicode_AsASCIIString(repr);
+      if( bytes ) {
+         result =  PyBytes_AS_STRING(bytes);
+         Py_DECREF(bytes);
+      }
+
+#if PY_MAJOR_VERSION < 3
+   } else if( PyString_Check( repr ) ) {
+      result =  PyString_AsString(repr);
+#endif
+   }
+
+   Py_DECREF(repr);
+   return result;
+}
+
+
+const char *GetObjectType( PyObject *o ){
+/*
+*  Name:
+*     GetObjectType
+
+*  Purpose:
+*     Return a pointer to the type name of an object.
+
+*/
+   return o->ob_type->tp_name;
+}
 

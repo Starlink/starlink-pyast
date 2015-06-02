@@ -118,6 +118,28 @@ class DummyGrf():
    def TxExt( self, text, x, y, just, upx, upy ):
       return (x-0.1,x+0.1,x+0.1,x-0.1,y-0.1,y-0.1,y+0.1,y+0.1)
 
+   def IntToCol( self, col ):
+      if col == 0:
+         return "red"
+      elif col == 1:
+         return "blue"
+      elif col == 2:
+         return "green"
+      else:
+         return None
+
+   def ColToInt( self, col ):
+      if col == "red":
+         return 0;
+      elif col == "blue":
+         return 1
+      elif col == "green":
+         return 2
+      else:
+         try:
+            return int(col)
+         except ValueError:
+            return None
 
 #  Tester
 class TestAst(unittest.TestCase):
@@ -1035,9 +1057,18 @@ class TestAst(unittest.TestCase):
       plot.Tol = 0.5
       self.assertEqual( plot.Tol, 0.5 )
 
-      self.assertEqual( plot.Colour_Border, 1 )
+      plot.Colour_Title = "red"
+      self.assertEqual( plot.Colour_Title, "red" )
+      plot.Colour_Title = 1
+      self.assertEqual( plot.Colour_Title, "blue" )
+      plot.Colour_Title = 5
+      self.assertEqual( plot.Colour_Title, 5 )
+
+      self.assertEqual( plot.Colour_Border, "blue" )
+      plot.Colour_Border = 5
+      self.assertEqual( plot.Colour_Border, 5 )
       plot.Colour_Border = 2
-      self.assertEqual( plot.Colour_Border, 2 )
+      self.assertEqual( plot.Colour_Border, "green" )
 
       plot.border()
 

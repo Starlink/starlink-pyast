@@ -78,12 +78,12 @@ class grf_matplotlib(object):
 
 #  A list used to convert AST integer colours into corresponding matplotlib
 #  properties. Ensure the first colour is the default.
-         self.colours = [ {"color":defcol}, {"color":'red'}, {"color":'green'},
-                          {"color":'blue'}, {"color":'cyan'},
-                          {"color":'magenta'}, {"color":'yellow'},
-                          {"color":'black'}, {"color":'darkgrey'},
-                          {"color":'grey'}, {"color":'lightgrey'},
-                          {"color":'white'} ]
+         self.colours = [ {"color":defcol}, {"color":'#ff0000'}, {"color":'#00ff00'},
+                          {"color":'#0000ff'}, {"color":'#00ffff'},
+                          {"color":'#ff00ff'}, {"color":'#ffff00'},
+                          {"color":'#000000'}, {"color":'#a9a9a9'},
+                          {"color":'#808080'}, {"color":'#d3d3d3'},
+                          {"color":'#ffffff'} ]
 
 #  The current graphics attribute values as used by AST
          self.__attrs = { Ast.grfLINE:{Ast.grfSTYLE:1, Ast.grfWIDTH:1, Ast.grfSIZE:1,
@@ -373,5 +373,68 @@ class grf_matplotlib(object):
 
       return (wcs_verts[0][0], wcs_verts[1][0], wcs_verts[2][0], wcs_verts[3][0],
               wcs_verts[0][1], wcs_verts[1][1], wcs_verts[2][1], wcs_verts[3][1])
+
+
+#------------------------------------------------------------------------
+   def ColToInt( self, colour ):
+      result = -1
+
+#  If integer, use as is.
+      try:
+         result = int( colour )
+
+#  If not, convert the supplied string to an RGB triple, and then to a
+#  html hex string.
+      except ValueError:
+         try:
+            rgb = matplotlib.colors.colorConverter.to_rgb(colour)
+            hex = matplotlib.colors.rgb2hex( rgb )
+
+#  Check if this hex string is already in the list of known colours.
+            index = -1;
+            for item in self.colours:
+               index += 1
+               if item['color'] == hex:
+                  result = index
+                  break
+
+#  If not, add it to the end.
+            if result == -1:
+               self.colours.append( {"color":hex} )
+               result = index + 1
+
+#  Return -1 if the supplied colour is not legal.
+         except ValueError:
+            pass
+
+#  GRF colours are zero-based, but AST colours are 1-based.
+      if result != -1:
+         result += 1
+
+      return result;
+
+
+#------------------------------------------------------------------------
+   def IntToCol( self, colour ):
+      result = None
+
+# Convert from 1-based AST values to zero based Grf values.
+      colour = int(colour) - 1
+
+#  Check it is in the range of the list of known colours (otherwise we
+#  reyturn None).
+      if colour >= 0 and colour < len(self.colours):
+
+#  Get the corresponding colour name (a html hex string).
+         result = self.colours[colour]['color'].upper()
+
+#  Replace the hex string with any corresponding standard colour name.
+         for name, hex in matplotlib.colors.cnames.items():
+            if hex == result:
+               result = name
+               break;
+
+#  Return the colour name.
+      return result;
 
 

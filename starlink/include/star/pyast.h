@@ -195,8 +195,11 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
       if( astOK ) result = 0; \
    } else { \
       setcode \
-      if( result == -1 ) PyErr_SetString( PyExc_TypeError, "Bad value supplied " \
-                                 "for " #class " attribute '" #attrib "'." ); \
+      if( result == -1 && !PyErr_Occurred()) { \
+         PyErr_Format( PyExc_TypeError, "Bad value (%s) supplied " \
+                       "for " #class " attribute '" #attrib "'.", \
+                       FormatObject( value ) ); \
+      } \
    } \
    TIDY; \
    return result; \
@@ -231,8 +234,10 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
 \
 static int set##attrib( class *self, PyObject *value, void *closure ); \
 static int set##attrib( class *self, PyObject *value, void *closure ){ \
-   PyErr_SetString( PyExc_AttributeError, \
-                    "Can't set read-only attribute '" #attrib "'."); \
+   if( ! PyErr_Occurred() ) { \
+      PyErr_SetString( PyExc_AttributeError, \
+                       "Can't set read-only attribute '" #attrib "'."); \
+   } \
    return -1; \
 }
 
@@ -259,6 +264,42 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
 MAKE_GET(class,attrib, \
    Py_BuildValue( "s", astGetC( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ));
 
+
+/*
+*  Name:
+*     MAKE_GETCOL
+
+*  Purpose:
+*     Declare and define a get method for a colour-valued AST attribute.
+
+*  Synopsis:
+*     MAKE_GETCOL(class,attrib)
+
+*  Parameters:
+*     class
+*        The AST Class name (in ptactice, this should always be Plot).
+*     attrib
+*        The AST attribute name (e.g. Colour_Border ).
+
+*/
+
+#define MAKE_GETCOL(class,attrib) \
+\
+static PyObject *get##attrib( class *self, void *closure ); \
+static PyObject *get##attrib( class *self, void *closure ){ \
+   PyObject *result; \
+   char att_buf[ MXATTR_LEN ]; \
+   int icol = astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib)); \
+   const char *text = IntToColour( self, icol ); \
+   if( text ) { \
+      result = Py_BuildValue( "s", text ); \
+   } else { \
+      result = Py_BuildValue( "i", icol ); \
+   } \
+   TIDY; \
+   Py_INCREF( result ); \
+   return result; \
+}
 
 /*
 *  Name:
@@ -556,6 +597,50 @@ MAKE_GET(class,attrib, \
 
 /*
 *  Name:
+*     MAKE_GETSETCOL
+
+*  Purpose:
+*     Declare and define get and set methods for a colour-valued AST attribute.
+
+*  Synopsis:
+*     MAKE_GETSETCOL(class,attrib)
+
+*  Parameters:
+*     class
+*        The AST Class name (in practice, this should always be Plot).
+*     attrib
+*        The AST attribute name (e.g. Colour_Border, etc ).
+
+*/
+
+
+#define SETCODECOL(attrib) \
+   int icol; \
+   char *cval = GetString(NULL,value); \
+   if( cval ) { \
+      icol = ColourToInt( self, cval ); \
+      if( icol >= 0 ) { \
+         astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
+      } \
+      cval = astFree( cval ); \
+   } else if( LONG_CHECK(value) ) { \
+      icol = PyLong_AsLong( value ); \
+      astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
+   } else if( ! PyErr_Occurred() ) { \
+      PyErr_Format( PyExc_TypeError, "Cannot set attribute '" \
+                    #attrib "' - value (%s) is not a known colour " \
+                    "name or an integer.", FormatObject(value) ); \
+   } \
+   if( astOK ) result = 0;
+
+
+#define MAKE_GETSETCOL(class,attrib) \
+   MAKE_GETCOL(class,attrib) \
+   MAKE_SET(class,attrib, Unicode, string, SETCODECOL(attrib));
+
+
+/*
+*  Name:
 *     DEFATT
 
 *  Purpose:
@@ -603,7 +688,7 @@ static int import_pyast(void) {
    if (PyErr_Occurred()) return -1;
    pyast = PyImport_ImportModule("starlink.Ast");
    PyAst_API = (void **) PyCapsule_Import( "starlink.Ast._C_API", 0 );
-   if( ! PyAst_API ) {
+   if( ! PyAst_API && !PyErr_Occurred() ) {
        PyErr_Print();
        PyErr_SetString(PyExc_ImportError, "starlink.Ast failed to import");
    }

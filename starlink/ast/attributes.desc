@@ -16,6 +16,7 @@
 #      "I" - integer
 #      "L" - boolean
 #      "D" - 64 bit floating point
+#      "COL" - colour (only for use with Plot attributes)
 #   desc - a text string description (must not include any commas!)
 #   maxindex - the max allowed integer index for values in a multi-valued
 #           attribute (1 if the attribute is not multi-valued or has string
@@ -47,7 +48,7 @@ WcsMap,WcsAxis,RO,I,FITS-WCS projection axes,2,1,-
 WcsMap,ProjP,SET,D,FITS-WCS projection parameters,2,0,-
 #  WcsMap,PVi_m needs special treatment
 PcdMap,PcdCen,SET,D,Centre coordinates of pincushion/barrel distortion,2,1,-
-Plot,Colour,SET,I,Colour index for a Plot element,1,1,Axes Axis1 Axis2 Border Curves Grid Grid1 Grid2 Markers NumLab NumLab1 NumLab2 Strings TextLab TextLab1 TextLab2 Ticks Ticks1 Ticks2 Title
+Plot,Colour,SET,COL,Colour index for a Plot element,1,1,Axes Axis1 Axis2 Border Curves Grid Grid1 Grid2 Markers NumLab NumLab1 NumLab2 Strings TextLab TextLab1 TextLab2 Ticks Ticks1 Ticks2 Title
 Plot,DrawAxes,SET,L,Draw axes for a Plot?,2,1,-
 Plot,Edge,SET,C,Which edges to label in a Plot,2,1,-
 Plot,Font,SET,I,Character font for a Plot element,1,1,Axes Axis1 Axis2 Border Curves Grid Grid1 Grid2 Markers NumLab NumLab1 NumLab2 Strings TextLab TextLab1 TextLab2 Ticks Ticks1 Ticks2 Title
