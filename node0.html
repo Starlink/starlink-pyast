@@ -150,6 +150,34 @@ and this will set the colour of a Plot border to colour index 1:
 </span>
 <p>
 
+<b>Colours:</b> - when a colour is specified within an options string (as
+in the first of the above two examples), only integer values are allowed.
+However, when using the equivalent Python property (as in the second of
+the above examples), colours may also be specified as strings, if this
+is allowed by the Grf module in use. The default matplotlib Grf module
+supplied with pyast allows colours to be specified using any string format
+that is recognised by matplotlib. So the second example could for instance
+be replaced by:
+<p>
+<span class=pycode>
+>>> Plot.Colour_Border = "lime"
+</span>
+<p>
+Note, when retrieving the value of a colour property, the colour will be
+converted to a named colour if possible, and will be represented as a hex
+HTML colour string otherwise. For instance:
+
+<p>
+<span class=pycode>
+>>> Plot.Colour_Border = "#000000"
+>>> print( Plot.Colour_Border )
+'black'
+>>> Plot.Colour_Border = "#FFEBC0"
+>>> print( Plot.Colour_Border )
+'#FFEBC0'
+</span>
+<p>
+
 <li> AST attributes can be retrieved using the <code>starlink.Ast.get()</code>
 method or the corresponding Python property:
 <p>

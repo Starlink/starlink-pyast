@@ -37,7 +37,7 @@ import pyfits
 import starlink.Grf as Grf
 import starlink.Ast as Ast
 import starlink.Atl as Atl
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 
 #  Open the FITS file using (for instance) pyfits. A list of the HDUs
 #  in the FITS file is returned.
@@ -282,21 +282,17 @@ else:
 </pre>
 
 
-<h4>...Display a Graphical Coordinate Grid</h4>
+<h4>...Display a Graphical Coordinate Grid Over a Greyscale Image</h4>
 <pre class=pycode>
 
-#  Create a matplotlib plotting region. Ensure that the matplotlib axis
-#  annotations are not drawn.
+#  Create a matplotlib figure, 12x9 inches in size.
    dx=12.0
    dy=9.0
-   fig = matplotlib.pyplot.figure( figsize=(dx,dy) )
-   ax = fig.add_axes( ( 0, 0, 1, 1 ) )
-   ax.xaxis.set_visible( False )
-   ax.yaxis.set_visible( False )
+   fig = plt.figure( figsize=(dx,dy) )
+   fig_aspect_ratio = dy/dx
 
-#  We map the entire FITS pixel grid onto this box. So get the bounds
-#  of the pixel grid from the FitsChan. If the NAXIS1/2 keywords are
-#  not in the FitsChan, use defaults of 500.
+#  Get the bounds of the pixel grid from the FitsChan. If the NAXIS1/2
+#  keywords are not in the FitsChan, use defaults of 500.
    if "NAXIS1" in fitschan:
       naxis1 = fitschan["NAXIS1"]
    else:
@@ -306,29 +302,48 @@ else:
       naxis2 = fitschan["NAXIS2"]
    else:
       naxis2 = 500
-   bbox = ( 0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5 )
 
-#  Set the bounds (in matplotlib data coordinates) of the largest rectangle
-#  that can be drawn on the matplotlib plotting area that has the same
-#  aspect ratio as the FITS array. Shrink the box to leave room for axis
-#  annotation.
+#  Set up the bounding box of the image in pixel coordinates, and get
+#  the aspect ratio of th eimage.
+   bbox = (0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5)
    fits_aspect_ratio = ( bbox[3] - bbox[1] )/( bbox[2] - bbox[0] )
-   grf_aspect_ratio = dy/dx
-   if grf_aspect_ratio > fits_aspect_ratio :
+
+#  Set up the bounding box of the image as fractional offsets within the
+#  figure. The hx and hy variables hold the horizontal and vertical half
+#  widths of the image, as fractions of the width and height of the figure.
+#  Shrink the image area by a factor of 0.7 to leave room for annotated axes.
+   if fig_aspect_ratio > fits_aspect_ratio :
       hx = 0.5
-      hy = 0.5*fits_aspect_ratio/grf_aspect_ratio
+      hy = 0.5*fits_aspect_ratio/fig_aspect_ratio
    else:
-      hx = 0.5*grf_aspect_ratio/fits_aspect_ratio
+      hx = 0.5*fig_aspect_ratio/fits_aspect_ratio
       hy = 0.5
 
    hx *= 0.7
    hy *= 0.7
-
    gbox = ( 0.5 - hx, 0.5 - hy, 0.5 + hx, 0.5 + hy )
 
+#  Add an Axes structure to the figure and display the image within it,
+#  scaled between data values zero and 100. Suppress the axes as we will
+#  be using AST to create axes.
+   ax_image = fig.add_axes( [ gbox[0], gbox[1], gbox[2] - gbox[0],
+                              gbox[3] - gbox[1] ], zorder=1 )
+   ax_image.xaxis.set_visible( False )
+   ax_image.yaxis.set_visible( False )
+   ax_image.imshow( hdu_list[0].data, vmin=0, vmax=200, cmap=plt.cm.gist_heat,
+                    origin='lower', aspect='auto')
+
+#  Add another Axes structure to the figure to hold the annotated axes
+#  produced by AST. It is displayed on top of the previous Axes
+#  structure. Make it transparent so that the image will show through.
+   ax_plot = fig.add_axes( [ 0, 0, 1, 1 ], zorder=2 )
+   ax_plot.xaxis.set_visible(False)
+   ax_plot.yaxis.set_visible(False)
+   ax_plot.patch.set_alpha(0.0)
+
 #  Create a drawing object that knows how to draw primitives (lines,
-#  marks and strings) into the matplotlib plotting region.
-   grf = Grf.grf_matplotlib( ax )
+#  marks and strings) into this second Axes structure.
+   grf = Grf.grf_matplotlib( ax_plot )
 
 #  Create the AST Plot, using the above object to draw the primitives. The
 #  Plot is based on the FrameSet that describes the WCS read from the FITS
@@ -336,12 +351,19 @@ else:
 #  coords, and then to matplotlib data coords.
    plot = Ast.Plot( wcsinfo, gbox, bbox, grf )
 
-#  And finally, draw the annotated WCS axes and any coordinate grid
-#  requested in the plotting attributes.
+#  Set some nice attributes for the plot.
+   plot.Colour_Border = "lime"
+   plot.Colour_Ticks = "lime"
+   plot.MajTickLen = 0.02
+   plot.Width_TextLab = 2
+   plot.Width_NumLab = 2
+   plot.Width_Title = 2
+
+#  And finally, draw the annotated WCS axes.
    plot.grid()
 
 #  Make the matplotlib plotting area visible
-   matplotlib.pyplot.show()
+   plt.show()
 
 
 

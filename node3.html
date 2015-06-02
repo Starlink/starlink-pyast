@@ -188,6 +188,15 @@ bbox = ( -1.0, -1.0, 1.0, 1.0 )<br>
 # Create the Plot, using the above grf object, and using a default Frame.<br>
 plot = Ast.Plot( None, gbox, bbox, grf )<br>
 <br>
+# Set some niceattributes for the plot. Note, colours can be supplied in any <br>
+# form that is acceptable to matplotlib.<br>
+plot.Colour_Border = "lime"<br>
+plot.Colour_Ticks = "lime"<br>
+plot.MajTickLen = 0.02<br>
+plot.Width_TextLab = 2<br>
+plot.Width_NumLab = 2<br>
+plot.Width_Title = 2<br>
+<br>
 #  Draw a coordinate grid.<br>
 plot.grid()<br>
 <br>
