@@ -94,7 +94,8 @@ class grf_matplotlib(object):
                                        Ast.grfFONT:1, Ast.grfCOLOUR:1}}
 
 #  The corresponding graphics properties used by matplotlib
-         self.__props = { Ast.grfLINE:{}, Ast.grfMARK:{}, Ast.grfTEXT:{}}
+         self.__props = { Ast.grfLINE:{"solid_capstyle":'butt'},
+                          Ast.grfMARK:{}, Ast.grfTEXT:{}}
 
 #  Ensure the defaults are current.
          for attr in ( Ast.grfCOLOUR, Ast.grfWIDTH, Ast.grfSIZE,
