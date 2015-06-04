@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     17-APR-2015 (makeh):
+*     21-MAY-2015 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -824,7 +824,7 @@ typedef struct AstMapping {
    AstObject object;
 
    char invert;
-   char issimple;
+   char flags;
    int nin;
    int nout;
    char report;
@@ -1834,6 +1834,7 @@ typedef struct AstLutMap {
    double start;
    int *flagsi;
    int *indexi;
+   double lutepsilon;
    int lutinterp;
    int nlut;
    int nluti;

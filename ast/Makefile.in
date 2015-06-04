@@ -3428,6 +3428,9 @@ distdir: $(DISTFILES)
 	    || exit 1; \
 	  fi; \
 	done
+	$(MAKE) $(AM_MAKEFLAGS) \
+	  top_distdir="$(top_distdir)" distdir="$(distdir)" \
+	  dist-hook
 	-test -n "$(am__skip_mode_fix)" \
 	|| find "$(distdir)" -type d ! -perm -755 \
 		-exec chmod u+rwx,go+rx {} \; -o \
@@ -3748,21 +3751,21 @@ uninstall-am: uninstall-binSCRIPTS uninstall-dist_binSCRIPTS \
 	check-am clean clean-checkPROGRAMS clean-cscope clean-generic \
 	clean-libLTLIBRARIES clean-libtool clean-noinstPROGRAMS cscope \
 	cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
-	distcheck distclean distclean-compile distclean-generic \
-	distclean-hdr distclean-libtool distclean-tags distcleancheck \
-	distdir distuninstallcheck dvi dvi-am html html-am info \
-	info-am install install-am install-binSCRIPTS install-data \
-	install-data-am install-dist_binSCRIPTS \
-	install-dist_pkgdataDATA install-dist_starnewsDATA install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-hook \
-	install-html install-html-am install-includeHEADERS \
-	install-includeMESSAGES install-info install-info-am \
-	install-libLTLIBRARIES install-man install-manifest \
-	install-nodist_includeHEADERS install-pdf install-pdf-am \
-	install-ps install-ps-am install-stardocsDATA \
-	install-starfacsDATA install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	dist-gzip dist-hook dist-lzip dist-shar dist-tarZ dist-xz \
+	dist-zip distcheck distclean distclean-compile \
+	distclean-generic distclean-hdr distclean-libtool \
+	distclean-tags distcleancheck distdir distuninstallcheck dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-binSCRIPTS install-data install-data-am \
+	install-dist_binSCRIPTS install-dist_pkgdataDATA \
+	install-dist_starnewsDATA install-dvi install-dvi-am \
+	install-exec install-exec-am install-exec-hook install-html \
+	install-html-am install-includeHEADERS install-includeMESSAGES \
+	install-info install-info-am install-libLTLIBRARIES \
+	install-man install-manifest install-nodist_includeHEADERS \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-stardocsDATA install-starfacsDATA install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	recheck tags tags-am uninstall uninstall-am \
@@ -3823,6 +3826,15 @@ install-exec-hook: libast.la
 # sun210_figures
 sun211_figures: sun210_figures
 	$(LN_S) sun210_figures sun211_figures
+
+#  Need to include latex support files in the distribution tar ball so
+#  that the docs can be built from the tex source files. Requires environment
+#  variable STARLATEXSUPPORT to be deined. Is there a better way to do this?
+dist-hook:
+	cp -p $(STARLATEXSUPPORT)/starlink.cls $(distdir)/
+	cp -p $(STARLATEXSUPPORT)/starabbrev.sty $(distdir)/
+	cp -p $(STARLATEXSUPPORT)/starstyle.sty $(distdir)/
+	cp -p $(STARLATEXSUPPORT)/sst.sty $(distdir)/
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

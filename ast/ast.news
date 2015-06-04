@@ -16,12 +16,39 @@ environment-independent.
 Main Changes in this Version
 ----------------------------
 
+- The behaviour of the astAddFrame method has been changed slightly.
+Previously, astAddFrame modified the FrameSet by storing references to
+the supplied Mapping and Frame objects within the FrameSet. This meant
+that any subsequent changes to the current Frame of the modified FrameSet
+also affected the supplied Frame object. Now, astAddFrame stores deep
+copies of the Mapping and Frame objects (rather than references) within
+the modified FrameSet. This means that subsequent changes to the modified
+FrameSet will now have no effect on the supplied Frame.
+
 - The choice of default tick-mark for time axes has been improved, to avoid
 previous issues which could result in no suitable gap being found, or
 inappropriate tick marks when using formatted dates.
 
 - A new method called astRegionOutline has been added to the Plot class.
 It draws the outline of a supplied AST Region.
+
+- A bug has been fixed that could cause astSimplfy to enter an infinite loop.
+
+- Some improvements have been made to the Mapping simplification process
+that allow more Mappings to be simplified.
+
+- The Frame class has a new read-only attribute called "InternalUnit",
+which gives the units used for the unformatted (i.e. floating-point) axis
+values used internally by application code. For most Frames, the
+InternalUnit value is just the same as the Unit value (i.e. formatted and
+unformatted axis values use the same units). However, the SkyFrame class
+always returns "rad" for InternalUnit, regardless of the value of Unit,
+indicating that floating-point SkyFrame axis values are always in units
+of radians.
+
+- The LutMap class has a new attribute called LutEpsilon, which specifies
+the relative error of the values in the table. It is used to decide if
+the LutMap can be simplified to a straight line.
 
 
 Main Changes in V8.0.3

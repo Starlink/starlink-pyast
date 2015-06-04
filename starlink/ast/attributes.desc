@@ -37,7 +37,8 @@ Frame,Label,SET,C,Axis label,MXDIM,1,-
 Frame,NormUnit,RO,C,Normalised axis physical units,MXDIM,1,-
 Frame,Symbol,SET,C,Axis symbol,MXDIM,1,-
 Frame,Top,SET,D,Highest axis value to display,MXDIM,1,-
-Frame,Unit,SET,C,Axis physical units,MXDIM,1,-
+Frame,Unit,SET,C,Units for formatted axis values,MXDIM,1,-
+Frame,InternalUnit,RO,C,Units for unformatted axis values,MXDIM,1,-
 SkyFrame,AsTime,SET,L,Format celestal coordinates as times?,2,1,-
 SkyFrame,IsLatAxis,RO,L,Is the specified celestial axis a latitude axis?,2,1,-
 SkyFrame,IsLonAxis,RO,L,Is the specified celestial axis a longitude axis?,2,1,-

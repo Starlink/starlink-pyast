@@ -4520,7 +4520,11 @@ When it is first created, a SkyFrame's axes are always in the order
 \htmlref{AST\_PERMAXES}{AST\_PERMAXES} routine (\secref{ss:permutingaxes}). The order of the axes
 can be determined at any time using the \htmlref{LatAxis}{LatAxis} and \htmlref{LonAxis}{LonAxis} attributes. A
 SkyFrame's coordinate values are always stored as angles in (double
-precision) radians, regardless of the setting of the Unit attribute.
+precision) radians, regardless of the setting of the Unit attribute
+\footnote{The units used for the internal floating-point representation of an
+axis value can be determined by examining the InternalUnit attribute of
+the Frame. For most Frames, the Unit and InternalUnit attributes will be
+equal, but InternalUnit is always set to ``\texttt{rad}'' for SkyFrames.}.
 
 \subsection{Creating a SkyFrame}
 
@@ -27204,7 +27208,6 @@ Object             - Base class for all AST Objects
 }{
    \sstdescription{
       This function draws an outline around the supplied AST \htmlref{Region}{Region} object.
-      xxx
    }
    \sstinvocation{
       CALL AST\_REGIONOUTLINE( THIS, REGION, STATUS )
@@ -36630,6 +36633,42 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   InternalUnit(axis)
+}{
+   Physical units for unformated axis values
+}{
+   \sstdescription{
+      This read-only attribute contains a textual representation of the
+      physical units used to represent unformatted (i.e. floating point)
+      values on a particular axis of a \htmlref{Frame}{Frame}, typically handled internally
+      within application code. In most cases, the value of the InternalUnit
+      attribute will be the same as Unit attribute (i.e. formatted and
+      unformatted axis values will normally uses the system of units).
+      The main exception to this is the \htmlref{SkyFrame}{SkyFrame} class, which represents
+      unformatted axis values in radians, regardless of the current
+      setting of the Unit attribute.
+   }
+   \sstattributetype{
+      String, read-only.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         Frame
+      }{
+         All Frames have this attribute.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+         When specifying this attribute by name, it should be
+         subscripted with the number of the Frame axis to which it
+         applies.
+      }
+   }
+}
+\sstroutine{
    IntraFlag
 }{
    IntraMap identification string
@@ -38384,7 +38423,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    NormUnit(axis)
 }{
-   Normalised Axis physical units
+   Normalised physical units for formatted axis values
 }{
    \sstdescription{
       The value of this read-only attribute is derived from the current
@@ -41747,12 +41786,13 @@ Object             - Base class for all AST Objects
 \sstroutine{
    Unit(axis)
 }{
-   Axis physical units
+   Physical units for formatted axis values
 }{
    \sstdescription{
       This attribute contains a textual representation of the physical
-      units used to represent coordinate values on a particular axis
-      of a \htmlref{Frame}{Frame}. The \htmlref{AST\_SETACTIVEUNIT}{AST\_SETACTIVEUNIT} routine controls how the Unit values
+      units used to represent formatted coordinate values on a particular
+      axis of a \htmlref{Frame}{Frame}.
+      The \htmlref{AST\_SETACTIVEUNIT}{AST\_SETACTIVEUNIT} routine controls how the Unit values
       are used.
    }
    \sstattributetype{
@@ -41796,6 +41836,16 @@ Object             - Base class for all AST Objects
    }
    \sstnotes{
       \sstitemlist{
+
+         \sstitem
+         This attribute described the units used when an axis value is
+         formatted into a string using
+         AST\_FORMAT.
+         In some cases these units may be different to those used to represent
+         floating point axis values within application code (for instance a
+         SkyFrame always uses radians to represent floating point axis values).
+         The InternalUnit attribute described the units used for floating
+         point values.
 
          \sstitem
          When specifying this attribute by name, it should be
@@ -43389,6 +43439,9 @@ Object             - Base class for all AST Objects
          \htmlref{Format(axis)}{Format(axis)}: Format specification for axis values
 
          \sstitem
+         \htmlref{InternalUnit(axis)}{InternalUnit(axis)}: Physical units for unformated axis values
+
+         \sstitem
          \htmlref{Label(axis)}{Label(axis)}: \htmlref{Axis}{Axis} label
 
          \sstitem
@@ -43404,7 +43457,7 @@ Object             - Base class for all AST Objects
          \htmlref{Naxes}{Naxes}: Number of Frame axes
 
          \sstitem
-         \htmlref{NormUnit(axis)}{NormUnit(axis)}: Normalised axis physical units
+         \htmlref{NormUnit(axis)}{NormUnit(axis)}: Normalised physical units for formatted axis values
 
          \sstitem
          \htmlref{ObsAlt}{ObsAlt}: Geodetic altitude of observer
@@ -43434,7 +43487,7 @@ Object             - Base class for all AST Objects
          \htmlref{Top(axis)}{Top(axis)}: Highest axis value to display
 
          \sstitem
-         \htmlref{Unit(axis)}{Unit(axis)}: Axis physical units
+         \htmlref{Unit(axis)}{Unit(axis)}: Physical units for formatted axis values
       }
    }
    \sstdiytopic{
@@ -45403,6 +45456,13 @@ Object             - Base class for all AST Objects
       All the coordinate values used by a SkyFrame are in
       radians. These may be formatted in more conventional ways for
       display by using \htmlref{AST\_FORMAT}{AST\_FORMAT}.
+      For a SkyFrame, the Unit attribute describes the formatted value of
+      a SkyFrame axis, and may for instance be {\tt{"}}h:m:s{\tt{"}}, indicating that a
+      formatted axis value contains colon-separated fields for hours, minutes
+      and seconds. On the other hand, the InternalUnit attribute for a
+      SkyFrame is always set to {\tt{"}}rad{\tt{"}} (i.e. radians), indicating that the
+      unformatted (i.e. floating point) axis values used by application code
+      are always in units of radians
    }
    \sstconstructor{
       \htmlref{AST\_SKYFRAME}{AST\_SKYFRAME}
@@ -47662,9 +47722,6 @@ the resulting CTYPE\emph{i} keyword values.
 \newpage
 \section{\xlabel{changes_and_new_features}\label{ss:changes}Release Notes}
 
-\sstminitoc{}
-\sstnomaintoc
-
 \subsection{Changes Introduced in V1.1}
 
 The following describes the most significant changes which occurred in
@@ -49417,10 +49474,9 @@ supplied as an argument to a constructor.
 function will now return a Region, if possible, when applied to a Region. If
 this is not possible, a Frame will be returned as before.
 
-\item The default gap size between the ISO date/time labels used by the \htmlref{Plot}{Plot}
-class when displaying an annotated axis described by a \htmlref{TimeFrame}{TimeFrame} has been
-changed. The changes are meant to improve the labelling of calendar time
-axes that span intervals from a day to a few years.
+\item The choice of default tick-mark for time axes has been improved, to avoid
+previous issues which could result in no suitable gap being found, or
+inappropriate tick marks when using formatted dates.
 
 \item A new function called
 \htmlref{AST\_TESTFITS}{AST\_TESTFITS}
@@ -50258,6 +50314,20 @@ being found.
 AST\_REGIONOUTLINE
 has been added to the \htmlref{Plot}{Plot} class. It draws the outline of a supplied AST
 \htmlref{Region}{Region}.
+
+\item A bug has been fixed that could cause astSimplfy to enter an infinite loop.
+
+\item Some improvements have been made to the \htmlref{Mapping}{Mapping} simplification process
+that allow more Mappings to be simplified.
+
+\item The \htmlref{Frame}{Frame} class has a new read-only attribute called InternalUnit,
+which gives the units used for the unformatted (i.e. floating-point) axis
+values used internally by application code. For most Frames, the
+InternalUnit value is just the same as the Unit value (i.e. formatted and
+unformatted axis values use the same units). However, the \htmlref{SkyFrame}{SkyFrame} class
+always returns ``\texttt{rad}'' for InternalUnit, regardless of the value of
+Unit, indicating that floating-point SkyFrame axis values are always in units
+of radians.
 
 \end{enumerate}
 

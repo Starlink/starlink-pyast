@@ -1124,6 +1124,13 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        range [-180,+180]. Prompted by bug report from Bill Joye "yet
 *        another CAR issue" on 24-MAR-2015 (file CHIPASS_Equ.head in
 *        ast_tester).
+*     27-APR-2015 (DSB):
+*        Modify MakeFitsFrameSet so that isolated SkyAxes (e.g.
+*        individual axes that have been oicked from a SkyFrame) are
+*        re-mapped into degrees before being used.
+*     20-APR-2015 (DSB):
+*        In MakeIntWorld, relax tolerance for checking that each FITS-WCS IWC 
+*        axis is linear, from 0.01 of a pixel to 0.1 of a pixel.
 *class--
 */
 
@@ -1317,6 +1324,7 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #include "dsbspecframe.h"
 #include "specmap.h"
 #include "sphmap.h"
+#include "unit.h"
 #include "unitmap.h"
 #include "polymap.h"
 #include "wcsmap.h"
@@ -4159,7 +4167,6 @@ static AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *di
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     AstMapping *CelestialAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
 *                                int *wperm, char s, FitsStore *store, int *axis_done,
 *                                int isoff, const char *method, const char *class, int *status )
@@ -20080,6 +20087,9 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
 *
 *     - NULL is returned if the WCS Frame contains more than one pair of
 *     celestial axes.
+*
+*     - Any isolated sky axes (i.e. not contained within a SkyFrame) are
+*     re-mapped from radians into degrees.
 
 *  Parameters:
 *     this
@@ -20121,10 +20131,13 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    AstMapping *map1;       /* Pointer to pre-WcsMap Mapping */
    AstMapping *map3;       /* Pointer to post-WcsMap Mapping */
    AstMapping *map;        /* Pointer to the pixel->wcs Mapping */
+   AstMapping *remap;      /* Total Mapping from internal to external units */
+   AstMapping *smap;       /* Simplified Mapping */
    AstMapping *tmap0;      /* Pointer to a temporary Mapping */
    AstMapping *tmap1;      /* Pointer to a temporary Mapping */
    AstMapping *tmap2;      /* Pointer to a temporary Mapping */
    AstMapping *tmap;       /* Pointer to a temporary Mapping */
+   AstMapping *umap;       /* 1D Mapping from internal to external units */
    AstSpecFrame *skyfrm;   /* Pointer to the SkyFrame within WCS Frame */
    AstSpecFrame *specfrm;  /* Pointer to the SpecFrame within WCS Frame */
    AstWcsMap *map2;        /* Pointer to WcsMap */
@@ -20132,6 +20145,8 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    char equinox_attr[ 13 ];/* Name of Equinox attribute for sky axes */
    char system_attr[ 12 ]; /* Name of System attribute for sky axes */
    const char *eqn;        /* Pointer to original sky Equinox value */
+   const char *extunit;    /* External units string */
+   const char *intunit;    /* Internal units string */
    const char *skysys;     /* Pointer to original sky System value */
    double con;             /* Constant axis value */
    double reflat;          /* Celestial latitude at reference point */
@@ -20145,6 +20160,7 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    int nwcs;               /* Number of WCS axes */
    int ok;                 /* Is the supplied FrameSet usable? */
    int paxis;              /* Axis index within the primary Frame */
+   int rep;                /* Was error reporting switched on? */
 
 /* Initialise */
    ret = NULL;
@@ -20168,6 +20184,8 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    nwcs = astGetNaxes( wcsfrm );
 
 /* Search the WCS Frame for SkyFrames and SpecFrames. */
+   umap = NULL;
+   remap = NULL;
    specfrm = NULL;
    skyfrm = NULL;
    ok = 1;
@@ -20203,10 +20221,70 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
          } else {
             ilat = iax;
          }
+
+/* If the internal and external units differ, attempt to remap the axis
+   into its external units. */
+      } else {
+
+/* Get the string describing the external units (the "Unit" attribute). */
+         extunit = astGetUnit( pframe, paxis );
+
+/* Get the string describing the internal units (the "InternalUnit"
+   attribute). */
+         intunit = astGetInternalUnit( pframe, paxis );
+
+/* If they are the same, we do not need to modify this axis. */
+         if( astOK && strcmp( extunit, intunit ) ){
+
+/* Otherwise, get the mapping from the internal units to the external
+   units, if possible. Ignore any error reported by unitmapper. */
+            rep = astReporting( 0 );
+            umap = astUnitMapper( intunit, extunit, NULL, NULL );
+            if( !astOK ) astClearStatus;
+            astReporting( rep );
+
+            if( !umap ) {
+
+/* If the above failed, ensure that the external units are the same as
+   the internal units (except that internal radians are converted to
+   external degrees). */
+               if( !strcmp( intunit, "rad" ) ) {
+                  umap = (AstMapping *) astZoomMap( 1, AST__DR2D, " ", status );
+                  extunit = "deg";
+               } else {
+                  extunit = intunit;
+               }
+
+               astSetUnit( wcsfrm, iax, extunit );
+            }
+         }
+      }
+
+/* If no change is needed for the mapping for this axis, use a UnitMap. */
+      if( !umap ) umap = (AstMapping *) astUnitMap( 1, " ", status );
+
+/* Extend the parallel CmpMap to encompass the current axis. */
+      if( remap ) {
+         tmap = (AstMapping *) astCmpMap( remap, umap, 0, " ", status );
+         (void) astAnnul( remap );
+         remap = tmap;
+      } else {
+         remap = astClone( umap );
       }
 
 /* Free resources. */
+      umap = astAnnul( umap );
       pframe = astAnnul( pframe );
+   }
+
+/* See if the pixel->wcs mapping needs to be modified to take account of
+   any changes to axis units. */
+   smap = astSimplify( remap );
+   if( ! astIsAUnitMap( smap ) ) {
+      tmap = (AstMapping *) astCmpMap( map, remap, 1, " ", status );
+      map = astAnnul( map );
+      remap = astAnnul( remap );
+      map = tmap;
    }
 
 /* If the supplied FrameSet is usable... */
@@ -20768,7 +20846,7 @@ static int MakeIntWorld( AstMapping *cmap, AstFrame *fr, int *wperm, char s,
             err = fabs( ptrw[ j ][ i + 1 ] - w0[ j ] );
             if( err > tol[ j ] ) tol[ j ] = err;
          }
-         tol[ j ] *= 0.01;
+         tol[ j ] *= 0.1;
 
 /* If the tolerance is zero (e.g. as is produced for degenerate axes),
    then use a tolerance equal to a very small fraction of hte degenerate
