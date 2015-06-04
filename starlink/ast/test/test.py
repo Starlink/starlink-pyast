@@ -605,6 +605,7 @@ class TestAst(unittest.TestCase):
       refpos = specframe.getrefpos(sky)
       self.assertAlmostEqual( refpos[0], 0, 5 )
       self.assertAlmostEqual( refpos[1], 1 )
+      self.assertEqual( specframe.InternalUnit_1, specframe.Unit_1, )
 
    def test_DSBSpecFrame(self):
       dsbspecframe = starlink.Ast.DSBSpecFrame( "IF=4.0,AlignSideBand=1")
@@ -620,6 +621,8 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( skyframe, starlink.Ast.SkyFrame )
       mapping = skyframe.skyoffsetmap()
       self.assertIsInstance( mapping, starlink.Ast.Mapping )
+      self.assertEqual( skyframe.InternalUnit_1, "rad" )
+      self.assertEqual( skyframe.InternalUnit_2, "rad" )
 
    def test_TimeFrame(self):
       tframe = starlink.Ast.TimeFrame( "TimeScale=TAI" )

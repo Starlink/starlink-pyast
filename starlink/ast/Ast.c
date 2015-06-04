@@ -3412,6 +3412,7 @@ static PyMethodDef Frame_methods[] = {
 #include "Symbol_def.c"
 #include "Top_def.c"
 #include "Unit_def.c"
+#include "InternalUnit_def.c"
 MAKE_GETROI(Frame,Naxes)
 MAKE_GETSETC(Frame,AlignSystem)
 MAKE_GETSETC(Frame,Domain)
@@ -3444,6 +3445,7 @@ static PyGetSetDef Frame_getseters[] = {
    #include "Symbol_desc.c"
    #include "Top_desc.c"
    #include "Unit_desc.c"
+   #include "InternalUnit_desc.c"
    DEFATT(AlignSystem,"Coordinate system used to align Frames"),
    DEFATT(Domain, "Coordinate system domain"),
    DEFATT(Dut1, "Difference between the UT1 and UTC timescale"),
