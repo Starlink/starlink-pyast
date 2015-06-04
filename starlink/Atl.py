@@ -1,6 +1,8 @@
 import starlink.Ast as Ast
 import starlink.Grf as Grf
 import matplotlib.pyplot as plt
+from distutils.version import LooseVersion
+
 try:
     import astropy.io.fits as pyfits
 except ImportError:
@@ -99,6 +101,10 @@ class PyFITSAdapter:
 #  it for the first time
       self.clear = clear
 
+#  Save a flag indicating if the version of pyfits is 3.1.0 or later
+#  (some of the earlier API was deprecated at 3.1.0).
+      self.pyfits_3_1_0 = ( LooseVersion(pyfits.__version__) >=
+                            LooseVersion("3.1.0") )
 
 # -----------------------------------------------------------------
    def astsource(self):
@@ -136,14 +142,28 @@ class PyFITSAdapter:
          self.hdu.header.clear()
 
       card = pyfits.Card.fromstring(card)
-      if card.key == "" or card.key == "BLANK":
-         self.hdu.header.add_blank()
-      elif card.key == "COMMENT":
-         self.hdu.header.add_comment(card.value)
-      elif card.key == "HISTORY":
-         self.hdu.header.add_history(card.value)
+
+#  pyfits 3.1.0 and later
+      if self.pyfits_3_1_0:
+         if card.keyword == "" or card.keyword == "BLANK":
+            self.hdu.header.add_blank()
+         elif card.keyword == "COMMENT":
+            self.hdu.header.add_comment(card.value)
+         elif card.keyword == "HISTORY":
+            self.hdu.header.add_history(card.value)
+         else:
+            self.hdu.header[card.keyword] = ( card.value, card.comment )
+
+#  Pre pyfits 3.1.0
       else:
-         self.hdu.header.update( card.key, card.value, card.comment )
+         if card.key == "" or card.keyword == "BLANK":
+            self.hdu.header.add_blank()
+         elif card.key == "COMMENT":
+            self.hdu.header.add_comment(card.value)
+         elif card.key == "HISTORY":
+            self.hdu.header.add_history(card.value)
+         else:
+            self.hdu.header.update( card.key, card.value, card.comment )
 
       self.index += 1
 
