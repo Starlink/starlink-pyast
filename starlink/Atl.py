@@ -5,8 +5,10 @@ from distutils.version import LooseVersion
 
 try:
     import astropy.io.fits as pyfits
+    _using_pyfits = False
 except ImportError:
     import pyfits
+    _using_pyfits = True
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -103,8 +105,9 @@ class PyFITSAdapter:
 
 #  Save a flag indicating if the version of pyfits is 3.1.0 or later
 #  (some of the earlier API was deprecated at 3.1.0).
-      self.pyfits_3_1_0 = ( LooseVersion(pyfits.__version__) >=
-                            LooseVersion("3.1.0") )
+      if _using_pyfits:
+          self.pyfits_3_1_0 = ( LooseVersion(pyfits.__version__) >=
+                                LooseVersion("3.1.0") )
 
 # -----------------------------------------------------------------
    def astsource(self):
@@ -144,7 +147,7 @@ class PyFITSAdapter:
       card = pyfits.Card.fromstring(card)
 
 #  pyfits 3.1.0 and later
-      if self.pyfits_3_1_0:
+      if _using_pyfits and self.pyfits_3_1_0:
          if card.keyword == "" or card.keyword == "BLANK":
             self.hdu.header.add_blank()
          elif card.keyword == "COMMENT":
