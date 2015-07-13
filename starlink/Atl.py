@@ -5,8 +5,10 @@ from distutils.version import LooseVersion
 
 try:
     import astropy.io.fits as pyfits
+    _using_pyfits = False
 except ImportError:
     import pyfits
+    _using_pyfits = True
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -103,8 +105,9 @@ class PyFITSAdapter:
 
 #  Save a flag indicating if the version of pyfits is 3.1.0 or later
 #  (some of the earlier API was deprecated at 3.1.0).
-      self.pyfits_3_1_0 = ( LooseVersion(pyfits.__version__) >=
-                            LooseVersion("3.1.0") )
+      if _using_pyfits:
+          self.pre_pyfits_3_1_0 = ( LooseVersion(pyfits.__version__) <
+                                LooseVersion("3.1.0") )
 
 # -----------------------------------------------------------------
    def astsource(self):
@@ -143,19 +146,8 @@ class PyFITSAdapter:
 
       card = pyfits.Card.fromstring(card)
 
-#  pyfits 3.1.0 and later
-      if self.pyfits_3_1_0:
-         if card.keyword == "" or card.keyword == "BLANK":
-            self.hdu.header.add_blank()
-         elif card.keyword == "COMMENT":
-            self.hdu.header.add_comment(card.value)
-         elif card.keyword == "HISTORY":
-            self.hdu.header.add_history(card.value)
-         else:
-            self.hdu.header[card.keyword] = ( card.value, card.comment )
-
 #  Pre pyfits 3.1.0
-      else:
+      if _using_pyfits and self.pre_pyfits_3_1_0:
          if card.key == "" or card.keyword == "BLANK":
             self.hdu.header.add_blank()
          elif card.key == "COMMENT":
@@ -164,6 +156,17 @@ class PyFITSAdapter:
             self.hdu.header.add_history(card.value)
          else:
             self.hdu.header.update( card.key, card.value, card.comment )
+
+#  Astropy, pyfits 3.1.0 and later
+      else:
+         if card.keyword == "" or card.keyword == "BLANK":
+            self.hdu.header.add_blank()
+         elif card.keyword == "COMMENT":
+            self.hdu.header.add_comment(card.value)
+         elif card.keyword == "HISTORY":
+            self.hdu.header.add_history(card.value)
+         else:
+            self.hdu.header[card.keyword] = ( card.value, card.comment )
 
       self.index += 1
 
