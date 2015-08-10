@@ -1309,6 +1309,14 @@ class TestAst(unittest.TestCase):
       self.assertIsInstance( polygon.getregionframe(), starlink.Ast.Frame )
       self.assertTrue( numpy.array_equal(polygon.getregionpoints(),
                                          [[0,1,0],[0,1,2]] ) )
+
+      self.assertEqual( polygon.MeshSize, 200 )
+      polygon.MeshSize = 5
+      self.assertEqual( polygon.MeshSize, 5 )
+      self.assertTrue( numpy.allclose(polygon.getregionmesh(),[[0.,0.5,1.,0.5,0.,0.,0.],[0.,0.5,1.,1.5,2.,1.333333333333,0.666666666667]] ) )
+      polygon.clear( "MeshSize" )
+      self.assertEqual( polygon.MeshSize, 200 )
+
       overlap = polygon.overlap( polygon )
       self.assertEqual( overlap, 5 )
       testpolygon = starlink.Ast.Polygon( starlink.Ast.Frame(2),
