@@ -400,6 +400,22 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="GetRegionMesh">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetRegionMesh">astGetRegionMesh</a> - Return a mesh of points covering the surface or volume of a Region 
+<ul>
+<li><span class=inv>points = region.getregionmesh( surface=1  )
+</span></li>
+<li class="note">The returned "points" array will be a 2-dimensional array with shape (ncoord,npoint), where "ncoord" is the number of axes within the Frame represented by the Region, and "npoint" is the number of points in the mesh (see attribute "MeshSize").</li>
+</ul>
+</div>
+<div class="implemented" id="GetRegionPoints">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetRegionPoints">astGetRegionPoints</a> - Returns the positions that define the given Region 
+<ul>
+<li><span class=inv>points = region.getregionpoints(   )
+</span></li>
+<li class="note">The returned "points" array will be a 2-dimensional array with shape (ncoord,npoint), where "ncoord" is the number of axes within the Frame represented by the Region, and "npoint" is the number of points used to define the Region.</li>
+</ul>
+</div>
 <div class="implemented" id="GetTableHeader">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetTableHeader">astGetTableHeader</a> - Get the FITS headers from a FitsTable 
 <ul>
