@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     21-MAY-2015 (makeh):
+*     31-AUG-2015 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -532,11 +532,11 @@ void astChrTrunc_( char *, int * );
 /* ===== */
 #define AST__VMAJOR 8
 #define AST__VMINOR 0
-#define AST__RELEASE 4
+#define AST__RELEASE 5
 
 #define AST_MAJOR_VERS 8
 #define AST_MINOR_VERS 0
-#define AST_RELEASE 4
+#define AST_RELEASE 5
 
 #include <stdarg.h>
 #include <float.h>
@@ -2203,6 +2203,7 @@ astPROTO_ISA(SlaMap)
 
 AstSlaMap *astSlaMapId_( int, const char *, ... )__attribute__((format(printf,2,3)));
 void astSlaAdd_( AstSlaMap *, const char *, const double[], int * );
+int astSlaIsEmpty_( AstSlaMap *, int * );
 #define astCheckSlaMap(this) astINVOKE_CHECK(SlaMap,this,0)
 #define astVerifySlaMap(this) astINVOKE_CHECK(SlaMap,this,1)
 
@@ -2602,6 +2603,7 @@ typedef struct AstSkyFrame {
    char *projection;
    double equinox;
    int neglon;
+   double skytol;
    int alignoffset;
    int skyrefis;
    double skyref[ 2 ];

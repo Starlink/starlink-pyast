@@ -11228,6 +11228,13 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
+         Deep copies of the supplied
+         {\tt{"}}mapping{\tt{"}} and {\tt{"}}frame{\tt{"}}
+         objects are stored within the modified FrameSet. So any changes made
+         to the FrameSet after calling this method will have no effect on the
+         supplied Mapping and Frame objects.
+
+         \sstitem
          A value of AST\_\_BASE or AST\_\_CURRENT may be given for the
          {\tt{"}}iframe{\tt{"}} parameter to specify the base Frame or the current
          Frame respectively.
@@ -33915,7 +33922,6 @@ Object             - Base class for all AST Objects
       Conditions
    }{
       The following conditions are currently recognised (all are
-
       case-insensitive):
 
       \sstitemlist{
@@ -33930,6 +33936,11 @@ Object             - Base class for all AST Objects
          non-Native encoded FitsChan if an illegal algorithm code is specified
          by a CTYPE keyword, and the illegal code can be converted to an
          equivalent legal code.
+
+         \sstitem
+         {\tt{"}}BadKeyName{\tt{"}}: This condition arises if a FITS keyword name is
+         encountered that contains an illegal character (i.e. one not allowed
+         by the FITS standard).
 
          \sstitem
          {\tt{"}}BadLat{\tt{"}}: This condition arises when reading a FrameSet from a
@@ -37172,7 +37183,7 @@ Object             - Base class for all AST Objects
       values on a particular axis of a \htmlref{Frame}{Frame}, typically handled internally
       within application code. In most cases, the value of the InternalUnit
       attribute will be the same as Unit attribute (i.e. formatted and
-      unformatted axis values will normally uses the system of units).
+      unformatted axis values will normally use the same system of units).
       The main exception to this is the \htmlref{SkyFrame}{SkyFrame} class, which represents
       unformatted axis values in radians, regardless of the current
       setting of the Unit attribute.
@@ -38151,6 +38162,34 @@ Object             - Base class for all AST Objects
          SkyFrame
       }{
          All SkyFrames have this attribute.
+      }
+   }
+}
+\sstroutine{
+   LutEpsilon
+}{
+   The relative error of the values held in the took-up table
+}{
+   \sstdescription{
+      This attribute holds the relative error of the values held in the
+      took-up table. It is used when simplifying a \htmlref{LutMap}{LutMap}, to determine
+      if the LutMap should be considered linear. Setting a larger value
+      makes it more likely that a LutMap will be replaced by a \htmlref{WinMap}{WinMap}
+      (i.e. a linear \htmlref{Mapping}{Mapping}) when simplified.
+
+      The default value is the value of the system constant DBL\_EPSILON
+      (typically around 1e-16 or 2E-16). If the values in the look-up
+      table were derived from single precision data, it may be appropriate
+      to set this attribute to a value around 1E-7.
+   }
+   \sstattributetype{
+      Double precision.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         LutMap
+      }{
+         All LutMaps have this attribute.
       }
    }
 }
@@ -40545,6 +40584,57 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   SkyTol
+}{
+   The smallest significant shift in sky coordinates
+}{
+   \sstdescription{
+      This attribute indicates the accuracy of the axis values that will
+      be represented by the \htmlref{SkyFrame}{SkyFrame}. If the arc-distance between two
+      positions within the SkyFrame is smaller than the value of SkyTol,
+      then the two positions will (for the puposes indicated below) be
+      considered to be co-incident.
+
+      This value is used only when constructing the \htmlref{Mapping}{Mapping} between
+      two different SkyFrames (for instance, when calling
+      \htmlref{astConvert}{astConvert} or \htmlref{astFindFrame}{astFindFrame}).
+      If the transformation between the two SkyFrames causes positions to
+      shift by less than SkyTol arc-seconds, then the transformation is
+      replaced by a \htmlref{UnitMap}{UnitMap}.  This could in certain circumatances allow
+      major simplifications to be made to the transformation between
+      any pixel grids associated with the two SkyFrames (for instance, if
+      each SkyFrame is part of the WCS \htmlref{FrameSet}{FrameSet} associated with an image).
+
+      A common case is when two SkyFrames use the FK5 system, but have
+      slightly different \htmlref{Epoch}{Epoch} values. If the \htmlref{AlignSystem}{AlignSystem} attribute has
+      its default value of {\tt{"}}ICRS{\tt{"}}, then the transformation between the
+      two SkyFrames will include a very small rotation (FK5 rotates with
+      respect to ICRS as a rate of about 0.0005 arc-seconds per year). In
+      most circumstances such a small rotation is insignificant. Setting
+      SkyTol to some suitably small non-zero value will cause this
+      rotation to be ignored, allowing much simpler transformations to
+      be used.
+
+      The test to determine the shift introduced by transforming between
+      the two SkyFrames is performed by transforming a set of 14 position
+      spread evenly over the whole sky. The largest shift produced at any
+      of these 14 positions is compared to the value of SkyTol.
+
+      The SkyTol value is in units of arc-seconds, and the default value
+      is 0.001.
+   }
+   \sstattributetype{
+      Floating point.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         SkyFrame
+      }{
+         All SkyFrames have this attribute.
+      }
+   }
+}
+\sstroutine{
    SortBy
 }{
    Determines how keys are sorted in a KeyMap
@@ -42637,7 +42727,7 @@ Object             - Base class for all AST Objects
       consist of a space separated list of condition names (see the
       \htmlref{AllWarnings}{AllWarnings} attribute for a list of the currently defined names).
       Each name indicates a condition which should be reported. The default
-      value for Warnings is the string {\tt{"}}Tnx Zpx BadCel BadMat BadPV BadCTYPE{\tt{"}}.
+      value for Warnings is the string {\tt{"}}BadKeyName Tnx Zpx BadCel BadMat BadPV BadCTYPE{\tt{"}}.
 
       The text of any warning will be stored within the FitsChan in the
       form of one or more new header cards with keyword ASTWARN. If
@@ -44525,6 +44615,9 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
+         \htmlref{LutEpsilon}{LutEpsilon}: The relative error of the values in the table.
+
+         \sstitem
          \htmlref{LutInterp}{LutInterp}: The interpolation method to use between table entries.
       }
    }
@@ -46051,6 +46144,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
          SkyRefP: Position defining orientation of the offset coordinate system
+
+         \sstitem
+         \htmlref{SkyTol}{SkyTol}: Smallest significant shift in sky coordinates
       }
    }
    \sstdiytopic{
@@ -52234,13 +52330,21 @@ can now be supplied. This avoids a security issue associated with the
 alternative form ``\texttt{..., text );}''.
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V8.0.4}
-The following describes the most significant changes which have
-occurred in the AST library between versions V8.0.3 and V8.0.4 (the
-current version):
+\subsection{Changes Introduced in V8.0.4}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.0.3 and V8.0.4:
 
 \begin{enumerate}
+
+\item The behaviour of the
+\htmlref{astAddFrame}{astAddFrame} method has been changed slightly. Previously, astAddFrame
+modified the \htmlref{FrameSet}{FrameSet} by storing references to the supplied \htmlref{Mapping}{Mapping} and
+\htmlref{Frame}{Frame} objects within the FrameSet. This meant that any subsequent changes
+to the current Frame of the modified FrameSet also affected the supplied
+Frame object. Now, deep copies of the Mapping and Frame objects (rather
+than references) are stored within the modified FrameSet. This means that
+subsequent changes to the modified FrameSet will now have no effect on
+the supplied Frame.
 
 \item The choice of default tick-mark gaps for time axes has been
 improved, to avoid a previous issue which could result in no suitable gap
@@ -52253,10 +52357,10 @@ has been added to the \htmlref{Plot}{Plot} class. It draws the outline of a supp
 
 \item A bug has been fixed that could cause astSimplfy to enter an infinite loop.
 
-\item Some improvements have been made to the \htmlref{Mapping}{Mapping} simplification process
+\item Some improvements have been made to the Mapping simplification process
 that allow more Mappings to be simplified.
 
-\item The \htmlref{Frame}{Frame} class has a new read-only attribute called InternalUnit,
+\item The Frame class has a new read-only attribute called InternalUnit,
 which gives the units used for the unformatted (i.e. floating-point) axis
 values used internally by application code. For most Frames, the
 InternalUnit value is just the same as the Unit value (i.e. formatted and
@@ -52264,6 +52368,36 @@ unformatted axis values use the same units). However, the \htmlref{SkyFrame}{Sky
 always returns ``\texttt{rad}'' for InternalUnit, regardless of the value of
 Unit, indicating that floating-point SkyFrame axis values are always in units
 of radians.
+
+\item The \htmlref{LutMap}{LutMap} class has a new attribute called \htmlref{LutEpsilon}{LutEpsilon}, which specifies
+the relative error of the values in the table. It is used to decide if
+the LutMap can be simplified to a straight line.
+
+\end{enumerate}
+
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V8.0.5}
+The following describes the most significant changes which have
+occurred in the AST library between versions V8.0.4 and V8.0.5 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{SkyFrame}{SkyFrame} class has a new attribute called \htmlref{SkyTol}{SkyTol}, which specifies
+the smallest significant distance within the SkyFrame. It is used to
+decide if the \htmlref{Mapping}{Mapping} between two SkyFrames can be considered a unit
+transformation. The default value is 0.001 arc-seconds.
+
+\item A bug has been fixed in the \htmlref{FitsChan}{FitsChan} class that prevented illegal
+characters within FITS keyword names (i.e. characters not allowed by the
+FITS standard) being detected. This bug could under some circumstances
+cause a subsequent segmentation violation to occur.
+
+- A ``BadKeyName'' warning is now issued by the FitsChan class if a FITS 
+keyword name is encountered that contains any illegal characters. See 
+attribute ``\htmlref{Warnings}{Warnings}'' and
+function ``\htmlref{astWarnings}{astWarnings}''.
 
 \end{enumerate}
 
