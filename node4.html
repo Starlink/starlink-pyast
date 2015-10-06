@@ -133,6 +133,41 @@ else:
 
 
 
+<h4>...Ensure that WCS Axes are in a Specified Order</h4>
+<pre class=pycode>
+
+#  The axes within a WCS FrameSet obtained from an external source may be
+#  in any arbitrary order. This order may be determined by examining the
+#  attributes (Domain, Label, IsLonAxis, IsLatAxis, etc) of the current
+#  Frame in the FrameSet. If your application code for some reason requires
+#  the axes to be in a specific order, this may be arranged using the
+#  findframe() method. You need to provide it with a Frame to act as a
+#  template that  defines the nature and order of the axes required by
+#  your application code. For instance, if your code is restricted to
+#  2-dimensional WCS FrameSets that represent (RA,Dec) axes, in that
+#  order, then you create a suitable SkyFrame with these properties to
+#  act as a template, and call findframe on the original WCS FrameSet to
+#  create a modified WCS FrameSet with the same properties as the
+#  template (if possible). For the above example, a default SkyFrame is
+#  an appropriate template since the default SkyFrame represents ICRS
+#  (RA,Dec) axes. So if "wcsinfo" is the original WCS FrameSet we can
+#  do...
+   newwcs = wcsinfo.findframe( Ast.SkyFrame() )
+
+#  It may be that the "wcsinfo" FrameSet did not contain any celestial
+#  axes, or was not 2-dimensional. in which case the above invocation of
+#  findframe will have failed. Check for this.
+   if newwcs:
+
+#  Demonstrate that the above has succeeded by printing the labels of the
+#  two axes in the current Frame.
+      print( "Axis 1: {0}".format( newwcs.Label_1 ) )
+      print( "Axis 3: {0}".format( newwcs.Label_2 ) )
+
+</pre>
+
+
+
 
 <h4>...Format Coordinates for Display</h4>
 <pre class=pycode>
