@@ -3717,6 +3717,15 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
 static PyObject *Frame_findframe( Frame *self, PyObject *args ) {
 
 /* args: result:template,domainlist=None */
+/* Note: One possible use of this method is to enforce a particular order
+         on the axes within a FrameSet. This may be necessary for
+         application code that expects axes to be in a particular order.
+         The Examples section in the pyast online documentation show an
+         example of this use. Note, in general AST code can be written that
+         does not need axes to be in a particular order. Instead, the
+         properties of the axes within the associated Frame can be
+         inspected and the code respond to the order and nature of these
+         axes. */
 
   Object *other = NULL;
   PyObject *result = NULL;
