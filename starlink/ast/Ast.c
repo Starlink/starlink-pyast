@@ -1813,6 +1813,14 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
          a new array with suitable shape is created to store the transformed
 	 positions. In either case, the value returned by the method is a
 	 new reference to the array storing the transformed values. */
+/* Note: The order of the axes in the returned array is determined by the
+         order of the axes in the Mapping. If this Mapping was generated
+         by the Ast.Convert method, then the axis order will depend on
+         the order of the axes within the two Frame(Sets)s supplied to
+         the Ast.Convert method. The attributes of these Frames can be
+         queried to determine the axis order. If a particular axis is
+         required for some reason, the Ast.findframe method can be used to
+         produce a new FrameSet with the axes in the required order. */
 
    PyArrayObject *in = NULL;
    PyArrayObject *out = NULL;
