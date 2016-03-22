@@ -172,7 +172,7 @@ class PyFITSAdapter:
 
 
 # ======================================================================
-def readfitswcs( hdu ):
+def readfitswcs( hdu, Iwc=False ):
 
    r"""Reads an AST FrameSet from a FITS header.
 
@@ -196,6 +196,10 @@ def readfitswcs( hdu ):
 	    header. For possible values, see the documentation for the
 	    "Encoding" attribute in SUN/211.
 
+         Iwc: Include the Intermediate World Coordinate system in the
+        returned FrameSet, to allow the addition of e.g. a distored
+        cartesian frame between the image frame and sky.
+
       Example:
          >>> import pyfits
          >>> import starlink.Atl as Atl
@@ -213,6 +217,7 @@ def readfitswcs( hdu ):
       myhdu = hdu
 
    fitschan = Ast.FitsChan( PyFITSAdapter( myhdu ) )
+   fitschan.Iwc = Iwc
    encoding = fitschan.Encoding
    frameset = fitschan.read()
    return (frameset,encoding)
