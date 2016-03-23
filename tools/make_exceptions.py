@@ -14,24 +14,25 @@ from __future__ import print_function
 import os
 import os.path
 
-def make_exceptions( dirname=None ):
+
+def make_exceptions(dirname=None):
 
     if 'AST_SOURCE' not in os.environ:
         print("Please set AST_SOURCE environment variable to point to the AST source code directory")
         exit(1)
 
     # ensure that we have the error codes file
-    errfile = os.path.join( os.environ['AST_SOURCE'], "ast_err.h")
+    errfile = os.path.join(os.environ['AST_SOURCE'], "ast_err.h")
     if not os.path.exists(errfile):
-        print("Could not find the ast_err.h file in directory "+os.environ['AST_SOURCE'])
+        print("Could not find the ast_err.h file in directory " + os.environ['AST_SOURCE'])
         exit(1)
 
     # Open an output C file
     cfilename = "exceptions.c"
     if dirname is not None:
-        cfilename = os.path.join( dirname, cfilename )
+        cfilename = os.path.join(dirname, cfilename)
 
-    cfile = open( cfilename, "w" )
+    cfile = open(cfilename, "w")
 
     # Need a C header
     print(r"""/*
@@ -68,10 +69,10 @@ static PyObject *AstError_err;
     # Note that AST__3DFSET is not currently supported because a
     # variable can not start with a number
     errcodes = []
-    for line in open( errfile,"r" ):
+    for line in open(errfile, "r"):
         words = line.split()
         if words and words[0] == "enum" and words[2][:5] == "AST__" and words[2][5:6].isalpha():
-            errcodes.append( words[2][5:] )
+            errcodes.append(words[2][5:])
 
     if not errcodes:
         print("Could not find any error codes. Aborting")
@@ -80,7 +81,7 @@ static PyObject *AstError_err;
         exit(1)
 
     for code in errcodes:
-        print( "static PyObject *{0}_err;".format(code), file=cfile )
+        print("static PyObject *{0}_err;".format(code), file=cfile)
 
     print(r"""
 /* Defines a function that creates a Python Exception object
