@@ -1,0 +1,12 @@
+language: C
+python:
+  - "2.7"
+  - "3.5"
+
+install:
+  pip install pytest
+  python setup.py build
+  python setup.py install
+
+script:
+  py.test starlink/ast/test/test.py
