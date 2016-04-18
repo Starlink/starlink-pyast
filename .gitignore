@@ -6,4 +6,6 @@ __pycache__/
 *.pyc
 starlink/ast/*_def.c
 starlink/ast/*_desc.c
-
+a.out
+sun211.htx/
+var/
