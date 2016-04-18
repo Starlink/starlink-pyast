@@ -186,6 +186,7 @@ MAKE_ISA(TimeFrame)
 MAKE_ISA(TimeMap)
 MAKE_ISA(TranMap)
 MAKE_ISA(UnitMap)
+MAKE_ISA(UnitNormMap)
 MAKE_ISA(WcsMap)
 MAKE_ISA(WinMap)
 MAKE_ISA(ZoomMap)
@@ -235,6 +236,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(TimeMap,timemap),
    DEF_ISA(TranMap,tranmap),
    DEF_ISA(UnitMap,unitmap),
+   DEF_ISA(UnitNormMap,unitnormmap),
    DEF_ISA(WcsMap,wcsmap),
    DEF_ISA(WinMap,winmap),
    DEF_ISA(ZoomMap,zoommap),
@@ -2582,6 +2584,95 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
       AstUnitMap *this = astUnitMap( ncoord, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* UnitNormMap */
+/* =========== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".UnitNormMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} UnitNormMap;
+
+/* Prototypes for class functions */
+static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject UnitNormMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(UnitNormMap),       /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST UnitNormMap",         /* tp_doc */
+   0,                         /* tp_traverse */
+   0,                         /* tp_clear */
+   0,                         /* tp_richcompare */
+   0,                         /* tp_weaklistoffset */
+   0,                         /* tp_iter */
+   0,                         /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)UnitNormMap_init, /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :shift,options=None */
+
+   const char *options = " ";
+   PyArrayObject * shift = NULL;
+   PyObject * shift_object = NULL;
+
+   int result = -1;
+
+   // We get nin and nou from the arrays themselves
+   if( PyArg_ParseTuple(args, "O|s:" CLASS, &shift_object,
+                        &options ) ) {
+      shift = (PyArrayObject *) PyArray_ContiguousFromAny( shift_object,
+                                                            PyArray_DOUBLE, 0, 100);
+      if (shift) {
+         AstUnitNormMap * this = NULL;
+         this = astUnitNormMap( PyArray_Size( (PyObject*)shift),
+                            (const double *)shift->data,
+                            "%s", options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( shift );
    }
 
    TIDY;
@@ -10980,6 +11071,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&UnitMapType);
    PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
 
+   UnitNormMapType.tp_new = PyType_GenericNew;
+   UnitNormMapType.tp_base = &MappingType;
+   if( PyType_Ready(&UnitNormMapType) < 0) RETURN( NULL );
+   Py_INCREF(&UnitNormMapType);
+   PyModule_AddObject( m, "UnitNormMap", (PyObject *)&UnitNormMapType);
+
    TimeMapType.tp_new = PyType_GenericNew;
    TimeMapType.tp_base = &MappingType;
    if( PyType_Ready(&TimeMapType) < 0) RETURN( NULL );
@@ -11654,6 +11751,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &MathMapType;
       } else if( !strcmp( class, "UnitMap" ) ) {
         result = (PyTypeObject *) &UnitMapType;
+      } else if( !strcmp( class, "UnitNormMap" ) ) {
+        result = (PyTypeObject *) &UnitNormMapType;
       } else if( !strcmp( class, "TimeMap" ) ) {
         result = (PyTypeObject *) &TimeMapType;
       } else if( !strcmp( class, "SphMap" ) ) {

@@ -46,7 +46,7 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'prism.c', 'proj.c', 'ratemap.c', 'region.c', 'shiftmap.c',
          'skyaxis.c', 'skyframe.c', 'specfluxframe.c', 'specframe.c',
          'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
-         'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
+         'tranmap.c', 'unit.c', 'unitmap.c', 'unitnormmap.c', 'wcsmap.c', 'wcstrig.c',
          'winmap.c', 'xml.c', 'zoommap.c')
 
 #  List the erfa source files required by AST.

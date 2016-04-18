@@ -20,7 +20,7 @@
 *     needed to use the library.
 
 *  Copyright:
-*     Copyright (C) 1997-2006 Council for the Central Laboratory of the
+*     Copyright (C) 1997-2016 Council for the Central Laboratory of the
 *     Research Councils
 
 *  Licence:
@@ -42,12 +42,15 @@
 *  Authors:
 *     DSB: D.S. Berry (STARLINK)
 *     RFWS: R.F. Warren-Smith (STARLINK)
+*     RO: Russell Owen (LSST)
 *     {enter_new_authors_here}
 
 *  History:
 *     31-AUG-2015 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
+*     20-APR-2016 (RO):
+*        Added UnitNormMap.
 *     {enter_changes_here}
 *-
 */
@@ -2435,6 +2438,25 @@ AstUnitMap *astUnitMapId_( int, const char *, ... )__attribute__((format(printf,
 #define astIsAUnitMap(this) astINVOKE_ISA(UnitMap,this)
 
 #define astUnitMap astINVOKE(F,astUnitMapId_)
+/* unitnormmap. */
+/* ========= */
+typedef struct AstUnitNormMap {
+
+   AstMapping mapping;
+
+   double *shift;
+
+} AstUnitNormMap;
+astPROTO_CHECK(UnitNormMap)
+astPROTO_ISA(UnitNormMap)
+
+AstUnitNormMap *astUnitNormMapId_( int, const double [], const char *, ... )__attribute__((format(printf,3,4)));
+#define astCheckUnitNormMap(this) astINVOKE_CHECK(UnitNormMap,this,0)
+#define astVerifyUnitNormMap(this) astINVOKE_CHECK(UnitNormMap,this,1)
+
+#define astIsAUnitNormMap(this) astINVOKE_ISA(UnitNormMap,this)
+
+#define astUnitNormMap astINVOKE(F,astUnitNormMapId_)
 /* wcsmap. */
 /* ======= */
 #define STATUS_PTR astGetStatusPtr

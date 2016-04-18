@@ -149,6 +149,63 @@ class DummyGrf():
 
 class TestAst(unittest.TestCase):
 
+    def checkPersistence(self, obj):
+        """Check that an Ast object can be persisted and unpersisted,
+        """
+        ts = TextStream()
+        chan = starlink.Ast.Channel(ts, ts)
+        chan.write(obj)
+        obj_copy = chan.read()
+        self.assertEqual(type(obj), type(obj_copy))
+        self.assertEqual(str(obj), str(obj_copy))
+
+    def checkRoundTrip(self, amap, poslist, rtol=1e-05, atol=1e-08):
+        """Check that a mapping's reverse transform is the opposite of forward
+
+        amap is the mapping to test
+        poslist is a list of input position for a forward transform
+        rtol is the relative tolerance for numpy.allclose
+        atol is the absolute tolerance for numpy.allclose
+        """
+        to_poslist = amap.tran(poslist)
+        roundtrip_poslist = amap.tran(to_poslist, 0)
+        self.assertTrue(numpy.allclose(poslist, roundtrip_poslist))
+
+        # repeat with a compound map
+        amapinv = amap.copy()
+        amapinv.Invert = not amap.Invert
+        acmp = starlink.Ast.CmpMap(amap, amapinv)
+        self.assertTrue(numpy.allclose(poslist, acmp.tran(poslist)))
+
+    def checkBasicSimplify(self, amap):
+        """Check basic simplfication for a reversible mapping
+
+        Check the following:
+        - A compound mapping of a amap and its inverse simplifies to a unit amap
+        - A compound mapping of a amap and a unit amap simplifies to the original amap
+        """
+        amapinv = amap.copy()
+        amapinv.Invert = not amap.Invert
+        cmp1 = starlink.Ast.CmpMap(amap, amapinv)
+        unit1 = cmp1.simplify()
+        self.assertTrue(unit1.isaunitmap())
+        self.assertEqual(cmp1.Nin, unit1.Nin)
+
+        cmp2 = starlink.Ast.CmpMap(amapinv, amap)
+        unit1inv = cmp2.simplify()
+        self.assertTrue(unit1inv.isaunitmap())
+        self.assertEqual(amapinv.Nin, unit1inv.Nin)
+
+        for ma, mb, desmap3 in (
+            (unit1, amap, amap),
+            (amap, unit1inv, amap),
+            (unit1inv, amapinv, amapinv),
+            (amapinv, unit1, amapinv),
+        ):
+            cmp3 = starlink.Ast.CmpMap(ma, mb)
+            cmp3simp = cmp3.simplify()
+            self.assertEqual(type(cmp3simp), type(amap.simplify()))
+
     def test_Static(self):
         self.assertEqual(starlink.Ast.tunec("HRDel"), "%-%^50+%s70+h%+")
         starlink.Ast.tunec("HRDel", "fred")
@@ -538,6 +595,83 @@ class TestAst(unittest.TestCase):
         unitmap = starlink.Ast.UnitMap(3)
         self.assertIsInstance(unitmap, starlink.Ast.UnitMap)
         self.assertEqual(unitmap.Nin, 3)
+
+    def test_UnitNormMap(self):
+        """Test basics of UnitNormMap including tran
+        """
+        for nin in (1, 2, 3):
+            center = numpy.array([-1, 1, 2][0:nin])
+            unitnormmap = starlink.Ast.UnitNormMap(center)
+            self.assertIsInstance( unitnormmap, starlink.Ast.UnitNormMap )
+            self.assertIsInstance( unitnormmap, starlink.Ast.Mapping )
+            self.assertEqual(unitnormmap.Nin, nin)
+            self.assertEqual(unitnormmap.Nout, nin+1)
+            self.assertFalse(unitnormmap.IsLinear)
+            self.checkPersistence(unitnormmap)
+
+            # arrays are a single point;
+            # to convert to Ast's [xarr, yarr...] use zip(arr)
+            frompos = numpy.array([-22, 3, 0.5][0:nin])
+            self.checkRoundTrip(unitnormmap, list(zip(frompos)))
+            self.checkBasicSimplify(unitnormmap)
+
+            topos = unitnormmap.tran(list(zip(frompos)))
+            topos = numpy.array(list(zip(*topos))[0])
+            norm = topos[-1]
+
+            relfrompos = frompos - center
+            prednorm = numpy.linalg.norm(relfrompos)
+            self.assertAlmostEqual(norm, prednorm)
+
+            predrelfrompos = topos[0:nin]*norm
+            self.assertTrue(numpy.allclose(relfrompos, predrelfrompos))
+
+        # UnitNormMap must have at least one input
+        with self.assertRaises(Exception):
+            starlink.Ast.UnitNormMap([])
+
+    def test_UnitNormMapSimplify(self):
+        """Test advanced simplification of UnitNormMap
+
+        Basic simplification is tested elsewhere.
+
+        ShiftMap              + UnitNormMap(forward)            = UnitNormMap(forward)
+        UnitNormMap(inverted) + ShiftMap                        = UnitNormMap(inverted)
+        UnitNormMap(forward)  + non-equal UnitNormMap(inverted) = ShiftMap
+        """
+        center1 = [2, -1, 0]
+        center2 = [-1, 6, 4]
+        shift = [3, 7, -9]
+        testpoints = [[1, 3, -5], [2, 3, 99], [-6, -5, -7], [30, 21, 37]]
+        unm1 = starlink.Ast.UnitNormMap(center1)
+        unm1inv = unm1.copy()
+        unm1inv.Invert = 1
+        unm2 = starlink.Ast.UnitNormMap(center2)
+        unm2inv = unm2.copy()
+        unm2inv.Invert = 1
+        shiftmap = starlink.Ast.ShiftMap(shift)
+        winmap_unitscale = starlink.Ast.WinMap(
+            numpy.zeros(3), shift, numpy.ones(3), numpy.ones(3) + shift)
+        winmap_notunitscale = starlink.Ast.WinMap(
+            numpy.zeros(3), shift, numpy.ones(3), numpy.ones(3)*2 + shift)
+
+        for map1, map2, des_simp_type in (
+            (unm1, unm2inv, starlink.Ast.WinMap),  # ShiftMap gets simplified to WinMap
+            (shiftmap, unm1, starlink.Ast.UnitNormMap),
+            (winmap_unitscale, unm1, starlink.Ast.UnitNormMap),
+            (winmap_notunitscale, unm1, starlink.Ast.CmpMap),
+            (unm1inv, shiftmap, starlink.Ast.UnitNormMap),
+            (unm1inv, winmap_unitscale, starlink.Ast.UnitNormMap),
+            (unm1inv, winmap_notunitscale, starlink.Ast.CmpMap),
+        ):
+            cmpmap = starlink.Ast.CmpMap(map1, map2)
+            cmpmap_simp = cmpmap.simplify()
+            self.assertIsInstance(cmpmap_simp, des_simp_type)
+            self.assertEqual(cmpmap.Nin, cmpmap_simp.Nin)
+            self.assertEqual(cmpmap.Nout, cmpmap_simp.Nout)
+            self.assertTrue(numpy.allclose(
+                cmpmap.tran(testpoints[0:cmpmap.Nin]),
+                cmpmap_simp.tran(testpoints[0:cmpmap.Nin])))
 
     def test_GrismMap(self):
         grismmap = starlink.Ast.GrismMap("GrismM=1")
