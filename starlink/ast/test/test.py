@@ -4,7 +4,6 @@ import copy
 import numpy
 import math
 import filecmp
-import string
 import sys
 import os.path
 import os
@@ -165,7 +164,7 @@ class TestAst(unittest.TestCase):
 
     def test_Object(self):
         with self.assertRaises(TypeError):
-            obj = starlink.Ast.Object()
+            starlink.Ast.Object()
 
     def test_ZoomMap(self):
         zoommap = starlink.Ast.ZoomMap(1, 1.2)
@@ -323,7 +322,7 @@ class TestAst(unittest.TestCase):
         self.assertIsInstance(fset, starlink.Ast.FrameSet)
         self.assertEqual(fset.Nframe, 2)
         fset2 = fset.findframe(nframe)
-        self.assertIsInstance(fset, starlink.Ast.FrameSet)
+        self.assertIsInstance(fset2, starlink.Ast.FrameSet)
 
     def test_FrameResolve(self):
         frame = starlink.Ast.Frame(2)
@@ -360,7 +359,7 @@ class TestAst(unittest.TestCase):
 
     def test_Mapping(self):
         with self.assertRaises(TypeError):
-            mapping = starlink.Ast.Mapping()
+            starlink.Ast.Mapping()
         zoommap = starlink.Ast.ZoomMap(1, 1.2)
         map1, map2, series, invert1, invert2 = zoommap.decompose()
         self.assertIsInstance(map1, starlink.Ast.ZoomMap)
@@ -813,7 +812,8 @@ class TestAst(unittest.TestCase):
         fc.emptyfits()
         self.assertEqual(fc.Ncard, 0)
 
-        cards = "CRVAL1  = 0                                                                     CRVAL2  = 0                                                                     "
+        cards = "CRVAL1  = 0                                                                     " + \
+                "CRVAL2  = 0                                                                     "
         fc.putcards(cards)
         self.assertEqual(fc.Card, 1)
         fc.set("Card=10")
@@ -829,19 +829,22 @@ class TestAst(unittest.TestCase):
         self.assertEqual(fc.Encoding, "FITS-WCS")
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
-        self.assertEqual(card, "CRVAL1  =                    0                                                  ")
+        self.assertEqual(card,
+            "CRVAL1  =                    0                                                  ")
         fc.delfits()
         self.assertEqual(fc.Ncard, 9)
         self.assertEqual(fc.Card, 9)
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
-        self.assertEqual(card, "CRVAL2  =                    0                                                  ")
+        self.assertEqual(card,
+            "CRVAL2  =                    0                                                  ")
         fc.putfits("CRVAL1  = 0", False)
         self.assertEqual(fc.Ncard, 10)
         self.assertEqual(fc.Card, 10)
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
-        self.assertEqual(card, "CRVAL2  =                    0                                                  ")
+        self.assertEqual(card,
+            "CRVAL2  =                    0                                                  ")
 
         for cards in zip(fc, mycards):
             self.assertEqual(cards[0], cards[1])
@@ -941,12 +944,13 @@ class TestAst(unittest.TestCase):
         self.assertTrue("NAXIS1" in fc)
 
         self.assertEqual(len(fc), 10)
-        self.assertEqual(fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
-        obj = fc.read()
+        self.assertEqual(fc[2],
+            "CTYPE1  = 'RA--TAN '                                                            ")
+        fc.read()
         self.assertEqual(len(fc), 2)
 
         with self.assertRaises(KeyError):
-            a = fc["CRVAL1"]
+            fc["CRVAL1"]
 
         self.assertEqual(fc["NAXIS1"], 200)
         fc["NAXIS2"] = None
@@ -967,13 +971,15 @@ class TestAst(unittest.TestCase):
         self.assertEqual(len(fc), 2)
 
         fc[100] = "CTYPE1  = 'RA--TAN '                                                            "
-        self.assertEqual(fc[2], "CTYPE1  = 'RA--TAN '                                                            ")
+        self.assertEqual(fc[2],
+            "CTYPE1  = 'RA--TAN '                                                            ")
         self.assertEqual(fc.Ncard, 3)
         self.assertEqual(fc.Nkey, 3)
         self.assertEqual(len(fc), 3)
 
         fc[0] = "NEWKEY  = 123.456"
-        self.assertEqual(fc[0], "NEWKEY  =              123.456                                                  ")
+        self.assertEqual(fc[0],
+            "NEWKEY  =              123.456                                                  ")
         self.assertEqual(fc.Ncard, 3)
         self.assertEqual(fc.Nkey, 3)
         self.assertEqual(len(fc), 3)
@@ -1078,10 +1084,24 @@ class TestAst(unittest.TestCase):
 
         plot.border()
 
-        self.assertAlmostEqual(mygrf.linex, [0.0, 0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959, 0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936, 0.71428573131561279, 0.78571426868438721, 0.8571428656578064, 0.92857140302658081, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                             1.0, 1.0, 1.0, 1.0, 0.92857140302658081, 0.8571428656578064, 0.78571426868438721, 0.71428573131561279, 0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032, 0.3571428656578064, 0.28571429848670959, 0.2142857164144516, 0.1428571492433548, 0.071428574621677399, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        self.assertAlmostEqual(mygrf.liney, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959, 0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936, 0.71428573131561279, 0.78571426868438721, 0.8571428656578064,
-                                             0.92857140302658081, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.92857140302658081, 0.8571428656578064, 0.78571426868438721, 0.71428573131561279, 0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032, 0.3571428656578064, 0.28571429848670959, 0.2142857164144516, 0.1428571492433548, 0.071428574621677399, 0.0])
+        self.assertAlmostEqual(mygrf.linex,
+            [0.0, 0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959,
+             0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936,
+             0.71428573131561279, 0.78571426868438721, 0.8571428656578064, 0.92857140302658081,
+             1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+             1.0, 1.0, 1.0, 1.0, 0.92857140302658081, 0.8571428656578064, 0.78571426868438721,
+             0.71428573131561279, 0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032,
+             0.3571428656578064, 0.28571429848670959, 0.2142857164144516, 0.1428571492433548,
+             0.071428574621677399, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.assertAlmostEqual(mygrf.liney,
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.071428574621677399, 0.1428571492433548, 0.2142857164144516, 0.28571429848670959,
+             0.3571428656578064, 0.4285714328289032, 0.5, 0.57142859697341919, 0.6428571343421936,
+             0.71428573131561279, 0.78571426868438721, 0.8571428656578064,
+             0.92857140302658081, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+             0.92857140302658081, 0.8571428656578064, 0.78571426868438721, 0.71428573131561279,
+             0.6428571343421936, 0.57142859697341919, 0.5, 0.4285714328289032, 0.3571428656578064,
+             0.28571429848670959, 0.2142857164144516, 0.1428571492433548, 0.071428574621677399, 0.0])
         self.assertEqual(mygrf.nline, 57)
         self.assertEqual(mygrf.attr, [4, 4])
         self.assertAlmostEqual(mygrf.value, [2.0, 1.0])
@@ -1089,7 +1109,8 @@ class TestAst(unittest.TestCase):
 
         mygrf.Reset()
         plot.grid()
-        self.assertEqual(mygrf.textt, ['0', '0.3', '0.6', '0.9', '0.4', '0.7', '1', 'Axis 1', 'Axis 2', '2-d coordinate system'])
+        self.assertEqual(mygrf.textt,
+            ['0', '0.3', '0.6', '0.9', '0.4', '0.7', '1', 'Axis 1', 'Axis 2', '2-d coordinate system'])
         self.assertEqual(mygrf.textj,  ['TC', 'TC', 'TC', 'TC', 'CR', 'CR', 'CR', 'TC', 'BC', 'BC'])
         self.assertEqual(mygrf.ntext, 10)
 
