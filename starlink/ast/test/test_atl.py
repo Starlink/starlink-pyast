@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 try:
-    from astrop.io import fits as pyfits
+    from astropy.io import fits as pyfits
 except ImportError:
     import pyfits
 import starlink.Atl as Atl
