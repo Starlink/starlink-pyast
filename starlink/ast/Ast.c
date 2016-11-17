@@ -4058,7 +4058,7 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
                          &point2_object, &point3_object ) && astOK ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
-    point3 = GetArray1D( point2_object, &naxes, "point3", NAME );
+    point3 = GetArray1D( point3_object, &naxes, "point3", NAME );
     dims[0] = naxes;
     point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
     if (point1 && point2 && point3 && point4) {
