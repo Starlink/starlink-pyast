@@ -328,8 +328,8 @@ class TestAst(unittest.TestCase):
     def test_FrameResolve(self):
         frame = starlink.Ast.Frame(2)
         point4, d1, d2 = frame.resolve([0, 0], [3, 3], [0, 4])
-        self.assertAlmostEqual(d2, 0.0)
-        self.assertAlmostEqual(d1, math.sqrt(18))
+        self.assertAlmostEqual(d1, 2*math.sqrt(2))
+        self.assertAlmostEqual(d2, 2*math.sqrt(2))
 
     def test_FrameUnformat(self):
         frame = starlink.Ast.Frame(2)
