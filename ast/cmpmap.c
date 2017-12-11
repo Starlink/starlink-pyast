@@ -2656,7 +2656,7 @@ static int *MapSplit0( AstMapping *this_mapping, int nin, const int *in,
    the current component Mapping. */
                itop += astGetNin( map_list[ imap ] );
 
-/* Get the zero-based indicies of the required inputs that feed the current
+/* Get the zero-based indices of the required inputs that feed the current
    component Mapping. */
                ncin = 0;
                while( iin < nin && inp[ iin ] <= itop ) {
@@ -3466,7 +3466,7 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
          nominated++;
 
 /* Note if any simplification occurred above. */
-         if( modified >= 0 ) {
+         if( modified >= 0 && astOK ) {
 
 /* Append the index of the first modified Mapping in the list and and check
    that there is no repreating pattern in the list. If there is, we are

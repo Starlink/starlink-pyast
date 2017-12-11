@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     31-AUG-2015 (makeh):
+*     11-DEC-2017 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -427,7 +427,11 @@ extern const char *astPRJrev_errmsg[];
 /* memory. */
 /* ======= */
 #include <stddef.h>
-#define astERROR_INVOKE(function) (astAt_(NULL,__FILE__,__LINE__,0,astGetStatusPtr),(function))
+#define astERROR_INVOKE(function) (astAt_(__func__,__FILE__,__LINE__,0,astGetStatusPtr),(function))
+typedef void (* AstPutErrFun)( int, const char * );
+
+typedef void (* AstPutErrFunWrapper)( AstPutErrFun, int, const char * );
+
 typedef struct AstErrorContext {
    int reporting;
    int ok;
@@ -437,11 +441,16 @@ int *astWatch_( int * );
 void astClearStatus_( int * );
 int *astGetStatusPtr_( void )__attribute__((pure));
 void astAt_( const char *, const char *, int, int, int * );
+void astSetPutErr_( AstPutErrFun, int * );
 void astErrorPublic_( int, const char *, ... )__attribute__((format(printf,2,3)));
 #define astWatch(status_ptr) astWatch_(status_ptr)
 #define astGetStatusPtr astGetStatusPtr_()
 #define astOK (astStatus==0)
 #define astSetStatus(status_value) (astStatus=(status_value))
+
+#define STATUS_PTR astGetStatusPtr
+
+#define astSetPutErr(fun) astSetPutErr_(fun,STATUS_PTR)
 #define astAt(routine,file,line) astAt_(routine,file,line,1,astGetStatusPtr)
 #define astClearStatus astClearStatus_(astGetStatusPtr)
 #define astStatus (*astGetStatusPtr)
@@ -531,12 +540,12 @@ void astChrTrunc_( char *, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 8
-#define AST__VMINOR 0
-#define AST__RELEASE 5
+#define AST__VMINOR 6
+#define AST__RELEASE 1
 
 #define AST_MAJOR_VERS 8
-#define AST_MINOR_VERS 0
-#define AST_RELEASE 5
+#define AST_MINOR_VERS 6
+#define AST_RELEASE 1
 
 #include <stdarg.h>
 #include <float.h>
@@ -559,7 +568,8 @@ void astChrTrunc_( char *, int * );
 #define astMAX(aa,bb) ((aa)>(bb)?(aa):(bb))
 #define astMIN(aa,bb) ((aa)<(bb)?(aa):(bb))
 
-#define astEQUAL(aa,bb) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E5*astMAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
+#define astEQUALS(aa,bb,tol) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=(tol)*astMAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
+#define astEQUAL(aa,bb) astEQUALS(aa,bb,1.0E5)
 
 #define AST__NULL (astI2P(0))
 typedef struct AstObject {
@@ -582,6 +592,7 @@ typedef struct AstClassIdentifier {
 } AstClassIdentifier;
 
 struct AstChannel;
+struct KeyMap;
 #define AST__CHANNEL_GETATTRIB_BUFF_LEN 50
 struct AstKeyMap;
 
@@ -664,6 +675,7 @@ void astExportId_( AstObject *, int * );
 void astImportId_( AstObject *, int * );
 void astSetId_( void *, const char *, ... )__attribute__((format(printf,2,3)));
 
+struct AstKeyMap *astActiveObjects_( const char *, int, int, int *);
 AstObject *astAnnulId_( AstObject *, int * );
 AstObject *astCheckLock_( AstObject *, int * );
 AstObject *astClone_( AstObject *, int * );
@@ -679,6 +691,7 @@ int astHasAttribute_( AstObject *, const char *, int * );
 int astSame_( AstObject *, AstObject *, int * );
 int astTest_( AstObject *, const char *, int * );
 long astGetL_( AstObject *, const char *, int * );
+void astCreatedAtId_( AstObject *, const char **, const char **, int *, int *);
 void *astGetProxy_( AstObject *, int * );
 void astClear_( AstObject *, const char *, int * );
 void astExemptId_( AstObject *, int * );
@@ -708,6 +721,8 @@ void astUnlockId_( AstObject *, int, int * );
 #define astMakePointer(id) ((void *)astCheckLock_(astMakePointer_((AstObject *)(id),STATUS_PTR),STATUS_PTR))
 #define astToString(this) astINVOKE(V,astToString_(astCheckObject(this),STATUS_PTR))
 #define astFromString(string) astINVOKE(O,astFromString_(string,STATUS_PTR))
+#define astCreatedAt(this,routine,file,line) astINVOKE(V,astCreatedAtId_((AstObject *)this,routine,file,line,STATUS_PTR))
+#define astActiveObjects(class,subclass,current) astINVOKE(O,astActiveObjects_(class,subclass,current,STATUS_PTR))
 #define astAnnul(this) astINVOKE(O,astAnnulId_((AstObject *)(this),STATUS_PTR))
 #define astDelete(this) astINVOKE(O,astDeleteId_((AstObject *)(this),STATUS_PTR))
 #define astExport(this) astINVOKE(V,astExportId_((AstObject *)(this),STATUS_PTR))
@@ -767,6 +782,7 @@ void astSetSubPoints_( AstPointSet *, int, int, AstPointSet *, int * );
 AstPointSet *astAppendPoints_( AstPointSet *, AstPointSet *, int * );
 void astBndPoints_( AstPointSet *, double *, double *, int * );
 int astReplaceNaN_( AstPointSet *, int * );
+void astShowPoints_( AstPointSet *, int * );
 #define astCheckPointSet(this) astINVOKE_CHECK(PointSet,this,0)
 #define astVerifyPointSet(this) astINVOKE_CHECK(PointSet,this,1)
 
@@ -781,6 +797,7 @@ int astReplaceNaN_( AstPointSet *, int * );
 #define astAppendPoints(this,that) astINVOKE(O,astAppendPoints_(astCheckPointSet(this),astCheckPointSet(that),STATUS_PTR))
 #define astBndPoints(this,lbnd,ubnd) astINVOKE(V,astBndPoints_(astCheckPointSet(this),lbnd,ubnd,STATUS_PTR))
 #define astReplaceNaN(this) astINVOKE(V,astReplaceNaN_(astCheckPointSet(this),STATUS_PTR))
+#define astShowPoints(this) astINVOKE(V,astShowPoints_(astCheckPointSet(this),STATUS_PTR))
 
 #include <stdint.h>
 #define STATUS_PTR astGetStatusPtr
@@ -854,7 +871,7 @@ PROTO_GENERIC_ALL(LD,long double)
 PROTO_GENERIC_DFI(D,double)
 PROTO_GENERIC_DFI(F,float)
 PROTO_GENERIC_DFI(I,int)
-PROTO_GENERIC_DFI(B,char)
+PROTO_GENERIC_DFI(B,signed char)
 PROTO_GENERIC_DFI(UB,unsigned char)
 
 PROTO_GENERIC_DFI(LD,long double)
@@ -1237,6 +1254,10 @@ enum { AST__MNPCK = 233934394 };
 enum { AST__EXSPIX = 233934402 };
 
 enum { AST__NOCNV = 233934410 };
+
+enum { AST__IMMUT = 233934418 };
+
+enum { AST__NOBOX = 233934426 };
 /* version. */
 /* ======== */
 /* object. */
@@ -1320,6 +1341,7 @@ int astMapGet1F_( AstKeyMap *, const char *, int, int *, float *, int * );
 int astMapGet1I_( AstKeyMap *, const char *, int, int *, int *, int * );
 int astMapGet1P_( AstKeyMap *, const char *, int, int *, void **, int * );
 int astMapGet1S_( AstKeyMap *, const char *, int, int *, short int *, int * );
+int astMapGetC_( AstKeyMap *, const char *, const char **, int * );
 int astMapGetElemB_( AstKeyMap *, const char *, int, unsigned char *, int * );
 int astMapGetElemC_( AstKeyMap *, const char *, int, int, char *, int * );
 int astMapGetElemD_( AstKeyMap *, const char *, int, double *, int * );
@@ -1387,6 +1409,7 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapGet0D(this,key,value) astINVOKE(V,astMapGet0D_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0F(this,key,value) astINVOKE(V,astMapGet0F_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0C(this,key,value) astINVOKE(V,astMapGet0C_(astCheckKeyMap(this),key,value,STATUS_PTR))
+#define astMapGetC(this,key,value) astINVOKE(V,astMapGetC_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet1I(this,key,mxval,nval,value) astINVOKE(V,astMapGet1I_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1B(this,key,mxval,nval,value) astINVOKE(V,astMapGet1B_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1S(this,key,mxval,nval,value) astINVOKE(V,astMapGet1S_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
@@ -1493,6 +1516,8 @@ typedef struct AstFitsChan {
    int cdmatrix;
    int polytan;
    int carlin;
+   int sipreplace;
+   double fitstol;
    int iwc;
    int clean;
    int fitsdigits;
@@ -1686,6 +1711,7 @@ AstAxis *astAxisId_( const char *, ... )__attribute__((format(printf,1,2)));
 const char *astAxisFormat_( AstAxis *, double, int * );
 int astAxisUnformat_( AstAxis *, const char *, double *, int * );
 void astAxisNorm_( AstAxis *, double *, int * );
+void astAxisNormValues_( AstAxis *, int, int, double *, int * );
 #define astCheckAxis(this) astINVOKE_CHECK(Axis,this,0)
 #define astVerifyAxis(this) astINVOKE_CHECK(Axis,this,1)
 
@@ -1694,6 +1720,7 @@ void astAxisNorm_( AstAxis *, double *, int * );
 #define astAxis astINVOKE(F,astAxisId_)
 #define astAxisFormat(this,value) astINVOKE(V,astAxisFormat_(astCheckAxis(this),value,STATUS_PTR))
 #define astAxisNorm(this,value) astINVOKE(V,astAxisNorm_(astCheckAxis(this),value,STATUS_PTR))
+#define astAxisNormValues(this,oper,nval,values) astINVOKE(V,astAxisNormValues_(astCheckAxis(this),oper,nval,values,STATUS_PTR))
 #define astAxisUnformat(this,string,value) astINVOKE(V,astAxisUnformat_(astCheckAxis(this),string,value,STATUS_PTR))
 /* skyaxis. */
 /* ======== */
@@ -1771,7 +1798,7 @@ typedef struct AstGrismMap {
    double waver;
    double alpha;
    double g;
-   double m;
+   int m;
    double eps;
    double theta;
    double k1;
@@ -1980,6 +2007,7 @@ astPROTO_ISA(PolyMap)
 
 AstPolyMap *astPolyMapId_( int, int, int, const double[], int, const double[], const char *, ... )__attribute__((format(printf,7,8)));
 AstPolyMap *astPolyTran_( AstPolyMap *, int, double, double, int, const double *, const double *, int * );
+void astPolyCoeffs_( AstPolyMap *, int, int, double *, int *, int *);
 #define astCheckPolyMap(this) astINVOKE_CHECK(PolyMap,this,0)
 #define astVerifyPolyMap(this) astINVOKE_CHECK(PolyMap,this,1)
 
@@ -1987,6 +2015,33 @@ AstPolyMap *astPolyTran_( AstPolyMap *, int, double, double, int, const double *
 
 #define astPolyMap astINVOKE(F,astPolyMapId_)
 #define astPolyTran(this,forward,acc,maxacc,maxorder,lbnd,ubnd) astINVOKE(O,astPolyTran_(astCheckPolyMap(this),forward,acc,maxacc,maxorder,lbnd,ubnd,STATUS_PTR))
+
+#define astPolyCoeffs(this,forward,nel,coeffs,ncoeff) astINVOKE(V,astPolyCoeffs_(astCheckPolyMap(this),forward,nel,coeffs,ncoeff,STATUS_PTR))
+/* chebymap. */
+/* ========= */
+typedef struct AstChebyMap {
+
+   AstPolyMap polymap;
+
+   int cheby_f;
+   int cheby_i;
+   double *scale_f;
+   double *offset_f;
+   double *scale_i;
+   double *offset_i;
+} AstChebyMap;
+astPROTO_CHECK(ChebyMap)
+astPROTO_ISA(ChebyMap)
+
+AstChebyMap *astChebyMapId_( int, int, int, const double[], int, const double[], const double[], const double[], const double[], const double[], const char *, ... )__attribute__((format(printf,11,12)));
+void astChebyDomain_( AstChebyMap *, int, double *, double *, int * );
+#define astCheckChebyMap(this) astINVOKE_CHECK(ChebyMap,this,0)
+#define astVerifyChebyMap(this) astINVOKE_CHECK(ChebyMap,this,1)
+
+#define astIsAChebyMap(this) astINVOKE_ISA(ChebyMap,this)
+
+#define astChebyMap astINVOKE(F,astChebyMapId_)
+#define astChebyDomain(this,forward,lbnd,ubnd) astINVOKE(V,astChebyDomain_(astCheckChebyMap(this),forward,lbnd,ubnd,STATUS_PTR))
 /* ratemap. */
 /* ======== */
 typedef struct AstRateMap {
@@ -2024,6 +2079,7 @@ typedef struct AstFrame {
    double obslat;
    double obslon;
    double obsalt;
+   double dtai;
    double dut1;
    int *perm;
    int digits;
@@ -2085,6 +2141,7 @@ void astAddVariant_( AstFrameSet *, AstMapping *, const char *, int * );
 void astMirrorVariants_( AstFrameSet *, int, int * );
 void astRemapFrame_( AstFrameSet *, int, AstMapping *, int * );
 void astRemoveFrame_( AstFrameSet *, int, int * );
+int astGetNodeId_( AstFrameSet *, int, int *, int *, AstMapping **, int *, int * );
 #define astCheckFrameSet(this) astINVOKE_CHECK(FrameSet,this,0)
 #define astVerifyFrameSet(this) astINVOKE_CHECK(FrameSet,this,1)
 
@@ -2098,6 +2155,7 @@ void astRemoveFrame_( AstFrameSet *, int, int * );
 #define astGetMapping(this,iframe1,iframe2) astINVOKE(O,astGetMapping_(astCheckFrameSet(this),iframe1,iframe2,STATUS_PTR))
 #define astRemapFrame(this,iframe,map) astINVOKE(V,astRemapFrame_(astCheckFrameSet(this),iframe,astCheckMapping(map),STATUS_PTR))
 #define astRemoveFrame(this,iframe) astINVOKE(V,astRemoveFrame_(astCheckFrameSet(this),iframe,STATUS_PTR))
+#define astGetNode(this,inode,nnodes,iframe,map,parent) astINVOKE(V,astGetNodeId_(astCheckFrameSet(this),inode,nnodes,iframe,map,parent,STATUS_PTR))
 
 astPROTO_CHECK(Frame)
 astPROTO_ISA(Frame)
@@ -2112,6 +2170,7 @@ double astAxOffset_( AstFrame *, int, double, double, int * );
 double astDistance_( AstFrame *, const double[], const double[], int * );
 double astOffset2_( AstFrame *, const double[2], double, double, double[2], int * );
 int astGetActiveUnit_( AstFrame *, int * );
+void astAxNorm_( AstFrame *, int, int, int, double *, int * );
 void astIntersect_( AstFrame *, const double[2], const double[2], const double[2], const double[2], double[2], int * );
 void astMatchAxes_( AstFrame *, AstFrame *, int[], int * );
 void astNorm_( AstFrame *, double[], int * );
@@ -2137,6 +2196,7 @@ void astPermAxesId_( AstFrame *, const int[], int * );
 #define astMatchAxes(frm1,frm2,axes) astINVOKE(V,astMatchAxes_(astCheckFrame(frm1),astCheckFrame(frm2),axes,STATUS_PTR))
 #define astNorm(this,value) astINVOKE(V,astNorm_(astCheckFrame(this),value,STATUS_PTR))
 #define astAxDistance(this,axis,v1,v2) astINVOKE(V,astAxDistance_(astCheckFrame(this),axis,v1,v2,STATUS_PTR))
+#define astAxNorm(this,axis,oper,nval,values) astINVOKE(V,astAxNorm_(astCheckFrame(this),axis,oper,nval,values,STATUS_PTR))
 #define astAxOffset(this,axis,v1,dist) astINVOKE(V,astAxOffset_(astCheckFrame(this),axis,v1,dist,STATUS_PTR))
 #define astOffset(this,point1,point2,offset,point3) astINVOKE(V,astOffset_(astCheckFrame(this),point1,point2,offset,point3,STATUS_PTR))
 #define astAxAngle(this,a,b,axis) astINVOKE(V,astAxAngle_(astCheckFrame(this),a,b,axis,STATUS_PTR))
@@ -2202,7 +2262,7 @@ astPROTO_CHECK(SlaMap)
 astPROTO_ISA(SlaMap)
 
 AstSlaMap *astSlaMapId_( int, const char *, ... )__attribute__((format(printf,2,3)));
-void astSlaAdd_( AstSlaMap *, const char *, const double[], int * );
+void astSlaAdd_( AstSlaMap *, const char *, int, const double[], int * );
 int astSlaIsEmpty_( AstSlaMap *, int * );
 #define astCheckSlaMap(this) astINVOKE_CHECK(SlaMap,this,0)
 #define astVerifySlaMap(this) astINVOKE_CHECK(SlaMap,this,1)
@@ -2210,7 +2270,7 @@ int astSlaIsEmpty_( AstSlaMap *, int * );
 #define astIsASlaMap(this) astINVOKE_ISA(SlaMap,this)
 
 #define astSlaMap astINVOKE(F,astSlaMapId_)
-#define astSlaAdd(this,cvt,args) astINVOKE(V,astSlaAdd_(astCheckSlaMap(this),cvt,args,STATUS_PTR))
+#define astSlaAdd(this,cvt,narg,args) astINVOKE(V,astSlaAdd_(astCheckSlaMap(this),cvt,narg,args,STATUS_PTR))
 /* specmap. */
 /* ======== */
 #define AST__C 2.99792458E8
@@ -2227,14 +2287,14 @@ astPROTO_CHECK(SpecMap)
 astPROTO_ISA(SpecMap)
 
 AstSpecMap *astSpecMapId_( int, int, const char *, ... )__attribute__((format(printf,3,4)));
-void astSpecAdd_( AstSpecMap *, const char *, const double[], int * );
+void astSpecAdd_( AstSpecMap *, const char *, int, const double[], int * );
 #define astCheckSpecMap(this) astINVOKE_CHECK(SpecMap,this,0)
 #define astVerifySpecMap(this) astINVOKE_CHECK(SpecMap,this,1)
 
 #define astIsASpecMap(this) astINVOKE_ISA(SpecMap,this)
 
 #define astSpecMap astINVOKE(F,astSpecMapId_)
-#define astSpecAdd(this,cvt,args) astINVOKE(V,astSpecAdd_(astCheckSpecMap(this),cvt,args,STATUS_PTR))
+#define astSpecAdd(this,cvt,narg,args) astINVOKE(V,astSpecAdd_(astCheckSpecMap(this),cvt,narg,args,STATUS_PTR))
 /* sphmap. */
 /* ======= */
 typedef struct AstSphMap {
@@ -2268,14 +2328,14 @@ astPROTO_CHECK(TimeMap)
 astPROTO_ISA(TimeMap)
 
 AstTimeMap *astTimeMapId_( int, const char *, ... )__attribute__((format(printf,2,3)));
-void astTimeAdd_( AstTimeMap *, const char *, const double[], int * );
+void astTimeAdd_( AstTimeMap *, const char *, int, const double[], int * );
 #define astCheckTimeMap(this) astINVOKE_CHECK(TimeMap,this,0)
 #define astVerifyTimeMap(this) astINVOKE_CHECK(TimeMap,this,1)
 
 #define astIsATimeMap(this) astINVOKE_ISA(TimeMap,this)
 
 #define astTimeMap astINVOKE(F,astTimeMapId_)
-#define astTimeAdd(this,cvt,args) astINVOKE(V,astTimeAdd_(astCheckTimeMap(this),cvt,args,STATUS_PTR))
+#define astTimeAdd(this,cvt,narg,args) astINVOKE(V,astTimeAdd_(astCheckTimeMap(this),cvt,narg,args,STATUS_PTR))
 /* selectormap. */
 /* ============ */
 #define STATUS_PTR astGetStatusPtr
@@ -2435,6 +2495,25 @@ AstUnitMap *astUnitMapId_( int, const char *, ... )__attribute__((format(printf,
 #define astIsAUnitMap(this) astINVOKE_ISA(UnitMap,this)
 
 #define astUnitMap astINVOKE(F,astUnitMapId_)
+/* unitnormmap. */
+/* ============ */
+typedef struct AstUnitNormMap {
+
+   AstMapping mapping;
+
+   double *centre;
+
+} AstUnitNormMap;
+astPROTO_CHECK(UnitNormMap)
+astPROTO_ISA(UnitNormMap)
+
+AstUnitNormMap *astUnitNormMapId_( int, const double [], const char *, ... )__attribute__((format(printf,3,4)));
+#define astCheckUnitNormMap(this) astINVOKE_CHECK(UnitNormMap,this,0)
+#define astVerifyUnitNormMap(this) astINVOKE_CHECK(UnitNormMap,this,1)
+
+#define astIsAUnitNormMap(this) astINVOKE_ISA(UnitNormMap,this)
+
+#define astUnitNormMap astINVOKE(F,astUnitNormMapId_)
 /* wcsmap. */
 /* ======= */
 #define STATUS_PTR astGetStatusPtr
@@ -2591,6 +2670,7 @@ typedef struct AstSkyLastTable {
    double obslon;
    double obsalt;
    double dut1;
+   double dtai;
    int nentry;
    double *epoch;
    double *last;
@@ -2995,9 +3075,7 @@ typedef struct AstBox {
    AstRegion region;
 
    double *extent;
-   double *shextent;
    double *centre;
-   double shrink;
    double *lo;
    double *hi;
    double *geolen;

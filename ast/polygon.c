@@ -106,6 +106,12 @@ f     - AST_OUTLINE<X>: Create a Polygon outlining values in a pixel array
 *        Added astConvex<X>.
 *     25-FEB-2014 (DSB):
 *        Added attribute SimpVertices.
+*     7-SEP-2015 (DSB):
+*        Shrink outline polygons by a small fraction of a pixel, in order
+*        to avoid placing vertices exactly on pixel edges. This is because
+*        rounding errors in subsequent code may push the vertices into
+*        neighbouring pixels, which may have bad WCS coords (e.g.
+*        vertices on the boundary of a polar cusp in an HPX map).
 *class--
 */
 
@@ -115,15 +121,6 @@ f     - AST_OUTLINE<X>: Create a Polygon outlining values in a pixel array
    the header files that define class interfaces that they should make
    "protected" symbols available. */
 #define astCLASS Polygon
-
-/* Macros which return the maximum and minimum of two values. */
-#define MAX(aa,bb) ((aa)>(bb)?(aa):(bb))
-#define MIN(aa,bb) ((aa)<(bb)?(aa):(bb))
-
-/* Macro to check for equality of floating point values. We cannot
-   compare bad values directory because of the danger of floating point
-   exceptions, so bad values are dealt with explicitly. */
-#define EQUAL(aa,bb) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E9*MAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
 
 /* Define a macro for testing if a pixel value <V> satisfies the requirements
    specified by <Oper> and <Value>. Compiler optimisation should remove
@@ -148,6 +145,10 @@ f     - AST_OUTLINE<X>: Create a Polygon outlining values in a pixel array
 #define IN      1
 #define OUT     2
 #define ON      3
+
+/* Size of pertubation (in pixels) used to avoid placing vertices exactly
+   on a pixel edge. */
+#define DELTA 0.01
 
 /* Include files. */
 /* ============== */
@@ -947,6 +948,7 @@ AstPolygon *astConvex##X##_( Xtype value, int oper, const Xtype array[], \
 \
 /* Initialise. */ \
    result = NULL; \
+   candidate = NULL; \
 \
 /* Check the global error status. */ \
    if ( !astOK ) return result; \
@@ -4619,7 +4621,7 @@ static int RegPins( AstRegion *this_region, AstPointSet *pset, AstRegion *unc,
             }
          }
       } else {
-         for( ip = 0; ip < np; ip++, m++ ) {
+         for( ip = 0; ip < np; ip++ ) {
             if( ptr1[ 0 ][ ip ] != AST__BAD &&
                 ptr1[ 1 ][ ip ] != AST__BAD ) {
                result = 0;
@@ -5633,6 +5635,8 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
    double *ptr[ 2 ];    /* PointSet data pointers */ \
    double *xvert;       /* Pointer to array holding vertex X axis values */ \
    double *yvert;       /* Pointer to array holding vertex Y axis values */ \
+   double dx;           /* Pertubation in X (pixels) to avoid the pixel edge */ \
+   double dy;           /* Pertubation in Y (pixels) to avoid the pixel edge */ \
    double xx;           /* Pixel X coord at corner */ \
    double yy;           /* Pixel Y coord at corner */ \
    int at;              /* The pixel corner to draw to */ \
@@ -5713,17 +5717,23 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
             at = 1; \
             ix--; \
             iy--; \
+            dx = DELTA; \
+            dy = -DELTA; \
 \
 /* Otherwise, if lower mid pixel is good, move down its left edge. */ \
          } else if( iy > lbnd[ 1 ] && ISVALID(*pc,OperI,value) ) { \
             pa = pc; \
             at = 0; \
             iy--; \
+            dx = DELTA; \
+            dy = 0.0; \
 \
 /* Otherwise, move to the right along the bottom edge of the current pixel. */ \
          } else { \
             nright--; \
             at = 3; \
+            dx = DELTA; \
+            dy = DELTA; \
          } \
 \
 /* If the polygon bends at this point, or if we will be smoothing the \
@@ -5758,17 +5768,23 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
             at = 2; \
             ix--; \
             iy++; \
+            dx = -DELTA; \
+            dy = -DELTA; \
 \
 /* Otherwise, if left mid pixel is good, move left along its top edge. */ \
          } else if( ix > lbnd[ 0 ] && ISVALID(*pc,OperI,value) ) { \
             pa = pc; \
             at = 1; \
             ix--; \
+            dx = 0.0; \
+            dy = -DELTA; \
 \
 /* Otherwise, move down the left edge of the current pixel. */ \
          } else { \
             nright--; \
             at = 0; \
+            dx = DELTA; \
+            dy = -DELTA; \
          } \
 \
 /* If the polygon bends at this point, or if we will be smoothing the \
@@ -5803,17 +5819,23 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
             at = 3; \
             ix++; \
             iy++; \
+            dx = -DELTA; \
+            dy = DELTA; \
 \
 /* Otherwise, if upper mid pixel is good, move up its right edge. */ \
          } else if( iy < ubnd[ 1 ] && ISVALID(*pc,OperI,value) ) { \
             pa = pc; \
             at = 2; \
             iy++; \
+            dx = -DELTA; \
+            dy = 0.0; \
 \
 /* Otherwise, move left along the top edge of the current pixel. */ \
          } else { \
             nright--; \
             at = 1; \
+            dx = -DELTA; \
+            dy = -DELTA; \
          } \
 \
 /* If the polygon bends at this point, or if we will be smoothing the \
@@ -5847,17 +5869,23 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
             at = 0; \
             ix++; \
             iy--; \
+            dx = DELTA; \
+            dy = DELTA; \
 \
 /* Otherwise, if right mid pixel is good, move right along its lower edge. */ \
          } else if( ix < ubnd[ 0 ] && ISVALID(*pc,OperI,value) ) { \
             pa = pc; \
             at = 3; \
             ix++; \
+            dx = 0.0; \
+            dy = DELTA; \
 \
-/* Otherwise, move up the left edge of the current pixel. */ \
+/* Otherwise, move up the right edge of the current pixel. */ \
          } else { \
             nright--; \
             at = 2; \
+            dx = -DELTA; \
+            dy = DELTA; \
          } \
 \
 /* If the polygon bends at this point, or if we will be smoothing the \
@@ -5893,14 +5921,17 @@ static AstPointSet *TraceEdge##Oper##X( Xtype value, const Xtype array[], \
 }
 
 /* Define a macro to add a vertex position to dynamically allocated
-   arrays of X and Y positions. */
+   arrays of X and Y positions. We offset the supplied position by
+   a small fraction of a pixel towards the centre of hte polygon to
+   avoid placing vertices exactly on the edge, which may cause problems
+   later for pixels that are on the edge of an area of bad pixel. */
 #define ADD(X,Y) {\
    ii = nvert++; \
    xvert = (double *) astGrow( xvert, nvert, sizeof( double ) ); \
    yvert = (double *) astGrow( yvert, nvert, sizeof( double ) ); \
    if( astOK ) { \
-      xvert[ ii ] = (X); \
-      yvert[ ii ] = (Y); \
+      xvert[ ii ] = (X+dx); \
+      yvert[ ii ] = (Y+dy); \
    } \
 }
 

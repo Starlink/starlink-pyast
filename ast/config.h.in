@@ -3,6 +3,9 @@
 /* use external PAL and ERFA libraries */
 #undef EXTERNAL_PAL
 
+/* Variable holding current function name. */
+#undef FUNCTION_NAME
+
 /* Define to 1 if you have the `backtrace' function. */
 #undef HAVE_BACKTRACE
 

@@ -197,6 +197,7 @@ AstGlobals *astGlobalsInit_( void ) {
       INIT( PermMap );
       INIT( PointList );
       INIT( PolyMap );
+      INIT( ChebyMap );
       INIT( Polygon );
       INIT( Prism );
       INIT( RateMap );
@@ -211,6 +212,7 @@ AstGlobals *astGlobalsInit_( void ) {
       INIT( TimeMap );
       INIT( TranMap );
       INIT( UnitMap );
+      INIT( UnitNormMap );
       INIT( WinMap );
       INIT( StcResourceProfile );
       INIT( StcSearchLocation );

@@ -2699,7 +2699,7 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
     astargs = (PyArrayObject *) PyArray_ContiguousFromAny( astargs_object,
                                                            PyArray_DOUBLE, 0, 100);
     if (astargs) {
-      astTimeAdd( THIS, cvt, (const double *)astargs->data );
+      astTimeAdd( THIS, cvt, astargs->dimensions[0], (const double *)astargs->data );
       if( astOK ) {
          Py_INCREF(Py_None);
          result = Py_None;
@@ -4534,6 +4534,7 @@ static PyObject *FrameSet_getframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_getmapping( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_remapframe( FrameSet *self, PyObject *args );
 static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args );
+static PyObject *FrameSet_getnode( FrameSet *self, PyObject *args );
 
 /* Describe the methods of the class */
 static PyMethodDef FrameSet_methods[] = {
@@ -4542,6 +4543,7 @@ static PyMethodDef FrameSet_methods[] = {
   {"getmapping", (PyCFunction)FrameSet_getmapping, METH_VARARGS, "Obtain a Mapping that converts between two Frames in a FrameSet"},
   {"remapframe", (PyCFunction)FrameSet_remapframe, METH_VARARGS, "Modify a Frame's relationship to other Frames in a FrameSet"},
   {"removeframe", (PyCFunction)FrameSet_removeframe, METH_VARARGS, "Remove a Frame from a FrameSet"},
+  {"getnode", (PyCFunction)FrameSet_getnode, METH_VARARGS, "Get information about a FrameSet node"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -4750,6 +4752,42 @@ static PyObject *FrameSet_removeframe( FrameSet *self, PyObject *args ) {
    TIDY;
    return result;
 }
+
+#undef NAME
+#define NAME CLASS ".getnode"
+static PyObject *FrameSet_getnode( FrameSet *self, PyObject *args ) {
+
+  PyObject *result = NULL;
+  int inode;
+  int nnodes;
+  AstMapping *map;
+  int iframe;
+  int parent;
+  int ok;
+
+  if( PyErr_Occurred() ) return NULL;
+
+  if( PyArg_ParseTuple(args, "i:" NAME, &inode) && astOK ) {
+      ok = astGetNode( THIS, inode, &nnodes, &iframe, &map, &parent );
+      if( astOK ) {
+        PyObject *map_object = NULL;
+        map_object = NewObject( (AstObject *)map );
+        if (map_object ) {
+          result = Py_BuildValue( "OiiOi", (ok?Py_True:Py_False),
+                                  nnodes, iframe, map_object,
+                                  parent );
+        }
+        Py_XDECREF( map_object );
+      }
+      if ( map ) map = astAnnul( map );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+
 
 /* CmpFrame */
 /* ======== */

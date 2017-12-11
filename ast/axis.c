@@ -85,6 +85,8 @@ f     only within textual output (e.g. from AST_WRITE).
 *        Guard against a null "str1" value in AxisAbbrev.
 *     17-APR-2015 (DSB):
 *        Added astAxisCentre.
+*     26-OCT-2016 (DSB):
+*        Added astAxisNormValues.
 *class--
 */
 
@@ -224,6 +226,7 @@ static int TestAxisUnit( AstAxis *, int * );
 static int TestAxisInternalUnit( AstAxis *, int * );
 static int TestAxisNormUnit( AstAxis *, int * );
 static void AxisNorm( AstAxis *, double *, int * );
+static void AxisNormValues( AstAxis *, int, int, double *, int * );
 static void AxisOverlay( AstAxis *, AstAxis *, int * );
 static void ClearAttrib( AstObject *, const char *, int * );
 static void ClearAxisDigits( AstAxis *, int * );
@@ -806,7 +809,7 @@ static const char *AxisFormat( AstAxis *this, double value, int *status ) {
             }
             astError( AST__FMTER, "astAxisFormat(%s): Error formatting a "
                       "coordinate value of %1.*G%s%s.", status, astGetClass( this ),
-                      DBL_DIG, value, stat? " - " : "", errstat );
+                      AST__DBL_DIG, value, stat? " - " : "", errstat );
             astError( AST__FMTER, "The format string was \"%s\".", status, fmt );
 
 /* Also check that the result buffer did not overflow. If it did, memory will
@@ -816,7 +819,7 @@ static const char *AxisFormat( AstAxis *this, double value, int *status ) {
             astError( AST__FMTER, "astAxisFormat(%s): Internal buffer "
                       "overflow while formatting a coordinate value of %1.*G "
                       "- result exceeds %d characters.", status, astGetClass( this ),
-                      DBL_DIG, value, AST__AXIS_AXISFORMAT_BUFF_LEN );
+                      AST__DBL_DIG, value, AST__AXIS_AXISFORMAT_BUFF_LEN );
             astError( AST__FMTER, "The format string was \"%s\".", status, fmt );
 
 /* If succesfull, return a pointer to the buffer. */
@@ -1090,6 +1093,56 @@ static void AxisNorm( AstAxis *this, double *value, int *status ) {
 *     value
 *        Pointer to the coordinate value to be normalised, which will
 *        be modified in place.
+*-
+*/
+
+/* In the Axis class there are no constraints, so simply return
+   without action. */
+   return;
+}
+
+static void AxisNormValues( AstAxis *this, int oper, int nval,
+                            double *values, int *status ){
+/*
+*+
+*  Name:
+*     astAxisNormValues
+
+*  Purpose:
+*     Normalise an array of axis coordinate values.
+
+*  Type:
+*     Public virtual function.
+
+*  Synopsis:
+*     #include "axis.h"
+*     void astAxisNormValues( AstAxis *this, int oper, int nval,
+*                             double *values )
+
+*  Class Membership:
+*     Axis method.
+
+*  Description:
+*     This function modifies a supplied array of axis values so that
+*     they are normalised in the manner indicated by parameter "oper".
+*
+*     For a simple axis, the supplied values are always returned
+*     unchanged regardless of the value of "oper".
+
+*  Parameters:
+*     this
+*        Pointer to the Axis.
+*     oper
+*        Indicates the type of normalisation to be applied. If zero is
+*        supplied, the normalisation will be the same as that performed by
+*        function astAxisNorm. If 1 is supplied, the normalisation will be
+*        chosen automatically so that the resulting list has the smallest
+*        range.
+*     nval
+*        The number of points in the values array.
+*     values
+*        On entry, the axis values to be normalised. Modified on exit to
+*        hold the normalised values.
 *-
 */
 
@@ -1709,7 +1762,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "top" ) ) {
       dval = astGetAxisTop( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1718,7 +1771,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "bottom" ) ) {
       dval = astGetAxisBottom( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1888,6 +1941,7 @@ void astInitAxisVtab_(  AstAxisVtab *vtab, const char *name, int *status ) {
    vtab->AxisGap = AxisGap;
    vtab->AxisIn = AxisIn;
    vtab->AxisNorm = AxisNorm;
+   vtab->AxisNormValues = AxisNormValues;
    vtab->AxisOverlay = AxisOverlay;
    vtab->AxisUnformat = AxisUnformat;
    vtab->ClearAxisDigits = ClearAxisDigits;
@@ -3433,9 +3487,11 @@ int astTestAxisInternalUnit_( AstAxis *this, int *status ) {
    if ( !astOK ) return 0;
    return (**astMEMBER(this,Axis,TestAxisInternalUnit))( this, status );
 }
-
-
-
+void astAxisNormValues_( AstAxis *this, int oper, int nval, double *values,
+                         int *status ){
+   if ( !astOK ) return;
+   (**astMEMBER(this,Axis,AxisNormValues))( this, oper, nval, values, status );
+}
 
 
 

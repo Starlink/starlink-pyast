@@ -633,3 +633,11 @@
       INTEGER AST__NOCNV
       PARAMETER ( AST__NOCNV = 233934410 )
 
+*     Attempt to change an immutable attribute
+      INTEGER AST__IMMUT
+      PARAMETER ( AST__IMMUT = 233934418 )
+
+*     No bounding box available
+      INTEGER AST__NOBOX
+      PARAMETER ( AST__NOBOX = 233934426 )
+

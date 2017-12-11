@@ -159,6 +159,16 @@ f     The MatrixMap class does not define any new routines beyond those
 *        if the intervening neighbour could not itself merge. This could
 *        result in an infinite simplification loop, which was detected by
 *        CmpMap and and aborted, resulting in no useful simplification.
+*     15-JUN-2017 (DSB):
+*        A diagonal MatrixMap in which the diagonal elements are all zero
+*        cannot be simplified to a ZoomMap, since ZoomMaps cannot have
+*        zero zoom factor.
+*     16-JUN-2017 (DSB):
+*        Fix error checking bug in MtrMult - it was checking for the
+*        inverse transformation of "this" instead of the forward
+*        transformation of "a".
+*     7-NOW-2017 (DSB):
+*        Allow a diagonal MatrixMap to merge with a WinMap.
 *class--
 */
 
@@ -173,15 +183,6 @@ f     The MatrixMap class does not define any new routines beyond those
 #define FULL       0
 #define DIAGONAL   1
 #define UNIT       2
-
-/* Macros which return the maximum and minimum of two values. */
-#define MAX(aa,bb) ((aa)>(bb)?(aa):(bb))
-#define MIN(aa,bb) ((aa)<(bb)?(aa):(bb))
-
-/* Macro to check for equality of floating point values. We cannot
-compare bad values directory because of the danger of floating point
-exceptions, so bad values are dealt with explicitly. */
-#define EQUAL(aa,bb) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E5*MAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
 
 /* Include files. */
 /* ============== */
@@ -268,6 +269,7 @@ static AstMatrixMap *MatZoom( AstMatrixMap *, AstZoomMap *, int, int, int * );
 static AstMatrixMap *MtrMult( AstMatrixMap *, AstMatrixMap *, int * );
 static AstMatrixMap *MtrRot( AstMatrixMap *, double, const double[], int * );
 static AstPointSet *Transform( AstMapping *, AstPointSet *, int, AstPointSet *, int * );
+static AstWinMap *MatWin2( AstMatrixMap *, AstWinMap *, int, int, int, int * );
 static double *InvertMatrix( int, int, int, double *, int * );
 static double Rate( AstMapping *, double *, int, int, int * );
 static int Equal( AstObject *, AstObject *, int * );
@@ -624,7 +626,7 @@ static void CompressMatrix( AstMatrixMap *this, int *status ){
    } else if( this->form == DIAGONAL ){
       new_form = UNIT;
       for( i = 0; i < ndiag; i++ ){
-         if( !EQUAL( (this->f_matrix)[ i ], 1.0 ) ){
+         if( !astEQUAL( (this->f_matrix)[ i ], 1.0 ) ){
             new_form = DIAGONAL;
             break;
          }
@@ -893,7 +895,7 @@ static int Equal( AstObject *this_object, AstObject *that_object, int *status ) 
          if( this_matrix && that_matrix ) {
             result = 1;
             for( i = 0; i < nin*nout; i++ ) {
-               if( !EQUAL( this_matrix[ i ], that_matrix[ i ] ) ){
+               if( !astEQUAL( this_matrix[ i ], that_matrix[ i ] ) ){
                   result = 0;
                   break;
                }
@@ -1622,15 +1624,16 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
    AstMapping **maplt;   /* New mappings list pointer */
    AstMapping *map2;     /* Pointer to replacement Mapping */
    AstMapping *mc[2];    /* Copies of supplied Mappings to swap */
+   AstMapping *newmap;   /* Pointer to replacement MatrixMap */
    AstMapping *smc0;     /* Simplied Mapping */
    AstMapping *smc1;     /* Simplied Mapping */
    AstMatrixMap *mm;     /* Pointer to supplied MatrixMap */
-   AstMatrixMap *newmm;  /* Pointer to replacement MatrixMap */
    const char *class1;   /* Pointer to first Mapping class string */
    const char *class2;   /* Pointer to second Mapping class string */
    const char *nclass;   /* Pointer to neighbouring Mapping class */
    double *b;            /* Pointer to scale terms */
    double *new_mat;      /* Pointer to elements of new MatrixMap */
+   double factor;        /* Zoom factor for new ZoomMap */
    int *invlt;           /* New invert flags list pointer */
    int do1;              /* Would a backward swap make a simplification? */
    int do2;              /* Would a forward swap make a simplification? */
@@ -1689,14 +1692,15 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
       map2 = (AstMapping *) astUnitMap( nin, "", status );
 
 /* If the MatrixMap is a square diagonal matrix with equal diagonal
-   terms, then it can be replaced by a ZoomMap. */
+   terms, then it can be replaced by a ZoomMap, so long as the
+   diagonal elements are not all zero. */
    } else if( mm->form == DIAGONAL && nin == nout &&
               mm->f_matrix && mm->i_matrix &&
              (mm->f_matrix)[ 0 ] != AST__BAD ){
       zoom = 1;
       b = mm->f_matrix + 1;
       for( i = 1; i < nin; i++ ){
-         if( !EQUAL( *b, *( b - 1 ) ) ){
+         if( !astEQUAL( *b, *( b - 1 ) ) ){
             zoom = 0;
             break;
          }
@@ -1705,13 +1709,17 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
 
       if( zoom ){
          if( ( *invert_list )[ where ] ){
-            map2 = (AstMapping *) astZoomMap( nin, (mm->i_matrix)[ 0 ], "", status );
+            factor = (mm->i_matrix)[ 0 ];
          } else {
-            map2 = (AstMapping *) astZoomMap( nin, (mm->f_matrix)[ 0 ], "", status );
+            factor = (mm->f_matrix)[ 0 ];
+         }
+
+         if( factor != 0.0 ){
+            map2 = (AstMapping *) astZoomMap( nin, factor, "", status );
          }
       }
 
-/* If the MatrixMap is a full matrix but all off-diagnal elements are
+/* If the MatrixMap is a full matrix but all off-diagonal elements are
    zero, it can be replaced by a diagonal MatrixMap. */
    } else if( mm->form == FULL && nin == nout && mm->f_matrix ){
       new_mat = astMalloc( sizeof( double )*nin );
@@ -1788,22 +1796,37 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
          if( nclass && !strcmp( nclass, "PermMap" ) &&
              !PermOK( ( *map_list )[ (i1==where)?i2:i1 ], status ) ) nclass = NULL;
 
+/* If the MatrixMap is diagonal it can also merge with a WinMap. */
+         if( !nclass && mm->form == DIAGONAL) {
+            if( class1 && ( !strcmp( class1, "WinMap" ) ) ){
+               nclass = class1;
+               i1 = where - 1;
+               i2 = where;
+
+            } else if( class2 && ( !strcmp( class2, "WinMap" ) ) ){
+               nclass = class2;
+               i1 = where;
+               i2 = where + 1;
+
+            }
+         }
+
 /* If the MatrixMap can merge with one of its neighbours, create the merged
    Mapping. */
          if( nclass ){
 
             if( !strcmp( nclass, "MatrixMap" ) ){
-               newmm = MatMat( ( *map_list )[ i1 ], ( *map_list )[ i2 ],
+               newmap = (AstMapping *) MatMat( ( *map_list )[ i1 ], ( *map_list )[ i2 ],
                                ( *invert_list )[ i1 ], ( *invert_list )[ i2 ], status );
                invert = 0;
 
             } else if( !strcmp( nclass, "ZoomMap" ) ){
                if( i1 == where ){
-                  newmm = MatZoom( (AstMatrixMap *)( *map_list )[ i1 ],
+                  newmap = (AstMapping *) MatZoom( (AstMatrixMap *)( *map_list )[ i1 ],
                                    (AstZoomMap *)( *map_list )[ i2 ],
                               ( *invert_list )[ i1 ], ( *invert_list )[ i2 ], status );
                } else {
-                  newmm = MatZoom( (AstMatrixMap *)( *map_list )[ i2 ],
+                  newmap = (AstMapping *) MatZoom( (AstMatrixMap *)( *map_list )[ i2 ],
                                    (AstZoomMap *)( *map_list )[ i1 ],
                            ( *invert_list )[ i2 ], ( *invert_list )[ i1 ], status );
                }
@@ -1811,18 +1834,30 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
 
             } else if( !strcmp( nclass, "PermMap" ) ){
                if( i1 == where ){
-                  newmm = MatPerm( (AstMatrixMap *)( *map_list )[ i1 ],
+                  newmap = (AstMapping *) MatPerm( (AstMatrixMap *)( *map_list )[ i1 ],
                                    (AstPermMap *)( *map_list )[ i2 ],
                            ( *invert_list )[ i1 ], ( *invert_list )[ i2 ], 1, status );
                } else {
-                  newmm = MatPerm( (AstMatrixMap *)( *map_list )[ i2 ],
+                  newmap = (AstMapping *) MatPerm( (AstMatrixMap *)( *map_list )[ i2 ],
                                    (AstPermMap *)( *map_list )[ i1 ],
                            ( *invert_list )[ i2 ], ( *invert_list )[ i1 ], 0, status );
                }
                invert = 0;
 
+            } else if( !strcmp( nclass, "WinMap" ) ){
+               if( i1 == where ){
+                  newmap = (AstMapping *) MatWin2( (AstMatrixMap *)( *map_list )[ i1 ],
+                                   (AstWinMap *)( *map_list )[ i2 ],
+                           ( *invert_list )[ i1 ], ( *invert_list )[ i2 ], 1, status );
+               } else {
+                  newmap = (AstMapping *) MatWin2( (AstMatrixMap *)( *map_list )[ i2 ],
+                                   (AstWinMap *)( *map_list )[ i1 ],
+                           ( *invert_list )[ i2 ], ( *invert_list )[ i1 ], 0, status );
+               }
+               invert = 0;
+
             } else {
-               newmm = astClone( ( *map_list )[ where ] );
+               newmap = astClone( ( *map_list )[ where ] );
                invert = ( *invert_list )[ where ];
             }
 
@@ -1832,7 +1867,7 @@ static int MapMerge( AstMapping *this, int where, int series, int *nmap,
 /* Annul the first of the two Mappings, and replace it with the merged
    MatrixMap. Also set the invert flag. */
                (void) astAnnul( ( *map_list )[ i1 ] );
-               ( *map_list )[ i1 ] = (AstMapping *) newmm;
+               ( *map_list )[ i1 ] = newmap;
                ( *invert_list )[ i1 ] = invert;
 
 /* Annul the second of the two Mappings, and shuffle down the rest of the
@@ -3029,6 +3064,192 @@ static void MatWin( AstMapping **maps, int *inverts, int imm, int *status ){
    return;
 }
 
+static AstWinMap *MatWin2( AstMatrixMap *mm, AstWinMap *wm, int minv,
+                           int winv, int mat1, int *status ){
+/*
+*  Name:
+*     MatWin2
+
+*  Purpose:
+*     Create a WinMap by merging a diagonal MatrixMap and a WinMap.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "matrixmap.h"
+*     AstWinMap *MatWin2( AstMatrixMap *mm, AstWinMap *wm, int minv,
+*                         int winv, int mat1, int *status )
+
+*  Class Membership:
+*     MatrixMap member function
+
+*  Description:
+*     This function creates a new WinMap which performs a mapping
+*     equivalent to applying the two supplied Mappings in series in the
+*     directions specified by the "invert" flags (the Invert attributes of
+*     the supplied MatrixMaps are ignored), in the order specified by
+*     "mat1".
+
+*  Parameters:
+*     mm
+*        A pointer to the MatrixMap. Assumed to be diagonal.
+*     wm
+*        A pointer to the WinMap.
+*     minv
+*        The invert flag to use with mm. A value of zero causes the forward
+*        mapping to be used, and a non-zero value causes the inverse
+*        mapping to be used.
+*     winv
+*        The invert flag to use with wm.
+*     mat1
+*        If non-zero, then "mm" is applied first followed by "wm". Otherwise,
+*        "wm" is applied first followed by "mm".
+*     status
+*        Pointer to the inherited status variable.
+
+*  Returned Value:
+*     Pointer to the new MatrixMap.
+
+*  Notes:
+*     -  The forward direction of the returned MatrixMap is equivalent to the
+*     combined effect of the two supplied Mappings, operating in the
+*     directions specified by "winv" and "minv".
+*     -  A null pointer will be returned if this function is invoked with the
+*     global error status set, or if it should fail for any reason.
+*/
+
+/* Local Variables: */
+   AstWinMap *result;            /* Pointer to output WinMap */
+   double *ina;                  /* Input corner A in new WinMap */
+   double *inb;                  /* Input corner B in new WinMap */
+   double *newscales;            /* Scales for new WinMap */
+   double *newshifts;            /* Shifts for new WinMap */
+   double *outa;                 /* Output corner A in new WinMap */
+   double *outb;                 /* Output corner B in new WinMap */
+   double *scales2;              /* Pointer to extended WinMap scales array */
+   double *scales;               /* Pointer to WinMap scales array */
+   double *shifts;               /* Pointer to WinMap shifts array */
+   int i;                        /* Axis index */
+   int ncol;                     /* No. of columns in the MatrixMap */
+   int nrow;                     /* No. of rows in the MatrixMap */
+   int nt;                       /* Number of axes in WinMap */
+   int old_minv;                 /* Original setting of MatrixMap Invert attribute */
+   int old_winv;                 /* Original setting of WinMap Invert attribute */
+
+/* Check the global error status. */
+   if ( !astOK ) return NULL;
+
+/* Initialise the returned pointer. */
+   result = NULL;
+
+/* Temporarily set the Invert attributes of both Mappings to the supplied
+   values. */
+   old_minv = astGetInvert( mm );
+   astSetInvert( mm, minv );
+
+   old_winv = astGetInvert( wm );
+   astSetInvert( wm, winv );
+
+/* Get the number of inputs (columns) and outputs (rows) for the MatrixMap. */
+   ncol = astGetNin( mm );
+   nrow = astGetNout( mm );
+
+/* Get the scales and shifts implemented by the WinMap. These take into
+   account the current Invert attribute of the WinMap. */
+   nt = astWinTerms( wm, &shifts, &scales );
+
+/* First deal with cases where the MatrixMap is applied first. */
+   if( mat1 ){
+
+/* Sanity check. */
+      if( nt != nrow ) {
+         if( astOK ) astError( AST__INTER, "astMapMerge(%s): WinMap has %d axes, "
+                               "but MatrixMap has %d rows (internal AST programming "
+                               "error).", status, astGetClass(mm), nt, nrow );
+
+      } else {
+
+/* Allocate the array to hold the scale terms for the new WinMap. */
+         newscales = astMalloc( nrow*sizeof(double) );
+
+/* Ensure that the original scales array is padded with sufficient zeros
+   to allow it to be transformed using the matrixmap. */
+         scales2 = astCalloc( ncol, sizeof(double) );
+         if( astOK ) memcpy( scales2, scales,
+                             (ncol<nrow?ncol:nrow)*sizeof(double) );
+
+/* Use the MatrixMap to transform the scale terms from the WinMap. */
+         astTranN( mm, 1, ncol, 1, scales2, 1, nrow, 1, newscales );
+
+/* Free resources. */
+         scales2 = astFree( scales2 );
+
+/* The shifts are unchanged. */
+         newshifts = shifts;
+      }
+
+/* Now deal with cases where the WinMap is applied first. */
+   } else {
+
+/* Sanity check. */
+      if( nt != ncol ) {
+         if( astOK ) astError( AST__INTER, "astMapMerge(%s): WinMap has %d axes, "
+                               "but MatrixMap has %d columns (internal AST programming "
+                               "error).", status, astGetClass(mm), nt, ncol );
+
+      } else {
+
+/* Allocate the array to hold the scale and shift terms for the new WinMap. */
+         newscales = astMalloc( nrow*sizeof(double) );
+         newshifts = astMalloc( nrow*sizeof(double) );
+
+/* Use the MatrixMap to transform the scale terms from the WinMap. */
+         astTranN( mm, 1, ncol, 1, scales, 1, nrow, 1, newscales );
+
+/* Use the MatrixMap to transform the shift terms from the WinMap. */
+         astTranN( mm, 1, ncol, 1, shifts, 1, nrow, 1, newshifts );
+
+      }
+   }
+
+/* Create the new WinMap. */
+   ina = astMalloc( nt*sizeof(double) );
+   inb = astMalloc( nt*sizeof(double) );
+   outa = astMalloc( nt*sizeof(double) );
+   outb = astMalloc( nt*sizeof(double) );
+   if( astOK ) {
+      for( i = 0; i < nt; i++ ) {
+         ina[ i ] = 0.0;
+         inb[ i ] = 1.0;
+         outa[ i ] = newshifts[ i ];
+         outb[ i ] = newscales[ i ] + newshifts[ i ];
+      }
+      result = astWinMap( nt, ina, inb, outa, outb, "", status );
+   }
+
+/* Re-instate the original settings of the Invert attribute for the
+   supplied Mappings. */
+   astSetInvert( mm, old_minv );
+   astSetInvert( wm, old_winv );
+
+/* Free resources. */
+   ina = astFree( ina );
+   inb = astFree( inb );
+   outa = astFree( outa );
+   outb = astFree( outb );
+   if( newscales != scales ) newscales = astFree( newscales );
+   if( newshifts != shifts ) newshifts = astFree( newshifts );
+   scales = astFree( scales );
+   shifts = astFree( shifts );
+
+/* If an error has occurred, annull the returned MatrixMap. */
+   if( !astOK ) result = astAnnul( result );
+
+/* Return a pointer to the output MatrixMap. */
+   return result;
+}
+
 static AstMatrixMap *MatZoom( AstMatrixMap *mm, AstZoomMap *zm, int minv,
                               int zinv, int *status ){
 /*
@@ -3233,7 +3454,7 @@ static AstMatrixMap *MtrMult( AstMatrixMap *this, AstMatrixMap *a, int *status )
       return NULL;
    }
 
-   if( !astGetTranInverse( this ) ){
+   if( !astGetTranForward( a ) ){
       astError( AST__MTRML, "astMtrMult(%s): Cannot find the product of 2 "
                 "MatrixMaps- the second MatrixMap has no forward transformation.", status,
                 astClass(this) );
@@ -4822,7 +5043,7 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
       nel = nin*nout;
 
    } else if( this->form == DIAGONAL ){
-      nel = MIN( nin, nout );
+      nel = astMIN( nin, nout );
 
    } else {
       nel = 0;
@@ -5437,7 +5658,7 @@ AstMatrixMap *astLoadMatrixMap_( void *mem, size_t size,
          nel = nin*nout;
 
       } else if( new->form == DIAGONAL ){
-         nel = MIN( nin, nout );
+         nel = astMIN( nin, nout );
 
       } else {
          nel = 0;

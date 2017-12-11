@@ -264,12 +264,12 @@
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.
@@ -390,6 +390,26 @@
 #if defined(astCLASS )
 #define AST__COUSIN -1000000
 #endif
+
+/* Number of digits to use when formatting double precision floating point
+   values. DBL_DIG ensures no loss when round-tripping from text to
+   binary to text, but we want no loss when round-tripping from binary to
+   text to binary, so we use DBL_DECIMAL_DIG instead. If this is not
+   avaialable we use DBL_DIG but add on an extra 3 digits. */
+#ifdef DBL_DECIMAL_DIG
+  #define AST__DBL_DIG (DBL_DECIMAL_DIG)
+#else
+  #define AST__DBL_DIG (DBL_DIG + 3)
+#endif
+
+#ifdef FLT_DECIMAL_DIG
+  #define AST__FLT_DIG (FLT_DECIMAL_DIG)
+#else
+  #define AST__FLT_DIG (FLT_DIG + 3)
+#endif
+
+
+
 
 /*
 *+
@@ -760,6 +780,95 @@ void astClear##attribute##_( Ast##class *this, int *status ) { \
 /*
 *+
 *  Name:
+*     astMAKE_CLEAR1
+
+*  Purpose:
+*     Implement a method to clear an attribute value for a class, reporting
+*     an error if the object has more than one reference.
+
+*  Type:
+*     Protected macro.
+
+*  Synopsis:
+*     #include "object.h"
+*     astMAKE_CLEAR1(class,attribute,component,assign)
+
+*  Class Membership:
+*     Defined by the Object class.
+
+*  Description:
+*     This macro expands to an implementation of a private member function of
+*     the form:
+*
+*        static void Clear<Attribute>( Ast<Class> *this )
+*
+*     and an external interface function of the form:
+*
+*        void astClear<Attribute>_( Ast<Class> *this )
+*
+*     which implement a method for clearing a specified attribute value for
+*     a class. An error is reported if the object has a reference count that
+*     is greater than one.
+
+*  Parameters:
+*     class
+*        The name (not the type) of the class to which the attribute belongs.
+*     attribute
+*        The name of the attribute to be cleared, as it appears in the function
+*        name (e.g. Label in "astClearLabel").
+*     component
+*        The name of the class structure component that holds the attribute
+*        value.
+*     assign
+*        An expression that evaluates to the value to assign to the component
+*        to clear its value.
+
+*  Notes:
+*     -  To avoid problems with some compilers, you should not leave any white
+*     space around the macro arguments.
+*-
+*/
+
+/* Define the macro. */
+#define astMAKE_CLEAR1(class,attribute,component,assign) \
+\
+/* Private member function. */ \
+/* ------------------------ */ \
+static void Clear##attribute( Ast##class *this, int *status ) { \
+\
+/* Check the inherited error status. */ \
+   if ( !astOK ) return; \
+\
+/* Report an error if the object has been cloned (i.e. has a reference \
+   count that is greater than one). */ \
+   if( astGetRefCount( this ) > 1 ) { \
+      astError( AST__IMMUT, "astClear(%s): The " #attribute "attribute of " \
+                "the supplied %s cannot be cleared because the %s has " \
+                "been cloned (programming error).", status, \
+                astGetClass(this), astGetClass(this), astGetClass(this) ); \
+\
+/* Otherwise, assign the "clear" value in the structure component. */ \
+   } else { \
+      this->component = (assign); \
+   } \
+} \
+\
+/* External interface. */ \
+/* ------------------- */ \
+void astClear##attribute##_( Ast##class *this, int *status ) { \
+\
+/* Check the inherited error status. */ \
+   if ( !astOK ) return; \
+\
+/* Invoke the required method via the virtual function table. */ \
+   (**astMEMBER(this,class,Clear##attribute))( this, status ); \
+}
+#endif
+
+#if defined(astCLASS)            /* Protected */
+/*
+*+
+*  Name:
 *     astMAKE_GET
 
 *  Purpose:
@@ -1010,6 +1119,94 @@ void astSet##attribute##_( Ast##class *this, type value, int *status ) { \
 /*
 *+
 *  Name:
+*     astMAKE_SET1
+
+*  Purpose:
+*     Implement a method to set an attribute value for a class, reporting
+*     an error if the object has more than one reference.
+
+*  Type:
+*     Protected macro.
+
+*  Synopsis:
+*     #include "object.h"
+*     astMAKE_SET1(class,attribute,type,component,assign)
+
+*  Class Membership:
+*     Defined by the Object class.
+
+*  Description:
+*     This macro expands to an implementation of a private member function of
+*     the form:
+*
+*        static void Set<Attribute>( Ast<Class> *this, <Type> value )
+*
+*     and an external interface function of the form:
+*
+*        void astSet<Attribute>_( Ast<Class> *this, <Type> value )
+*
+*     which implement a method for setting a specified attribute value for a
+*     class. An error is reported if the object has a reference count that
+*     is greater than one.
+
+*  Parameters:
+*      class
+*         The name (not the type) of the class to which the attribute belongs.
+*      attribute
+*         The name of the attribute to be set, as it appears in the function
+*         name (e.g. Label in "astSetLabel").
+*      type
+*         The C type of the attribute.
+*      component
+*         The name of the class structure component that holds the attribute
+*         value.
+*      assign
+*         An expression that evaluates to the value to be assigned to the
+*         component.
+
+*-
+*/
+
+/* Define the macro. */
+#define astMAKE_SET1(class,attribute,type,component,assign) \
+\
+/* Private member function. */ \
+/* ------------------------ */ \
+static void Set##attribute( Ast##class *this, type value, int *status ) { \
+\
+/* Check the inherited error status. */ \
+   if ( !astOK ) return; \
+\
+/* Report an error if the object has been cloned (i.e. has a reference \
+   count that is greater than one). */ \
+   if( astGetRefCount( this ) > 1 ) { \
+      astError( AST__IMMUT, "astSet(%s): The " #attribute "attribute of " \
+                "the supplied %s cannot be changed because the %s has " \
+                "been cloned (programming error).", status, \
+                astGetClass(this), astGetClass(this), astGetClass(this) ); \
+\
+/* Otherwise, store the new value in the structure component. */ \
+   } else { \
+      this->component = (assign); \
+   } \
+} \
+\
+/* External interface. */ \
+/* ------------------- */ \
+void astSet##attribute##_( Ast##class *this, type value, int *status ) { \
+\
+/* Check the inherited error status. */ \
+   if ( !astOK ) return; \
+\
+/* Invoke the required method via the virtual function table. */ \
+   (**astMEMBER(this,class,Set##attribute))( this, value, status ); \
+}
+#endif
+
+#if defined(astCLASS)            /* Protected */
+/*
+*+
+*  Name:
 *     astMAKE_TEST
 
 *  Purpose:
@@ -1224,7 +1421,9 @@ int astTest##attribute##_( Ast##class *this, int *status ) { \
 /* Check for equality of floating point values. We cannot compare bad values
    directly because of the danger of floating point exceptions, so bad
    values are dealt with explicitly. */
-#define astEQUAL(aa,bb) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E5*astMAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
+#define astEQUALS(aa,bb,tol) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=(tol)*astMAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
+#define astEQUAL(aa,bb) astEQUALS(aa,bb,1.0E5)
+
 
 /* AST__NULL. */
 /* ---------- */
@@ -1314,6 +1513,7 @@ typedef struct AstClassIdentifier {
    included (below). Hence make a preliminary definition available
    now. */
 struct AstChannel;
+struct KeyMap;
 
 /* This table contains all information that is the same for all
    objects in the class (e.g. pointers to its virtual functions). */
@@ -1480,6 +1680,7 @@ void astImportId_( AstObject *, int * );
 void astSetId_( void *, const char *, ... )__attribute__((format(printf,2,3)));
 #endif
 
+struct AstKeyMap *astActiveObjects_( const char *, int, int, int *);
 AstObject *astAnnulId_( AstObject *, int * );
 AstObject *astCheckLock_( AstObject *, int * );
 AstObject *astClone_( AstObject *, int * );
@@ -1495,6 +1696,7 @@ int astHasAttribute_( AstObject *, const char *, int * );
 int astSame_( AstObject *, AstObject *, int * );
 int astTest_( AstObject *, const char *, int * );
 long astGetL_( AstObject *, const char *, int * );
+void astCreatedAtId_( AstObject *, const char **, const char **, int *, int *);
 void *astGetProxy_( AstObject *, int * );
 void astClear_( AstObject *, const char *, int * );
 void astExemptId_( AstObject *, int * );
@@ -1602,6 +1804,9 @@ astINVOKE(O,astLoadObject_(mem,size,vtab,name,astCheckChannel(channel),STATUS_PT
 #define astMakePointer(id) ((void *)astCheckLock_(astMakePointer_((AstObject *)(id),STATUS_PTR),STATUS_PTR))
 #define astToString(this) astINVOKE(V,astToString_(astCheckObject(this),STATUS_PTR))
 #define astFromString(string) astINVOKE(O,astFromString_(string,STATUS_PTR))
+#define astCreatedAt(this,routine,file,line) astINVOKE(V,astCreatedAtId_((AstObject *)this,routine,file,line,STATUS_PTR))
+#define astActiveObjects(class,subclass,current) astINVOKE(O,astActiveObjects_(class,subclass,current,STATUS_PTR))
+
 
 /* Interfaces to member functions. */
 /* ------------------------------- */

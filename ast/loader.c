@@ -2,6 +2,7 @@
 #include "axis.h"
 #include "box.h"
 #include "channel.h"
+#include "chebymap.h"
 #include "circle.h"
 #include "cmpframe.h"
 #include "cmpmap.h"
@@ -50,6 +51,7 @@
 #include "selectormap.h"
 #include "switchmap.h"
 #include "unitmap.h"
+#include "unitnormmap.h"
 #include "wcsmap.h"
 #include "winmap.h"
 #include "xmlchan.h"
@@ -71,7 +73,7 @@
 /*
 *+
 *  Copyright:
-*     Copyright (C) 1997-2006 Council for the Central Laboratory of the
+*     Copyright (C) 1997-2016 Council for the Central Laboratory of the
 *     Research Councils
 
 *  Licence:
@@ -80,12 +82,12 @@
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.
@@ -93,6 +95,7 @@
 *  Authors:
 *     RFWS: R.F. Warren-Smith (Starlink)
 *     DSB: David S. Berry (Starlink)
+*     RO: Russell Owen (LSST)
 
 *  History:
 *     18-NOV-1997 (RFWS):
@@ -109,6 +112,8 @@
 *        Added the GrsimMap class.
 *     6-FEB-2009 (DSB):
 *        Added the StcsChan class.
+*     20-APR-2016 (RO):
+*        Added the UnitNormMap class.
 *-
 */
 
@@ -121,6 +126,7 @@ if ( !strcmp( class, #name ) ) return (AstLoaderType *) astLoad##name##_
    LOAD(Axis);
    LOAD(Box);
    LOAD(Channel);
+   LOAD(ChebyMap);
    LOAD(Circle);
    LOAD(CmpFrame);
    LOAD(CmpMap);
@@ -170,6 +176,7 @@ if ( !strcmp( class, #name ) ) return (AstLoaderType *) astLoad##name##_
    LOAD(TimeMap);
    LOAD(TranMap);
    LOAD(UnitMap);
+   LOAD(UnitNormMap);
    LOAD(WcsMap);
    LOAD(WinMap);
    LOAD(XmlChan);

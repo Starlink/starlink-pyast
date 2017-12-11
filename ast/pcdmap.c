@@ -288,6 +288,14 @@ static void Clear##attr( AstPcdMap *this, int axis, int *status ) { \
                 "astClear" #attr, astGetClass( this ), \
                 axis + 1, nval ); \
 \
+/* Report an error if the object has been cloned (i.e. has a reference \
+   count that is greater than one). */ \
+   } else if( astGetRefCount( this ) > 1 ) { \
+      astError( AST__IMMUT, "astClear(%s): The " #attr "attribute of " \
+                "the supplied %s cannot be cleared because the %s has " \
+                "been cloned (programming error).", status, \
+                astGetClass(this), astGetClass(this), astGetClass(this) ); \
+\
 /* Assign the "clear" value. */ \
    } else { \
       this->component[ axis ] = (assign); \
@@ -473,6 +481,14 @@ static void Set##attr( AstPcdMap *this, int axis, type value, int *status ) { \
                 #attr " - it should be in the range 1 to %d.", status, \
                 "astSet" #attr, astGetClass( this ), \
                 axis + 1, nval ); \
+\
+/* Report an error if the object has been cloned (i.e. has a reference \
+   count that is greater than one). */ \
+   } else if( astGetRefCount( this ) > 1 ) { \
+      astError( AST__IMMUT, "astSet(%s): The " #attr "attribute of " \
+                "the supplied %s cannot be changed because the %s has " \
+                "been cloned (programming error).", status, \
+                astGetClass(this), astGetClass(this), astGetClass(this) ); \
 \
 /* Store the new value in the structure component. */ \
    } else { \
@@ -1080,7 +1096,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    if ( !strcmp( attrib, "disco" ) ) {
       dval = astGetDisco( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1091,7 +1107,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
                && ( nc >= len ) ) {
       dval = astGetPcdCen( this, axis - 1 );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1100,7 +1116,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "pcdcen" ) ) {
       dval = astGetPcdCen( this, 0 );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -2535,6 +2551,14 @@ f     (e.g. using AST_INVERT), then the forward transformation will
 *     remove the distortion and the inverse transformation will apply
 *     it. The distortion itself will still be given by the same value of
 *     Disco.
+*
+*     Note, the value of this attribute may changed only if the PcdMap
+*     has no more than one reference. That is, an error is reported if the
+*     PcdMap has been cloned, either by including it within another object
+*     such as a CmpMap or FrameSet or by calling the
+c     astClone
+f     AST_CLONE
+*     function.
 
 *  Applicability:
 *     PcdMap
@@ -2544,10 +2568,10 @@ f     (e.g. using AST_INVERT), then the forward transformation will
 */
 /* This ia a double value with a value of AST__BAD when undefined but
    yielding a default of 0.0. */
-astMAKE_CLEAR(PcdMap,Disco,disco,AST__BAD)
+astMAKE_CLEAR1(PcdMap,Disco,disco,AST__BAD)
 astMAKE_GET(PcdMap,Disco,double,0.0,( ( this->disco == AST__BAD ) ?
                                       0.0 : this->disco ))
-astMAKE_SET(PcdMap,Disco,double,disco,value)
+astMAKE_SET1(PcdMap,Disco,double,disco,value)
 astMAKE_TEST(PcdMap,Disco,( this->disco != AST__BAD ))
 
 
@@ -2574,6 +2598,14 @@ astMAKE_TEST(PcdMap,Disco,( this->disco != AST__BAD ))
 *     respectively. This attribute is set when a PcdMap is created, but may
 *     later be modified. If the attribute is cleared, the default value for
 *     both axes is zero.
+*
+*     Note, the value of this attribute may changed only if the PcdMap
+*     has no more than one reference. That is, an error is reported if the
+*     PcdMap has been cloned, either by including it within another object
+*     such as a CmpMap or FrameSet or by calling the
+c     astClone
+f     AST_CLONE
+*     function.
 
 *  Applicability:
 *     PcdMap

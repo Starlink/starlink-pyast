@@ -221,6 +221,17 @@ f     - AST_SHOWMESH: Display a mesh of points on the surface of a Region
 *        Fix bug masking regions that have no overlap with the supplied array.
 *     17-APR-2015 (DSB):
 *        Added Centre.
+*     26-OCT-2016 (DSB):
+*        - Override the astAxNorm method.
+*        - Use astAxNorm to fix a bug in astGetRegionBounds for cases where
+*        the Region cross a longitude=0 singularity.
+*     11-NOV-2016 (DSB):
+*        When loading a Region, use the dimensionality of the base Frame
+*        of the FrameSet (rather than the current Frame as it used to be)
+*        to define the number of axes required in the PointSet.
+*     1-DEC-2016 (DSB):
+*        Changed MapRegion to remove any unnecessary base frame axes in
+*        the returned Region.
 *class--
 
 *  Implementation Notes:
@@ -237,15 +248,6 @@ f     - AST_SHOWMESH: Display a mesh of points on the surface of a Region
    the header files that define class interfaces that they should make
    "protected" symbols available. */
 #define astCLASS Region
-
-/* Macros which return the maximum and minimum of two values. */
-#define MAX(aa,bb) ((aa)>(bb)?(aa):(bb))
-#define MIN(aa,bb) ((aa)<(bb)?(aa):(bb))
-
-/* Macro to check for equality of floating point values. We cannot
-   compare bad values directory because of the danger of floating point
-   exceptions, so bad values are dealt with explicitly. */
-#define EQUAL(aa,bb) (((aa)==AST__BAD)?(((bb)==AST__BAD)?1:0):(((bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E5*MAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
 
 /* Value for Ident attribute of of an encapsulated FrameSet which
    indicates that it is a dummy FrameSet (see astRegDummy). */
@@ -944,6 +946,7 @@ static int SubFrame( AstFrame *, AstFrame *, int, const int *, const int *, AstM
 static int RegTrace( AstRegion *, int, double *, double **, int * );
 static int Unformat( AstFrame *, int, const char *, double *, int * );
 static int ValidateAxis( AstFrame *, int, int, const char *, int * );
+static void AxNorm( AstFrame *, int, int, int, double *, int * );
 static void CheckPerm( AstFrame *, const int *, const char *, int * );
 static void Copy( const AstObject *, AstObject *, int * );
 static void Delete( AstObject *, int * );
@@ -1476,6 +1479,80 @@ static double AxDistance( AstFrame *this_frame, int axis, double v1, double v2, 
 
 /* Return the result. */
    return result;
+}
+
+static void AxNorm( AstFrame *this_frame, int axis, int oper, int nval,
+                    double *values, int *status ){
+/*
+*  Name:
+*     AxNorm
+
+*  Purpose:
+*     Normalise an array of axis values.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "region.h"
+*     void AxNorm( AstFrame *this, int axis, int oper, int nval,
+*                  double *values, int *status )
+
+*  Class Membership:
+*     FrameSet member function (over-rides the protected astAxNorm
+*     method inherited from the Frame class).
+
+*  Description:
+*     This function modifies a supplied array of axis values so that
+*     they are normalised in the manner indicated by parameter "oper".
+*
+*     No normalisation is possible for a simple Frame and so the supplied
+*     values are returned unchanged. However, this may not be the case for
+*     specialised sub-classes of Frame. For instance, a SkyFrame has a
+*     discontinuity at zero longitude and so a longitude value can be
+*     expressed in the range [-Pi,+PI] or the range [0,2*PI].
+
+*  Parameters:
+*     this
+*        Pointer to the Frame.
+*     axis
+*        The index of the axis to which the supplied values refer. The
+*        first axis has index 1.
+*     oper
+*        Indicates the type of normalisation to be applied. If zero is
+*        supplied, the normalisation will be the same as that performed by
+*        function astNorm. If 1 is supplied, the normalisation will be
+*        chosen automatically so that the resulting list has the smallest
+*        range.
+*     nval
+*        The number of points in the values array.
+*     values
+*        On entry, the axis values to be normalised. Modified on exit to
+*        hold the normalised values.
+*     status
+*        Pointer to the inherited status variable.
+
+*/
+
+/* Local Variables: */
+   AstFrame *fr;                 /* Pointer to current Frame */
+   AstRegion *this;              /* Pointer to the Region structure */
+
+/* Check the global error status. */
+   if ( !astOK ) return;
+
+/* Obtain a pointer to the Region structure. */
+   this = (AstRegion *) this_frame;
+
+/* Validate the axis index. */
+   (void) astValidateAxis( this, axis - 1, 1, "astAxNorm" );
+
+/* Obtain a pointer to the Region's encapsulated Frame and invoke
+   the astAxNorm method for this Frame. Annul the Frame pointer
+   afterwards. */
+   fr = astGetFrame( this->frameset, AST__CURRENT );
+   astAxNorm( fr, axis, oper, nval, values );
+   fr = astAnnul( fr );
 }
 
 static double AxOffset( AstFrame *this_frame, int axis, double v1, double dist, int *status ) {
@@ -3096,7 +3173,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "fillfactor" ) ) {
       dval = astGetFillFactor( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -4554,6 +4631,7 @@ void astInitRegionVtab_(  AstRegionVtab *vtab, const char *name, int *status ) {
    frame->Angle = Angle;
    frame->AxAngle = AxAngle;
    frame->AxDistance = AxDistance;
+   frame->AxNorm = AxNorm;
    frame->AxOffset = AxOffset;
    frame->CheckPerm = CheckPerm;
    frame->ClearDigits = ClearDigits;
@@ -5284,26 +5362,39 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
 /* Local Variables: */
    AstFrame *frame;
    AstFrameSet *fs;
+   AstMapping *tmap;
+   AstMapping *usemap;
    AstMapping *map;
-   AstPointSet *ps2;
    AstPointSet *ps1;
    AstPointSet *pst;
+   AstPointSet *ps2;
+   AstRegion *usethis;
    AstRegion *result;
    double **ptr1;
    double **ptr2;
+   int *axflags;
+   int *inax;
+   int *keep;
+   int *outax;
    int i;
    int icurr;
    int j;
    int nax1;
-   int nax2;
+   int nkept;
+   int nnew;
+   int nold;
    int np;
+   int ntotal;
    int ok;
 
-/* Initialise. */
+/* Initialise returned value. */
    result = NULL;
 
 /* Check the global error status. */
    if ( !astOK ) return result;
+
+/* Initialise local variables */
+   axflags = NULL;
 
 /* If a FrameSet was supplied for the Mapping, use the base->current
    Mapping */
@@ -5332,14 +5423,24 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
                 astGetClass( map ) );
    }
 
-/* It must not introduce any bad axis values. We can only perform this
-   test reliably if the supplied Region has not bad axis values. */
+
+/* Get the number of axes in the supplied Region. */
+   nold = astGetNaxes( this );
+
+/* Get the number of axes in the returned Region. */
+   nnew = astGetNaxes( frame );
+
+/* The forward transformation must not introduce any bad axis values. We
+   can only perform this test reliably if the supplied Region has no bad
+   axis values. */
    ps1 = this->points;
    if( ps1 ) {
       nax1 = astGetNcoord( ps1 );
       np = astGetNpoint( ps1 );
       ptr1 = astGetPoints( ps1 );
       if( ptr1 ) {
+
+/* Check the axis values defining the Region are good. */
          ok = 1;
          for( i = 0; i < nax1 && ok; i++ ){
             for( j = 0; j < np; j++ ) {
@@ -5350,12 +5451,18 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
             }
          }
          if( ok ) {
+
+/* Transform the points defining the supplied Region into the current Frame
+   of the Region. */
             pst = astRegTransform( this, ps1, 1, NULL, NULL );
+
+/* The use the supplied Mapping to transfom them into the new Frame. */
             ps2 = astTransform( map, pst, 1, NULL );
-            nax2 = astGetNcoord( ps2 );
+
+/* Test if any of these axis values are bad. */
             ptr2 = astGetPoints( ps2 );
             if( ptr2 ) {
-               for( i = 0; i < nax2 && ok; i++ ){
+               for( i = 0; i < nnew && ok; i++ ){
                   for( j = 0; j < np; j++ ) {
                      if( ptr2[ i ][ j ] == AST__BAD ){
                         ok = 0;
@@ -5368,6 +5475,29 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
                             "results from using the supplied %s to transform "
                             "the supplied %s is undefined.", status, astGetClass( this ),
                             astGetClass( map ), astGetClass( this ) );
+
+/* If all axis values are good, use the inverse transformation of the
+   supplied Mapping to transform them back to the Frame of the supplied
+   Region. */
+               } else {
+                  pst = astAnnul( pst );
+                  pst = astTransform( map, ps2, 0, NULL );
+
+/* Get a flag for each input of the supplied Mapping (i.e. each axis of
+   the supplied Region) which is non-zero if the inverse transformation
+   of the Mapping has produced any good axis values. */
+                  ptr1 = astGetPoints( pst );
+                  axflags = astCalloc( nold, sizeof(int) );
+                  if( astOK ) {
+                     for( i = 0; i < nold; i++ ){
+                        for( j = 0; j < np; j++ ) {
+                           if( ptr1[ i ][ j ] != AST__BAD ){
+                              axflags[ i ] = 1;
+                              break;
+                           }
+                        }
+                     }
+                  }
                }
             }
             ps2 = astAnnul( ps2 );
@@ -5376,8 +5506,131 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
       }
    }
 
+/* Assume we will be using the supplied Region (this) and Mapping (map). */
+   usethis = astClone( this );
+   usemap = astClone( map );
+
+/* If the new Frame for the Region has fewer axes than the old Frame, see
+   if we can discard some base-frame axes. We only do this if the inverse
+   transformation would otherwise supply bad values for the unused axes.
+   Using bad axis values is not a good idea as some operations cannot be
+   performed if any bad values are supplied. Also having more axes than
+   needed is bad as it results in fewer mesh points per axis. */
+   if( nnew < nold ) {
+
+/* First invert the Mapping since astMapSplit only allows selection of
+   inputs, and we want to select outputs. */
+      astInvert( map );
+
+/* Create an array holding the indices of the required inputs. */
+      inax = astMalloc( nnew*sizeof(int) );
+      if( astOK ) for( i = 0; i < nnew; i++ ) inax[i] = i;
+
+/* Attempt to split the mapping to extract a new mapping that omits any
+   unnecessary outputs (i.e. outputs that are indepenent of the selected
+   inputs). Check the Mapping was split successfully. */
+      outax = astMapSplit( map, nnew, inax, &tmap );
+      if( outax ) {
+
+/* Get the number of old axes that have been retained in the Mapping. */
+         nkept = astGetNout( tmap );
+
+/* Now we need to ensure that any unused axes for which the Mapping
+   creates non-bad values are retained (such values are significant
+   since they may determine whether the new Region is null or not).
+   We only need to do this if any of the outputs that were split off
+   above have been found to generate good values, as indicated by the
+   "axflags" array. Count the number of extra axes that need to be kept,
+   over and above those that are kept by the Mapping returned by
+   astMapSplit above. */
+         ntotal = 0;
+         keep = NULL;
+         if( axflags ) {
+            keep = astMalloc( nold*sizeof(int) );
+            if( astOK ) {
+
+/* Loop round each axis in the supplied Region. */
+               for( i = 0; i < nold; i++ ) {
+
+/* Search the "outax" array to see if this axis was retained by astMapSplit.
+   If it was, append its index to the total list of axes to keep. */
+                  ok = 0;
+                  for( j = 0; j < nkept; j++ ) {
+                     if( outax[ j ] == i ) {
+                        keep[ ntotal++ ] = i;
+                        ok = 1;
+                        break;
+                     }
+                  }
+
+/* If the axis was not retained by astMapSplit, but generates good axis
+   values, also append its index to the total list of axes to keep. */
+                  if( !ok && axflags[ i ] ) {
+                     keep[ ntotal++ ] = i;
+                  }
+               }
+            }
+         }
+
+/* If there are no extra axes to keep, then the Mapping returned by
+   astMapSplit above can be used as it is. */
+         if( ntotal == nkept ) {
+
+/* The values in the "outax" array will hold the zero-based indices of
+   the original old axes that are retained by the new Mapping. We need to
+   create a copy of the supplied Region that includes only these axes. */
+            usethis = astAnnul( usethis );
+            usethis = astPickAxes( this, nkept, outax, NULL );
+
+/* Use the temportary Mapping returned by astMapSplit in place of the
+   supplied Mapping (remember to invert to undo the inversion performed
+   above). */
+            usemap = astAnnul( usemap );
+            usemap = astClone( tmap );
+            astInvert( usemap );
+
+/* Free temporary resources. */
+            tmap = astAnnul( tmap );
+            outax = astFree( outax );
+
+/* If we need to retain some extra axes because they generate good values
+   (even though they are independent of the new Frame axes)... */
+         } else if( ntotal > nkept ){
+
+/* We know the old Frame axes that we want to keep, so use astMapSplit
+   in the opposite direction - i.e. use it on the Mapping form old to
+   new.  */
+            astInvert( map );
+
+            tmap = astAnnul( tmap );
+            outax = astFree( outax );
+
+            outax = astMapSplit( map, ntotal, keep, &tmap );
+            if( outax ) {
+
+               usethis = astAnnul( usethis );
+               usethis = astPickAxes( this, ntotal, keep, NULL );
+
+               usemap = astAnnul( usemap );
+               usemap = astClone( tmap );
+
+               tmap = astAnnul( tmap );
+               outax = astFree( outax );
+
+            }
+
+            astInvert( map );
+         }
+         keep = astFree( keep );
+      }
+      inax = astFree( inax );
+
+/* Invert the Mapping again to bring it back to its original state. */
+      astInvert( map );
+   }
+
 /* Take a deep copy of the supplied Region. */
-   result = astCopy( this );
+   result = astCopy( usethis );
 
 /* Get a pointer to the encapsulated FrameSet. */
    if( astOK ) {
@@ -5386,7 +5639,7 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
 /* Add in the new Frame and Mapping. First note the index of the original
    current Frame. */
       icurr = astGetCurrent( fs );
-      astAddFrame( fs, AST__CURRENT, map, frame );
+      astAddFrame( fs, AST__CURRENT, usemap, frame );
 
 /* Remove the original current Frame. */
       astRemoveFrame( fs, icurr );
@@ -5399,11 +5652,14 @@ static AstRegion *MapRegion( AstRegion *this, AstMapping *map0,
 
 /* Since the Mapping has been changed, any cached information calculated
    on the basis of the Mapping properties may no longer be up to date. */
-   astResetCache( this );
+   astResetCache( result );
 
 /* Free resources */
+   usemap = astAnnul( usemap );
+   usethis = astAnnul( usethis );
    map = astAnnul( map );
    frame = astAnnul( frame );
+   axflags = astFree( axflags );
 
 /* If not OK, annul the returned pointer. */
    if( !astOK ) result = astAnnul( result );
@@ -5738,8 +5994,8 @@ static int Mask##X( AstRegion *this, AstMapping *map, int inside, int ndim, \
       npixg = 1; \
       for ( idim = 0; idim < ndim; idim++ ) { \
          if( lbndgd[ idim ] != AST__BAD && ubndgd[ idim ] != AST__BAD ) { \
-            lbndg[ idim ] = MAX( lbnd[ idim ], (int)( lbndgd[ idim ] + 0.5 ) - 2 ); \
-            ubndg[ idim ] = MIN( ubnd[ idim ], (int)( ubndgd[ idim ] + 0.5 ) + 2 ); \
+            lbndg[ idim ] = astMAX( lbnd[ idim ], (int)( lbndgd[ idim ] + 0.5 ) - 2 ); \
+            ubndg[ idim ] = astMIN( ubnd[ idim ], (int)( ubndgd[ idim ] + 0.5 ) + 2 ); \
          } else { \
             lbndg[ idim ] = lbnd[ idim ]; \
             ubndg[ idim ] = ubnd[ idim ]; \
@@ -7119,7 +7375,7 @@ static void Overlay( AstFrame *template_frame, const int *template_axes,
 *        should be set to -1.
 *
 *        If a NULL pointer is supplied, the template and result axis
-*        indicies are assumed to be identical.
+*        indices are assumed to be identical.
 *     result
 *        Pointer to the Frame which is to receive the new attribute values.
 *     status
@@ -8530,6 +8786,7 @@ f        The global status.
    AstPointSet *bmesh;        /* PointSet holding base Frame mesh */
    AstPointSet *cmesh;        /* PointSet holding current Frame mesh */
    double **bptr;             /* Pointer to PointSet coord arrays */
+   double **cptr;             /* Pointer to PointSet coord arrays */
    double *blbnd;             /* Lower bounds in base Frame */
    double *bubnd;             /* Upper bounds in base Frame */
    double *p;                 /* Array of values for current axis */
@@ -8612,15 +8869,24 @@ f        The global status.
    current Frame. */
       cmesh = astTransform( smap, bmesh, 1, NULL );
 
-/* Get the axis bounds of this PointSet. */
-      astBndPoints( cmesh, lbnd, ubnd );
-
-/* There is a possibility that these bounds may span a singularity in the
-   coordinate system such as the RA=0 line in a SkyFrame. So for each
-   axis we ensure the width (i.e. "ubnd-lbnd" ) is correct. */
+/* There is a possibility that these points may span a singularity in the
+   coordinate system such as the RA=0 line in a SkyFrame. So ensure the
+   axis values are normalised into the shortest possible range. */
       frm = astGetFrame( this->frameset, AST__CURRENT );
       ncur = astGetNaxes( frm );
 
+      cptr = astGetPoints( cmesh );
+      npos = astGetNpoint( cmesh );
+      for( i = 0; i < ncur; i++ ) {
+         astAxNorm( frm, i+1, 1, npos, cptr[i] );
+      }
+
+/* Get the axis bounds of this PointSet. */
+      astBndPoints( cmesh, lbnd, ubnd );
+
+/* There is again a possibility that these bounds may span a singularity in
+   the coordinate system such as the RA=0 line in a SkyFrame. So for each
+   axis we ensure the width (i.e. "ubnd-lbnd" ) is correct. */
       for( i = 0; i < ncur; i++ ) {
          width = astAxDistance( frm, i + 1, lbnd[ i ], ubnd[ i ] );
          if( width != AST__BAD ) {
@@ -11165,7 +11431,7 @@ double *astRegTranPoint_( AstRegion *this, double *in, int np, int forward, int 
       if( pset_out && astStatus == AST__INTER ) {
          p = in;
          for( ip = 0; ip < np; ip++ ) {
-            for( ic = 0; ic < naxin; ic++ ) printf("%.*g\n", DBL_DIG, *(p++) );
+            for( ic = 0; ic < naxin; ic++ ) printf("%.*g\n", AST__DBL_DIG, *(p++) );
          }
       }
 
@@ -12376,7 +12642,7 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
       astWriteObject( channel, "Points", 1, 1, this->points,
                       "Points defining the shape" );
 
-/* If the FrameSet was not included in the dump, then the loaded will use
+/* If the FrameSet was not included in the dump, then the loader will use
    the PointSet to determine the number of axes in the frame spanned by
    the Region. If there is no PointSet, then we must explicitly include
    an item giving the number of axes.*/
@@ -12708,7 +12974,7 @@ AstRegion *astLoadRegion_( void *mem, size_t size,
 /* Local Variables: */
    AstFrame *f1;                  /* Base Frame for encapsulated FrameSet */
    AstRegion *new;                /* Pointer to the new Region */
-   int nax;                       /* No. of axes in Frame */
+   int nax;                       /* No. of axes in Frame, or FrameSet base Frame */
    int naxpt;                     /* No. of axes in per point */
 
 /* Get a pointer to the thread specific global data structure. */
@@ -12824,11 +13090,12 @@ AstRegion *astLoadRegion_( void *mem, size_t size,
          astSetRegFS( new, f1 );
          f1 = astAnnul( f1 );
 
-/* If no Frame was found in the dump, look for a FrameSet. */
+/* If no Frame was found in the dump, look for a FrameSet. Get the number
+   of axes spanning its base Frame ("Nin"). */
       } else {
          new->frameset = astReadObject( channel, "frmset", NULL );
          if( new->frameset ) {
-            nax = astGetNaxes( new->frameset );
+            nax = astGetNin( new->frameset );
 
 /* If a FrameSet was found, the value of the RegionFS attribute is still
    unknown and so we must read it from an attribute as normal. */

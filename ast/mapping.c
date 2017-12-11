@@ -346,7 +346,7 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *        "size_t *" to allow greater amounts of data to be pasted into
 *        the output array.
 *     29-APR-2013 (DSB):
-*        No sot simplify Mappings that have a set value for their Ident
+*        Do not simplify Mappings that have a set value for their Ident
 *        attribute. If an Ident value has been set then it means that we
 *        should be trying to preserve the identify of the Mapping. This
 *        is implemented via a new protected method (astDoNotSimplify) which
@@ -362,7 +362,7 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *        Correct logic for determining whether to divide or not in
 *        RebinAdaptively. The old logic could lead to infinite recursion.
 *     1-SEP-2014 (DSB):
-*        Modify astLinearAPprox to avoid using regularly placed
+*        Modify astLinearApprox to avoid using regularly placed
 *        test points, as such regular placement may result in
 *        non-representative behaviour.
 *     25-SEP-2014 (DSB):
@@ -373,6 +373,16 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *     23-APR-2015 (DSB):
 *        Use one bit of this->flags to store the "IsSimple" attribute
 *        rather using a whole char (this->issimple).
+*     16-JUN-2017 (DSB):
+*        If a simplification fails because the simplification process makes 
+*        an inappropriate assumption about the supplied Mapping (e.g. that 
+*        it has a defined inverse transformation) - thus causing an error to 
+*        be reported, then clear the error status and return a clone of the 
+*        unmodified supplied Mapping. Putting this check in the astSimplify_ 
+*        wrapper function in the base Mapping class is much simpler and less
+*        error prone than performing tests on the appropriateness of the 
+*        mapping in teh astMapMerge method of each and every mapping class. 
+*        
 *class--
 */
 
@@ -632,7 +642,7 @@ DECLARE_GENERIC(D,double)
 DECLARE_GENERIC(F,float)
 DECLARE_GENERIC(I,int)
 DECLARE_GENERIC(UB,unsigned char)
-DECLARE_GENERIC(B,char)
+DECLARE_GENERIC(B,signed char)
 
 #if HAVE_LONG_DOUBLE     /* Not normally implemented */
 DECLARE_GENERIC(LD,long double)
@@ -9815,8 +9825,8 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the input. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astRebin"#X"(%s): Supplied input array " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* Check that the positional accuracy tolerance supplied is valid and \
@@ -9824,7 +9834,7 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
    if ( astOK && ( tol < 0.0 ) ) { \
       astError( AST__PATIN, "astRebin"#X"(%s): Invalid positional " \
                 "accuracy tolerance (%.*g pixel).", status, \
-                astGetClass( this ), DBL_DIG, tol ); \
+                astGetClass( this ), AST__DBL_DIG, tol ); \
       astError( AST__PATIN, "This value should not be less than zero." , status); \
    } \
 \
@@ -9858,8 +9868,8 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the output. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astRebin"#X"(%s): Supplied output array " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* Similarly check the bounds of the input region. */ \
@@ -9900,8 +9910,8 @@ static void Rebin##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the input region. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astRebin"#X"(%s): Supplied input region " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* If OK, loop to determine how many input pixels are to be binned. */ \
@@ -10049,7 +10059,7 @@ MAKE_REBIN(LD,long double,0)
 MAKE_REBIN(D,double,0)
 MAKE_REBIN(F,float,0)
 MAKE_REBIN(I,int,1)
-MAKE_REBIN(B,char,1)
+MAKE_REBIN(B,signed char,1)
 MAKE_REBIN(UB,unsigned char,1)
 
 /* Undefine the macro. */
@@ -11107,7 +11117,7 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_NEAREST(D,double)
                CASE_NEAREST(F,float)
                CASE_NEAREST(I,int)
-               CASE_NEAREST(B,char)
+               CASE_NEAREST(B,signed char)
                CASE_NEAREST(UB,unsigned char)
 
                case ( TYPE_L ): break;
@@ -11150,7 +11160,7 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_LINEAR(D,double)
                CASE_LINEAR(F,float)
                CASE_LINEAR(I,int)
-               CASE_LINEAR(B,char)
+               CASE_LINEAR(B,signed char)
                CASE_LINEAR(UB,unsigned char)
 
                case ( TYPE_L ): break;
@@ -11349,7 +11359,7 @@ static void RebinSection( AstMapping *this, const double *linear_fit,
                CASE_KERNEL1(D,double)
                CASE_KERNEL1(F,float)
                CASE_KERNEL1(I,int)
-               CASE_KERNEL1(B,char)
+               CASE_KERNEL1(B,signed char)
                CASE_KERNEL1(UB,unsigned char)
 
                case ( TYPE_L ): break;
@@ -12107,8 +12117,8 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the input. */ \
       if ( astOK && (int) mpix != mpix ) { \
          astError( AST__EXSPIX, "astRebinSeq"#X"(%s): Supplied input array " \
-                   "contains too many pixels (%zu): must be fewer than %d.", \
-                   status, astGetClass( this ), mpix, INT_MAX ); \
+                   "contains too many pixels (%g): must be fewer than %d.", \
+                   status, astGetClass( this ), (double) mpix, INT_MAX ); \
       } \
 \
 /* Ensure any supplied "in_var" pointer is ignored if no input variances are \
@@ -12128,7 +12138,7 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
       if ( astOK && ( tol < 0.0 ) ) { \
          astError( AST__PATIN, "astRebinSeq"#X"(%s): Invalid positional " \
                    "accuracy tolerance (%.*g pixel).", status, \
-                   astGetClass( this ), DBL_DIG, tol ); \
+                   astGetClass( this ), AST__DBL_DIG, tol ); \
          astError( AST__PATIN, "This value should not be less than zero." , status); \
       } \
 \
@@ -12162,8 +12172,8 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the output. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astRebinSeq"#X"(%s): Supplied output array " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* Similarly check the bounds of the input region. */ \
@@ -12204,8 +12214,8 @@ static void RebinSeq##X( AstMapping *this, double wlim, int ndim_in, \
 /* Report an error if there are too many pixels in the input region. */ \
       if ( astOK && (int) mpix != mpix ) { \
          astError( AST__EXSPIX, "astRebinSeq"#X"(%s): Supplied input region " \
-                   "contains too many pixels (%zu): must be fewer than %d.", \
-                   status, astGetClass( this ), mpix, INT_MAX ); \
+                   "contains too many pixels (%g): must be fewer than %d.", \
+                   status, astGetClass( this ), (double) mpix, INT_MAX ); \
       } \
 \
 /* Check that only one of AST__USEVAR and ASR__GENVAR has been supplied. */ \
@@ -12445,7 +12455,7 @@ MAKE_REBINSEQ(LD,long double,0)
 MAKE_REBINSEQ(D,double,0)
 MAKE_REBINSEQ(F,float,0)
 MAKE_REBINSEQ(I,int,1)
-MAKE_REBINSEQ(B,char,1)
+MAKE_REBINSEQ(B,signed char,1)
 MAKE_REBINSEQ(UB,unsigned char,1)
 
 /* Undefine the macro. */
@@ -13000,7 +13010,7 @@ static void ReportPoints( AstMapping *this, int forward,
             printf( "%s<bad>", coord ? ", " : "" );
          } else {
             printf( "%s%.*g", coord ? ", " : "",
-                              DBL_DIG, ptr_in[ coord ][ point ] );
+                              AST__DBL_DIG, ptr_in[ coord ][ point ] );
          }
       }
 
@@ -13011,7 +13021,7 @@ static void ReportPoints( AstMapping *this, int forward,
             printf( "%s<bad>", coord ? ", " : "" );
          } else {
             printf( "%s%.*g", coord ? ", " : "",
-                              DBL_DIG, ptr_out[ coord ][ point ] );
+                              AST__DBL_DIG, ptr_out[ coord ][ point ] );
          }
       }
       printf( ")\n" );
@@ -13974,8 +13984,8 @@ static int Resample##X( AstMapping *this, int ndim_in, \
 /* Report an error if there are too many pixels in the input. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astResample"#X"(%s): Supplied input array " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* Check that the positional accuracy tolerance supplied is valid and \
@@ -13983,7 +13993,7 @@ static int Resample##X( AstMapping *this, int ndim_in, \
    if ( astOK && ( tol < 0.0 ) ) { \
       astError( AST__PATIN, "astResample"#X"(%s): Invalid positional " \
                 "accuracy tolerance (%.*g pixel).", status, \
-                astGetClass( this ), DBL_DIG, tol ); \
+                astGetClass( this ), AST__DBL_DIG, tol ); \
       astError( AST__PATIN, "This value should not be less than zero." , status); \
    } \
 \
@@ -14018,8 +14028,8 @@ static int Resample##X( AstMapping *this, int ndim_in, \
 /* Report an error if there are too many pixels in the output. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astResample"#X"(%s): Supplied output array " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* Similarly check the bounds of the output region. */ \
@@ -14060,8 +14070,8 @@ static int Resample##X( AstMapping *this, int ndim_in, \
 /* Report an error if there are too many pixels in the output region. */ \
    if ( astOK && (int) mpix != mpix ) { \
       astError( AST__EXSPIX, "astResample"#X"(%s): Supplied output region " \
-                "contains too many pixels (%zu): must be fewer than %d.", \
-                status, astGetClass( this ), mpix, INT_MAX ); \
+                "contains too many pixels (%g): must be fewer than %d.", \
+                status, astGetClass( this ), (double) mpix, INT_MAX ); \
    } \
 \
 /* If we are conserving flux, check "tol" is not zero. */ \
@@ -18290,7 +18300,7 @@ MAKE_SPREAD_KERNEL1(LD,long double,0)
 MAKE_SPREAD_KERNEL1(D,double,0)
 MAKE_SPREAD_KERNEL1(F,float,0)
 MAKE_SPREAD_KERNEL1(I,int,1)
-MAKE_SPREAD_KERNEL1(B,char,1)
+MAKE_SPREAD_KERNEL1(B,signed char,1)
 MAKE_SPREAD_KERNEL1(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
@@ -18883,7 +18893,7 @@ static void SpreadLinear##X( int ndim_out, \
 \
 /* If we are using the input data variances as weights, calculate the \
    weight, and scale the fractions of each input pixel by the weight. \
-   Since the product of two fractions is always used ot scale the input \
+   Since the product of two fractions is always used to scale the input \
    data values, we use the square root of the reciprocal of the variance \
    as the weight (so that when the product of two fractions is taken, \
    the square roots multiply together to give the required 1/variance \
@@ -19129,7 +19139,7 @@ MAKE_SPREAD_LINEAR(LD,long double,0)
 MAKE_SPREAD_LINEAR(D,double,0)
 MAKE_SPREAD_LINEAR(F,float,0)
 MAKE_SPREAD_LINEAR(I,int,1)
-MAKE_SPREAD_LINEAR(B,char,1)
+MAKE_SPREAD_LINEAR(B,signed char,1)
 MAKE_SPREAD_LINEAR(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
@@ -19813,7 +19823,7 @@ MAKE_SPREAD_NEAREST(LD,long double,0)
 MAKE_SPREAD_NEAREST(D,double,0)
 MAKE_SPREAD_NEAREST(F,float,0)
 MAKE_SPREAD_NEAREST(I,int,1)
-MAKE_SPREAD_NEAREST(B,char,1)
+MAKE_SPREAD_NEAREST(B,signed char,1)
 MAKE_SPREAD_NEAREST(UB,unsigned char,1)
 
 /* Undefine the macros used above. */
@@ -20347,15 +20357,15 @@ f     be reversed.
    npoint = mpix;
    if ( astOK && npoint != mpix ) {
       astError( AST__EXSPIX, "astTranGrid(%s): Supplied grid "
-                "contains too many points (%zu): must be fewer than %d.",
-                status, astGetClass( this ), mpix, INT_MAX/ncoord_out );
+                "contains too many points (%g): must be fewer than %d.",
+                status, astGetClass( this ), (double) mpix, INT_MAX/ncoord_out );
    }
 
    mpix = outdim*ncoord_out;
    if ( astOK && (int) mpix != mpix ) {
       astError( AST__EXSPIX, "astTranGrid(%s): Supplied output array "
-                "contains too many pixels (%zu): must be fewer than %d.",
-                status, astGetClass( this ), mpix, INT_MAX );
+                "contains too many pixels (%g): must be fewer than %d.",
+                status, astGetClass( this ), (double) mpix, INT_MAX );
    }
 
 
@@ -20368,7 +20378,7 @@ f     be reversed.
    if ( astOK && ( tol < 0.0 ) ) {
       astError( AST__PATIN, "astTranGrid(%s): Invalid positional "
                 "accuracy tolerance (%.*g pixel).", status,
-                astGetClass( this ), DBL_DIG, tol );
+                astGetClass( this ), AST__DBL_DIG, tol );
       astError( AST__PATIN, "This value should not be less than zero." , status);
    }
 
@@ -23860,7 +23870,7 @@ MAKE_REBIN_(LD,long double)
 MAKE_REBIN_(D,double)
 MAKE_REBIN_(F,float)
 MAKE_REBIN_(I,int)
-MAKE_REBIN_(B,char)
+MAKE_REBIN_(B,signed char)
 MAKE_REBIN_(UB,unsigned char)
 #undef MAKE_REBIN_
 
@@ -23893,7 +23903,7 @@ MAKE_REBINSEQ_(LD,long double)
 MAKE_REBINSEQ_(D,double)
 MAKE_REBINSEQ_(F,float)
 MAKE_REBINSEQ_(I,int)
-MAKE_REBINSEQ_(B,char)
+MAKE_REBINSEQ_(B,signed char)
 MAKE_REBINSEQ_(UB,unsigned char)
 
 #undef MAKE_REBINSEQ_
@@ -23926,17 +23936,51 @@ AstMapping *astRemoveRegions_( AstMapping *this, int *status ) {
    if ( !astOK ) return NULL;
    return (**astMEMBER(this,Mapping,RemoveRegions))( this, status );
 }
+
 AstMapping *astSimplify_( AstMapping *this, int *status ) {
    AstMapping *result;
+   AstErrorContext error_context;
+
    if ( !astOK ) return NULL;
+
+/* If this Mapping has already been simplified, or if it cannot be
+   simplified (e.g. because it is a Frame) we just returned a clone
+   of the upplied pointer. */
    if( !astGetIsSimple( this ) && !astDoNotSimplify( this ) ) {
+
+/* Start a new error reporting context. This is done so that errors
+   caused by the siplification process attempting to do inappropriate things
+   with the supplied mapping can be caught. */
+      astErrorBegin( &error_context );
+
+/* Do the simplification. */
       result = (**astMEMBER(this,Mapping,Simplify))( this, status );
-      if( result ) result->flags |= AST__ISSIMPLE_FLAG; /* Indicate simplification has been done */
+
+/* If a result was returned, indicate it has been simplified and so does
+   not need to be simplified again. */
+      if( result ) {
+         result->flags |= AST__ISSIMPLE_FLAG;
+
+/* If the simplification process failed due to the supplied Mappings
+   being inappropriate (e.g. because it attempted to ue an undefined
+   transformation), clear the error status and return a clone of the
+   supplied Mapping. */
+      } else if( astStatus == AST__NODEF || astStatus == AST__TRNND ){
+         astClearStatus;
+         result = astClone( this );
+      }
+
+/* End the error reporting context. */
+      astErrorEnd( &error_context );
+
+/* If the Mapping has already been simplified just return a clone. */
    } else {
       result = astClone( this );
    }
+
    return result;
 }
+
 AstPointSet *astTransform_( AstMapping *this, AstPointSet *in,
                             int forward, AstPointSet *out, int *status ) {
    AstPointSet *result;

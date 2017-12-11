@@ -480,4 +480,11 @@ enum { AST__EXSPIX          	= 233934402 };	/* messid=456 */
 /* No mapping found between coordinate systems */
 enum { AST__NOCNV           	= 233934410 };	/* messid=457 */
 
+/* Attempt to change an immutable attribute */
+enum { AST__IMMUT           	= 233934418 };	/* messid=458 */
+
+/* No bounding box available */
+enum { AST__NOBOX           	= 233934426 };	/* messid=459 */
+
+
 #endif	/* AST_ERROR_DEFINED */

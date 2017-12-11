@@ -81,7 +81,7 @@ f     The Prism class does not define any new routines beyond those
 *     14-AUG-2014 (DSB):
 *        Over-ride the astGetRegionBounds method.
 *     9-SEP-2014 (DSB):
-*        Record the pointer to the Prism implementation of RegBaseMesh 
+*        Record the pointer to the Prism implementation of RegBaseMesh
 *        within the class virtual function table.
 *class--
 */
@@ -92,15 +92,6 @@ f     The Prism class does not define any new routines beyond those
    the header files that define class interfaces that they should make
    "protected" symbols available. */
 #define astCLASS Prism
-
-/* Macros which return the maximum and minimum of two values. */
-#define MAX(aa,bb) ((aa)>(bb)?(aa):(bb))
-#define MIN(aa,bb) ((aa)<(bb)?(aa):(bb))
-
-/* Macro to check for equality of floating point values. We cannot
-   compare bad values directory because of the danger of floating point
-   exceptions, so bad values are dealt with explicitly. */
-#define EQUAL(aa,bb) (((aa)==(bb))?1:(((aa)==AST__BAD||(bb)==AST__BAD)?0:(fabs((aa)-(bb))<=1.0E9*MAX((fabs(aa)+fabs(bb))*DBL_EPSILON,DBL_MIN))))
 
 /* Include files. */
 /* ============== */
@@ -1012,7 +1003,6 @@ static void GetRegionBounds( AstRegion *this_region, double *lbnd,
    AstFrame *cfrm1;             /* Frame spanning current axes for 1st component Region */
    AstFrame *cfrm2;             /* Frame spanning current axes for 2nd component Region */
    AstFrame *cfrm;              /* Current Frame for total Prism */
-   AstMapping *fsmap;           /* Base->Current Mapping */
    AstMapping *map1;            /* Base->Current Mapping for axes of 1st component Region */
    AstMapping *map2;            /* Base->Current Mapping for axes of 2nd component Region */
    AstMapping *map;             /* Case->Current mapping for total Prism */

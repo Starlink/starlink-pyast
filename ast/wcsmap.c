@@ -1230,8 +1230,16 @@ static void ClearPV( AstWcsMap *this, int i, int m, int *status ) {
 /* Check the global error status. */
    if ( !astOK ) return;
 
+/* Report an error if the object has been cloned (i.e. has a reference
+   count that is greater than one). */
+   if( astGetRefCount( this ) > 1 ) {
+      astError( AST__IMMUT, "astClear(%s): Projection parameter values "
+                "within the supplied %s cannot be cleared because the %s has "
+                "been cloned (programming error).", status,
+                astGetClass(this), astGetClass(this), astGetClass(this) );
+
 /* Validate the axis index. */
-   if( i < 0 || i >= astGetNin( this ) ){
+   } else if( i < 0 || i >= astGetNin( this ) ){
       astError( AST__AXIIN, "astClearPV(%s): Axis index (%d) is invalid in "
                 "attribute PV%d_%d  - it should be in the range 1 to %d.",
                 status, astGetClass( this ), i + 1, i + 1, m,
@@ -1779,7 +1787,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
                   && ( nc >= len ) ) {
       dval = astGetPV( this, astGetWcsAxis( this, 1 ), m );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1789,7 +1797,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
                   && ( nc >= len ) ) {
       dval = astGetPV( this, i - 1, m );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1817,7 +1825,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "natlat" ) ) {
       dval = astGetNatLat( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -1826,7 +1834,7 @@ static const char *GetAttrib( AstObject *this_object, const char *attrib, int *s
    } else if ( !strcmp( attrib, "natlon" ) ) {
       dval = astGetNatLon( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%.*g", DBL_DIG, dval );
+         (void) sprintf( getattrib_buff, "%.*g", AST__DBL_DIG, dval );
          result = getattrib_buff;
       }
 
@@ -3805,8 +3813,16 @@ static void SetPV( AstWcsMap *this, int i, int m, double val, int *status ) {
 /* Find the number of axes in the WcsMap. */
    naxis = astGetNin( this );
 
+/* Report an error if the object has been cloned (i.e. has a reference
+   count that is greater than one). */
+   if( astGetRefCount( this ) > 1 ) {
+      astError( AST__IMMUT, "astSet(%s): Projection parameter values "
+                "within the supplied %s cannot be changed because the %s has "
+                "been cloned (programming error).", status,
+                astGetClass(this), astGetClass(this), astGetClass(this) );
+
 /* Validate the axis index. */
-   if( i < 0 || i >= naxis ){
+   } else if( i < 0 || i >= naxis ){
       astError( AST__AXIIN, "astSetPV(%s): Axis index (%d) is invalid in "
                 "attribute PV%d_%d  - it should be in the range 1 to %d.",
                 status, astGetClass( this ), i + 1, i + 1, m, naxis );
@@ -4657,10 +4673,10 @@ static void WcsPerm( AstMapping **maps, int *inverts, int iwm, int *status ){
 *     that is to be  converted into a set of FITS headers using the
 c     astWrite funtion,
 f     AST_WRITE routine,
-*     the WcsMap will be used to define the projection code appeneded to
+*     the WcsMap will be used to define the projection code appended to
 *     the FITS "CTYPEi" keywords if, and only if, the FITSProj attribute
 *     is set non-zero in the WcsMap. In order for the conversion to be
-*     successful, the compoound Mapping connecting the base and current
+*     successful, the compound Mapping connecting the base and current
 *     Frames in the FrameSet must contained one (and only one) WcsMap
 *     that has a non-zero value for its FITSProj attribute.
 *
@@ -4740,6 +4756,14 @@ astMAKE_TEST(WcsMap,TPNTan,( this->tpn_tan != -INT_MAX ))
 *     to PV<axlat>_9, where <axlat> is replaced by the index of the
 *     latitude axis (given by attribute WcsAxis(2)). See PV for further
 *     details.
+*
+*     Note, the value of this attribute may changed only if the WcsMap
+*     has no more than one reference. That is, an error is reported if the
+*     WcsMap has been cloned, either by including it within another object
+*     such as a CmpMap or FrameSet or by calling the
+c     astClone
+f     AST_CLONE
+*     function.
 
 *  Applicability:
 *     WcsMap
@@ -4819,6 +4843,13 @@ f     done using the OPTIONS argument of AST_WCSMAP (q.v.) when a WcsMap
 *        All WcsMaps have this attribute.
 
 *  Notes:
+*     - The value of this attribute may changed only if the WcsMap
+*     has no more than one reference. That is, an error is reported if the
+*     WcsMap has been cloned, either by including it within another object
+*     such as a CmpMap or FrameSet or by calling the
+c     astClone
+f     AST_CLONE
+*     function.
 *     - If the projection parameter values given for a WcsMap do not
 *     satisfy all the required constraints (as defined in the FITS-WCS
 *     paper), then an error will result when the WcsMap is used to

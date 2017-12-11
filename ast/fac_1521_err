@@ -157,3 +157,5 @@ FACILITY AST
 455,MNPCK,Error in cminpack Levenberg-Marquardt code
 456,EXSPIX,Supplied array has too many pixels
 457,NOCNV,No mapping found between coordinate systems
+458,IMMUT,Attempt to change an immutable attribute
+459,NOBOX,No bounding box available

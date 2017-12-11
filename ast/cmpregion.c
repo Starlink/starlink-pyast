@@ -70,12 +70,12 @@ f     The CmpRegion class does not define any new routines beyond those
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.
@@ -114,7 +114,7 @@ f     The CmpRegion class does not define any new routines beyond those
 *     7-JUN-2012 (DSB):
 *        Override astRegSplit method.
 *     21-NOV-2012 (DSB):
-*        Map the regions returned by RegSplit into the current Frame of the 
+*        Map the regions returned by RegSplit into the current Frame of the
 *        CmpRegion.
 *class--
 */
@@ -125,10 +125,6 @@ f     The CmpRegion class does not define any new routines beyond those
    the header files that define class interfaces that they should make
    "protected" symbols available. */
 #define astCLASS CmpRegion
-
-/* Macros which return the maximum and minimum of two values. */
-#define MAX(aa,bb) ((aa)>(bb)?(aa):(bb))
-#define MIN(aa,bb) ((aa)<(bb)?(aa):(bb))
 
 /* Include files. */
 /* ============== */
@@ -1682,8 +1678,8 @@ static void RegBaseBox( AstRegion *this_region, double *lbnd, double *ubnd, int 
 
                if( inc1 ) {
                   if( inc2 ) {
-                     lbnd[ i ] = MAX( clbnd1[ i ], clbnd2[ i ] );
-                     ubnd[ i ] = MIN( cubnd1[ i ], cubnd2[ i ] );
+                     lbnd[ i ] = astMAX( clbnd1[ i ], clbnd2[ i ] );
+                     ubnd[ i ] = astMIN( cubnd1[ i ], cubnd2[ i ] );
                   } else {
                      lbnd[ i ] = clbnd1[ i ] < clbnd2[ i ] ? clbnd1[ i ] : cubnd2[ i ];
                      ubnd[ i ] = cubnd1[ i ] > cubnd2[ i ] ? cubnd1[ i ] : clbnd2[ i ];
@@ -1702,8 +1698,8 @@ static void RegBaseBox( AstRegion *this_region, double *lbnd, double *ubnd, int 
    the axis intervals. */
             } else {
                if( inc1 && inc2 ) {
-                  lbnd[ i ] = MIN( clbnd1[ i ], clbnd2[ i ] );
-                  ubnd[ i ] = MAX( cubnd1[ i ], cubnd2[ i ] );
+                  lbnd[ i ] = astMIN( clbnd1[ i ], clbnd2[ i ] );
+                  ubnd[ i ] = astMAX( cubnd1[ i ], cubnd2[ i ] );
                } else {
                   lbnd[ i ] = -DBL_MAX;
                   ubnd[ i ] = DBL_MAX;
@@ -1805,14 +1801,14 @@ static void RegBaseBox2( AstRegion *this_region, double *lbnd, double *ubnd, int
    bounding boxes. For other operators find the union. */
       if( this->oper == AST__AND ) {
          for( i = 0; i < nax; i++ ) {
-            lbnd[ i ]= MAX( clbnd1[ i ], clbnd2[ i ] );
-            ubnd[ i ]= MIN( cubnd1[ i ], cubnd2[ i ] );
+            lbnd[ i ]= astMAX( clbnd1[ i ], clbnd2[ i ] );
+            ubnd[ i ]= astMIN( cubnd1[ i ], cubnd2[ i ] );
          }
 
       } else {
          for( i = 0; i < nax; i++ ) {
-            lbnd[ i ]= MIN( clbnd1[ i ], clbnd2[ i ] );
-            ubnd[ i ]= MAX( cubnd1[ i ], cubnd2[ i ] );
+            lbnd[ i ]= astMIN( clbnd1[ i ], clbnd2[ i ] );
+            ubnd[ i ]= astMAX( cubnd1[ i ], cubnd2[ i ] );
          }
       }
    }
@@ -2548,13 +2544,13 @@ static AstRegion **RegSplit( AstRegion *this_region, int *nlist, int *status ){
 /* Get a pointer to the CmpRegion structure. */
    this = (AstCmpRegion *) this_region;
 
+/* Indicate we have not yet found any unbounded component regions. */
+   unbounded = 0;
+
 /* Can only split non-inverted CmpRegions that combine their components
    using the OR operator. */
    if( this->oper == AST__OR && !astGetNegated( this->region1 ) &&
                                 !astGetNegated( this->region2 ) ) {
-
-/* Indicate we have not yet found any unbounded component regions. */
-      unbounded = 0;
 
 /* Process each of the two component Regions in turn. */
       for( icomp = 0; icomp < 2 && !unbounded; icomp++ ) {

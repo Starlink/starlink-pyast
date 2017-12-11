@@ -540,6 +540,10 @@
 *        Added astCentre.
 *     27-APR-2015 (DSB):
 *        Added InternalUnit attribute.
+*     26-OCT-2016 (DSB):
+*        Added method astAxNorm.
+*     11-JAN-2017 (GSB):
+*        Add Dtai attribute.
 *-
 */
 
@@ -615,6 +619,7 @@ typedef struct AstFrame {
    double obslat;                /* Geodetic latitude of observer */
    double obslon;                /* Geodetic longitude of observer */
    double obsalt;                /* Height above reference spheroid (geodetic, metres) */
+   double dtai;                  /* TAI-UTC in seconds */
    double dut1;                  /* UT1-UTC in seconds */
    int *perm;                    /* Pointer to axis permutation array */
    int digits;                   /* Default digits of precision */
@@ -689,6 +694,7 @@ typedef struct AstFrameVtab {
    double (* Gap)( AstFrame *, int, double, int *, int * );
    int (* Fields)( AstFrame *, int, const char *, const char *, int, char **, int *, double *, int * );
    double (* AxDistance)( AstFrame *, int, double, double, int * );
+   void (* AxNorm)( AstFrame *, int, int, int, double *, int * );
    double (* AxOffset)( AstFrame *, int, double, double, int * );
    int (* AxIn)( AstFrame *, int, double, double, double, int, int * );
    int (* GetDigits)( AstFrame *, int * );
@@ -815,6 +821,11 @@ typedef struct AstFrameVtab {
    void (* ClearObsAlt)( AstFrame *, int * );
    void (* SetObsAlt)( AstFrame *, double, int * );
 
+   double (* GetDtai)( AstFrame *, int * );
+   int (* TestDtai)( AstFrame *, int * );
+   void (* ClearDtai)( AstFrame *, int * );
+   void (* SetDtai)( AstFrame *, double, int * );
+
    double (* GetDut1)( AstFrame *, int * );
    int (* TestDut1)( AstFrame *, int * );
    void (* ClearDut1)( AstFrame *, int * );
@@ -901,6 +912,7 @@ double astAxOffset_( AstFrame *, int, double, double, int * );
 double astDistance_( AstFrame *, const double[], const double[], int * );
 double astOffset2_( AstFrame *, const double[2], double, double, double[2], int * );
 int astGetActiveUnit_( AstFrame *, int * );
+void astAxNorm_( AstFrame *, int, int, int, double *, int * );
 void astIntersect_( AstFrame *, const double[2], const double[2], const double[2], const double[2], double[2], int * );
 void astMatchAxes_( AstFrame *, AstFrame *, int[], int * );
 void astNorm_( AstFrame *, double[], int * );
@@ -1049,6 +1061,11 @@ int astTestObsAlt_( AstFrame *, int * );
 void astClearObsAlt_( AstFrame *, int * );
 void astSetObsAlt_( AstFrame *, double, int * );
 
+double astGetDtai_( AstFrame *, int * );
+int astTestDtai_( AstFrame *, int * );
+void astClearDtai_( AstFrame *, int * );
+void astSetDtai_( AstFrame *, double, int * );
+
 double astGetDut1_( AstFrame *, int * );
 int astTestDut1_( AstFrame *, int * );
 void astClearDut1_( AstFrame *, int * );
@@ -1119,6 +1136,8 @@ astINVOKE(V,astMatchAxes_(astCheckFrame(frm1),astCheckFrame(frm2),axes,STATUS_PT
 astINVOKE(V,astNorm_(astCheckFrame(this),value,STATUS_PTR))
 #define astAxDistance(this,axis,v1,v2) \
 astINVOKE(V,astAxDistance_(astCheckFrame(this),axis,v1,v2,STATUS_PTR))
+#define astAxNorm(this,axis,oper,nval,values) \
+astINVOKE(V,astAxNorm_(astCheckFrame(this),axis,oper,nval,values,STATUS_PTR))
 #define astAxOffset(this,axis,v1,dist) \
 astINVOKE(V,astAxOffset_(astCheckFrame(this),axis,v1,dist,STATUS_PTR))
 #define astOffset(this,point1,point2,offset,point3) \
@@ -1404,6 +1423,15 @@ astINVOKE(V,astTestObsAlt_(astCheckFrame(this),STATUS_PTR))
 astINVOKE(V,astClearObsAlt_(astCheckFrame(this),STATUS_PTR))
 #define astSetObsAlt(this,value) \
 astINVOKE(V,astSetObsAlt_(astCheckFrame(this),value,STATUS_PTR))
+
+#define astClearDtai(this) \
+astINVOKE(V,astClearDtai_(astCheckFrame(this),STATUS_PTR))
+#define astGetDtai(this) \
+astINVOKE(V,astGetDtai_(astCheckFrame(this),STATUS_PTR))
+#define astSetDtai(this,value) \
+astINVOKE(V,astSetDtai_(astCheckFrame(this),value,STATUS_PTR))
+#define astTestDtai(this) \
+astINVOKE(V,astTestDtai_(astCheckFrame(this),STATUS_PTR))
 
 #define astClearDut1(this) \
 astINVOKE(V,astClearDut1_(astCheckFrame(this),STATUS_PTR))
