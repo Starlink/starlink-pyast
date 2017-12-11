@@ -5953,6 +5953,13 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int Circle_init( Circle *self, PyObject *args, PyObject *kwds );
+static PyObject *Circle_circlepars( Circle *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef Circle_methods[] = {
+  {"circlepars", (PyCFunction)Circle_circlepars, METH_VARARGS, "Get the geometric parameters of the Circle"},
+  {NULL, NULL, 0, NULL}  /* Sentinel */
+};
 
 /* Define the class Python type structure */
 static PyTypeObject CircleType = {
@@ -5983,7 +5990,7 @@ static PyTypeObject CircleType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   0,                         /* tp_methods */
+   Circle_methods,            /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -6036,6 +6043,35 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+
+#undef NAME
+#define NAME CLASS ".circlepars"
+static PyObject *Circle_circlepars( Circle *self, PyObject *args ) {
+
+/* args: centre,radius,p1: */
+
+  PyObject *result = NULL;
+  PyArrayObject *p1 = NULL;
+  PyArrayObject *centre = NULL;
+  npy_intp dims[1];
+  double radius;
+
+  if( PyErr_Occurred() ) return NULL;
+
+  dims[0] = astGetI( THIS, "Naxes" );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  if( centre && p1 ) {
+    astCirclePars( THIS, (double *)centre->data, &radius, (double *)p1->data );
+    if( astOK ) result = Py_BuildValue( "OdO", PyArray_Return(centre),
+                                        radius, PyArray_Return(p1));
+  }
+  Py_XDECREF( centre );
+  Py_XDECREF( p1 );
+
+  TIDY;
+  return result;
+}
 
 
 
@@ -6286,6 +6322,13 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds );
+static PyObject *Ellipse_ellipsepars( Ellipse *self, PyObject *args );
+
+/* Describe the methods of the class */
+static PyMethodDef Ellipse_methods[] = {
+  {"ellipsepars", (PyCFunction)Ellipse_ellipsepars, METH_VARARGS, "Get the geometric parameters of the Ellipse"},
+  {NULL, NULL, 0, NULL}  /* Sentinel */
+};
 
 /* Define the class Python type structure */
 static PyTypeObject EllipseType = {
@@ -6316,7 +6359,7 @@ static PyTypeObject EllipseType = {
    0,		              /* tp_weaklistoffset */
    0,		              /* tp_iter */
    0,		              /* tp_iternext */
-   0,                         /* tp_methods */
+   Ellipse_methods,           /* tp_methods */
    0,                         /* tp_members */
    0,                         /* tp_getset */
    0,                         /* tp_base */
@@ -6372,6 +6415,44 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
    TIDY;
    return result;
 }
+
+
+#undef NAME
+#define NAME CLASS ".ellipsepars"
+static PyObject *Ellipse_ellipsepars( Ellipse *self, PyObject *args ) {
+
+/* args: centre,a,b,angle,p1,p2: */
+
+  PyObject *result = NULL;
+  PyArrayObject *p1 = NULL;
+  PyArrayObject *p2 = NULL;
+  PyArrayObject *centre = NULL;
+  npy_intp dims[1];
+  double a;
+  double b;
+  double angle;
+
+  if( PyErr_Occurred() ) return NULL;
+
+  dims[0] = astGetI( THIS, "Naxes" );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  p2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  if( centre && p1 && p2 ) {
+    astEllipsePars( THIS, (double *)centre->data, &a, &b, &angle,
+                    (double *)p1->data, (double *)p2->data );
+    if( astOK ) result = Py_BuildValue( "OdddOO", PyArray_Return(centre),
+                                        a, b, angle, PyArray_Return(p1),
+                                        PyArray_Return(p2));
+  }
+  Py_XDECREF( centre );
+  Py_XDECREF( p1 );
+  Py_XDECREF( p2 );
+
+  TIDY;
+  return result;
+}
+
 
 /* Interval */
 /* ======== */
