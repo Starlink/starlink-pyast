@@ -781,6 +781,226 @@ char *astAppendStringf_( char *str1, int *nc, const char *str2, ... ) {
    return result;
 }
 
+int astBrackets_( const char *text, size_t start, size_t end,
+                  char opchar, char clchar, int strip,
+                  size_t *openat, size_t *closeat, char **before,
+                  char **in, char **after, int *status ){
+/*
+*++
+*  Name:
+*     astBrackets
+
+*  Purpose:
+*     Identify a bracketed sub-string.
+
+*  Type:
+*     Public function.
+
+*  Synopsis:
+*     #include "memory.h"
+*     int astBrackets( const char *text, size_t start, size_t end,
+*                      char opchar, char clchar, int strip,
+*                      size_t *openat, size_t *closeat, char **before,
+*                      char **in, char **after )
+
+*  Description:
+*     This function searches a specified section of the supplied text
+*     string for the first sub-string that is delimited by opening and
+*     closing brackets. If found, the positions of the opening and closing
+*     brackets are returned. Optionally, null-terminated copies of the
+*     strings, before, in and after the brackets can be returned. The
+*     characters to be used as the opening and closing brackets can be
+*     specified.
+
+*  Parameters:
+*     text
+*        The text string to be seached.
+*     start
+*        The zero-based index of the first character to be checked within
+*        "text". The whole string is used if "start" is greater than "end".
+*     end
+*        The zero-based index of the last character to be checked within
+*        "text". The whole string is used if "start" is greater than "end".
+*        The last character is used if "end" is greater than the length
+*        of the string.
+*     opchar
+*        The character to be used as the opening bracket (e.g. '[').
+*     clchar
+*        The character to be used as the closing bracket (e.g. ']').
+*     strip
+*        If non-zero, leading and trailing spaces are removed from the
+*        returned "before", "in" and "after" strings.
+*     openat
+*        Returned holding the zero-based index of the opening bracket.
+*        Ignored if NULL.
+*     closeat
+*        Returned holding the zero-based index of the closing bracket.
+*        Ignored if NULL.
+*     before
+*        Address at which to return a pointer to a null-terminated copy
+*        of the string that came before the opening bracket. This will be
+*        a null string "" if the opening bracket is the first character
+*        in the search. The returned pointer should be freed using astFree
+*        when no longer needed. Ignored if "before" is NULL.
+*     in
+*        Address at which to return a pointer to a null-terminated copy
+*        of the string that came between the opening and closing bracket.
+*        This will be a null string "" if the bracket was empty. The
+*        returned pointer should be freed using astFree when no longer
+*        needed. Ignored if "in" is NULL.
+*     after
+*        Address at which to return a pointer to a null-terminated copy
+*        of the string that came after the opening bracket. This will be
+*        a null string "" if the closing bracket is the last character
+*        in the search. The returned pointer should be freed using astFree
+*        when no longer needed. Ignored if "after" is NULL.
+
+*  Returned Value:
+*     astBrackets()
+*        A value of 1 is returned if a correctly bracketed sub-string was
+*        found. A value of 0 is returned if no bracketed sub-string was
+*        found. A value of -1 is returned if too many closing brackets
+*        were found. A value of -2 is returned if too many opening
+*        brackets were found.
+
+*  Notes:
+*     - Any nested brackets within a top-level bracketed sub-string are
+*     skipped. Any inbalance in brackets is indicated by the function
+*     return value.
+*     - If no bracketed sub-string is found, all the returned pointers
+*     will be NULL, "closeat" will be 0 and "openat" will be 1.
+*--
+*/
+/* Local Variables: */
+   int result;
+   size_t nc;
+   size_t nct;
+   size_t opat;
+   size_t clat;
+   int depth;
+   const char *p;
+   const char *pend;
+
+/* Initialise. */
+   result = 0;
+   if( openat ) *openat = 1;
+   if( closeat ) *closeat = 0;
+   if( before ) *before = NULL;
+   if( in ) *in = NULL;
+   if( after ) *after = NULL;
+
+/* Check the global error status. Also check a text string was supplied. */
+   if ( !astOK || !text ) return result;
+
+/* Get the total length of the supplied string, including any trailing blanks
+   but excluding the terminating null. */
+   nct = strlen( text );
+
+/* Get the actual start and end positions to use. */
+   if( start > end ) {
+      start = 0;
+      end = nct - 1;
+   } else if( end >= nct ) {
+      end = nct - 1;
+   }
+
+/* Check there is some text to search. */
+   if( start <= end ) {
+
+/* Initialise the indices of the opening and closing brackets to indicate
+   that no brackets have yet been found ( opat > clat). */
+      opat = 1;
+      clat = 0;
+
+/* Initialise the current depth of nesting within brackets. */
+      depth = 0;
+
+/* Loop through all characters in the section of the string to be
+   searched. */
+      p = text + start - 1;
+      pend = text + end;
+      while( ++p <= pend ) {
+
+/* If this is an opening bracket, increment the nesting depth. If it is
+   the first opening bracket (original depth zero), record its position. */
+         if( *p == opchar ) {
+            if( depth++ == 0 ) opat = p - text;
+
+/* If this is a closing bracket, record its position and decrement the
+   nesting depth. If the depth reaches zero, break out of the loop. If
+   a closing bracket is found before any opening bracket, the depth will
+   go negative, so check for this too. */
+         } else if( *p == clchar ) {
+            clat = p - text;
+            if( --depth <= 0 ) break;
+         }
+      }
+
+/* If the final depth is positive, we have to0 many opening brackets.
+   So return -2. */
+      if( depth > 0 ) {
+         result = -2;
+
+/* If the final is negative, we found a closing bracket before finding an
+   opening bracket, so return -1. */
+      } else if( depth < 0 ) {
+         result = -1;
+
+/* If brackets were balanced correctly, check we actually found some
+   brackets. If so, return 1. */
+      } else if( opat <= clat ) {
+         result = 1;
+
+/* Return the index of the opening and closing brackets. */
+         if( openat ) *openat = opat;
+         if( closeat ) *closeat = clat;
+
+/* If required, extract the string that occurs before the opening bracket,
+   and terminate it. */
+         if( before ) {
+            nc = opat;
+            *before = astStore( NULL, text, nc + 1 );
+            (*before)[ nc ] = 0;
+
+/* If required, strip trailing and leading spaces. */
+            if( strip ) {
+               astChrTrunc( *before );
+               astRemoveLeadingBlanks( *before );
+            }
+         }
+
+/* If required, extract the string that occurs within the brackets,
+   and terminate it. Strip spaces if required. */
+         if( in ) {
+            nc = clat - opat - 1;
+            *in = astStore( NULL, text + opat + 1, nc + 1 );
+            (*in)[ nc ] = 0;
+
+            if( strip ) {
+               astChrTrunc( *in );
+               astRemoveLeadingBlanks( *in );
+            }
+         }
+
+/* If required, extract the string that occurs after the brackets,
+   and terminate it. Strip spaces if required. */
+         if( after ) {
+            nc = nct - clat - 1;
+            *after = astStore( NULL, text + clat + 1, nc + 1 );
+            (*after)[ nc ] = 0;
+
+            if( strip ) {
+               astChrTrunc( *after );
+               astRemoveLeadingBlanks( *after );
+            }
+         }
+      }
+   }
+
+/* Return the result. */
+   return result;
+}
+
 void *astCalloc_( size_t nmemb, size_t size, int *status ) {
 /*
 *++
@@ -1250,6 +1470,45 @@ void astChrCase_( const char *in, char *out, int upper, int blen, int *status ) 
    }
 }
 
+void astChrClean_( char *text ) {
+/*
+*++
+*  Name:
+*     astChrClean
+
+*  Purpose:
+*     Replace unprintable characters in a string with spaces.
+
+*  Type:
+*     Public function.
+
+*  Synopsis:
+*     #include "memory.h"
+*     void astChrClean( char *text )
+
+*  Description:
+*     This function replaces all unprintable characters in the given
+*     string with spaces. It is assumed that the string contains only
+*     ASCII characters.
+
+*  Parameters:
+*     text
+*        Pointer to the null terminated string to be modified.
+
+*--
+*/
+
+/* Local Variables: */
+   char *pr;
+
+   if( !text ) return;
+
+   pr = text - 1;
+   while( *(++pr) ) {
+      if( *pr < ' ' || *pr > '~' ) *pr = ' ';
+   }
+}
+
 int astChrMatch_( const char *str1, const char *str2, int *status ) {
 /*
 *++
@@ -1389,6 +1648,48 @@ int astChrMatchN_( const char *str1, const char *str2, size_t n, int *status ) {
    return match;
 }
 
+void astChrRemoveBlanks_( char *text ) {
+/*
+*++
+*  Name:
+*     astChrRemoveBlanks
+
+*  Purpose:
+*     Remove all spaces from a string.
+
+*  Type:
+*     Public function.
+
+*  Synopsis:
+*     #include "memory.h"
+*     void astChrClean( char *text )
+
+*  Description:
+*     This function removes all spaces form the supplied string by moving
+*     non-space characters to the left. The string is terminated to
+*     remove any trailing spaces.
+
+*  Parameters:
+*     text
+*        Pointer to the null terminated string to be modified.
+
+*--
+*/
+
+/* Local Variables: */
+   char *pr;
+   char *pw;
+
+   if( !text ) return;
+
+   pw = text;
+   pr = text - 1;
+   while( *(++pr) ) {
+      if( *pr != ' ' ) *(pw++) = *pr;
+   }
+   *pw = 0;
+}
+
 char **astChrSplit_( const char *str, int *n, int *status ) {
 /*
 *++
@@ -1403,7 +1704,7 @@ char **astChrSplit_( const char *str, int *n, int *status ) {
 
 *  Synopsis:
 *     #include "memory.h"
-*     char **astChrSplit_( const char *str, int *n )
+*     char **astChrSplit( const char *str, int *n )
 
 *  Description:
 *     This function extracts all space-separated words form the supplied
@@ -2084,6 +2385,111 @@ void astChrTrunc_( char *text, int *status ){
    text[ astChrLen( text ) ] = 0;
 }
 
+void astFandl_( const char *text, size_t start, size_t end,
+                size_t *f, size_t *l, int *status ){
+/*
+*++
+*  Name:
+*     astFandl
+
+*  Purpose:
+*     Identify the used section of a string.
+
+*  Type:
+*     Public function.
+
+*  Synopsis:
+*     #include "memory.h"
+*     void astFandl_( const char *text, size_t start, size_t end,
+*                     size_t *f, size_t *l )
+
+*  Description:
+*     This function searches a specified section of the supplied text
+*     for non-space characters, returning the indices of the first and
+*     last.
+
+*  Parameters:
+*     text
+*        The text string to be seached.
+*     start
+*        The zero-based index of the first character to be checked within
+*        "text". The whole string is used if "start" is greater than "end".
+*     end
+*        The zero-based index of the last character to be checked within
+*        "text". The whole string is used if "start" is greater than "end".
+*        The last character is used if "end" is greater than the length
+*        of the string.
+*     f
+*        Returned holding the zero-based index of the first non-space
+*        character. Ignored if NULL.
+*     l
+*        Returned holding the zero-based index of the last non-space
+*        character. Ignored if NULL.
+
+*  Notes:
+*     - "f" is returned greater than "l" if the specified section of the
+*     string is entirely blank.
+*--
+*/
+/* Local Variables: */
+   size_t nct;
+   const char *pstart;
+   const char *pend;
+
+/* Initialise. */
+   if( f ) *f = 1;
+   if( l ) *l = 0;
+
+/* Check the global error status. Also check a text string was supplied. */
+   if ( !astOK || !text ) return;
+
+/* Get the total length of the supplied string, including any trailing blanks
+   but excluding the terminating null. */
+   nct = strlen( text );
+
+/* Get the actual start and end positions to use. */
+   if( start > end ) {
+      start = 0;
+      end = nct - 1;
+   } else if( end >= nct ) {
+      end = nct - 1;
+   }
+
+/* Check there is some text to search. */
+   if( start <= end ) {
+
+/* If we want the position of the first non-space... */
+      if( f ) {
+
+/* Move forward through all the characters in the substring to be searched.
+   Break when the first non-space is found. */
+         pend = text + end;
+         pstart = text + start - 1;
+         while( ++pstart <= pend ){
+            if( *pstart != ' ' ) {
+               *f = pstart - text;
+               break;
+            }
+         }
+      }
+
+/* If we want the position of the last non-space... */
+      if( l ) {
+
+/* Move backwards through all the characters in the substring to be
+   searched. Break when the first non-space is found. */
+         pend = text + end + 1;
+         pstart = text + start;
+         while( --pend >= pstart ) {
+            if( *pend != ' ' ) {
+               *l = pend - text;
+               break;
+            }
+         }
+      }
+   }
+}
+
 void *astFree_( void *ptr, int *status ) {
 /*
 *++
@@ -2369,7 +2775,7 @@ int astIsDynamic_( const void *ptr, int *status ) {
 
 *  Synopsis:
 *     #include "memory.h"
-*     int astIsDynamic_( const void *ptr )
+*     int astIsDynamic( const void *ptr )
 
 *  Description:
 *     This function takes a pointer to a region of memory and tests if

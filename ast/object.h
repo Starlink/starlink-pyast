@@ -408,7 +408,12 @@
   #define AST__FLT_DIG (FLT_DIG + 3)
 #endif
 
-
+/* The number of characters needed to store a floating point value formatted
+   using "%.*g, AST__DBL_DIG". This does not include space for a trailing
+   null. The six extra characters are for the decimal point and the
+   exponent (the exponent occupies up to 5 characters). */
+#define AST__DBL_WIDTH (AST__DBL_DIG + 6)
+#define AST__FLT_WIDTH (AST__FLT_DIG + 6)
 
 
 /*
@@ -1957,4 +1962,3 @@ void astHandleAlarm_( const char *, va_list );
 #endif
 
 #endif
-
