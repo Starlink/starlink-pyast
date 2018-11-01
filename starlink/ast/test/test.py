@@ -187,26 +187,26 @@ class TestAst(unittest.TestCase):
         self.assertTrue(zoommap.UseDefs)
         self.assertEqual(zoommap.Nin, 1)
         self.assertEqual(zoommap.Nout, 1)
-        self.assertEqual(zoommap.Zoom, 1.2)
+        self.assertAlmostEqual(zoommap.Zoom, 1.2)
         zoommap.Zoom = -1.3
-        self.assertEqual(zoommap.Zoom, -1.3)
+        self.assertAlmostEqual(zoommap.Zoom, -1.3)
         self.assertEqual(zoommap.get("Zoom"), "-1.3")
         zm = copy.deepcopy(zoommap)
         self.assertEqual(zoommap.Nobject, 2)
         self.assertIsInstance(zm, starlink.Ast.ZoomMap)
-        self.assertEqual(zm.Zoom, -1.3)
-        self.assertEqual(zoommap.Zoom, -1.3)
+        self.assertAlmostEqual(zm.Zoom, -1.3)
+        self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm.Zoom = 3.0
-        self.assertEqual(zm.Zoom, 3.0)
-        self.assertEqual(zoommap.Zoom, -1.3)
+        self.assertAlmostEqual(zm.Zoom, 3.0)
+        self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm2 = zoommap.copy()
         self.assertEqual(zoommap.Nobject, 3)
         self.assertIsInstance(zm2, starlink.Ast.ZoomMap)
-        self.assertEqual(zm2.Zoom, -1.3)
-        self.assertEqual(zoommap.Zoom, -1.3)
+        self.assertAlmostEqual(zm2.Zoom, -1.3)
+        self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm2.Zoom = 3.0
-        self.assertEqual(zm2.Zoom, 3.0)
-        self.assertEqual(zoommap.Zoom, -1.3)
+        self.assertAlmostEqual(zm2.Zoom, 3.0)
+        self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm2 = None
         self.assertEqual(zoommap.Nobject, 2)
         self.assertTrue(zoommap.same(zoommap))
@@ -227,7 +227,7 @@ class TestAst(unittest.TestCase):
         with self.assertRaises(starlink.Ast.ZOOMI):
             zoommap = starlink.Ast.ZoomMap(1, 0)
         zoommap = starlink.Ast.ZoomMap(1, 12.25, "Zoom=2.1")
-        self.assertEqual(zoommap.Zoom, 2.1)
+        self.assertAlmostEqual(zoommap.Zoom, 2.1)
         with self.assertRaises(starlink.Ast.NOWRT):
             zoommap = starlink.Ast.ZoomMap(1, 12.25, "Nin=3")
 
@@ -334,7 +334,7 @@ class TestAst(unittest.TestCase):
         frame = starlink.Ast.Frame(2)
         nchars, value = frame.unformat(1, "56.4 #")
         self.assertEqual(nchars, 5)
-        self.assertEqual(value, 56.4)
+        self.assertAlmostEqual(value, 56.4)
 
     def test_FrameActiveUnit(self):
         frame = starlink.Ast.Frame(2)
@@ -372,7 +372,7 @@ class TestAst(unittest.TestCase):
         zoommap = starlink.Ast.ZoomMap(1, 1.2)
         map1, map2, series, invert1, invert2 = zoommap.decompose()
         self.assertIsInstance(map1, starlink.Ast.ZoomMap)
-        self.assertEqual(map1.Zoom, 1.2)
+        self.assertAlmostEqual(map1.Zoom, 1.2)
         self.assertIsNone(map2)
         self.assertFalse(invert1)
         self.assertFalse(invert2)
@@ -525,7 +525,7 @@ class TestAst(unittest.TestCase):
         with self.assertRaises(starlink.Ast.WCSTY):
             wcsmap = starlink.Ast.WcsMap(2, 4000, 1, 2)
         wcsmap.set("PV2_0=1.2")
-        self.assertEqual(wcsmap.ProjP_0, 1.2)
+        self.assertAlmostEqual(wcsmap.ProjP_0, 1.2)
         self.assertEqual(wcsmap.WcsType, starlink.Ast.TAN)
 
     def test_PcdMap(self):
@@ -1248,12 +1248,12 @@ class TestAst(unittest.TestCase):
         self.assertEqual(mm.Nout, 2)
         pin = numpy.array([[1., 2., 3], [0., 1., 2]])
         pout = mm.tran(pin, False)
-        self.assertEqual(pout[0][0], -1.0)
-        self.assertEqual(pout[0][1], -2.0)
-        self.assertEqual(pout[0][2], -3.0)
-        self.assertEqual(pout[1][0], 0.0 / 2.0)
-        self.assertEqual(pout[1][1], 1.0 / 2.0)
-        self.assertEqual(pout[1][2], 2.0 / 2.0)
+        self.assertAlmostEqual(pout[0][0], -1.0)
+        self.assertAlmostEqual(pout[0][1], -2.0)
+        self.assertAlmostEqual(pout[0][2], -3.0)
+        self.assertAlmostEqual(pout[1][0], 0.0 / 2.0)
+        self.assertAlmostEqual(pout[1][1], 1.0 / 2.0)
+        self.assertAlmostEqual(pout[1][2], 2.0 / 2.0)
 
         mm = starlink.Ast.MatrixMap([[0.0, 1.0], [2.0, 3.0], [-1.0, -2.0]])
         self.assertTrue(mm.TranForward)
@@ -1261,15 +1261,15 @@ class TestAst(unittest.TestCase):
         self.assertEqual(mm.Nout, 3)
         self.assertEqual(mm.Nin, 2)
         pout = mm.tran(pin, True)
-        self.assertEqual(pout[0][0], 0.0)
-        self.assertEqual(pout[0][1], 1.0)
-        self.assertEqual(pout[0][2], 2.0)
-        self.assertEqual(pout[1][0], 2.0)
-        self.assertEqual(pout[1][1], 7.0)
-        self.assertEqual(pout[1][2], 12.0)
-        self.assertEqual(pout[2][0], -1.0)
-        self.assertEqual(pout[2][1], -4.0)
-        self.assertEqual(pout[2][2], -7.0)
+        self.assertAlmostEqual(pout[0][0], 0.0)
+        self.assertAlmostEqual(pout[0][1], 1.0)
+        self.assertAlmostEqual(pout[0][2], 2.0)
+        self.assertAlmostEqual(pout[1][0], 2.0)
+        self.assertAlmostEqual(pout[1][1], 7.0)
+        self.assertAlmostEqual(pout[1][2], 12.0)
+        self.assertAlmostEqual(pout[2][0], -1.0)
+        self.assertAlmostEqual(pout[2][1], -4.0)
+        self.assertAlmostEqual(pout[2][2], -7.0)
 
     def test_PolyMap(self):
         pm = starlink.Ast.PolyMap([[1.2, 1., 2., 0.], [-0.5, 1., 1., 1.],
@@ -1388,7 +1388,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(pout[0][1], 0.)
         self.assertEqual(pout[0][2], starlink.Ast.BAD)
         self.assertEqual(pout[1][0], starlink.Ast.BAD)
-        self.assertEqual(pout[1][1], 2.1)
+        self.assertAlmostEqual(pout[1][1], 2.1)
         self.assertEqual(pout[1][2], starlink.Ast.BAD)
 
         new2 = new.downsize(0, 3)
