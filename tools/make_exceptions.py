@@ -101,8 +101,9 @@ static int RegisterErrors( PyObject *m ){
 /* Now create an instance of each derived AST exception class. */""", file=cfile)
 
     for code in errcodes:
-        print("   if( !({0}_err = PyErr_NewException(\"Ast.{0}\", AstError_err, NULL))) return 0;".format(code), file=cfile)
-        print("   PyDict_SetItemString( dict, \"{0}\", {0}_err );".format(code), file=cfile)
+        print('   if( !({0}_err = PyErr_NewException("Ast.{0}", AstError_err, NULL))) return 0;'.format(code),
+              file=cfile)
+        print('   PyDict_SetItemString( dict, "{0}", {0}_err );'.format(code), file=cfile)
         print(" ", file=cfile)
 
     print(r"""   return 1;
@@ -181,6 +182,7 @@ void astPutErr_( int status_value, const char *message ) {
 }
 """, file=cfile)
     cfile.close()
+
 
 if __name__ == "__main__":
     make_exceptions()

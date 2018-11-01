@@ -149,7 +149,7 @@ class grf_matplotlib(object):
                         import io
                         fig.canvas.print_pdf(io.BytesIO())
                         self.renderer = fig._cachedRenderer
-                    except:
+                    except Exception:
                         pass
 
         if not self.renderer:
@@ -374,7 +374,6 @@ class grf_matplotlib(object):
         return (wcs_verts[0][0], wcs_verts[1][0], wcs_verts[2][0], wcs_verts[3][0],
                 wcs_verts[0][1], wcs_verts[1][1], wcs_verts[2][1], wcs_verts[3][1])
 
-
 # ------------------------------------------------------------------------
     def ColToInt(self, colour):
         result = -1
@@ -412,7 +411,6 @@ class grf_matplotlib(object):
             result += 1
 
         return result
-
 
 # ------------------------------------------------------------------------
     def IntToCol(self, colour):
