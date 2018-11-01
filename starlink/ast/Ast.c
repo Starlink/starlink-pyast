@@ -7573,6 +7573,10 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
       astSetI( THIS, "Card", val );
       if( astFindFits( THIS, "%f", card, 0 ) ) {
          result = Py_BuildValue( "s", card );
+      } else {
+        char buff[ 200 ];
+        sprintf( buff, "FITS card at index %d not found in FitsChan.", val - 1 );
+        PyErr_SetString( PyExc_KeyError, buff );
       }
 
 /* Otherwise, get the keyword to be searched for. */
