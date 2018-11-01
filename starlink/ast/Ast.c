@@ -12108,7 +12108,7 @@ const char *FormatObject( PyObject *o ){
 *     freed.
 
 */
-   const char *result;
+   const char *result = NULL;
    PyObject *repr = PyObject_Repr( o );
 
    if( PyUnicode_Check( repr ) ) {
@@ -12140,4 +12140,3 @@ const char *GetObjectType( PyObject *o ){
 */
    return o->ob_type->tp_name;
 }
-
