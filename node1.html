@@ -48,6 +48,13 @@ that provides the method.
 </ul>
 <hr>
 <p>
+<div class="implemented" id="AddCell">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddCell">astAddCell</a> - Adds a single HEALPix cell into an axisting Moc 
+<ul>
+<li><span class=inv> moc.addcell( order, npix, cmode=starlink.Ast.OR  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="AddColumn">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddColumn">astAddColumn</a> - Add a new column definition to a table 
 <ul>
@@ -62,10 +69,31 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="AddMocData">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddMocData">astAddMocData</a> - Adds a FITS binary table into an axisting Moc 
+<ul>
+<li><span class=inv> moc.addmocdata( data, cmode=starlink.Ast.OR, negate=False, maxorder=-1  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="AddParameter">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddParameter">astAddParameter</a> - Add a new global parameter definition to a table 
 <ul>
 <li><span class=inv> table.addparameter( name  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AddPixelMask">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddPixelMask">astAddPixelMask</a> - Add a set of pixels to a Moc 
+<ul>
+<li><span class=inv> moc.addpixelmask( array, oper, value, badval, wcs, flags, cmode=starlink.Ast.OR  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AddRegion">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astAddRegion">astAddRegion</a> - Add a Region into a Moc 
+<ul>
+<li><span class=inv> moc.addregion( region, cmode=starlink.Ast.OR  )
 </span></li>
 </ul>
 </div>
@@ -372,6 +400,13 @@ that provides the method.
 <li class="note">The starlink.Ast.get() method is equivalent to <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetC">astGetC</a> in that it always returns the string representation of the AST attribute value. By contrast, each Python property returns the attribute value using the native data type of the AST attribute (integer, boolean, floating point or string).</li>
 </ul>
 </div>
+<div class="implemented" id="GetCell">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetCell">astGetCell</a> - Identify the next cell in a normalised Moc 
+<ul>
+<li><span class=inv>( order, npix ) = moc.getcell( icell  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="GetFits&lt;X&gt;">
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetFits&lt;X&gt;">astGetFits&lt;X&gt;</a> - Get a named keyword value from a FitsChan 
 <ul>
@@ -391,6 +426,20 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetMapping">astGetMapping</a> - Obtain a Mapping that converts between two Frames in a FrameSet 
 <ul>
 <li><span class=inv>result = frameset.getmapping( iframe1=starlink.Ast.BASE, iframe2=starlink.Ast.CURRENT  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetMocData">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetMocData">astGetMocData</a> - Get the FITS binary table data describing a Moc 
+<ul>
+<li><span class=inv>data = moc.getmocdata(   )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="GetMocHeader">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astGetMocHeader">astGetMocHeader</a> - Get the FITS binary table headers describing a Moc 
+<ul>
+<li><span class=inv>result = moc.getmocheader(   )
 </span></li>
 </ul>
 </div>
@@ -578,6 +627,12 @@ that provides the method.
 <ul>
 <li><span class=inv>matrixmap = starlink.Ast.MatrixMap( matrix, options=None  )</span></li>
 <li class="note">The supplied array of matrix element values must be either 1- or 2- dimensional. If it is 1-dimensional, it is assumed to contain the values for the diagonal of the (square) matrix, all other elements being zero. In this case the length of the array determines the number of inputs and outputs for the Matrixmap. If the array is 2-dimensional, it should consist of a list in which each element is a list of values for a single row of the matrix. For instance, the 2-dimensional array [[1,2,3],[4,2,1]] specifies a matrix with two rows and three columns. The resulting MatrixMap would have Nin=3 and Nout=2.</li>
+</ul>
+</div>
+<div class="implemented" id="Moc">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astMoc">astMoc</a> - Create a Moc 
+<ul>
+<li><span class=inv>moc = starlink.Ast.Moc( options=None  )</span></li>
 </ul>
 </div>
 <div class="implemented" id="Negate">
@@ -819,7 +874,7 @@ that provides the method.
 </ul>
 </div>
 <div class="implemented" id="RemapFrame">
-&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRemapFrame">astRemapFrame</a> - Modify a Frame's relationship to other Frames in a FrameSet 
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astRemapFrame">astRemapFrame</a> - Modify a Frame\texttt{'} s relationship to other Frames in a FrameSet 
 <ul>
 <li><span class=inv> frameset.remapframe( iframe, map  )
 </span></li>
@@ -995,6 +1050,13 @@ that provides the method.
 &#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTest">astTest</a> - Test if an Object attribute value is set 
 <ul>
 <li><span class=inv>result = object.test( attrib  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="TestCell">
+&#149; &nbsp; <a href="http://www.starlink.ac.uk/cgi-bin/htxserver/sun211.htx/?xref_astTestCell">astTestCell</a> - Tests if a single HEALPix cell is included in a Moc 
+<ul>
+<li><span class=inv>result = moc.testcell( order, npix, parent  )
 </span></li>
 </ul>
 </div>
