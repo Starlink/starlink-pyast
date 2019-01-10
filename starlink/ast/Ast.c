@@ -136,9 +136,10 @@ static PyObject *Object_show( Object *self );
 static PyObject *Object_str( PyObject *self );
 static PyObject *Object_test( Object *self, PyObject *args );
 static PyObject *Object_unlock( Object *self, PyObject *args );
-static PyTypeObject *GetType( AstObject *this );
+static PyTypeObject *GetType( AstObject *this, int (**setproxy_function)( AstObject *, Object * ), void (**def_function)( Object * ) );
 static int SetProxy( AstObject *this, Object *self );
 static void Object_dealloc( Object *self );
+static void Object_def( Object *self );
 
 /* Class membership functions (probably not needed, but just in case).
 These are functions of the base Object class since it should be possible
@@ -163,6 +164,7 @@ MAKE_ISA(LutMap)
 MAKE_ISA(Mapping)
 MAKE_ISA(MathMap)
 MAKE_ISA(MatrixMap)
+MAKE_ISA(Moc)
 MAKE_ISA(NormMap)
 MAKE_ISA(NullRegion)
 MAKE_ISA(Object)
@@ -212,6 +214,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(Mapping,mapping),
    DEF_ISA(MathMap,mathmap),
    DEF_ISA(MatrixMap,matrixmap),
+   DEF_ISA(Moc,moc),
    DEF_ISA(NormMap,normmap),
    DEF_ISA(NullRegion,nullregion),
    DEF_ISA(Object,object),
@@ -308,6 +311,11 @@ static PyTypeObject ObjectType = {
 
 
 /* Define the class methods */
+static void Object_def( Object *self ){
+   if( !self ) return;
+   self->ast_object = NULL;
+}
+
 #undef NAME
 #define NAME CLASS ".clear"
 static PyObject *Object_clear( Object *self, PyObject *args ) {
@@ -1572,7 +1580,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const long *)in->data,
                           (in_var ? (const long *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_f, ncoord_out,
+                          flags, tol, maxpix, badval_l, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (long *)out->data,
@@ -1592,7 +1600,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const short int *)in->data,
                           (in_var ? (const short int *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_f, ncoord_out,
+                          flags, tol, maxpix, badval_h, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (short int *)out->data,
@@ -1602,7 +1610,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const signed char *)in->data,
                           (in_var ? (const signed char *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_f, ncoord_out,
+                          flags, tol, maxpix, badval_b, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (signed char *)out->data,
@@ -1612,7 +1620,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const unsigned int *)in->data,
                           (in_var ? (const unsigned int *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_i, ncoord_out,
+                          flags, tol, maxpix, badval_I, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (unsigned int *)out->data,
@@ -1622,7 +1630,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const unsigned short int *)in->data,
                           (in_var ? (const unsigned short int *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_f, ncoord_out,
+                          flags, tol, maxpix, badval_H, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (unsigned short int *)out->data,
@@ -1632,7 +1640,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)ubnd_in->data, (const unsigned char *)in->data,
                           (in_var ? (const unsigned char *)in_var->data : NULL),
                           interp, NULL, (params ? (const double *)params->data : NULL),
-                          flags, tol, maxpix, badval_f, ncoord_out,
+                          flags, tol, maxpix, badval_B, ncoord_out,
                           (const int *)lbnd_out->data, (const int *)ubnd_out->data,
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (unsigned char *)out->data,
@@ -6075,6 +6083,533 @@ static PyObject *Circle_circlepars( Circle *self, PyObject *args ) {
 
 
 
+/* Moc */
+/* === */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".Moc"
+
+/* Define the class structure */
+typedef struct {
+   Region parent;
+} Moc;
+
+/* Prototypes for class functions */
+static int Moc_init( Moc *self, PyObject *args, PyObject *kwds );
+static PyObject *Moc_addcell( Moc *self, PyObject *args );
+static PyObject *Moc_addmocdata( Moc *self, PyObject *args );
+static PyObject *Moc_addpixelmask( Moc *self, PyObject *args );
+static PyObject *Moc_addregion( Moc *self, PyObject *args );
+static PyObject *Moc_getcell( Moc *self, PyObject *args );
+static PyObject *Moc_getmocdata( Moc *self, PyObject *args );
+static PyObject *Moc_getmocheader( Moc *self, PyObject *args );
+static PyObject *Moc_testcell( Moc *self, PyObject *args );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETI(Moc,MaxOrder)
+MAKE_GETSETI(Moc,MinOrder)
+MAKE_GETSETD(Moc,MaxRes)
+MAKE_GETSETD(Moc,MinRes)
+MAKE_GETROI(Moc,MocType)
+MAKE_GETROI(Moc,MocLength)
+MAKE_GETROD(Moc,MocArea)
+
+static PyGetSetDef Moc_getseters[] = {
+  DEFATT(MaxOrder,"The highest HEALPix order used in the MOC"),
+  DEFATT(MinOrder,"The lowest HEALPix order used in the MOC"),
+  DEFATT(MaxRes,"The best resolution of the MOC"),
+  DEFATT(MinRes,"The worst resolution of the MOC"),
+  DEFATT(MocType,"The data type used to describe a Moc in FITS"),
+  DEFATT(MocArea,"The area covered by the Moc, in square arc-minutes"),
+  DEFATT(MocLength,"The table length used to describe a Moc in FITS"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Describe the methods of the class */
+static PyMethodDef Moc_methods[] = {
+   {"addcell", (PyCFunction)Moc_addcell, METH_VARARGS, "Adds a single HEALPix cell into an existing Moc"},
+   {"addmocdata", (PyCFunction)Moc_addmocdata, METH_VARARGS, "Adds a FITS binary table into an existing Moc"},
+   {"addpixelmask", (PyCFunction)Moc_addpixelmask, METH_VARARGS, "Adds a pixel mask to an existing Moc"},
+   {"addregion", (PyCFunction)Moc_addregion, METH_VARARGS, "Adds a Region to an existing Moc"},
+   {"getcell", (PyCFunction)Moc_getcell, METH_VARARGS, "Identify the next cell included in a Moc"},
+   {"getmocdata", (PyCFunction)Moc_getmocdata, METH_VARARGS, "Get the FITS binary table data describing a Moc"},
+   {"getmocheader", (PyCFunction)Moc_getmocheader, METH_VARARGS, "Get the FITS binary table headers describing a Moc"},
+   {"testcell", (PyCFunction)Moc_testcell, METH_VARARGS, "Test if a single HEALPix cell is included in a Moc"},
+   {NULL, NULL, 0, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject MocType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(Moc),               /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST moc",                 /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   Moc_methods,               /* tp_methods */
+   0,                         /* tp_members */
+   Moc_getseters,             /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)Moc_init,        /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int Moc_init( Moc *self, PyObject *args, PyObject *kwds ){
+
+/* args: :options=None */
+
+   const char *options = " ";
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
+      AstMoc *this = astMoc( "%s", options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addcell"
+static PyObject *Moc_addcell( Moc *self, PyObject *args ) {
+
+/* args: :order,npix,cmode=starlink.Ast.OR */
+
+   PyObject *result = NULL;
+   int cmode = AST__OR;
+   int order;
+   int64_t npix;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "iL|i:" NAME, &order, &npix, &cmode ) && astOK ) {
+      astAddCell( THIS, cmode, order, npix );
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addmocdata"
+static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
+
+/* args: :data,cmode=starlink.Ast.OR,negate=False,maxorder=-1 */
+
+   PyArrayObject *data = NULL;
+   PyObject *result = NULL;
+   PyObject *data_object = NULL;
+   char buf[120];
+   int cmode = AST__OR;
+   int len = 0;
+   int maxorder = -1;
+   int nbyte = 0;
+   int ndim;
+   int negate = 0;
+   int type = 0;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "O|iii:" NAME, &data_object, &cmode, &negate,
+                         &maxorder ) && astOK ) {
+
+      if( !PyArray_Check(  data_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'data' argument for " NAME " must be "
+                          "an array object" );
+      } else {
+         type = ((PyArrayObject*) data_object)->descr->type_num;
+         if( type == PyArray_INT ) {
+            nbyte = sizeof(int);
+         } else if( type == PyArray_LONG ) {
+            nbyte = sizeof(long int);
+         } else if( type == PyArray_LONGLONG ) {
+            nbyte = sizeof(long long int);
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'data' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
+
+         ndim = ((PyArrayObject*) data_object)->nd;
+         if( ndim != 1 ) {
+            sprintf( buf, "The 'data' array supplied to " NAME " has bad "
+                     "number (%d) of dimensions (must be one-dimensional).",
+                     ndim );
+            PyErr_SetString( PyExc_ValueError, buf );
+         } else {
+            len = (((PyArrayObject*) data_object)->dimensions)[ 0 ];
+         }
+      }
+
+      if( len > 0 && nbyte > 0 ) {
+         data = (PyArrayObject *) PyArray_ContiguousFromAny( data_object,
+                                                             type, 1, 1 );
+         if( data ) {
+            astAddMocData( THIS, cmode, negate, maxorder, len, nbyte,
+                           data->data );
+            Py_DECREF( data );
+         }
+      }
+
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addpixelmask"
+static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
+
+/* args: :array,oper,value,badval,wcs,flags,cmode=starlink.Ast.OR */
+
+   Object *other = NULL;
+   PyArrayObject *array = NULL;
+   PyObject *array_object = NULL;
+   PyObject *result = NULL;
+   char badval_b;
+   char buf[120];
+   char format[] = "OiddO!i|i:" NAME;
+   char value_b;
+   double badval_d;
+   double value_d;
+   float badval_f;
+   float value_f;
+   int badval_i;
+   int cmode = AST__OR;
+   int dims[ 2 ];
+   int flags = 0;
+   int i;
+   int ndim;
+   int oper;
+   int type;
+   int value_i;
+   long badval_l;
+   long value_l;
+   npy_intp *pdims = NULL;
+   short int badval_h;
+   short int value_h;
+   unsigned char badval_B;
+   unsigned char value_B;
+   unsigned int badval_I;
+   unsigned int value_I;
+   unsigned short int badval_H;
+   unsigned short int value_H;
+   void *pbadval = NULL;
+   void *pvalue = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* We do not know yet what format code to use for badval and value. We
+   need to parse the arguments twice. The first time, we determine the
+   data type from "array". This allows us to choose the correct format
+   code for badval/value, so we then parse the arguments a second time,
+   using the correct code. */
+   if( PyArg_ParseTuple( args, format, &array_object, &oper, &value_d,
+                         &badval_d, &FrameSetType, (PyObject**) &other,
+                         &flags, &cmode ) && astOK ) {
+
+      if( !PyArray_Check(  array_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
+                          "an array object" );
+      } else {
+         type = ((PyArrayObject*) array_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 2 ] = 'd';
+            pvalue = &value_d;
+            pbadval = &badval_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 2 ] = 'f';
+            pvalue = &value_f;
+            pbadval = &badval_f;
+         } else if( type == PyArray_INT ) {
+            format[ 2 ] = 'i';
+            pvalue = &value_i;
+            pbadval = &badval_i;
+         } else if( type == PyArray_LONG ) {
+            format[ 2 ] = 'l';
+            pvalue = &value_l;
+            pbadval = &badval_l;
+         } else if( type == PyArray_SHORT ) {
+            format[ 2 ] = 'h';
+            pvalue = &value_h;
+            pbadval = &badval_h;
+         } else if( type == PyArray_BYTE ) {
+            format[ 2 ] = 'b';
+            pvalue = &value_b;
+            pbadval = &badval_b;
+         } else if( type == PyArray_UINT ) {
+            format[ 2 ] = 'I';
+            pvalue = &value_I;
+            pbadval = &badval_I;
+         } else if( type == PyArray_USHORT ) {
+            format[ 2 ] = 'H';
+            pvalue = &value_H;
+            pbadval = &badval_H;
+         } else if( type == PyArray_UBYTE ) {
+            format[ 2 ] = 'B';
+            pvalue = &value_B;
+            pbadval = &badval_B;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'array' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
+
+/* Set the type code for "badval" to the that of "value". */
+         format[ 3 ] = format[ 2 ];
+
+/* Also check the number of axes and record the dimensions in the array. */
+         ndim = ((PyArrayObject*) array_object)->nd;
+         pdims = ((PyArrayObject*) array_object)->dimensions;
+         if( ndim != 2 ) {
+            sprintf( buf, "The 'array' array supplied to " NAME " has bad "
+                     "number (%d) of dimensions (must be 2-dimensional).",
+                     ndim );
+            PyErr_SetString( PyExc_ValueError, buf );
+            pbadval = NULL;
+            pvalue = NULL;
+         } else {
+            for( i = 0; i < ndim; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
+         }
+      }
+   }
+
+/* Parse the arguments again, this time with the correct code for
+   badval. */
+   if( PyArg_ParseTuple( args, format, &array_object, &oper, pvalue,
+                         pbadval, &FrameSetType, (PyObject**) &other,
+                         &flags, &cmode ) && pbadval ) {
+
+      array = GetArray( array_object, type, 1, 2, dims, "array", NAME );
+      if( array ) {
+         if( type == PyArray_DOUBLE ) {
+            astAddPixelMaskD( THIS, cmode, THAT, value_d, oper, flags,
+                              badval_d, (const double *)array->data,
+                              dims );
+         } else if( type == PyArray_FLOAT ) {
+            astAddPixelMaskF( THIS, cmode, THAT, value_f, oper, flags,
+                              badval_f, (const float *)array->data,
+                              dims );
+         } else if( type == PyArray_LONG ) {
+            astAddPixelMaskL( THIS, cmode, THAT, value_l, oper, flags,
+                              badval_l, (const long int *)array->data,
+                              dims );
+         } else if( type == PyArray_INT ) {
+            astAddPixelMaskI( THIS, cmode, THAT, value_i, oper, flags,
+                              badval_i, (const int *)array->data,
+                              dims );
+         } else if( type == PyArray_SHORT ) {
+            astAddPixelMaskS( THIS, cmode, THAT, value_h, oper, flags,
+                              badval_h, (const short int *)array->data,
+                              dims );
+         } else if( type == PyArray_BYTE ) {
+            astAddPixelMaskB( THIS, cmode, THAT, value_b, oper, flags,
+                              badval_b, (const signed char *)array->data,
+                              dims );
+         } else if( type == PyArray_UINT ) {
+            astAddPixelMaskUI( THIS, cmode, THAT, value_I, oper, flags,
+                              badval_I, (const unsigned int *)array->data,
+                              dims );
+         } else if( type == PyArray_USHORT ) {
+            astAddPixelMaskUS( THIS, cmode, THAT, value_H, oper, flags,
+                              badval_H, (const unsigned short int *)array->data,
+                              dims );
+         } else if( type == PyArray_UBYTE ) {
+            astAddPixelMaskUB( THIS, cmode, THAT, value_B, oper, flags,
+                              badval_B, (const unsigned char *)array->data,
+                              dims );
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'array' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
+         Py_DECREF( array );
+      }
+
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addregion"
+static PyObject *Moc_addregion( Moc *self, PyObject *args ) {
+
+/* args: :region,cmode=starlink.Ast.OR */
+
+   PyObject *result = NULL;
+   int cmode = AST__OR;
+   Object *other = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "O!|i:" NAME, &RegionType,
+                         (PyObject**)&other, &cmode ) && astOK ) {
+      astAddRegion( THIS, cmode, THAT );
+      if( astOK ) {
+         Py_INCREF(Py_None);
+         result = Py_None;
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getcell"
+static PyObject *Moc_getcell( Moc *self, PyObject *args ) {
+
+/* args: order,npix:icell */
+
+   PyObject *result = NULL;
+   int order;
+   int64_t npix;
+   int icell;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "i:" NAME, &icell ) && astOK ) {
+      astGetCell( THIS, icell, &order, &npix );
+      if( astOK ) result = Py_BuildValue("iL", order, npix );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getmocdata"
+static PyObject *Moc_getmocdata( Moc *self, PyObject *args ) {
+
+/* args: data: */
+
+   PyObject *result = NULL;
+   PyArrayObject *data = NULL;
+   int len;
+   int nbyte;
+   npy_intp dims[1];
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* Get the number of bytes per value (type) and number of values
+   (length) of the moc data array. */
+   nbyte = astGetI( THIS, "MocType" );
+   len = astGetI( THIS, "MocLength" );
+
+/* Create a suitable numpy array in which to store the data values. */
+   dims[ 0 ] = len;
+   data = (PyArrayObject *) PyArray_SimpleNew( 1, dims,
+                             ( nbyte == 4 ) ? PyArray_INT : PyArray_LONGLONG );
+   if( data ) {
+      astGetMocData( THIS, dims[ 0 ]*nbyte, data->data );
+      if( astOK ) result = Py_BuildValue( "O", data );
+      Py_XDECREF( data );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getmocheader"
+static PyObject *Moc_getmocheader( Moc *self, PyObject *args ) {
+
+/* args: result: */
+
+   PyObject *result = NULL;
+   AstFitsChan *header = NULL;
+   PyObject *header_object = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   header = astGetMocHeader( THIS );
+   if( header ) {
+      header_object = NewObject( (AstObject *) header );
+      if( header_object ) result = Py_BuildValue( "O", header_object );
+      Py_XDECREF( header_object );
+      header = astAnnul( header );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".testcell"
+static PyObject *Moc_testcell( Moc *self, PyObject *args ) {
+
+/* args: result:order,npix,parent */
+
+   PyObject *result = NULL;
+   int parent;
+   int order;
+   int64_t npix;
+   int there;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple(args, "iLi:" NAME, &order, &npix, &parent ) && astOK ) {
+      there = astTestCell( THIS, order, npix, parent );
+      if( astOK ) result = Py_BuildValue( "O", (there ?  Py_True : Py_False));
+   }
+
+   TIDY;
+   return result;
+}
+
+
+
+
+
 /* Polygon */
 /* ======= */
 
@@ -6815,6 +7350,7 @@ static PyObject *Channel_warnings( Channel *self );
 static PyObject *Channel_read( Channel *self, PyObject *args );
 static PyObject *Channel_write( Channel *self, PyObject *args );
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
+static int Channel_setproxy( AstObject *this, Object *self );
 const char *source_wrapper( void );
 const char *srcseq_wrapper( void );
 void sink_wrapper( const char *text );
@@ -6822,6 +7358,7 @@ static int ChannelFuncs( Channel *self,  PyObject *source, PyObject *sink,
                          const char *(** source_wrap)( void ),
                          void (** sink_wrap)( const char * ) );
 static void Channel_dealloc( Channel *self );
+static void Channel_def( Object *self );
 
 
 /* Describe the methods of the class */
@@ -6897,6 +7434,16 @@ static PyTypeObject ChannelType = {
 
 
 /* Define the class methods */
+static void Channel_def( Object *self ){
+   if( !self ) return;
+   Object_def( self );
+   Channel *channel  = (Channel *) self;
+   channel->source = NULL;
+   channel->sink = NULL;
+   channel->source_line = NULL;
+   channel->src_count = 0;
+}
+
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
 
 /* args: :source=None,sink=None,options=None */
@@ -6918,6 +7465,9 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    void (* sink_wrap)( const char * );
    const char *options = " ";
    int result = -1;
+
+   Channel_def( (Object *) self );
+
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
 /* Choose the source and sink wrapper functions and store info required
@@ -6928,17 +7478,33 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
       if( result == 0 ) {
          AstChannel *this = astChannel( source_wrap, sink_wrap, "%s", options );
 
+/* Set up "self" to be a proxy for "this". */
 /* Store a pointer to the PyObject Channel in the AST Channel so that the
    source and sink wrapper functions can get at it. */
-         astPutChannelData( this, self );
+         astPutChannelData( (AstChannel *) this, (Channel *) self );
 
 /* Store self as the Python proxy for the AST Channel. */
-         result = SetProxy( (AstObject *) this, (Object *) self );
+         result = SetProxy( this, self );
          this = astAnnul( this );
       }
    }
 
    TIDY;
+   return result;
+}
+
+/* Set up "self" to be a proxy for "this". */
+static int Channel_setproxy( AstObject *this, Object *self ){
+   int result = -1;
+   if( astOK ) {
+
+/* Store a pointer to the PyObject Channel in the AST Channel so that the
+   source and sink wrapper functions can get at it. */
+      astPutChannelData( (AstChannel *) this, (Channel *) self );
+
+/* Store self as the Python proxy for the AST Channel. */
+      result = SetProxy( this, self );
+   }
    return result;
 }
 
@@ -7069,6 +7635,8 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    int result = 0;
    *source_wrap = NULL;
    *sink_wrap = NULL;
+   self->source = NULL;
+   self->sink = NULL;
 
 /* If a source object was supplied, we use the local "source_wrapper" function
    as a C-callable wrapper for the object's "astsource" method, and store a
@@ -7221,11 +7789,13 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *keyword );
 static int FitsChan_contains( PyObject *self, PyObject *index );
 static PyObject *FitsChan_getiter( PyObject *self );
 static PyObject *FitsChan_next( PyObject *self );
+static PyObject *FitsChan_keys( PyObject *self );
 static PyObject *FitsChan_readfits( FitsChan *self );
 static PyObject *FitsChan_writefits( FitsChan *self );
 static Py_ssize_t FitsChan_length( PyObject *self );
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds );
 static int FitsChan_setitem( PyObject *self, PyObject *keyword, PyObject *value );
+static int FitsChan_setproxy( AstObject *this, Object *self );
 static PyObject *FitsChan_gettables( FitsChan *self );
 static PyObject *FitsChan_purgewcs( FitsChan *self );
 static PyObject *FitsChan_putcards( FitsChan *self, PyObject *args );
@@ -7244,6 +7814,7 @@ static PyObject *FitsChan_setfitsCN( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_tablesource( FitsChan *self, PyObject *args );
 static PyObject *FitsChan_testfits( FitsChan *self, PyObject *args );
 static void FitsChan_dealloc( FitsChan *self );
+static void FitsChan_def( Object *self );
 void tabsource_wrapper( AstFitsChan *, const char *, int, int, int * );
 
 /* Describe the methods of the class */
@@ -7259,6 +7830,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"getfitsS", (PyCFunction)FitsChan_getfitsS, METH_VARARGS, "Get a string keyword value from a FitsChan."},
    {"getfitsCN", (PyCFunction)FitsChan_getfitsCN, METH_VARARGS, "Get a string keyword value from a FitsChan."},
    {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve any FitsTables currently in a FitsChan"},
+   {"keys",     (PyCFunction)FitsChan_keys, METH_NOARGS, "Return all keywords in a FitsChan."},
    {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
    {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
    {"putfits", (PyCFunction)FitsChan_putfits, METH_VARARGS, "Store a FITS header card in a FitsChan."},
@@ -7377,6 +7949,13 @@ static PyTypeObject FitsChanType = {
    0,                         /* tp_new */
 };
 
+/* Define the class methods */
+static void FitsChan_def( Object *self ){
+   if( !self ) return;
+   Channel_def( self );
+   FitsChan *fitschan  = (FitsChan *) self;
+   fitschan->tabsource = NULL;
+}
 
 static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
 
@@ -7399,6 +7978,9 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    void (* sink_wrap)( const char * );
    const char *options = " ";
    int result = -1;
+
+   FitsChan_def( (Object *) self );
+
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
 /* Choose the source and sink wrapper functions and store info required
@@ -7410,16 +7992,9 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
       if( result == 0 ) {
          AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, "%s", options );
 
-/* Store a pointer to the PyObject FitsChan in the AST FitsChan so that the
-   source and sink wrapper functions can get at it. */
-         astPutChannelData( this, self );
-
-/* Store self as the Python proxy for the AST FitsChan. */
-         result = SetProxy( (AstObject *) this, (Object *) self );
+/* Set up "self" to be a proxy for "this". */
+         result = FitsChan_setproxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
-
-/* No table source function as yet. */
-         self->tabsource = NULL;
       }
    }
 
@@ -7427,6 +8002,22 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* Set up "self" to be a proxy for "this". */
+static int FitsChan_setproxy( AstObject *this, Object *self ){
+   int result = -1;
+   if( astOK ) {
+
+/* Use the parent class (Channel) to set the proxy and do any other
+   initialisation required by the Channel class. */
+      result = Channel_setproxy( this, self );
+
+/* Do any further initialisation required by this class. No table source
+   function as yet. */
+      ((FitsChan *) self)->tabsource = NULL;
+   }
+
+   return result;
+}
 
 static void FitsChan_dealloc( FitsChan *self ) {
    if( self ) {
@@ -7477,6 +8068,28 @@ static PyObject *FitsChan_next( PyObject *self ) {
    } else {
       PyErr_SetString( PyExc_StopIteration, "No more header cards in FitsChan" );
    }
+   TIDY;
+   return result;
+}
+
+/* Return a list of the keywords in a FitsChan. */
+static PyObject *FitsChan_keys( PyObject *self ) {
+   PyObject *result = NULL;
+   int i;
+
+   if( PyErr_Occurred() ) return result;
+
+   int icard0 = astGetI( THIS, "Card" );
+   astClear( THIS, "Card" );
+   int nkey = astGetI( THIS, "NCard" );
+   result = PyList_New( (Py_ssize_t) nkey );
+   for( i = 0; i < nkey; i++ ) {
+      astSetI( THIS, "Card", i + 1 );
+      const char *key = astGetC( THIS, "CardName" );
+      PyObject *pykey = Py_BuildValue( "s", key );
+      PyList_SetItem( result, (Py_ssize_t) i, pykey );
+   }
+   astSetI( THIS, "Card", icard0 );
    TIDY;
    return result;
 }
@@ -8090,6 +8703,7 @@ typedef struct {
 
 /* Prototypes for class functions */
 static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds );
+static int StcsChan_setproxy( AstObject *this, Object *self );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(StcsChan,StcsArea)
@@ -8180,12 +8794,8 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
       if( result == 0 ) {
          AstStcsChan *this = astStcsChan( source_wrap, sink_wrap, "%s", options );
 
-/* Store a pointer to the PyObject StcsChan in the AST StcsChan so that the
-   source and sink wrapper functions can get at it. */
-         astPutChannelData( this, self );
-
-/* Store self as the Python proxy for the AST StcsChan. */
-         result = SetProxy( (AstObject *) this, (Object *) self );
+/* Set up "self" to be a proxy for "this". */
+         result = StcsChan_setproxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
    }
@@ -8193,6 +8803,19 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
    TIDY;
    return result;
 }
+
+/* Set up "self" to be a proxy for "this". */
+static int StcsChan_setproxy( AstObject *this, Object *self ){
+   int result = -1;
+   if( astOK ) {
+
+/* Use the parent class (Channel) to set the proxy and do any other
+   initialisation required by the Channel class. */
+      result = Channel_setproxy( this, self );
+   }
+   return result;
+}
+
 
 
 /* KeyMap */
@@ -8771,6 +9394,7 @@ static void Plot_dealloc( Plot *self );
 static int setGrf( Plot *self, PyObject *value );
 static const char *IntToColour( Plot *self, int colour );
 static int ColourToInt( Plot *self, const char *colour );
+static void Plot_def( Object *self );
 
 /* Wrappers for external Python Grf functions */
 static int Attr_wrapper( AstObject *grfcon, int attr, double value, double *old_value, int prim );
@@ -8924,6 +9548,12 @@ static PyTypeObject PlotType = {
    0,                         /* tp_new */
 };
 
+static void Plot_def( Object *self ){
+   if( !self ) return;
+   Object_def( self );
+   Plot *plot = (Plot *) self;
+   plot->grf = NULL;
+}
 
 /* Define the class methods */
 static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
@@ -8943,6 +9573,8 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
    PyArrayObject *gbox = NULL;
    PyArrayObject *bbox = NULL;
    int result = -1;
+
+   Plot_def( (Object *) self );
 
    if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, (PyObject**)&frame,
                         &gbox_object, &bbox_object, &grf_object, &options ) ) {
@@ -11271,6 +11903,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&IntervalType);
    PyModule_AddObject( m, "Interval", (PyObject *)&IntervalType);
 
+   MocType.tp_new = PyType_GenericNew;
+   MocType.tp_base = &RegionType;
+   if( PyType_Ready(&MocType) < 0) RETURN( NULL );
+   Py_INCREF(&MocType);
+   PyModule_AddObject( m, "Moc", (PyObject *)&MocType);
+
    NullRegionType.tp_new = PyType_GenericNew;
    NullRegionType.tp_base = &RegionType;
    if( PyType_Ready(&NullRegionType) < 0) RETURN( NULL );
@@ -11358,7 +11996,9 @@ MOD_INIT(Ast) {
    ICONST(ARC);
    ICONST(AZP);
    ICONST(BADTYPE);
+   ICONST(BADTS);
    ICONST(BASE);
+   ICONST(BEPOCH);
    ICONST(BLOCKAVE);
    ICONST(BON);
    ICONST(BYTETYPE);
@@ -11367,8 +12007,8 @@ MOD_INIT(Ast) {
    ICONST(COD);
    ICONST(COE);
    ICONST(COMMENT);
-   ICONST(COMPLEXI);
    ICONST(COMPLEXF);
+   ICONST(COMPLEXI);
    ICONST(CONSERVEFLUX);
    ICONST(CONTINUE);
    ICONST(COO);
@@ -11379,8 +12019,8 @@ MOD_INIT(Ast) {
    ICONST(DISVAR);
    ICONST(DOUBLETYPE);
    ICONST(EQ);
-   ICONST(FLOAT);
    ICONST(FLOATTYPE);
+   ICONST(FLOAT);
    ICONST(GATTR);
    ICONST(GAUSS);
    ICONST(GBBUF);
@@ -11392,6 +12032,7 @@ MOD_INIT(Ast) {
    ICONST(GLINE);
    ICONST(GLS);
    ICONST(GMARK);
+   ICONST(GMST);
    ICONST(GQCH);
    ICONST(GSCALES);
    ICONST(GT);
@@ -11400,10 +12041,16 @@ MOD_INIT(Ast) {
    ICONST(HPX);
    ICONST(INT);
    ICONST(INTTYPE);
+   ICONST(JD);
+   ICONST(JEPOCH);
+   ICONST(LAST);
    ICONST(LE);
    ICONST(LINEAR);
+   ICONST(LMST);
    ICONST(LOGICAL);
+   ICONST(LT);
    ICONST(MER);
+   ICONST(MJD);
    ICONST(MOL);
    ICONST(MXKEYLEN);
    ICONST(NCP);
@@ -11422,61 +12069,70 @@ MOD_INIT(Ast) {
    ICONST(PCO);
    ICONST(POINTERTYPE);
    ICONST(QSC);
-   ICONST(REBINEND);
    ICONST(REBININIT);
+   ICONST(REBINEND);
    ICONST(SFL);
-   ICONST(SIMPFI);
    ICONST(SIMPIF);
+   ICONST(SIMPFI);
    ICONST(SIN);
-   ICONST(SINC);
-   ICONST(SINCCOS);
-   ICONST(SINCGAUSS);
    ICONST(SINCSINC);
+   ICONST(SINCGAUSS);
+   ICONST(SINCCOS);
+   ICONST(SINC);
    ICONST(SINTTYPE);
-   ICONST(SOMB);
    ICONST(SOMBCOS);
+   ICONST(SOMB);
    ICONST(STG);
-   ICONST(STRINGTYPE);
    ICONST(STRING);
+   ICONST(STRINGTYPE);
    ICONST(SZP);
+   ICONST(TAI);
    ICONST(TAN);
+   ICONST(TCB);
+   ICONST(TCG);
+   ICONST(TDB);
    ICONST(TPN);
    ICONST(TSC);
+   ICONST(TT);
    ICONST(TUNULL);
    ICONST(UINTERP);
    ICONST(UKERN1);
-   ICONST(UNDEF);
    ICONST(UNDEFTYPE);
-   ICONST(URESAMP4);
-   ICONST(URESAMP3);
-   ICONST(URESAMP2);
+   ICONST(UNDEF);
    ICONST(URESAMP1);
+   ICONST(URESAMP2);
+   ICONST(URESAMP3);
+   ICONST(URESAMP4);
    ICONST(USEBAD);
    ICONST(USEVAR);
+   ICONST(UT1);
+   ICONST(UTC);
    ICONST(VARWGT);
    ICONST(WCSBAD);
    ICONST(WCSMX);
    ICONST(XMLATTR);
-   ICONST(XMLBAD);
    ICONST(XMLBLACK);
-   ICONST(XMLCDATA);
-   ICONST(XMLCHAR);
-   ICONST(XMLCOM);
+   ICONST(XMLBAD);
    ICONST(XMLCONT);
-   ICONST(XMLDEC);
-   ICONST(XMLDOC);
+   ICONST(XMLCOM);
+   ICONST(XMLCHAR);
+   ICONST(XMLCDATA);
    ICONST(XMLDTD);
+   ICONST(XMLDOC);
+   ICONST(XMLDEC);
    ICONST(XMLELEM);
    ICONST(XMLMISC);
    ICONST(XMLNAME);
    ICONST(XMLOBJECT);
-   ICONST(XMLPAR);
-   ICONST(XMLPI);
    ICONST(XMLPRO);
+   ICONST(XMLPI);
+   ICONST(XMLPAR);
    ICONST(XMLWHITE);
    ICONST(XOR);
    ICONST(ZEA);
    ICONST(ZPN);
+
+
 
 #undef ICONST
 #undef CCONST
@@ -11696,6 +12352,8 @@ static PyObject *NewObject( AstObject *this ) {
 /* Local Variables: */
    PyObject *result = NULL;
    Object *self;
+   int (*setproxy_function)( AstObject *, Object * );
+   void (*def_function)( Object * );
 
 /* Check inherited status */
    if( !astOK ) return result;
@@ -11714,14 +12372,16 @@ static PyObject *NewObject( AstObject *this ) {
 
 /* If the supplied AST object does not have an associated proxy object,
    create a new starlink.Ast.object (of the same type as the AST object),
-   store the AST Object pointer in it and record it as the proxy for the
+   set the contents of the proxy object to default values, then store
+   the AST Object pointer in it and record it as the proxy for the
    AST Object. Delete the starlink.Ast.object if anything goes wrong. */
       } else {
-         PyTypeObject * type = GetType( this );
+         PyTypeObject *type = GetType( this, &setproxy_function, &def_function );
          if( type ) {
             self = (Object *) _PyObject_New( type );
             if( self ) {
-              if( SetProxy( this, self ) == 0 ) {
+              (*def_function)( self );
+              if( (*setproxy_function)( this, self ) == 0 ) {
                 result = (PyObject *) self;
               } else {
                 Object_dealloc( self );
@@ -11754,7 +12414,10 @@ static int SetProxy( AstObject *this, Object *self ) {
 
 
 
-static PyTypeObject *GetType( AstObject *this ) {
+static PyTypeObject *GetType( AstObject *this,
+                              int (**setproxy_function)( AstObject *,
+                                                         Object * ),
+                              void (**def_function)( Object * ) ) {
 /*
 *  Name:
 *     GetType
@@ -11768,6 +12431,9 @@ static PyTypeObject *GetType( AstObject *this ) {
    const char * class = NULL;
    PyTypeObject *result = NULL;
    if( !astOK ) return NULL;
+
+   *setproxy_function = SetProxy;
+   *def_function = Object_def;
 
    class = astGetC( this, "Class" );
    if( class ) {
@@ -11813,6 +12479,7 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &FrameSetType;
       } else if( !strcmp( class, "Plot" ) ) {
          result = (PyTypeObject *) &PlotType;
+         *def_function = Plot_def;
       } else if( !strcmp( class, "CmpFrame" ) ) {
          result = (PyTypeObject *) &CmpFrameType;
       } else if( !strcmp( class, "SpecFrame" ) ) {
@@ -11841,6 +12508,8 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &EllipseType;
       } else if( !strcmp( class, "Interval" ) ) {
          result = (PyTypeObject *) &IntervalType;
+      } else if( !strcmp( class, "Moc" ) ) {
+         result = (PyTypeObject *) &MocType;
       } else if( !strcmp( class, "NullRegion" ) ) {
          result = (PyTypeObject *) &NullRegionType;
       } else if( !strcmp( class, "CmpRegion" ) ) {
@@ -11849,10 +12518,16 @@ static PyTypeObject *GetType( AstObject *this ) {
          result = (PyTypeObject *) &PrismType;
       } else if( !strcmp( class, "Channel" ) ) {
          result = (PyTypeObject *) &ChannelType;
+         *setproxy_function = Channel_setproxy;
+         *def_function = Channel_def;
       } else if( !strcmp( class, "FitsChan" ) ) {
          result = (PyTypeObject *) &FitsChanType;
+         *setproxy_function = FitsChan_setproxy;
+         *def_function = FitsChan_def;
       } else if( !strcmp( class, "StcsChan" ) ) {
          result = (PyTypeObject *) &StcsChanType;
+         *setproxy_function = StcsChan_setproxy;
+         *def_function = Channel_def;
       } else if( !strcmp( class, "KeyMap" ) ) {
          result = (PyTypeObject *) &KeyMapType;
       } else if( !strcmp( class, "Table" ) ) {

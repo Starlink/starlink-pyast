@@ -1209,7 +1209,11 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        than on the basis of their class. This is because some linear
 *        combinations contain non-linear mappings (eg. a spherical
 *        rotation projected using a TAN projection).
-
+*     2-NOV-2018 (DSB):
+*        In SpecTrans, when renaming QV to PV, ensure the data type of
+*        the FITS card is used rather than assuming AST__FLOAT. The previous
+*        behaviour could cause spurious PV values for QV values that have no
+*        decimal point.
 *class--
 */
 
@@ -30592,8 +30596,9 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    FitsChan. */
          if( !GetValue2( ret, this, keyname, AST__FLOAT, (void *) &cval, 0,
                         method, class, status ) ){
-            SetValue( ret, keyname, CardData( this, &size, status ), AST__FLOAT,
-                      CardComm( this, status ), status );
+            SetValue( ret, keyname, CardData( this, &size, status ),
+                      CardType( this, status ), CardComm( this, status ),
+                      status );
          }
 
 /* Move on to the next card. */
@@ -37414,7 +37419,7 @@ static AstMapping *WcsOthers( AstFitsChan *this, FitsStore *store, char s,
    AstMapping *map2;         /* Pointer to a Mapping */
    AstMapping *ret;          /* The returned Mapping */
    char **comms;             /* Pointer to array of CTYPE commments */
-   char buf[ 100 ];          /* Buffer for textual attribute value */
+   char buf[ 101 ];          /* Buffer for textual attribute value */
    char buf2[ 100 ];         /* Buffer for textual attribute value */
    char buf3[ 20 ];          /* Buffer for default CTYPE value */
    char *newdom;             /* Pointer to new Domain value */

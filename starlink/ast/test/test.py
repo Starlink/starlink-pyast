@@ -801,6 +801,12 @@ class TestAst(unittest.TestCase):
         fc = starlink.Ast.FitsChan(mycards)
         self.assertIsInstance(fc, starlink.Ast.Object)
         self.assertEqual(fc["CRVAL1"], 0.0)
+        self.assertEqual(len(fc),10)
+        keywords = fc.keys()
+        self.assertEqual(len(keywords),10)
+        self.assertEqual(keywords[0], 'NAXIS1' )
+        self.assertEqual(keywords[4], 'CRPIX1' )
+        self.assertEqual(keywords[9], 'CRVAL2' )
 
         fc = starlink.Ast.FitsChan()
         self.assertIsInstance(fc, starlink.Ast.Object)
@@ -1441,6 +1447,126 @@ class TestAst(unittest.TestCase):
         keys = tables.keys()
         self.assertEqual(keys[0], 'Fred')
 
+    def test_Moc(self):
+        moc = starlink.Ast.Moc("maxorder=18")
+        self.assertIsInstance(moc, starlink.Ast.Moc)
+        self.assertIsInstance(moc, starlink.Ast.Region)
+        self.assertEqual(moc.MaxOrder, 18)
+        moc.MinOrder = 11
+        self.assertEqual(moc.MinOrder, 11)
+
+        reg1 = starlink.Ast.Circle(starlink.Ast.SkyFrame(), 1,
+                                     [1, 1], 2.0E-4 )
+        moc.addregion( reg1 )
+        self.assertAlmostEqual(moc.MocArea, 1.485, delta=1.0E-3)
+
+        data = moc.getmocdata()
+        self.assertEqual( len(data.shape), 1 )
+        self.assertEqual( data.shape[0], 385 )
+        self.assertEqual( data.dtype, numpy.int64 )
+        moc2 = starlink.Ast.Moc("maxorder=18")
+        moc2.addmocdata(data)
+        self.assertEqual( moc.overlap(moc2), 5 )
+
+        moc = starlink.Ast.Moc("maxorder=8,minorder=4")
+        centre = [3.1415927, 0.75]
+        sf = starlink.Ast.SkyFrame()
+        reg1 = starlink.Ast.Circle(sf, 1, centre, 0.5 )
+        moc.addregion( reg1 )
+        self.assertAlmostEqual(moc.MaxRes, 824.5167, delta=1.0E-4)
+        lbnd, ubnd = moc.getregionbounds()
+        self.assertAlmostEqual(lbnd[0], 2.4235144, delta=1E-6 )
+        self.assertAlmostEqual(ubnd[0], 3.8596708, delta=1E-6 )
+        self.assertAlmostEqual(lbnd[1], 0.2499916, delta=1E-6 )
+        self.assertAlmostEqual(ubnd[1], 1.2504847, delta=1E-6 )
+
+        mesh = moc.getregionmesh( 1 )
+        self.assertEqual( len(mesh.shape), 2 )
+        self.assertEqual( mesh.shape[0], 2 )
+        self.assertEqual( mesh.shape[1], 868 )
+        mxerr = math.radians( 0.7*824.5167/3600.0 )
+        for i in range(868):
+           point = [ mesh[0][i], mesh[1][i] ]
+           self.assertAlmostEqual( sf.distance( centre, point ), 0.5, delta=mxerr )
+        self.assertEqual( moc.MocType, 4 )
+        self.assertEqual( moc.MocLength, 832 )
+
+        fc = moc.getmocheader()
+        self.assertEqual(fc["NAXIS1"], 4)
+        self.assertEqual(fc["NAXIS2"], 832)
+        self.assertEqual(fc["TFORM1"], '1J')
+        self.assertEqual(fc["MOCORDER"], 8)
+
+        image = numpy.empty([100,100],order='F')
+        for j in range(100):
+           dy = j + 1 - 50.5
+           dy2 = dy*dy
+           for i in range(100):
+              dx = i + 1 - 50.5
+              image[j][i] = math.sqrt( dx*dx + dy2 )
+
+        fc.emptyfits()
+        fc['CRVAL1'] = 35.0
+        fc['CRVAL2'] = 55.0
+        fc['CRPIX1'] = 50.5
+        fc['CRPIX2'] = 50.5
+        fc['CDELT1'] = -0.01
+        fc['CDELT2'] = 0.01
+        fc['CTYPE1'] = 'RA---TAN'
+        fc['CTYPE2'] = 'DEC--TAN'
+        fc['CRVAL3'] = -22.9
+        fc['CRPIX3'] = 1.0
+        fc['CDELT3'] = 1.27
+        fc['CTYPE3'] = 'VRAD    '
+        fc['CUNIT3'] = 'km/s    '
+        wcs = fc.read()
+
+        moc = starlink.Ast.Moc()
+        moc.addpixelmask(image,starlink.Ast.LT,10,0.0,wcs,0)
+        self.assertAlmostEqual(moc.MaxRes, 12.883, delta=1.0E-3)
+
+        mesh = moc.getregionmesh( 1 )
+        self.assertEqual( mesh.shape[1], 298 )
+
+        centre = [ math.radians( 35 ), math.radians( 55 ) ]
+        mxerr = math.radians( 0.01 )
+        for i in range(mesh.shape[1]):
+           point = [ mesh[0][i], mesh[1][i] ]
+           self.assertAlmostEqual( sf.distance( centre, point ), 1.745E-3, delta=mxerr )
+
+
+        centre = [0.0, 1.57]
+        reg1 = starlink.Ast.Circle(sf, 1, centre, 0.3 )
+        moc = starlink.Ast.Moc("maxorder=8,minorder=4")
+        moc.addregion( reg1 )
+
+        moc2 = starlink.Ast.Moc()
+        moc2.addregion( moc )
+        self.assertEqual( moc.overlap(moc2), 5 )
+
+        reg2 = starlink.Ast.Circle(sf, 1, centre, 0.2 )
+        reg2.negate()
+        moc2 = starlink.Ast.Moc("maxorder=9,minorder=4")
+        moc2.addregion( reg2 )
+
+        moc.addregion( moc2, starlink.Ast.AND )
+        self.assertAlmostEqual(moc.MocArea, 1.843466E6, delta=1.0 )
+
+        moc2 = starlink.Ast.Moc("maxorder=7,minorder=4")
+        moc2.addregion( reg2 )
+
+        moc.addregion(moc2, starlink.Ast.AND )
+        self.assertAlmostEqual(moc.MocArea, 1.803054E6, delta=1.0 )
+
+        moc3 = starlink.Ast.Moc()
+        moc3.MaxOrder = moc.MaxOrder
+        for i in range(moc.MocLength):
+           (order,npix) = moc.getcell( i )
+           self.assertTrue( moc.testcell( order, npix, False ) )
+           moc3.addcell( order, npix )
+
+        self.assertEqual( moc.overlap(moc3), 5 )
+        self.assertFalse( moc.testcell( 8, 123456, False ) )
 
 if __name__ == "__main__":
     #    starlink.Ast.watchmemory(10914)

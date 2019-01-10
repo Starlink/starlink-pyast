@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     11-DEC-2017 (makeh):
+*     9-JAN-2019 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -461,6 +461,8 @@ void astErrorPublic_( int, const char *, ... )__attribute__((format(printf,2,3))
 #define AST__TUNULL -99999
 #define AST__TUNULLC "<NOTUNEPAR>"
 int astMemCaching_( int, int * );
+void astChrClean_( char * );
+void astChrRemoveBlanks_( char * );
 void astChrCase_( const char *, char *, int, int, int * );
 char **astChrSplit_( const char *, int *, int * );
 char **astChrSplitRE_( const char *, const char *, int *, const char **, int * );
@@ -488,6 +490,8 @@ char *astAppendString_( char *, int *, const char *, int * );
 char *astAppendStringf_( char *, int *, const char *, ... )__attribute__((format(printf,3,4)));
 char *astChrSub_( const char *, const char *, const char *[], int, int * );
 void astChrTrunc_( char *, int * );
+int astBrackets_( const char *, size_t, size_t, char, char, int, size_t *, size_t *, char **, char **, char **, int * );
+void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 #define astCalloc(nmemb,size) astERROR_INVOKE(astCalloc_(nmemb,size,STATUS_PTR))
 #define astChrMatch(str1,str2) astERROR_INVOKE(astChrMatch_(str1,str2,STATUS_PTR))
 #define astChrMatchN(str1,str2,n) astERROR_INVOKE(astChrMatchN_(str1,str2,n,STATUS_PTR))
@@ -506,12 +510,16 @@ void astChrTrunc_( char *, int * );
 #define astString(chars,nchars) astERROR_INVOKE(astString_(chars,nchars,STATUS_PTR))
 #define astStringArray(chars,nel,len) astERROR_INVOKE(astStringArray_(chars,nel,len,STATUS_PTR))
 #define astStringCase(string,toupper) astERROR_INVOKE(astStringCase_(string,toupper,STATUS_PTR))
+#define astChrClean(string) astERROR_INVOKE(astChrClean_(string))
+#define astChrRemoveBlanks(string) astERROR_INVOKE(astChrRemoveBlanks_(string))
 #define astChrLen(string) astERROR_INVOKE(astChrLen_(string,STATUS_PTR))
 #define astChrTrunc(string) astERROR_INVOKE(astChrTrunc_(string,STATUS_PTR))
 #define astChr2Double(string) astERROR_INVOKE(astChr2Double_(string,STATUS_PTR))
 #define astRemoveLeadingBlanks(string) astERROR_INVOKE(astRemoveLeadingBlanks_(string,STATUS_PTR))
 #define astChrSub(test,template,subs,nsub) astERROR_INVOKE(astChrSub_(test,template,subs,nsub,STATUS_PTR))
 #define astChrCase(in,out,upper,blen) astERROR_INVOKE(astChrCase_(in,out,upper,blen,STATUS_PTR))
+#define astBrackets(text,start,end,opchar,clchar,strip,openat,closeat,before,in,after) astERROR_INVOKE(astBrackets_(text,start,end,opchar,clchar,strip,openat,closeat,before,in,after,STATUS_PTR))
+#define astFandl(text,start,end,f,l) astERROR_INVOKE(astFandl_(text,start,end,f,l,STATUS_PTR))
 #define astSscanf astERROR_INVOKE(sscanf)
 
 #define astChrSplit(str,n) astERROR_INVOKE(astChrSplit_(str,n,STATUS_PTR))
@@ -540,18 +548,20 @@ void astChrTrunc_( char *, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 8
-#define AST__VMINOR 6
-#define AST__RELEASE 1
+#define AST__VMINOR 7
+#define AST__RELEASE 0
 
 #define AST_MAJOR_VERS 8
-#define AST_MINOR_VERS 6
-#define AST_RELEASE 1
+#define AST_MINOR_VERS 7
+#define AST_RELEASE 0
 
 #include <stdarg.h>
 #include <float.h>
 #include <stdio.h>
 #define STATUS_PTR astGetStatusPtr
 #define AST__THREADSAFE 1
+#define AST__DBL_WIDTH ((DBL_DIG + 3) + 6)
+#define AST__FLT_WIDTH ((FLT_DIG + 3) + 6)
 #define astINVOKE(rettype,function) astERROR_INVOKE(astRet##rettype##_(function))
 
 #define astRetF_(x) (x)
@@ -756,6 +766,7 @@ void astUnlockId_( AstObject *, int, int * );
 #define astWatchHandle
 #define astHandleUse
 #define astHandleAlarm
+#define astWatchPointer
 #define STATUS_PTR astGetStatusPtr
 #define AST__BAD (-(DBL_MAX))
 #define AST__NAN (-(0.95*DBL_MAX))
@@ -819,6 +830,7 @@ void astShowPoints_( AstPointSet *, int * );
 #define AST__NOBAD (2048)
 #define AST__DISVAR (4096)
 #define AST__NONORM (8192)
+#define AST__PARWGT (16384)
 
 #define AST__UKERN1 (1)
 
@@ -1258,6 +1270,18 @@ enum { AST__NOCNV = 233934410 };
 enum { AST__IMMUT = 233934418 };
 
 enum { AST__NOBOX = 233934426 };
+
+enum { AST__NOSKY = 233934434 };
+
+enum { AST__BDSKY = 233934442 };
+
+enum { AST__BDCLS = 233934450 };
+
+enum { AST__NOIMP = 233934458 };
+
+enum { AST__BGMOC = 233934466 };
+
+enum { AST__INVAR = 233934474 };
 /* version. */
 /* ======== */
 /* object. */
@@ -1515,6 +1539,7 @@ typedef struct AstFitsChan {
    int tabok;
    int cdmatrix;
    int polytan;
+   int sipok;
    int carlin;
    int sipreplace;
    double fitstol;
@@ -2001,6 +2026,7 @@ typedef struct AstPolyMap {
    int niterinverse;
    double tolinverse;
    struct AstPolyMap **jacobian;
+   AstMapping *lintrunc;
 } AstPolyMap;
 astPROTO_CHECK(PolyMap)
 astPROTO_ISA(PolyMap)
@@ -2382,6 +2408,7 @@ void astSetUnc_( AstRegion *, AstRegion *, int * );
 AstRegion *astGetNegation_( AstRegion *, int * );
 AstRegion *astGetUnc_( AstRegion *, int, int * );
 void astGetRegionBounds_( AstRegion *, double *, double *, int * );
+void astGetRegionDisc_( AstRegion *, double[2], double *, int * );
 void astShowMesh_( AstRegion *, int, const char *, int * );
 void astGetRegionMesh_( AstRegion *, int, int, int, int *, double *, int * );
 void astGetRegionPoints_( AstRegion *, int, int, int *, double *, int * );
@@ -2410,6 +2437,7 @@ AstRegion *astMapRegionId_( AstRegion *, AstMapping *, AstFrame *, int * );
 #define astSetUnc(this,unc) astINVOKE(V,astSetUnc_(astCheckRegion(this),unc?astCheckRegion(unc):NULL,STATUS_PTR))
 #define astGetUnc(this,def) astINVOKE(O,astGetUnc_(astCheckRegion(this),def,STATUS_PTR))
 #define astGetRegionBounds(this,lbnd,ubnd) astINVOKE(V,astGetRegionBounds_(astCheckRegion(this),lbnd,ubnd,STATUS_PTR))
+#define astGetRegionDisc(this,centre,radius) astINVOKE(V,astGetRegionDisc_(astCheckRegion(this),centre,radius,STATUS_PTR))
 #define astShowMesh(this,format,ttl) astINVOKE(V,astShowMesh_(astCheckRegion(this),format,ttl,STATUS_PTR))
 #define astGetRegionMesh(this,surface,maxpoint,maxcoord,npoint,points) astINVOKE(V,astGetRegionMesh_(astCheckRegion(this),surface,maxpoint,maxcoord,npoint,points,STATUS_PTR))
 #define astGetRegionPoints(this,maxpoint,maxcoord,npoint,points) astINVOKE(V,astGetRegionPoints_(astCheckRegion(this),maxpoint,maxcoord,npoint,points,STATUS_PTR))
@@ -2570,6 +2598,7 @@ typedef struct AstWcsMap {
    int *np;
    struct AstPrjPrm params;
 
+   int loncheck;
    int fits_proj;
    int tpn_tan;
 } AstWcsMap;
@@ -2603,6 +2632,22 @@ AstWinMap *astWinMapId_( int, const double [], const double [], const double [],
 #define astIsAWinMap(this) astINVOKE_ISA(WinMap,this)
 
 #define astWinMap astINVOKE(F,astWinMapId_)
+/* xphmap. */
+/* ======= */
+#define AST__MXORDHPX 27
+typedef struct AstXphMap {
+
+   AstMapping mapping;
+
+   int order;
+   int type;
+} AstXphMap;
+astPROTO_CHECK(XphMap)
+astPROTO_ISA(XphMap)
+#define astCheckXphMap(this) astINVOKE_CHECK(XphMap,this,0)
+#define astVerifyXphMap(this) astINVOKE_CHECK(XphMap,this,1)
+
+#define astIsAXphMap(this) astINVOKE_ISA(XphMap,this)
 /* zoommap. */
 /* ======== */
 typedef struct AstZoomMap {
@@ -2896,6 +2941,7 @@ typedef struct AstPlot {
    int mintick[ 3 ];
    int numlab[ 3 ];
    int style[ AST__NPID ];
+   int textgaptype;
    int textlab[ 3 ];
    int tickall;
    int forceexterior;
@@ -3202,6 +3248,79 @@ AstInterval *astIntervalId_( void *, const double[], const double[], AstRegion *
 #define astIsAInterval(this) astINVOKE_ISA(Interval,this)
 
 #define astInterval astINVOKE(F,astIntervalId_)
+/* moc. */
+/* ==== */
+typedef struct AstMoc {
+
+   AstRegion region;
+
+   AstMapping *cached_maps[ AST__MXORDHPX + 1 ];
+   AstPointSet *basemesh;
+   AstRegion *unc;
+   double lbnd[ 2 ];
+   double mocarea;
+   double ubnd[ 2 ];
+   int *inorm;
+   int *meshdist;
+   int maxorder;
+   int minorder;
+   int moclength;
+   int nrange;
+   int64_t *knorm;
+   int64_t *range;
+} AstMoc;
+astPROTO_CHECK(Moc)
+astPROTO_ISA(Moc)
+
+AstMoc *astMocId_( const char *, ... )__attribute__((format(printf,1,2)));
+void astAddRegion_( AstMoc *, int, AstRegion *, int * );
+
+void astAddPixelMaskLD_( AstMoc *, int, AstFrameSet *, long double, int, int, long double, const long double[], const int[2], int * );
+
+void astAddPixelMaskB_( AstMoc *, int, AstFrameSet *, signed char, int, int, signed char, const signed char[], const int[2], int * );
+void astAddPixelMaskD_( AstMoc *, int, AstFrameSet *, double, int, int, double, const double[], const int[2], int * );
+void astAddPixelMaskF_( AstMoc *, int, AstFrameSet *, float, int, int, float, const float[], const int[2], int * );
+void astAddPixelMaskI_( AstMoc *, int, AstFrameSet *, int, int, int, int, const int[], const int[2], int * );
+void astAddPixelMaskL_( AstMoc *, int, AstFrameSet *, long int, int, int, long int, const long int[], const int[2], int * );
+void astAddPixelMaskS_( AstMoc *, int, AstFrameSet *, short int, int, int, short int, const short int[], const int[2], int * );
+void astAddPixelMaskUB_( AstMoc *, int, AstFrameSet *, unsigned char, int, int, unsigned char, const unsigned char[], const int[2], int * );
+void astAddPixelMaskUI_( AstMoc *, int, AstFrameSet *, unsigned int, int, int, unsigned int, const unsigned int[], const int[2], int * );
+void astAddPixelMaskUL_( AstMoc *, int, AstFrameSet *, unsigned long int, int, int, unsigned long int, const unsigned long int[], const int[2], int * );
+void astAddPixelMaskUS_( AstMoc *, int, AstFrameSet *, unsigned short int, int, int, unsigned short int,const unsigned short int[], const int[2], int * );
+
+void astGetCell_( AstMoc *, int, int *, int64_t *, int * );
+void astAddCell_( AstMoc *, int, int, int64_t, int * );
+void astAddMocData_( AstMoc *, int, int, int, int, int, const void *, int * );
+void astGetMocData_( AstMoc *, size_t, void *, int * );
+int astTestCell_( AstMoc *, int, int64_t, int, int * );
+AstFitsChan *astGetMocHeader_( AstMoc *, int * );
+#define astCheckMoc(this) astINVOKE_CHECK(Moc,this,0)
+#define astVerifyMoc(this) astINVOKE_CHECK(Moc,this,1)
+
+#define astIsAMoc(this) astINVOKE_ISA(Moc,this)
+
+#define astMoc astINVOKE(F,astMocId_)
+#define astAddRegion(this,cmode,region) astINVOKE(V,astAddRegion_(astCheckMoc(this),cmode,astCheckRegion(region),STATUS_PTR))
+#define astAddMocData(this,cmode,negate,maxorder,len,nbyte,data) astINVOKE(V,astAddMocData_(astCheckMoc(this),cmode,negate,maxorder,len,nbyte,data,STATUS_PTR))
+#define astAddCell(this,cmode,order,npix) astINVOKE(V,astAddCell_(astCheckMoc(this),cmode,order,npix,STATUS_PTR))
+#define astTestCell(this,order,npix,parent) astINVOKE(V,astTestCell_(astCheckMoc(this),order,npix,parent,STATUS_PTR))
+#define astGetCell(this,icell,order,npix) astINVOKE(V,astGetCell_(astCheckMoc(this),icell,order,npix,STATUS_PTR))
+
+#define astAddPixelMaskLD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskLD_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+
+#define astAddPixelMaskB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskD_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskF(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskF_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskS_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUS_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+
+#define astGetMocData(this,mxsize,data) astINVOKE(V,astGetMocData_(astCheckMoc(this),mxsize,data,STATUS_PTR))
+#define astGetMocHeader(this) astINVOKE(O,astGetMocHeader_(astCheckMoc(this),STATUS_PTR))
 /* nullregion. */
 /* =========== */
 typedef struct AstNullRegion {
@@ -3241,6 +3360,23 @@ AstPointList *astPointListId_( void *, int, int, int, const double *, AstRegion 
 /* polygon. */
 /* ======== */
 #define STATUS_PTR astGetStatusPtr
+#define AST__MJD 1
+#define AST__JD 2
+#define AST__JEPOCH 3
+#define AST__BEPOCH 4
+
+#define AST__BADTS 0
+#define AST__TAI 1
+#define AST__UTC 2
+#define AST__UT1 3
+#define AST__GMST 4
+#define AST__LAST 5
+#define AST__LMST 6
+#define AST__TT 7
+#define AST__TDB 8
+#define AST__TCB 9
+#define AST__TCG 10
+#define AST__LT 11
 typedef int AstTimeScaleType;
 
 typedef struct AstTimeFrame {

@@ -486,5 +486,23 @@ enum { AST__IMMUT           	= 233934418 };	/* messid=458 */
 /* No bounding box available */
 enum { AST__NOBOX           	= 233934426 };	/* messid=459 */
 
+/* Supplied Frame has no sky coordinate axes */
+enum { AST__NOSKY           	= 233934434 };	/* messid=460 */
+
+/* Sky axes cannot be separated from other axes */
+enum { AST__BDSKY           	= 233934442 };	/* messid=461 */
+
+/* Wrong class of object supplied */
+enum { AST__BDCLS           	= 233934450 };	/* messid=462 */
+
+/* Class does not implement the invoked method */
+enum { AST__NOIMP           	= 233934458 };	/* messid=463 */
+
+/* Normalised MOC is too big */
+enum { AST__BGMOC           	= 233934466 };	/* messid=464 */
+
+/* Invalid argument value supplied to an AST method */
+enum { AST__INVAR           	= 233934474 };	/* messid=465 */
+
 
 #endif	/* AST_ERROR_DEFINED */

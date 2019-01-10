@@ -40,14 +40,14 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'frameset.c', 'globals.c', 'grf3d.c', 'grf_2.0.c', 'grf_3.2.c',
          'grf_5.6.c', 'grismmap.c', 'interval.c', 'keymap.c',
          'loader.c', 'lutmap.c', 'mapping.c', 'mathmap.c',
-         'matrixmap.c', 'memory.c', 'normmap.c', 'nullregion.c',
+         'matrixmap.c', 'memory.c', 'moc.c', 'normmap.c', 'nullregion.c',
          'object.c', 'palwrap.c', 'pcdmap.c', 'permmap.c', 'plot.c',
          'pointlist.c', 'pointset.c', 'polygon.c', 'polymap.c',
          'prism.c', 'proj.c', 'ratemap.c', 'region.c', 'shiftmap.c',
          'skyaxis.c', 'skyframe.c', 'specfluxframe.c', 'specframe.c',
          'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
          'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
-         'winmap.c', 'xml.c', 'zoommap.c')
+         'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c')
 
 #  List the erfa source files required by AST.
 erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
@@ -160,7 +160,7 @@ if sys.platform.startswith("darwin"):
 
 
 setup(name='starlink-pyast',
-      version='3.10.0',
+      version='3.11.0',
       description='A Python wrapper for the Starlink AST library',
       url='http://www.starlink.ac.uk/ast',
       author='David Berry',

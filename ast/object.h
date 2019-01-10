@@ -325,7 +325,8 @@
 *        Added astSame.
 *     7-APR-2010 (DSB):
 *        Added astHasAttribute.
-*--
+*     20-SEP-2018 (DSB):
+*        Added AST__DBL_WIDTH and AST__FLT_WIDTH
 */
 
 /* Include files. */
@@ -370,7 +371,7 @@
 #define AST__THREADSAFE 1
 
 #if defined(astCLASS )
-#define AST__GETATTRIB_BUFF_LEN 50 /* Length of string returned by GetAttrib. */
+#define AST__GETATTRIB_BUFF_LEN 200 /* Length of string returned by GetAttrib. */
 #define AST__ASTGETC_MAX_STRINGS 50 /* Number of string values to buffer within astGetC */
 
 /* Values supplied to astManageLock */
@@ -1948,17 +1949,21 @@ astINVOKE(V,astTestAttrib_(astCheckObject(this),attrib,STATUS_PTR))
 void astWatchHandle_( int );
 void astHandleUse_( int, const char *, ... );
 void astHandleAlarm_( const char *, va_list );
+void astWatchPointer_( int );
 
 #define astWatchHandle astWatchHandle_
 #define astHandleUse astHandleUse_
 #define astHandleAlarm astHandleAlarm_
+#define astWatchPointer astWatchPointer_
 
 #else
 
 #define astWatchHandle
 #define astHandleUse
 #define astHandleAlarm
+#define astWatchPointer
 
 #endif
 
 #endif
+
