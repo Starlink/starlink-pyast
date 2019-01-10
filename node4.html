@@ -31,7 +31,7 @@ example.
 
 
 
-<h4>...Read a WCS Calibration from a Dataset</h4>
+<h4 id="ex1">...Read a WCS Calibration from a Dataset</h4>
 <pre class=pycode>
 import pyfits
 import starlink.Grf as Grf
@@ -62,7 +62,7 @@ wcsinfo = fitschan.read()
 
 
 
-<h4>...Validate WCS Information</h4>
+<h4 id="ex2">...Validate WCS Information</h4>
 <pre class=pycode>
 
 #  Check that the FITS header contained WCS in a form that can be
@@ -90,7 +90,7 @@ else:
 
 
 
-<h4>...Display AST Data</h4>
+<h4 id="ex3">...Display AST Data</h4>
 <pre class=pycode>
 #  Display the internal representation of the AST FrameSet
    print( wcsinfo )
@@ -99,7 +99,7 @@ else:
    wcsinfo.show()
 </pre>
 
-<h4>...Convert Between Pixel and World Coordinates</h4>
+<h4 id="ex4">...Convert Between Pixel and World Coordinates</h4>
 <pre class=pycode>
 
 #  Store the x and y pixel coordinates at 3 points in the FITS image
@@ -117,7 +117,7 @@ else:
 
 
 
-<h4>...Test if a WCS is a Celestial Coordinate System</h4>
+<h4 id="ex5">...Test if a WCS is a Celestial Coordinate System</h4>
 <pre class=pycode>
 
 #  Obtain a pointer to the current Frame and determine if it is a SkyFrame.
@@ -133,7 +133,7 @@ else:
 
 
 
-<h4>...Ensure that WCS Axes are in a Specified Order</h4>
+<h4 id="ex6">...Ensure that WCS Axes are in a Specified Order</h4>
 <pre class=pycode>
 
 #  The axes within a WCS FrameSet obtained from an external source may be
@@ -169,7 +169,7 @@ else:
 
 
 
-<h4>...Format Coordinates for Display</h4>
+<h4 id="ex7">...Format Coordinates for Display</h4>
 <pre class=pycode>
 
 # Loop round all the positions to be formatted
@@ -188,7 +188,7 @@ else:
 
 
 
-<h4>...Display Coordinates as they are Transformed</h4>
+<h4 id="ex8">...Display Coordinates as they are Transformed</h4>
 <pre class=pycode>
 
 #  Tell the Mapping to report each position as it is transformed.
@@ -202,7 +202,7 @@ else:
 
 </pre>
 
-<h4>...Read Coordinates Entered by a User</h4>
+<h4 id="ex9">...Read Coordinates Entered by a User</h4>
 <pre class=pycode>
 
 #  Obtain the number of coordinate axes (if not already known).
@@ -251,7 +251,7 @@ else:
 
 
 
-<h4>...Modify a WCS Calibration</h4>
+<h4 id="ex10">...Modify a WCS Calibration</h4>
 <pre class=pycode>
 
 #  The MatrixMap may be constructed directly from the matrix "m", which
@@ -280,7 +280,7 @@ else:
 
 
 
-<h4>...Write a Modified WCS Calibration to a Dataset</h4>
+<h4 id="ex11">...Write a Modified WCS Calibration to a Dataset</h4>
 <pre class=pycode>
 
 #  Create an empty FitsChan to contain the output WCS information. Use a
@@ -317,7 +317,7 @@ else:
 </pre>
 
 
-<h4>...Display a Graphical Coordinate Grid Over a Greyscale Image</h4>
+<h4 id="ex12">...Display a Graphical Coordinate Grid Over a Greyscale Image</h4>
 <pre class=pycode>
 
 #  Create a matplotlib figure, 12x9 inches in size.
@@ -399,7 +399,69 @@ else:
 
 #  Make the matplotlib plotting area visible
    plt.show()
+</pre>
 
+<h4 id="ex13">...Create a FITS binary table holding a MOC describing a sky region</h4>
+<pre class=pycode>
+
+from astropy.io import fits
+import starlink.Ast as Ast
+import numpy as np
+
+#  This example creates a FITS binary table containing a description of
+#  a polygonal area of sky using the IVOA Multi-Order Coverage (MOC)
+#  recommendation. AST provides several other ways to define the area
+#  of sky to be described by the MOC. For instance, other forms of
+#  2-dimensional shape may be used (circles, ellipses, boxes, etc),
+#  or a contour within a pixel array may be used (see astAddPixelMask),
+#  or individual HEALPix cells may be specified (see astAddCell).
+
+
+#  Define the polygon vertices. This example uses galactic coordinates,
+#  although they may be defined in any celestial coordinate system
+#  supported by AST. They will be converted to ICRS automatically before
+#  creating the MOC. The values in this list are in degrees. Note,
+#  reversing the order of the vertices will cause the Region to describe
+#  the area *outside* the polygon.
+glon_list = [260.8126, 252.9279, 266.8518, 288.8583, 299.2654]
+glat_list = [-58.5782, -46.3082, -40.9669, -46.8499, -60.9320]
+vertices = [glon_list, glat_list]
+
+#  Create an AST polygon describing this region in galactic coordinates.
+#  Convert the latitude and longitude values to radians, as required by
+#  AST.
+polygon = Ast.Polygon( Ast.SkyFrame("System=galactic"),
+np.radians(vertices) )
+
+#  Create an empty Moc, indicating that it should be accurate to 60
+#  arc-seconds (this corresponds to a MOC order of 12).
+moc = Ast.Moc( "MaxRes=60")
+
+#  Add the polygon into the Moc.
+moc.addregion( polygon )
+
+#  Get a list of integers that describe the MOC in a form suitable for
+#  storing in a FITS binary table.
+coldata = moc.getmocdata()
+
+#  Get a FitsChan holding the FITS header values required for the binary
+#  table.
+fc = moc.getmocheader()
+
+#  Use astropy.io.fits to create the binary table in file "astmoc.fits",
+#  copying in all the headers from "fc". (Note, the docs say that the
+#  "name" value is optional when creating a Column, but omitting it causes
+#  an exception to be raised in BinTableHDU.from_columns).
+col = fits.Column( name=fc['TTYPE1'], format=fc['TFORM1'], array=coldata )
+
+header = fits.Header()
+for cardimage in fc:
+   header.append( fits.Card.fromstring( cardimage ) )
+
+table = fits.BinTableHDU.from_columns( [col], header )
+table.writeto( 'astmoc.fits', overwrite=True )
+
+</pre>
 
 
 </body>
