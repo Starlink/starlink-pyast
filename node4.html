@@ -463,6 +463,66 @@ table.writeto( 'astmoc.fits', overwrite=True )
 
 </pre>
 
+<h4 id="ex14">...Check for overlap between a FITS image and a FITS MOC</h4>
+<pre class=pycode>
+
+from astropy.io import fits
+import starlink.Ast as Ast
+import starlink.Atl as Atl
+import numpy as np
+
+#  This example reads an IVOA Multi-Order Coverage (MOC) map from a FITS
+#  binary table held in file "moc.fits" and tests if it overlaps the
+#  region of sky covered by an image held in FITS file "image.fits".
+
+#  Use astropy.io.fits to read the integer values defining a MOC from
+#  a fits file called "moc.fits". For simplicity, it is assumed in this
+#  example that the MOC is in the first extension. A real application
+#  would use a more sophisticated method to find the MOC.
+hdul = fits.open( "moc.fits" )
+data = hdul[1].data.field(0)
+
+#  Create an empty AST Moc object, leaving the resolution unspecified so
+#  that it is set to the resolution of the MOC importred from the FITS
+#  file.
+moc = Ast.Moc()
+
+#  Add the data array read from "moc.fits" into the Moc.
+moc.addmocdata( data )
+
+#  Now read the WCS from a FITS image held in file "image.fits". This is
+#  described in more detail in an earlier pyast example.
+hdu_list = fits.open( 'image.fits' )
+fc = Ast.FitsChan( Atl.PyFITSAdapter(hdu_list[ 0 ]) )
+wcsinfo = fc.read()
+
+#  Create an AST Region describing the sky area covered by the pixel
+#  array. First create a Box in pixel coords (the base Frame in the
+#  "wcsinfo" FrameSet ). Then map it into the sky coordinate system
+#  defined by the current Frame of the FrameSet. A FrameSet can act as
+#  both a Mapping and a Frame - the first argument to "pixbox.mapregion"
+#  uses "wcsinfo" as a Mapping and the second one uses it as a Frame.
+lbnd = [ 0.5, 0.5 ]
+ubnd = [ fc['NAXIS1'], fc['NAXIS2'] ]
+pixbox = Ast.Box( wcsinfo.getframe( Ast.BASE ), 1, lbnd, ubnd )
+wcsbox = pixbox.mapregion( wcsinfo, wcsinfo )
+
+#  See if the wcsbox overlaps the moc, and report.
+overlap = moc.overlap( wcsbox )
+if overlap == 2:
+   print( "The MOC is completely inside the image")
+elif overlap == 3:
+   print( "The image is completely inside the MOC")
+elif overlap == 4:
+   print( "The MOC and the image overlap partially")
+elif overlap == 5:
+   print( "The MOC and image cover nearly identical regions")
+else:
+   print( "The MOC and image do not overlap")
+
+</pre>
+
+
 
 </body>
 </html>
