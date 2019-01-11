@@ -327,7 +327,7 @@ EOF
 foreach $key (sort keys %purposes) {
    if( $invokes{$key} ) {
       print OUT "<div class=\"implemented\" id=\"$key\">\n";
-      print OUT "&#149; &nbsp; <a href=\"#\"  onClick=\"document.location.href=devurl('xref_ast$key');\">ast$key</a> - $purposes{$key}\n";
+      print OUT "&#149; &nbsp; <a href=\"javascript:devurl('xref_ast$key');\">ast$key</a> - $purposes{$key}\n";
       print OUT "<ul>\n";
       print OUT "<li><span class=inv>$invokes{$key}</span></li>\n";
       if( $isstat{$key} ) {
@@ -337,7 +337,7 @@ foreach $key (sort keys %purposes) {
 #  Check notes for references to ast functions (e.g. "<*astGetC*>", and replace
 #  them with links to the SUN/211 docs.
       foreach $note (split /zzz/, $notes{$key} ) {
-         $note =~ s/<\*(\S+)\*>/<a href="#" onClick="document.location.href=devurl('xref_$1');">$1<\/a>/g;
+         $note =~ s/<\*(\S+)\*>/<a href="javascript:devurl('xref_$1');">$1<\/a>/g;
          print OUT "<li class=\"note\">$note</li>\n";
       }
       print OUT "</ul>\n";
@@ -385,7 +385,7 @@ foreach $key (sort keys %purposes) {
          $extra = '';
       }
       print OUT "<div class=\"unimplemented\">\n";
-      print OUT "<a href=\"#\"  onClick=\"document.location.href=devurl('xref_ast$key');\">ast$key - $purposes{$key}</a>$extra<br>\n";
+      print OUT "<a href=\"javascript:devurl('xref_ast$key');\">ast$key - $purposes{$key}</a>$extra<br>\n";
       print OUT "</div>\n";
    }
 }
