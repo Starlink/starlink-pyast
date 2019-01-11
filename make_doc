@@ -264,11 +264,6 @@ while( $line = <IN> ){
 #  Having gathered all the required information from sun/211 and
 #  Ast.c, we now generate the output HTML files.
 
-#  The URL of the starlink documents server - used to access on-line
-#  version of SUN/211. This service determines the current URL of the page
-#  describing a particular method.
-$stardocs = "http://www.starlink.ac.uk/cgi-bin/htxserver";
-
 #  "node1.html" contains information about all the AST functions for
 #  which pyast provides wrappers.
 open( OUT, ">node1.html" );
