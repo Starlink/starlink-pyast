@@ -118,6 +118,132 @@ def invoke(command):
    return outtxt
 
 
+#  Return a string describing a Frame.
+def frameDesc( frame ):
+   text = ""
+   dom0 = frame.Domain
+   title0 = frame.Title
+   epoch0 = frame.Epoch
+   if dom0:
+      text = "{0}Domain: {1}\n".format(text,dom0)
+   if title0:
+      text = "{0}Title: {1}\n".format(text,title0)
+   if epoch0:
+      if float(epoch0) < 1984.0:
+         text = "{0}Epoch: B{1}\n".format(text,epoch0)
+      else:
+         text = "{0}Epoch: J{1}\n".format(text,epoch0)
+
+   spec_axis = 0
+   dsb_axis = 0
+   skylon_axis = 0
+   skylat_axis = 0
+   time_axis = 0
+   flux_axis = 0
+
+   for i in range( frame.Naxes ):
+      text = "{0}\nAxis {1}:\n".format(text,i+1)
+      classified = False
+
+      try:
+         junk = frame.get( "IsLatAxis({0})".format( i+1 ) )
+         if junk == '1':
+            skylat_axis = i + 1
+         else:
+            skylon_axis = i + 1
+         classified = True
+      except Ast.BADAT:
+         pass
+
+      try:
+         junk = frame.get( "SideBand({0})".format( i+1 ) )
+         dsb_axis = i + 1
+         classified = True
+      except Ast.BADAT:
+         try:
+            junk = frame.get( "StdOfRest({0})".format( i+1 ) )
+            spec_axis = i + 1
+            classified = True
+         except Ast.BADAT:
+            pass
+
+      try:
+         junk = frame.get( "TimeScale({0})".format( i+1 ) )
+         time_axis = i + 1
+         classified = True
+      except Ast.BADAT:
+         pass
+
+      try:
+         junk = frame.get( "SpecVal({0})".format( i+1 ) )
+         flux_axis = i + 1
+         classified = True
+      except Ast.BADAT:
+         pass
+
+      item = frame.get( "Domain({0})".format( i+1 ) )
+      if item and item != dom0 and not classified:
+         text = "{0}   Domain: {1}\n".format(text,item)
+      item = frame.get("Label({0})".format( i+1 ))
+      if item:
+         text = "{0}   Label: {1}\n".format(text,item)
+      item = frame.get("InternalUnit({0})".format( i+1 ))
+      if item:
+         text = "{0}   Unit: {1}\n".format(text,item)
+      item = frame.get("Format({0})".format( i+1 ))
+      if item:
+         text = "{0}   Format: {1}\n".format(text,item)
+
+   sky_axis = max( [skylon_axis, skylat_axis ] )
+   if sky_axis > 0:
+      text = "{0}\nCelestial co-ordinates:\n".format(text)
+      item = frame.get("System({0})".format( sky_axis ))
+      if item:
+         text = "{0}   System: {1}\n".format(text,item)
+      item = frame.get("Equinox({0})".format( sky_axis ))
+      if item:
+         text = "{0}   Equinox: {1}\n".format(text,item)
+
+      if skylon_axis > 0 and skylat_axis > 0:
+         att1 = "SkyRef({0})".format( skylon_axis )
+         att2 = "SkyRef({0})".format( skylat_axis )
+         print( frame.test(att1), frame.test(att2) )
+         if frame.test(att1) and frame.test(att2):
+            fmt1 = frame.format( skylon_axis, float(frame.get(att1)) )
+            fmt2 = frame.format( skylat_axis, float(frame.get(att2)) )
+            text = "{0}   Ref. position: {1} {2}\n".format(text,fmt1,fmt2)
+            item = frame.get("SkyRefIs({0})".format( sky_axis ))
+            text = "{0}   Ref. position is {1}\n".format(text,item)
+
+
+   if spec_axis == 0:
+      spec_axis = dsb_axis
+
+   if spec_axis > 0:
+      text = "{0}\nSpectral co-ordinates:\n".format(text)
+      item = frame.get("System({0})".format( spec_axis ))
+      if item:
+         text = "{0}   System: {1}\n".format(text,item)
+      item = frame.get("RefRA({0})".format( spec_axis ))
+      if item:
+         text = "{0}   Ref. RA: {1}\n".format(text,item)
+      item = frame.get("RefDec({0})".format( spec_axis ))
+      if item:
+         text = "{0}   Ref. Dec: {1}\n".format(text,item)
+      item = frame.get("RestFreq({0})".format( spec_axis ))
+      if item:
+         text = "{0}   Rest freq: {1} GHz\n".format(text,item)
+      item = frame.get("StdOfRest({0})".format( spec_axis ))
+      if item:
+         text = "{0}   Standard of rest: {1}\n".format(text,item)
+
+
+
+
+
+   return text
+
+
 #  ================================================================
 class SettingsDialog(QDialog):
 
@@ -156,7 +282,7 @@ class SettingsDialog(QDialog):
    def accept(self):
       for key in self.options:
          if key != OPT_CHANGED:
-            text = self.lineedits[ key ].text().strip()
+            text = str(self.lineedits[ key ].text()).strip()
             if text != self.options[ key ]:
                self.options[ key ] = text
                if option_defs[ key ][ 2 ]:
@@ -176,13 +302,29 @@ class DumpDialog(QDialog):
 
       vlayout = QVBoxLayout(self)
       self.setLayout(vlayout)
-      vlayout.setContentsMargins(0,0,0,0)
-      vlayout.setSpacing(0)
+
+      self.menubar = QMenuBar( self )
+      vlayout.addWidget( self.menubar )
+
+      fileMenu = self.menubar.addMenu('&File')
+
+      saveAction = QAction('&Save', self)
+      saveAction.setShortcut('Ctrl+S')
+      saveAction.setStatusTip('Save object to text file')
+      saveAction.triggered.connect(self.save)
+      fileMenu.addAction(saveAction)
+
+      vlayout.setContentsMargins(10,10,10,10)
+      vlayout.setSpacing(5)
+
+      self.tabs = QTabWidget()
+      vlayout.addWidget( self.tabs )
 
       s = QScrollArea()
-      vlayout.addWidget( s )
       text = QLabel( "{}".format(object) )
+      text.setMargin(10)
       s.setWidget( text )
+      self.tabs.addTab( s, "Raw AST data" )
 
       buttons = QDialogButtonBox(
             QDialogButtonBox.Ok,
@@ -194,6 +336,28 @@ class DumpDialog(QDialog):
 
    def accept(self):
       super(DumpDialog,self).accept()
+
+   def save(self):
+      fname = QtGui.QFileDialog.getSaveFileName(self, 'Save {0} to file:'.format(self.object.Class))
+      if fname:
+         Ast.Channel( None, None, "SinkFile={0}".format(fname) ).write( self.object )
+
+#  ================================================================
+class FrameDialog(DumpDialog):
+
+#  ----------------------------------------------------------------
+   def __init__(self, parent, object ):
+      super(FrameDialog,self).__init__( parent, object )
+
+      text = "Domain: {0}\n".format( object.Domain )
+
+
+      s = QScrollArea()
+      text = QLabel( frameDesc( self.object ) )
+      text.setMargin(10)
+      s.setWidget( text )
+      itab = self.tabs.addTab( s, "Axis descriptions" )
+      self.tabs.setCurrentIndex( itab )
 
 
 #  ================================================================
@@ -478,7 +642,7 @@ class FrameIcon(QGraphicsRectItem):
          self.rb = None
 
       if not done and not self.dragged:
-         dialog = DumpDialog( None, self.frame )
+         dialog = FrameDialog( None, self.frame )
          dialog.exec_()
 
 
@@ -1098,7 +1262,7 @@ class AstView(QGraphicsView):
 
 #  ================================================================
 class AstTab(QWidget):
-   def __init__(self, label, scrollarea, parent = None):
+   def __init__(self, label, parent = None):
       super(AstTab, self).__init__(parent)
       self.label = label
       self.view =  AstView(self)
@@ -1127,7 +1291,7 @@ class AstTabs(QTabWidget):
 
    def addTab(self,label="",tabtext=""):
       self.s = QScrollArea()
-      tab = AstTab(label,self.s)
+      tab = AstTab( label )
       self.s.setWidget( tab )
       self.s.setWidgetResizable(True)
       itab = super(AstTabs, self).addTab( self.s, label )
@@ -1135,8 +1299,22 @@ class AstTabs(QTabWidget):
       self.setTabText( self.count()-1, tabtext)
       return itab
 
+   def removeCurrentTab(self):
+      itab = self.currentIndex()
+      tab = self.widget(itab).widget()
+      for (key,value) in self.tabs.items():
+         if value == tab:
+            del self.tabs[key]
+      self.removeTab( itab )
+      return self.count()
+
    def getCurrentView(self):
-      return self.currentWidget().widget().view
+      result = self.currentWidget()
+      if result is not None:
+         result = result.widget()
+      if result is not None:
+         result = result.view
+      return result
 
    def setSize(self):
       self.currentWidget().widget().setSize()
@@ -1156,15 +1334,16 @@ class AstViewer(QMainWindow):
       self.tabs = AstTabs()
       self.setCentralWidget( self.tabs )
       self.statusbar = self.statusBar()
+      self.titles = {}
+      self.fname = None
+      self.redraw = False
+
+      self.tabs.currentChanged.connect(self.tabChanged)
 
       if fname:
-         ok = self.readFile( fname )
+         self.readFile( fname )
       else:
-         ok = False
-
-      if not ok:
          self.showExample( )
-
 
       exitAction = QAction('&Exit', self)
       exitAction.setShortcut('Ctrl+Q')
@@ -1186,6 +1365,10 @@ class AstViewer(QMainWindow):
 
       openFileAction.setStatusTip(text)
       openFileAction.triggered.connect(self.showOpenFileDialog)
+
+      closeTabAction = QAction('&Close', self)
+      closeTabAction.setStatusTip('Close tab')
+      closeTabAction.triggered.connect(self.closeTab)
 
       settingsAction = QAction('Preferences', self)
       settingsAction.setStatusTip('Change global preferences')
@@ -1210,6 +1393,7 @@ class AstViewer(QMainWindow):
       menubar = self.menuBar()
       fileMenu = menubar.addMenu('&File')
       fileMenu.addAction(openFileAction)
+      fileMenu.addAction(closeTabAction)
       fileMenu.addAction(settingsAction)
       fileMenu.addAction(exitAction)
 
@@ -1219,6 +1403,7 @@ class AstViewer(QMainWindow):
       viewMenu.addAction(baseToCurrentAction)
 
 #  ----------------------------------------------------------------
+#  Display the base to current Mapping
    def btoc(self ):
       if self.scene and self.scene.frameset:
          self.scene.clearSelection()
@@ -1242,41 +1427,66 @@ class AstViewer(QMainWindow):
          self.scene.removeItem( rb )
 
 #  ----------------------------------------------------------------
+#  Display the current Frame
    def cframe(self ):
       if self.scene and self.scene.frameset:
          self.scene.clearSelection()
          self.scene.currentIcon.setSelected(True)
          frame = self.scene.frameset.getframe( Ast.CURRENT )
-         dialog = DumpDialog( None, frame )
+         dialog = FrameDialog( None, frame )
          dialog.exec_()
 
 #  ----------------------------------------------------------------
    def bframe(self ):
+#  Display the base Frame
       if self.scene and self.scene.frameset:
          self.scene.clearSelection()
          self.scene.baseIcon.setSelected(True)
          frame = self.scene.frameset.getframe( Ast.BASE )
-         dialog = DumpDialog( None, frame )
+         dialog = FrameDialog( None, frame )
          dialog.exec_()
 
 #  ----------------------------------------------------------------
+#  Display a FrameSet in a tab
    def showObject(self, object, title, label ):
       if object:
-
+         self.tabs.blockSignals(True)
          if self.exampleTab >= 0:
             self.tabs.removeTab( self.exampleTab )
             self.exampleTab = -1
 
          itab = self.tabs.addTab( label, label )
          self.tabs.setCurrentIndex( itab )
-         self.view = self.tabs.getCurrentView()
-         self.view.setMouseTracking(True)
 
-         self.scene = AstScene( object, self.view, self )
-         self.view.setScene( self.scene )
-         self.setWindowTitle( "astviewer: "+title )
+         view = self.tabs.getCurrentView()
+         scene = AstScene( object, view, self )
+         view.setScene( scene )
+         self.titles[ scene ] = title;
+
+         self.showTab()
+         self.tabs.blockSignals(False)
+
+#  ----------------------------------------------------------------
+#  Invoked when the user clicks on a new tab.
+   def tabChanged( self, i ):
+      self.showTab()
+
+#  ----------------------------------------------------------------
+#  Invoked when the current tab changes.
+   def showTab( self ):
+      self.view = self.tabs.getCurrentView()
+      if self.view:
+         self.view.setMouseTracking(True)
+         self.scene = self.view.scene()
+         self.setWindowTitle( "astviewer: "+self.titles[ self.scene ] )
          self.object = object
          self.tabs.setSize( )
+
+#  ----------------------------------------------------------------
+#  Close a tab. Close the app if no other tabs left.
+   def closeTab(self):
+      if self.tabs.removeCurrentTab() == 0:
+         self.close()
 
 #  ----------------------------------------------------------------
    def readFile(self, fname ):
@@ -1290,8 +1500,12 @@ class AstViewer(QMainWindow):
 
       if self.fname:
          fname = str(self.fname)
+         if not os. path. isfile(fname):
+            QMessageBox.warning( self, "Message", "Cannot find file '{}'".format( fname ) )
+            fname = None
 
 #  See if it a binary file - usually works.
+      if fname:
          textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20,0x100)) - {0x7f})
          is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
          binfile = is_binary_string(open(fname, 'rb').read(32768))
@@ -1316,7 +1530,9 @@ class AstViewer(QMainWindow):
 
             if not obj:
                try:
-                  obj = Ast.FitsChan( lines, None, self.options[ OPT_FCATTS ] ).read()
+                  fc = Ast.FitsChan( None, None, self.options[ OPT_FCATTS ] )
+                  fc.SourceFile = dumpfile
+                  obj = fc.read()
                except:
                   obj = None
 
