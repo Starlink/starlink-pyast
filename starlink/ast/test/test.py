@@ -190,7 +190,7 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(zoommap.Zoom, 1.2)
         zoommap.Zoom = -1.3
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
-        self.assertEqual(zoommap.get("Zoom"), "-1.3")
+        self.assertAlmostEqual(float(zoommap.get("Zoom")), -1.3)
         zm = copy.deepcopy(zoommap)
         self.assertEqual(zoommap.Nobject, 2)
         self.assertIsInstance(zm, starlink.Ast.ZoomMap)
