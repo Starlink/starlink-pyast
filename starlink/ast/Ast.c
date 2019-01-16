@@ -8192,8 +8192,8 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
         PyErr_SetString( PyExc_KeyError, buff );
       }
 
-/* Otherwise, get the keyword to be searched for. */
-   } else {
+/* Otherwise, if the index is a string, get the keyword to be searched for. */
+   } else if( STRING_CHECK( index ) ){
       keyw = GetString( NULL, index );
 
 /* Rewind the FitsChan so that we search all cards. */
@@ -8272,6 +8272,11 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 
       vals = astFree( vals );
       keyw = astFree( keyw );
+
+/* Report an error for other index data types. */
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Illegal data type for AST "
+                       "FitsChan key." );
    }
 
 /* Re-instate the original current card. */
@@ -8310,8 +8315,8 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
          astDelFits( THIS );
       }
 
-/* Otherwise...get the keyword to be searched for. */
-   } else {
+/* Otherwise, if the index is a string, get the keyword to be searched for. */
+   } else if( STRING_CHECK( index ) ){
       keyw = GetString( NULL, index );
 
 /* If the keyword name is blank, just insert the supplied value (as a
@@ -8384,7 +8389,13 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
       }
 
       keyw = astFree( keyw );
+
+/* Report an error for other index data types. */
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Illegal data type for AST "
+                       "FitsChan key" );
    }
+
    if( !astOK || PyErr_Occurred() ) result = -1;
    TIDY;
    return result;
@@ -9016,6 +9027,11 @@ static int KeyMap_contains( PyObject *self, PyObject *index ) {
       char *key = GetString( NULL, index );
       result = astMapHasKey( THIS, key );
       key = astFree( key );
+
+/* Report an error for other index data types. */
+   } else {
+      PyErr_SetString( PyExc_TypeError, "Illegal data type for AST "
+                       "KeyMap key." );
    }
 
    if( !astOK ) result = -1;
@@ -10070,7 +10086,7 @@ static const char *IntToColour( Plot *self, int colour ){
       if( PyObject_HasAttrString(self->grf, "IntToCol") ){
          PyObject *result = PyObject_CallMethod( self->grf, "IntToCol", "i", colour );
 
-         if( result && result != Py_None) {
+         if( result && result != Py_None && STRING_CHECK( result ) ) {
             char *p = GetString( NULL, result );
             if( p ){
                if( strlen( p ) > MAXLENCOL ) {
@@ -12297,7 +12313,9 @@ static char *GetString( void *mem, PyObject *value ) {
 *        returned string should be stored. This memory will be extended
 *        if required. New memory is allocated if NULL is supplied.
 *     value
-*        The PyObject containing the string to copy.
+*        The PyObject containing the string to copy. This must be a
+*        string object - use the PyObject_Str method before calling this
+*        function to get a string description of other classes of object.
 
 *  Returned Value:
 *     A dynamically allocated copy of the string. It should be freed
