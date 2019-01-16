@@ -136,7 +136,9 @@ void astPutErr_( int status_value, const char *message ) {
 
 /* Get the existing Exception text */
          PyErr_Fetch( &ptype, &pvalue, &ptraceback );
-         text = GetString( NULL, pvalue );
+         PyObject *str = PyObject_Str( pvalue );
+         text = GetString( NULL, str );
+         Py_DECREF(str);
          if( text ) {
 
 /* Ignore messages that give the C source file and line number since they are
@@ -158,7 +160,9 @@ void astPutErr_( int status_value, const char *message ) {
          }
       }
 
-/* If an AST or non-AST exception has already occurred, return without action. */
+/* If an AST or non-AST exception has already occurred, restore the
+   original AST status value then return without action. */
+      astSetStatus( lstat );
       return;
    }
 
