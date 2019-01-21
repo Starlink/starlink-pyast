@@ -146,6 +146,7 @@ These are functions of the base Object class since it should be possible
 to test an object of any sub-class for membership of any other sub-class. */
 MAKE_ISA(Box)
 MAKE_ISA(Channel)
+MAKE_ISA(ChebyMap)
 MAKE_ISA(Circle)
 MAKE_ISA(CmpFrame)
 MAKE_ISA(CmpMap)
@@ -179,8 +180,10 @@ MAKE_ISA(RateMap)
 MAKE_ISA(Region)
 MAKE_ISA(ShiftMap)
 MAKE_ISA(SkyFrame)
+MAKE_ISA(SlaMap)
 MAKE_ISA(SpecFluxFrame)
 MAKE_ISA(SpecFrame)
+MAKE_ISA(SpecMap)
 MAKE_ISA(SphMap)
 MAKE_ISA(StcsChan)
 MAKE_ISA(Table)
@@ -188,6 +191,7 @@ MAKE_ISA(TimeFrame)
 MAKE_ISA(TimeMap)
 MAKE_ISA(TranMap)
 MAKE_ISA(UnitMap)
+MAKE_ISA(UnitNormMap)
 MAKE_ISA(WcsMap)
 MAKE_ISA(WinMap)
 MAKE_ISA(ZoomMap)
@@ -196,6 +200,7 @@ MAKE_ISA(ZoomMap)
 static PyMethodDef Object_methods[] = {
    DEF_ISA(Box,box),
    DEF_ISA(Channel,channel),
+   DEF_ISA(ChebyMap,chebymap),
    DEF_ISA(Circle,circle),
    DEF_ISA(CmpFrame,cmpframe),
    DEF_ISA(CmpMap,cmpmap),
@@ -229,8 +234,10 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(Region,region),
    DEF_ISA(ShiftMap,shiftmap),
    DEF_ISA(SkyFrame,skyframe),
+   DEF_ISA(SlaMap,slamap),
    DEF_ISA(SpecFluxFrame,specfluxframe),
    DEF_ISA(SpecFrame,specframe),
+   DEF_ISA(SpecMap,specmap),
    DEF_ISA(SphMap,sphmap),
    DEF_ISA(StcsChan,stcschan),
    DEF_ISA(Table,table),
@@ -238,6 +245,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(TimeMap,timemap),
    DEF_ISA(TranMap,tranmap),
    DEF_ISA(UnitMap,unitmap),
+   DEF_ISA(UnitNormMap,unitnormmap),
    DEF_ISA(WcsMap,wcsmap),
    DEF_ISA(WinMap,winmap),
    DEF_ISA(ZoomMap,zoommap),
@@ -3156,6 +3164,93 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
    return result;
 }
 
+/* UnitNormMap */
+/* =========== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".UnitNormMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} UnitNormMap;
+
+/* Prototypes for class functions */
+static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject UnitNormMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(UnitNormMap),       /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST UnitNormMap",         /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)UnitNormMap_init,/* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :centre,options=None */
+
+   const char *options = " ";
+   PyArrayObject *centre = NULL;
+   PyObject *centre_object = NULL;
+
+   int result = -1;
+
+   // We get nin and nout from the arrays themselves
+   if( PyArg_ParseTuple(args, "O|s:" CLASS, &centre_object, &options ) ) {
+      centre = (PyArrayObject *) PyArray_ContiguousFromAny( centre_object,
+                                                            PyArray_DOUBLE, 0, 100);
+      if( centre ) {
+         AstUnitNormMap *this = NULL;
+         this = astUnitNormMap( PyArray_Size( (PyObject*)centre ),
+                               (const double *)centre->data, "%s", options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( centre );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* LutMap */
 /* ====== */
 
@@ -4444,6 +4539,209 @@ static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args ) {
    return result;
 }
 
+/* ChebyMap */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".ChebyMap"
+
+/* Define the class structure */
+typedef struct {
+   PolyMap parent;
+} ChebyMap;
+
+/* Prototypes for class functions */
+static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject ChebyMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(ChebyMap),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST ChebyMap",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)ChebyMap_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :fcoeff,lbnd_f,ubnd_f,icoeff=None,lbnd_i=None,ubnd_i=None,options=None */
+
+   PyArrayObject *fcoeff = NULL;
+   PyArrayObject *icoeff = NULL;
+   PyArrayObject *lbnd_i = NULL;
+   PyArrayObject *lbnd_f = NULL;
+   PyArrayObject *ubnd_f = NULL;
+   PyArrayObject *ubnd_i = NULL;
+   PyObject *fcoeff_object = NULL;
+   PyObject *icoeff_object = NULL;
+   PyObject *lbnd_f_object = NULL;
+   PyObject *lbnd_i_object = NULL;
+   PyObject *ubnd_f_object = NULL;
+   PyObject *ubnd_i_object = NULL;
+   const char *options = " ";
+   const double *coeff_i = NULL;
+   const double *coeff_f = NULL;
+   int i;
+   int ncoeff_f = 0;
+   int ncoeff_i = 0;
+   int nin1 = 0;
+   int nin2 = 0;
+   int nout1 = 0;
+   int nout2 = 0;
+   int result = -1;
+   int size = 2;
+
+   if( PyErr_Occurred() ) return result;
+
+   if( PyArg_ParseTuple( args, "OOO|OOOs:" CLASS, &fcoeff_object,
+                         &lbnd_f_object, &ubnd_f_object, &icoeff_object,
+                         &lbnd_i_object, &ubnd_i_object, &options ) ) {
+
+      if( fcoeff_object && fcoeff_object != Py_None ) {
+         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
+                                                               PyArray_DOUBLE,
+                                                               0, 100);
+         if( fcoeff ) {
+            if( fcoeff->nd != 2 ) {
+               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
+                             "coefficients must be 2 dimensional, not %d "
+                             "dimensional.", fcoeff->nd );
+            } else {
+               if( lbnd_f_object ) lbnd_f = GetArray1D( lbnd_f_object, &size, "lbnd_f", NAME );
+               if( ubnd_f_object ) ubnd_f = GetArray1D( ubnd_f_object, &size, "ubnd_f", NAME );
+               coeff_f = (const double *) fcoeff->data;
+               ncoeff_f = fcoeff->dimensions[ 0 ];
+               nin1 = fcoeff->dimensions[ 1 ] - 2;
+               nout1 = 0;
+               const double *p = coeff_f + 1;
+               for( i = 0; i < ncoeff_f; i++ ) {
+                  int iout = (int) ( *p + 0.5 );
+                  if( iout > nout1 ) nout1 = iout;
+                  p += nin1 + 2;
+               }
+            }
+         }
+      }
+
+      if( icoeff_object && icoeff_object != Py_None ) {
+         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
+                                                               PyArray_DOUBLE,
+                                                               0, 100);
+         if( icoeff ) {
+            if( icoeff->nd != 2 ) {
+               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
+                             "coefficients must be 2 dimensional, not %d "
+                             "dimensional.", icoeff->nd );
+            } else {
+               if( lbnd_i_object ) lbnd_i = GetArray1D( lbnd_i_object, &size, "lbnd_f", NAME );
+               if( ubnd_i_object ) ubnd_i = GetArray1D( ubnd_i_object, &size, "ubnd_f", NAME );
+               coeff_i = (const double *) icoeff->data;
+               ncoeff_i = icoeff->dimensions[ 0 ];
+               nout2 = icoeff->dimensions[ 1 ] - 2;
+               nin2 = 0;
+               const double *p = coeff_i + 1;
+               for( i = 0; i < ncoeff_i; i++ ) {
+                  int iin = (int) ( *p + 0.5 );
+                  if( iin > nin2 ) nin2 = iin;
+                  p += nout2 + 2;
+               }
+            }
+         }
+      }
+
+      if( nin1 != 0 && nin2 != 0 && nin1 != nin2 ) {
+         PyErr_Format( PyExc_ValueError, "The number of ChebyMap inputs implied"
+                       " by the supplied arrays of forward and inverse "
+                       "coefficients differ (%d and %d).", nin1, nin2 );
+
+      } else if( nout1 != 0 && nout2 != 0 && nout1 != nout2 ) {
+         PyErr_Format( PyExc_ValueError, "The number of ChebyMap outputs implied"
+                       " by the supplied arrays of forward and inverse "
+                       "coefficients differ (%d and %d).", nout1, nout2 );
+
+      } else if( nout1 != 0 && nout2 != 0 && nout1 != nout2 ) {
+         PyErr_Format( PyExc_ValueError, "The number of ChebyMap outputs implied"
+                       " by the supplied arrays of forward and inverse "
+                       "coefficients differ (%d and %d).", nout1, nout2 );
+
+      } else if( coeff_f && ( !lbnd_f || !ubnd_f ) ) {
+         if( !lbnd_f ) {
+            PyErr_Format( PyExc_ValueError, "The lower bounds of the input "
+                          "bounding box of the ChebyMap have not been supplied." );
+         } else if( !ubnd_f ) {
+            PyErr_Format( PyExc_ValueError, "The upper bounds of the input "
+                          "bounding box of the ChebyMap have not been supplied." );
+         }
+
+      } else if( coeff_i && ( !lbnd_i || !ubnd_i ) ) {
+         if( !lbnd_i ) {
+            PyErr_Format( PyExc_ValueError, "The lower bounds of the output "
+                          "bounding box of the ChebyMap have not been supplied." );
+         } else if( !ubnd_i ) {
+            PyErr_Format( PyExc_ValueError, "The upper bounds of the output "
+                          "bounding box of the ChebyMap have not been supplied." );
+         }
+
+      } else {
+         AstChebyMap *this = astChebyMap( coeff_f?nin1:nin2, coeff_f?nout1:nout2,
+                                        ncoeff_f, coeff_f, ncoeff_i, coeff_i,
+                                        lbnd_f?(const double *)lbnd_f->data:NULL,
+                                        ubnd_f?(const double *)ubnd_f->data:NULL,
+                                        lbnd_i?(const double *)lbnd_i->data:NULL,
+                                        ubnd_i?(const double *)ubnd_i->data:NULL,
+                                        "%s", options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+
+      Py_XDECREF(fcoeff);
+      Py_XDECREF(icoeff);
+      if( lbnd_f ) Py_XDECREF( lbnd_f );
+      if( ubnd_f ) Py_XDECREF( ubnd_f );
+      if( lbnd_i ) Py_XDECREF( lbnd_i );
+      if( ubnd_i ) Py_XDECREF( ubnd_i );
+   }
+
+   TIDY;
+   return result;
+}
+
 /* NormMap */
 /* ======= */
 
@@ -5170,6 +5468,161 @@ static PyObject *SpecFrame_getrefpos( SpecFrame *self, PyObject *args ) {
                        &SkyFrameType, (PyObject**)&other ) && astOK ) {
       astGetRefPos( THIS, THAT, &lon, &lat );
       if( astOK ) result = Py_BuildValue( "dd", lon, lat );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* SpecMap */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SpecMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} SpecMap;
+
+/* Prototypes for class functions */
+static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject SpecMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(SpecMap),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SpecMap",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SpecMap_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :nin,flags=0 */
+
+   const char *options = " ";
+   int flags = 0;
+   int nin;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "i|is:" CLASS, &nin, &flags, &options ) ) {
+      AstSpecMap *this = astSpecMap( nin, flags, "%s", options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
+   }
+
+   TIDY;
+   return result;
+}
+
+/* SlaMap */
+/* ====== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SlaMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} SlaMap;
+
+/* Prototypes for class functions */
+static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the class Python type structure */
+static PyTypeObject SlaMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(SlaMap),            /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SlaMap",              /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   0,                         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SlaMap_init,     /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :flags=0 */
+
+   const char *options = " ";
+   int flags = 0;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "|is:" CLASS, &flags, &options ) ) {
+      AstSlaMap *this = astSlaMap( flags, "%s", options );
+      result = SetProxy( (AstObject *) this, (Object *) self );
+      this = astAnnul( this );
    }
 
    TIDY;
@@ -11793,6 +12246,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&ShiftMapType);
    PyModule_AddObject( m, "ShiftMap", (PyObject *)&ShiftMapType);
 
+   UnitNormMapType.tp_new = PyType_GenericNew;
+   UnitNormMapType.tp_base = &MappingType;
+   if( PyType_Ready(&UnitNormMapType) < 0) RETURN( NULL );
+   Py_INCREF(&UnitNormMapType);
+   PyModule_AddObject( m, "UnitNormMap", (PyObject *)&UnitNormMapType);
+
    LutMapType.tp_new = PyType_GenericNew;
    LutMapType.tp_base = &MappingType;
    if( PyType_Ready(&LutMapType) < 0) RETURN( NULL );
@@ -11816,6 +12275,12 @@ MOD_INIT(Ast) {
    if( PyType_Ready(&PolyMapType) < 0) RETURN( NULL );
    Py_INCREF(&PolyMapType);
    PyModule_AddObject( m, "PolyMap", (PyObject *)&PolyMapType);
+
+   ChebyMapType.tp_new = PyType_GenericNew;
+   ChebyMapType.tp_base = &PolyMapType;
+   if( PyType_Ready(&ChebyMapType) < 0) RETURN( NULL );
+   Py_INCREF(&ChebyMapType);
+   PyModule_AddObject( m, "ChebyMap", (PyObject *)&ChebyMapType);
 
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
@@ -11846,6 +12311,18 @@ MOD_INIT(Ast) {
    if( PyType_Ready(&SpecFrameType) < 0) RETURN( NULL );
    Py_INCREF(&SpecFrameType);
    PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
+
+   SlaMapType.tp_new = PyType_GenericNew;
+   SlaMapType.tp_base = &MappingType;
+   if( PyType_Ready(&SlaMapType) < 0) RETURN( NULL );
+   Py_INCREF(&SlaMapType);
+   PyModule_AddObject( m, "SlaMap", (PyObject *)&SlaMapType);
+
+   SpecMapType.tp_new = PyType_GenericNew;
+   SpecMapType.tp_base = &MappingType;
+   if( PyType_Ready(&SpecMapType) < 0) RETURN( NULL );
+   Py_INCREF(&SpecMapType);
+   PyModule_AddObject( m, "SpecMap", (PyObject *)&SpecMapType);
 
    DSBSpecFrameType.tp_new = PyType_GenericNew;
    DSBSpecFrameType.tp_base = &SpecFrameType;
@@ -12483,6 +12960,8 @@ static PyTypeObject *GetType( AstObject *this,
         result = (PyTypeObject *) &PermMapType;
       } else if( !strcmp( class, "ShiftMap" ) ) {
         result = (PyTypeObject *) &ShiftMapType;
+      } else if( !strcmp( class, "UnitNormMap" ) ) {
+        result = (PyTypeObject *) &UnitNormMapType;
       } else if( !strcmp( class, "LutMap" ) ) {
         result = (PyTypeObject *) &LutMapType;
       } else if( !strcmp( class, "WinMap" ) ) {
@@ -12491,6 +12970,8 @@ static PyTypeObject *GetType( AstObject *this,
         result = (PyTypeObject *) &MatrixMapType;
       } else if( !strcmp( class, "PolyMap" ) ) {
         result = (PyTypeObject *) &PolyMapType;
+      } else if( !strcmp( class, "ChebyMap" ) ) {
+        result = (PyTypeObject *) &ChebyMapType;
       } else if( !strcmp( class, "Frame" ) ) {
          result = (PyTypeObject *) &FrameType;
       } else if( !strcmp( class, "FrameSet" ) ) {
@@ -12502,6 +12983,10 @@ static PyTypeObject *GetType( AstObject *this,
          result = (PyTypeObject *) &CmpFrameType;
       } else if( !strcmp( class, "SpecFrame" ) ) {
          result = (PyTypeObject *) &SpecFrameType;
+      } else if( !strcmp( class, "SlaMap" ) ) {
+        result = (PyTypeObject *) &SlaMapType;
+      } else if( !strcmp( class, "SpecMap" ) ) {
+        result = (PyTypeObject *) &SpecMapType;
       } else if( !strcmp( class, "DSBSpecFrame" ) ) {
          result = (PyTypeObject *) &DSBSpecFrameType;
       } else if( !strcmp( class, "SkyFrame" ) ) {

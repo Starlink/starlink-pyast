@@ -504,6 +504,13 @@ class TestAst(unittest.TestCase):
         self.assertIsInstance(shiftmap, starlink.Ast.Mapping)
         self.assertEqual(shiftmap.Nout, 2)
 
+    def test_UnitNormMap(self):
+        unitnormmap = starlink.Ast.UnitNormMap([1, 2])
+        self.assertIsInstance(unitnormmap, starlink.Ast.UnitNormMap)
+        self.assertIsInstance(unitnormmap, starlink.Ast.Mapping)
+        self.assertEqual(unitnormmap.Nin, 2)
+        self.assertEqual(unitnormmap.Nout, 3)
+
     def test_SphMap(self):
         sphmap = starlink.Ast.SphMap("UnitRadius=1")
         self.assertIsInstance(sphmap, starlink.Ast.SphMap)
@@ -547,6 +554,16 @@ class TestAst(unittest.TestCase):
         unitmap = starlink.Ast.UnitMap(3)
         self.assertIsInstance(unitmap, starlink.Ast.UnitMap)
         self.assertEqual(unitmap.Nin, 3)
+
+    def test_SlaMap(self):
+        slamap = starlink.Ast.SlaMap()
+        self.assertIsInstance(slamap, starlink.Ast.SlaMap)
+        self.assertEqual(slamap.Nin, 2)
+
+    def test_SpecMap(self):
+        specmap = starlink.Ast.SpecMap(3)
+        self.assertIsInstance(specmap, starlink.Ast.SpecMap)
+        self.assertEqual(specmap.Nin, 3)
 
     def test_GrismMap(self):
         grismmap = starlink.Ast.GrismMap("GrismM=1")
@@ -1567,6 +1584,40 @@ class TestAst(unittest.TestCase):
 
         self.assertEqual( moc.overlap(moc3), 5 )
         self.assertFalse( moc.testcell( 8, 123456, False ) )
+
+    def test_ChebyMap(self):
+        lbnd = [0.,0.]
+        ubnd = [10.,10.]
+        pm = starlink.Ast.ChebyMap([[  1.0, 1.0, 0.0, 0.0 ],
+                                    [ -2.0, 1.0, 1.0, 2.0 ],
+                                    [  1.0, 1.0, 0.0, 1.0 ],
+                                    [  1.5, 2.0, 0.0, 0.0 ],
+                                    [ -2.5, 2.0, 1.0, 2.0 ]],
+                                    lbnd, ubnd )
+        self.assertIsInstance(pm, starlink.Ast.Object)
+        self.assertIsInstance(pm, starlink.Ast.Mapping)
+        self.assertIsInstance(pm, starlink.Ast.PolyMap)
+        self.assertIsInstance(pm, starlink.Ast.ChebyMap)
+        self.assertTrue(pm.isaobject())
+        self.assertTrue(pm.isamapping())
+        self.assertTrue(pm.isapolymap())
+        self.assertTrue(pm.isachebymap())
+        self.assertEqual(pm.Nin, 2)
+        self.assertEqual(pm.Nout, 2)
+
+        pin = numpy.array([[0.0,2.0,6.0,10.0],[2.0,5.0,8.0,0.0]])
+        pout = pm.tran(pin, True)
+        for (xin, yin, xo, yo) in zip(pin[0], pin[1], pout[0], pout[1]):
+           xi = 2.0*( xin - lbnd[0] )/( ubnd[0] - lbnd[0] ) - 1.0
+           yi = 2.0*( yin - lbnd[1] )/( ubnd[1] - lbnd[1] ) - 1.0
+           xv = 1 - 2*xi*(2*yi*yi - 1) + yi
+           yv = 1.5 - 2.5*xi*(2*yi*yi - 1)
+           self.assertAlmostEqual(xv, xo)
+           self.assertAlmostEqual(yv, yo)
+
+
+
+
 
 if __name__ == "__main__":
     #    starlink.Ast.watchmemory(10914)
