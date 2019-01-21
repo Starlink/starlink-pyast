@@ -47,7 +47,8 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'skyaxis.c', 'skyframe.c', 'specfluxframe.c', 'specframe.c',
          'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
          'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
-         'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c')
+         'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c', 'specmap.c',
+         'slamap.c', 'chebymap.c', 'unitnormmap.c' )
 
 #  List the erfa source files required by AST.
 erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
@@ -95,13 +96,10 @@ erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
           'zr.c')
 
 #  List the C source files for unimplemeneted AST classes:
-ast_c_extra = ('chebymap.c', 'fchebymap.c', 'fitstable.c',
-               'funitnormmap.c', 'intramap.c', 'plot3d.c',
-               'selectormap.c', 'slamap.c', 'specmap.c', 'stc.c',
-               'stccatalogentrylocation.c', 'stcobsdatalocation.c',
-               'stcresourceprofile.c', 'stcsearchlocation.c',
-               'switchmap.c', 'table.c', 'unitnormmap.c',
-               'xmlchan.c')
+ast_c_extra = ('fitstable.c', 'intramap.c', 'plot3d.c', 'selectormap.c',
+               'stc.c', 'stccatalogentrylocation.c', 'stcobsdatalocation.c',
+               'stcresourceprofile.c', 'stcsearchlocation.c', 'switchmap.c',
+               'table.c', 'xmlchan.c')
 
 #  Initialise the list of sources files needed to build the starlink.Ast
 #  module.
