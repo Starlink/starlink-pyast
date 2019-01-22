@@ -45,7 +45,7 @@ static char *GetString( void *mem, PyObject *value );
 static char *PyAst_ToString( PyObject *self );
 static const char *AttNorm( const char *att, char *buff );
 static void Sinka( const char *text );
-static const char *FormatObject( PyObject *o );
+static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
 
 /* Macros used in this file */
@@ -13366,30 +13366,33 @@ static const char *AttNorm( const char *att, char *buff ){
 }
 
 
-const char *FormatObject( PyObject *o ){
+char *FormatObject( PyObject *o ){
 /*
 *  Name:
 *     FormatObject
 
 *  Purpose:
 *     Return a formatted representation of an arbitrary PyObject.
-*     The returned pointer points to static memory and must not be
-*     freed.
+*     The returned pointer points to dynamic memory and must be
+*     freed using astFree.
 
 */
-   const char *result = NULL;
+   const char *text = NULL;
+   char *result = NULL;
    PyObject *repr = PyObject_Repr( o );
 
    if( PyUnicode_Check( repr ) ) {
       PyObject *bytes = PyUnicode_AsASCIIString(repr);
       if( bytes ) {
-         result =  PyBytes_AS_STRING(bytes);
+         text =  PyBytes_AS_STRING(bytes);
+         if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
          Py_DECREF(bytes);
       }
 
 #if PY_MAJOR_VERSION < 3
    } else if( PyString_Check( repr ) ) {
-      result =  PyString_AsString(repr);
+      text =  PyString_AsString(repr);
+      if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
 #endif
    }
 

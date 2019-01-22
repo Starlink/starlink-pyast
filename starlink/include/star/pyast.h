@@ -196,9 +196,11 @@ static int set##attrib( class *self, PyObject *value, void *closure ){ \
    } else { \
       setcode \
       if( result == -1 && !PyErr_Occurred()) { \
+         char *rep = FormatObject( value ); \
          PyErr_Format( PyExc_TypeError, "Bad value (%s) supplied " \
                        "for " #class " attribute '" #attrib "'.", \
-                       FormatObject( value ) ); \
+                       rep ); \
+         rep = astFree( rep ); \
       } \
    } \
    TIDY; \
@@ -627,9 +629,11 @@ MAKE_GET(class,attrib, \
       icol = PyLong_AsLong( value ); \
       astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
    } else if( ! PyErr_Occurred() ) { \
+      char *rep = FormatObject(value); \
       PyErr_Format( PyExc_TypeError, "Cannot set attribute '" \
                     #attrib "' - value (%s) is not a known colour " \
-                    "name or an integer.", FormatObject(value) ); \
+                    "name or an integer.", rep ); \
+      rep = astFree( rep ); \
    } \
    if( astOK ) result = 0;
 
