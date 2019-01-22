@@ -606,7 +606,29 @@ class TestAst(unittest.TestCase):
         self.assertIsInstance(cmpmap, starlink.Ast.CmpMap)
         self.assertIsInstance(cmpmap, starlink.Ast.Mapping)
 
-        zoommap = starlink.Ast.ZoomMap(2, 1.0)
+        unitmap1 = starlink.Ast.UnitMap(2)
+        unitmap2 = starlink.Ast.UnitMap(2)
+        zoommap1 = starlink.Ast.ZoomMap(2, 1.5)
+        zoommap2 = starlink.Ast.ZoomMap(2, 2.0)
+        shiftmap = starlink.Ast.ShiftMap( [-1.0,-1.0] )
+        maplist = [unitmap1, zoommap1, shiftmap, unitmap2, zoommap2]
+        invlist = [0,0,0,0,1]
+        (result,newmaplist,newinvlist) = shiftmap.mapmerge( 2, True, maplist,
+                                                           invlist )
+        self.assertEqual(result,2)
+        self.assertEqual(len(newmaplist),5)
+        self.assertEqual(len(newinvlist),5)
+        self.assertIsInstance(newmaplist[0], starlink.Ast.UnitMap)
+        self.assertIsInstance(newmaplist[1], starlink.Ast.ZoomMap)
+        self.assertIsInstance(newmaplist[2], starlink.Ast.WinMap)
+        self.assertIsInstance(newmaplist[3], starlink.Ast.UnitMap)
+        self.assertIsInstance(newmaplist[4], starlink.Ast.ZoomMap)
+
+        del newmaplist
+        del maplist
+        del unitmap1, zoommap1, shiftmap, unitmap2, zoommap2
+
+        zoommap = starlink.Ast.ZoomMap(2, 2.0)
         unitmap = starlink.Ast.UnitMap(1)
         cmpmap = starlink.Ast.CmpMap(zoommap, unitmap, False)
         out, map = cmpmap.mapsplit(3)

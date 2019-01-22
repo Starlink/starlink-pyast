@@ -2,6 +2,7 @@
 #include <string.h>
 #include "numpy/arrayobject.h"
 #include "ast.h"
+#include "pyast_extra.h"
 #include "grf.h"
 
 /* Define macros for things that changed between Python V2.7 and V3.2 */
@@ -590,6 +591,7 @@ static PyObject *Mapping_decompose( Mapping *self );
 static PyObject *Mapping_invert( Mapping *self );
 static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args );
 static PyObject *Mapping_mapbox( Mapping *self, PyObject *args );
+static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args );
 static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args );
 static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args );
 static PyObject *Mapping_rate( Mapping *self, PyObject *args );
@@ -606,6 +608,7 @@ static PyMethodDef Mapping_methods[] = {
    {"decompose", (PyCFunction)Mapping_decompose, METH_NOARGS, "Decompose a Mapping into two component Mappings"},
    {"invert", (PyCFunction)Mapping_invert, METH_NOARGS, "Invert a Mapping"},
    {"mapbox", (PyCFunction)Mapping_mapbox, METH_VARARGS, "Find a bounding box for a Mapping."},
+   {"mapmerge", (PyCFunction)Mapping_mapmerge, METH_VARARGS, "Merge a single Mapping with its neighbouring Mappings."},
    {"mapsplit", (PyCFunction)Mapping_mapsplit, METH_VARARGS, "Split a Mapping up into parallel component Mappings."},
    {"linearapprox", (PyCFunction)Mapping_linearapprox, METH_VARARGS, "Obtain a linear approximation to a Mapping, if appropriate."},
    {"quadapprox", (PyCFunction)Mapping_quadapprox, METH_VARARGS, "Obtain a quadratic approximation to a 2D Mapping"},
@@ -822,6 +825,90 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
       Py_XDECREF( ubnd_in );
    }
 
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".mapmerge"
+static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
+
+/* args: (result,map_list,invert_list):where,series,map_list,invert_list */
+
+   AstMapping **mymaplist = NULL;
+   PyArrayObject *invlist_in = NULL;
+   PyArrayObject *invlist_out = NULL;
+   PyObject *invlist_object = NULL;
+   PyObject *maplist_object = NULL;
+   PyObject *result = NULL;
+   int *myinvlist = NULL;
+   int i;
+   int myresult;
+   int nmap;
+   int series;
+   int where;
+   npy_intp dims[1];
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "iiOO:" NAME, &where, &series,
+                         &maplist_object, &invlist_object ) && astOK ) {
+
+      if( PySequence_Check( maplist_object ) ) {
+         nmap = PySequence_Length( maplist_object );
+         mymaplist = astCalloc( nmap, sizeof(*mymaplist) );
+         if( astOK ) {
+            for( i = 0; i < nmap; i++ ) {
+               PyObject *o = PySequence_GetItem( maplist_object, (Py_ssize_t) i );
+               if( PyObject_IsInstance( o, (PyObject *) &MappingType ) ) {
+                  mymaplist[ i ] = (AstMapping *) AST( o );
+               } else {
+                  char *buf[200];
+                  sprintf( buf, "Element %d of the 'maplist' argument of the "
+                           "Ast.Mapping.mapmerge() method is a %s (must be "
+                           "an AST Mapping).", i, GetObjectType( o ) );
+                  PyErr_SetString( PyExc_TypeError, buf );
+                  nmap = 0;
+                  break;
+               }
+               Py_XDECREF( o );
+            }
+         }
+      } else {
+         PyErr_SetString( PyExc_TypeError, "The 'maplist' argument of "
+                          "the Ast.Mapping.mapmerge() method must be a "
+                          "list of AST Objects" );
+         nmap = 0;
+      }
+
+      invlist_in = GetArray1I( invlist_object, &nmap, "invlist", NAME );
+      if( invlist_in ) myinvlist = astStore( NULL, (const int *) invlist_in->data,
+                                             nmap*sizeof(*myinvlist) );
+      if( myinvlist ) {
+         myresult = astMapMerge( THIS, where, series, &nmap, &mymaplist,
+                                 &myinvlist );
+
+         maplist_object = PyList_New( (Py_ssize_t) nmap );
+         dims[ 0 ] = nmap;
+         invlist_out = PyArray_SimpleNew( 1, dims, PyArray_INT );
+         if( astOK && maplist_object && invlist_out ) {
+            for( i = 0; i < nmap; i++ ) {
+               invlist_out->data[ i ] = myinvlist[ i ];
+               PyObject *map = NewObject( (AstObject *) mymaplist[ i ] );
+               PyList_SetItem( maplist_object, (Py_ssize_t) i, map );
+               mymaplist[ i ] = astAnnul(  mymaplist[ i ] );
+            }
+
+            result = Py_BuildValue( "iOO", myresult, maplist_object,
+                                     invlist_out );
+         }
+         Py_XDECREF( maplist_object );
+         Py_XDECREF( invlist_out );
+      }
+      mymaplist = astFree( mymaplist );
+      myinvlist = astFree( myinvlist );
+      Py_XDECREF( invlist_in );
+   }
    TIDY;
    return result;
 }
