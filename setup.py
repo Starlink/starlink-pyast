@@ -48,7 +48,7 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
          'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
          'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c', 'specmap.c',
-         'slamap.c', 'chebymap.c', 'unitnormmap.c' )
+         'slamap.c', 'chebymap.c', 'unitnormmap.c', 'pyast_extra.c' )
 
 #  List the erfa source files required by AST.
 erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
