@@ -842,6 +842,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
    PyObject *maplist_object = NULL;
    PyObject *result = NULL;
    int *myinvlist = NULL;
+   int *pi;
    int i;
    int myresult;
    int nmap;
@@ -892,8 +893,9 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
          dims[ 0 ] = nmap;
          invlist_out = PyArray_SimpleNew( 1, dims, PyArray_INT );
          if( astOK && maplist_object && invlist_out ) {
+            pi = ((int *)invlist_out->data);
             for( i = 0; i < nmap; i++ ) {
-               invlist_out->data[ i ] = myinvlist[ i ];
+               *(pi++) = myinvlist[ i ];
                PyObject *map = NewObject( (AstObject *) mymaplist[ i ] );
                PyList_SetItem( maplist_object, (Py_ssize_t) i, map );
                mymaplist[ i ] = astAnnul(  mymaplist[ i ] );
