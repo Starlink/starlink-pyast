@@ -49,7 +49,7 @@ that provides the method.
 <hr>
 <p>
 <div class="implemented" id="AddCell">
-&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astAddCell">astAddCell</a> - Adds a single HEALPix cell into an axisting Moc 
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astAddCell">astAddCell</a> - Adds a single HEALPix cell into an existing Moc 
 <ul>
 <li><span class=inv> moc.addcell( order, npix, cmode=starlink.Ast.OR  )
 </span></li>
@@ -70,9 +70,16 @@ that provides the method.
 </ul>
 </div>
 <div class="implemented" id="AddMocData">
-&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astAddMocData">astAddMocData</a> - Adds a FITS binary table into an axisting Moc 
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astAddMocData">astAddMocData</a> - Adds a FITS binary table into an existing Moc 
 <ul>
 <li><span class=inv> moc.addmocdata( data, cmode=starlink.Ast.OR, negate=False, maxorder=-1  )
+</span></li>
+</ul>
+</div>
+<div class="implemented" id="AddMocString">
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astAddMocString">astAddMocString</a> - Adds a JSON or string-encoded MOC into an existing Moc 
+<ul>
+<li><span class=inv>json = moc.addmocstring( string, cmode=starlink.Ast.OR, negate=False, maxorder=-1  )
 </span></li>
 </ul>
 </div>
@@ -449,6 +456,13 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="GetMocString">
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astGetMocString">astGetMocString</a> - Get the JSON or string-encoded representation of a Moc 
+<ul>
+<li><span class=inv>string = moc.getmocstring( json=False  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="GetRefPos">
 &#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astGetRefPos">astGetRefPos</a> - Return the reference position in a specified celestial coordinate system 
 <ul>
@@ -639,6 +653,14 @@ that provides the method.
 &#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astMoc">astMoc</a> - Create a Moc 
 <ul>
 <li><span class=inv>moc = starlink.Ast.Moc( options=None  )</span></li>
+</ul>
+</div>
+<div class="implemented" id="MocChan">
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astMocChan">astMocChan</a> - Create a MocChan 
+<ul>
+<li><span class=inv>mocchan = starlink.Ast.MocChan( source=None, sink=None, options=None  )</span></li>
+<li class="note">If supplied, the "source" argument can either be a reference to an object that provides a method named "astsource", or a sequence. In the first case, the "source" method is called with no arguments, and should return the next line of text on each invocation, returning None when all text has been read. In the second case, each element of the sequence is converted to a string and used as the next line of text.</li>
+<li class="note">If supplied, the "sink" argument should be a reference to an object that provides a method named "astsink". This method is called with each succesive line of text as its only argument, and should store each line in some external data sink.</li>
 </ul>
 </div>
 <div class="implemented" id="Negate">
