@@ -148,6 +148,9 @@ typedef struct AstMocVtab {
    void (* AddCell)( AstMoc *, int, int, int64_t, int * );
    void (* AddMocData)( AstMoc *, int, int, int, int, int, const void *, int * );
    void (* GetMocData)( AstMoc *, size_t, void *, int * );
+   void (* AddMocString)( AstMoc *, int, int, int, size_t, const char *, int *, int * );
+   void (* GetMocString)( AstMoc *, int, size_t, char *, size_t *, int * );
+
    void (* GetCell)( AstMoc *, int, int *, int64_t *, int * );
    int (* TestCell)( AstMoc *, int, int64_t, int, int * );
 
@@ -245,10 +248,16 @@ void astGetCell_( AstMoc *, int, int *, int64_t *, int * );
 void astAddCell_( AstMoc *, int, int, int64_t, int * );
 void astAddMocData_( AstMoc *, int, int, int, int, int, const void *, int * );
 void astGetMocData_( AstMoc *, size_t, void *, int * );
+void astAddMocString_( AstMoc *, int, int, int, size_t, const char *, int *, int * );
+void astGetMocString_( AstMoc *, int, size_t, char *, size_t *, int * );
 int astTestCell_( AstMoc *, int, int64_t, int, int * );
 AstFitsChan *astGetMocHeader_( AstMoc *, int * );
 
 # if defined(astCLASS)           /* Protected */
+void astMocNorm_( AstMoc *, int, int, int, int, const char *, int *);
+void astAddMocText_( AstMoc *, int, const char *(*)( void *, size_t *, int * ), void *, const char *, int *, int * );
+void astGetMocText_( AstMoc *, int, size_t, void (*)( void *, size_t, const char *, int * ), void *, const char *, int * );
+
 int astGetMocType_( AstMoc *, int * );
 double astGetMocArea_( AstMoc *, int * );
 int astGetMocLength_( AstMoc *, int * );
@@ -315,6 +324,11 @@ astINVOKE(O,astLoadMoc_(mem,size,vtab,name,astCheckChannel(channel),STATUS_PTR))
 astINVOKE(V,astAddRegion_(astCheckMoc(this),cmode,astCheckRegion(region),STATUS_PTR))
 #define astAddMocData(this,cmode,negate,maxorder,len,nbyte,data) \
 astINVOKE(V,astAddMocData_(astCheckMoc(this),cmode,negate,maxorder,len,nbyte,data,STATUS_PTR))
+#define astAddMocString(this,cmode,negate,maxorder,len,string,json) \
+astINVOKE(V,astAddMocString_(astCheckMoc(this),cmode,negate,maxorder,len,string,json,STATUS_PTR))
+#define astGetMocString(this,json,mxsize,string,size) \
+astINVOKE(V,astGetMocString_(astCheckMoc(this),json,mxsize,string,size,STATUS_PTR))
+
 #define astAddCell(this,cmode,order,npix) \
 astINVOKE(V,astAddCell_(astCheckMoc(this),cmode,order,npix,STATUS_PTR))
 #define astTestCell(this,order,npix,parent) \
@@ -354,6 +368,14 @@ astINVOKE(O,astGetMocHeader_(astCheckMoc(this),STATUS_PTR))
 
 
 #if defined(astCLASS)            /* Protected */
+
+#define astMocNorm(this,negate,cmode,nold,maxorder,method) \
+astMocNorm_(astCheckMoc(this),negate,cmode,nold,maxorder,method,STATUS_PTR)
+#define astAddMocText(this,maxorder,source,data,method,json) \
+astAddMocText_(this,maxorder,source,data,method,json,STATUS_PTR)
+#define astGetMocText(this,json,buflen,sink,data,method) \
+astGetMocText_(astCheckMoc(this),json,buflen,sink,data,method,STATUS_PTR)
+
 #define astGetMocType(this) \
 astINVOKE(V,astGetMocType_(astCheckMoc(this),STATUS_PTR))
 #define astGetMocLength(this) \

@@ -167,6 +167,7 @@ MAKE_ISA(Mapping)
 MAKE_ISA(MathMap)
 MAKE_ISA(MatrixMap)
 MAKE_ISA(Moc)
+MAKE_ISA(MocChan)
 MAKE_ISA(NormMap)
 MAKE_ISA(NullRegion)
 MAKE_ISA(Object)
@@ -221,6 +222,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(MathMap,mathmap),
    DEF_ISA(MatrixMap,matrixmap),
    DEF_ISA(Moc,moc),
+   DEF_ISA(MocChan,mocchan),
    DEF_ISA(NormMap,normmap),
    DEF_ISA(NullRegion,nullregion),
    DEF_ISA(Object,object),
@@ -6641,10 +6643,12 @@ typedef struct {
 static int Moc_init( Moc *self, PyObject *args, PyObject *kwds );
 static PyObject *Moc_addcell( Moc *self, PyObject *args );
 static PyObject *Moc_addmocdata( Moc *self, PyObject *args );
+static PyObject *Moc_addmocstring( Moc *self, PyObject *args );
 static PyObject *Moc_addpixelmask( Moc *self, PyObject *args );
 static PyObject *Moc_addregion( Moc *self, PyObject *args );
 static PyObject *Moc_getcell( Moc *self, PyObject *args );
 static PyObject *Moc_getmocdata( Moc *self, PyObject *args );
+static PyObject *Moc_getmocstring( Moc *self, PyObject *args );
 static PyObject *Moc_getmocheader( Moc *self, PyObject *args );
 static PyObject *Moc_testcell( Moc *self, PyObject *args );
 
@@ -6672,10 +6676,12 @@ static PyGetSetDef Moc_getseters[] = {
 static PyMethodDef Moc_methods[] = {
    {"addcell", (PyCFunction)Moc_addcell, METH_VARARGS, "Adds a single HEALPix cell into an existing Moc"},
    {"addmocdata", (PyCFunction)Moc_addmocdata, METH_VARARGS, "Adds a FITS binary table into an existing Moc"},
+   {"addmocstring", (PyCFunction)Moc_addmocstring, METH_VARARGS, "Adds a JSON or string-encoded MOC into an existing Moc"},
    {"addpixelmask", (PyCFunction)Moc_addpixelmask, METH_VARARGS, "Adds a pixel mask to an existing Moc"},
    {"addregion", (PyCFunction)Moc_addregion, METH_VARARGS, "Adds a Region to an existing Moc"},
    {"getcell", (PyCFunction)Moc_getcell, METH_VARARGS, "Identify the next cell included in a Moc"},
    {"getmocdata", (PyCFunction)Moc_getmocdata, METH_VARARGS, "Get the FITS binary table data describing a Moc"},
+   {"getmocstring", (PyCFunction)Moc_getmocstring, METH_VARARGS, "Get the JSON or string-encoded representation of a Moc"},
    {"getmocheader", (PyCFunction)Moc_getmocheader, METH_VARARGS, "Get the FITS binary table headers describing a Moc"},
    {"testcell", (PyCFunction)Moc_testcell, METH_VARARGS, "Test if a single HEALPix cell is included in a Moc"},
    {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -6832,6 +6838,32 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
          Py_INCREF(Py_None);
          result = Py_None;
       }
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".addmocstring"
+static PyObject *Moc_addmocstring( Moc *self, PyObject *args ) {
+
+/* args: json:string,cmode=starlink.Ast.OR,negate=False,maxorder=-1 */
+
+   const char *string = NULL;
+   PyObject *result = NULL;
+   int cmode = AST__OR;
+   int maxorder = -1;
+   int negate = 0;
+   int json;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "s|iii:" NAME, &string, &json,
+                         &cmode, &negate, &maxorder ) && astOK ) {
+      astAddMocString( THIS, cmode, negate, maxorder, strlen(string),
+                       string, &json );
+      if( astOK ) result = Py_BuildValue( "O", (json ?  Py_True : Py_False));
    }
 
    TIDY;
@@ -7094,6 +7126,35 @@ static PyObject *Moc_getmocdata( Moc *self, PyObject *args ) {
       astGetMocData( THIS, dims[ 0 ]*nbyte, data->data );
       if( astOK ) result = Py_BuildValue( "O", data );
       Py_XDECREF( data );
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getmocstring"
+static PyObject *Moc_getmocstring( Moc *self, PyObject *args ) {
+
+/* args: string:json=False */
+
+   PyObject *result = NULL;
+   int json;
+   size_t mxsize;
+   char junk[1];
+   char *buf;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "|i:" NAME, &json ) ) {
+      astGetMocString( THIS, json, 0, junk, &mxsize );
+      buf = astMalloc( mxsize + 1 );
+      astGetMocString( THIS, json, mxsize, buf, &mxsize );
+      if( astOK ) {
+         buf[ mxsize ] = 0;
+         result = Py_BuildValue( "s", buf );
+      }
+      buf = astFree( buf );
    }
 
    TIDY;
@@ -9240,6 +9301,132 @@ static PyObject *FitsChan_purgewcs( FitsChan *self ) {
    TIDY;
    return result;
 }
+
+
+/* MocChan */
+/* ======= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".MocChan"
+
+/* Define the class structure */
+typedef struct {
+   Channel parent;
+} MocChan;
+
+/* Prototypes for class functions */
+static int MocChan_init( MocChan *self, PyObject *args, PyObject *kwds );
+static int MocChan_setproxy( AstObject *this, Object *self );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(MocChan,MocFormat)
+MAKE_GETSETI(MocChan,MocLineLen)
+
+static PyGetSetDef MocChan_getseters[] = {
+   DEFATT(MocFormat,"Whether to use JSON or string format"),
+   DEFATT(MocLineLen,"Controls output line length."),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject MocChanType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(MocChan),           /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST MocChan",             /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   MocChan_getseters,         /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)MocChan_init,    /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+static int MocChan_init( MocChan *self, PyObject *args, PyObject *kwds ){
+
+/* args: :source=None,sink=None,options=None */
+/* Note: If supplied, the "source" argument can either be a reference to an
+         object that provides a method named "astsource", or a sequence. In the
+         first case, the "source" method is called with no arguments, and
+         should return the next line of text on each invocation, returning
+         None when all text has been read. In the second case, each
+         element of the sequence is converted to a string and used as the
+         next line of text. */
+/* Note: If supplied, the "sink" argument should be a reference to an object that
+         provides a method named "astsink". This method is called with each succesive
+         line of text as its only argument, and should store each line in some
+         external data sink. */
+
+   PyObject *source = NULL;
+   PyObject *sink = NULL;
+   const char *(* source_wrap)( void ) = NULL;
+   void (* sink_wrap)( const char * ) = NULL;
+   const char *options = " ";
+   int result = -1;
+   if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
+
+/* Choose the source and sink wrapper functions and store info required
+   by the source and sink functions in the Channel structure. */
+      result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
+                             &sink_wrap );
+
+/* Create the MocChan using the above selected wrapper functions. */
+      if( result == 0 ) {
+         AstMocChan *this = astMocChan( source_wrap, sink_wrap, "%s", options );
+
+/* Set up "self" to be a proxy for "this". */
+         result = MocChan_setproxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+/* Set up "self" to be a proxy for "this". */
+static int MocChan_setproxy( AstObject *this, Object *self ){
+   int result = -1;
+   if( astOK ) {
+
+/* Use the parent class (Channel) to set the proxy and do any other
+   initialisation required by the Channel class. */
+      result = Channel_setproxy( this, self );
+   }
+   return result;
+}
+
+
 
 
 /* StcsChan */
@@ -12527,6 +12714,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&StcsChanType);
    PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
 
+   MocChanType.tp_new = PyType_GenericNew;
+   MocChanType.tp_base = &ChannelType;
+   if( PyType_Ready(&MocChanType) < 0) RETURN( NULL );
+   Py_INCREF(&MocChanType);
+   PyModule_AddObject( m, "MocChan", (PyObject *)&MocChanType);
+
    KeyMapType.tp_new = PyType_GenericNew;
    KeyMapType.tp_base = &ObjectType;
    if( PyType_Ready(&KeyMapType) < 0) RETURN( NULL );
@@ -13119,6 +13312,10 @@ static PyTypeObject *GetType( AstObject *this,
       } else if( !strcmp( class, "StcsChan" ) ) {
          result = (PyTypeObject *) &StcsChanType;
          *setproxy_function = StcsChan_setproxy;
+         *def_function = Channel_def;
+      } else if( !strcmp( class, "MocChan" ) ) {
+         result = (PyTypeObject *) &MocChanType;
+         *setproxy_function = MocChan_setproxy;
          *def_function = Channel_def;
       } else if( !strcmp( class, "KeyMap" ) ) {
          result = (PyTypeObject *) &KeyMapType;

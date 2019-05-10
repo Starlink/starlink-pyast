@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     9-JAN-2019 (makeh):
+*     10-MAY-2019 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -1282,6 +1282,10 @@ enum { AST__NOIMP = 233934458 };
 enum { AST__BGMOC = 233934466 };
 
 enum { AST__INVAR = 233934474 };
+
+enum { AST__INMOC = 233934482 };
+
+enum { AST__SMBUF = 233934490 };
 /* version. */
 /* ======== */
 /* object. */
@@ -3292,6 +3296,8 @@ void astGetCell_( AstMoc *, int, int *, int64_t *, int * );
 void astAddCell_( AstMoc *, int, int, int64_t, int * );
 void astAddMocData_( AstMoc *, int, int, int, int, int, const void *, int * );
 void astGetMocData_( AstMoc *, size_t, void *, int * );
+void astAddMocString_( AstMoc *, int, int, int, size_t, const char *, int *, int * );
+void astGetMocString_( AstMoc *, int, size_t, char *, size_t *, int * );
 int astTestCell_( AstMoc *, int, int64_t, int, int * );
 AstFitsChan *astGetMocHeader_( AstMoc *, int * );
 #define astCheckMoc(this) astINVOKE_CHECK(Moc,this,0)
@@ -3302,6 +3308,9 @@ AstFitsChan *astGetMocHeader_( AstMoc *, int * );
 #define astMoc astINVOKE(F,astMocId_)
 #define astAddRegion(this,cmode,region) astINVOKE(V,astAddRegion_(astCheckMoc(this),cmode,astCheckRegion(region),STATUS_PTR))
 #define astAddMocData(this,cmode,negate,maxorder,len,nbyte,data) astINVOKE(V,astAddMocData_(astCheckMoc(this),cmode,negate,maxorder,len,nbyte,data,STATUS_PTR))
+#define astAddMocString(this,cmode,negate,maxorder,len,string,json) astINVOKE(V,astAddMocString_(astCheckMoc(this),cmode,negate,maxorder,len,string,json,STATUS_PTR))
+#define astGetMocString(this,json,mxsize,string,size) astINVOKE(V,astGetMocString_(astCheckMoc(this),json,mxsize,string,size,STATUS_PTR))
+
 #define astAddCell(this,cmode,order,npix) astINVOKE(V,astAddCell_(astCheckMoc(this),cmode,order,npix,STATUS_PTR))
 #define astTestCell(this,order,npix,parent) astINVOKE(V,astTestCell_(astCheckMoc(this),order,npix,parent,STATUS_PTR))
 #define astGetCell(this,icell,order,npix) astINVOKE(V,astGetCell_(astCheckMoc(this),icell,order,npix,STATUS_PTR))
@@ -3612,6 +3621,36 @@ AstStcObsDataLocation *astStcObsDataLocationId_( void *, int, AstKeyMap **, cons
 /* ======== */
 /* fitschan. */
 /* ========= */
+/* mocchan. */
+/* ======== */
+#define STATUS_PTR astGetStatusPtr
+
+#define AST__MOCCHAN_GETATTRIB_BUFF_LEN 200
+typedef struct AstMocChan {
+
+   AstChannel channel;
+
+   int mocformat;
+   int moclinelen;
+} AstMocChan;
+astPROTO_CHECK(MocChan)
+astPROTO_ISA(MocChan)
+
+AstMocChan *astMocChanId_( const char *(*)( void ), void (*)( const char * ),
+                           const char *, ... );
+AstMocChan *astMocChanForId_( const char *(*)( void ),
+                              char *(*)( const char *(*)( void ), int * ),
+                              void (*)( const char * ),
+                              void (*)( void (*)( const char * ),
+                                        const char *, int * ),
+                              const char *, ... );
+#define astCheckMocChan(this) astINVOKE_CHECK(MocChan,this,0)
+#define astVerifyMocChan(this) astINVOKE_CHECK(MocChan,this,1)
+
+#define astIsAMocChan(this) astINVOKE_ISA(MocChan,this)
+
+#define astMocChan astINVOKE(F,astMocChanId_)
+#define astMocChanFor astINVOKE(F,astMocChanForId_)
 /* stcschan. */
 /* ========= */
 #define STATUS_PTR astGetStatusPtr

@@ -15,6 +15,9 @@ import os
 class TextStream():
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.reset_sink()
         self.reset_source()
 
@@ -1606,6 +1609,35 @@ class TestAst(unittest.TestCase):
 
         self.assertEqual( moc.overlap(moc3), 5 )
         self.assertFalse( moc.testcell( 8, 123456, False ) )
+
+        moc4 = starlink.Ast.Moc()
+        json = moc4.addmocstring( '1/1-2,4 2/12-14,21,23,25 8/' )
+        self.assertFalse( json )
+        self.assertEqual( moc4.getmocstring( True ),
+                          '{"1":[1,2,4],"2":[12,13,14,21,23,25],"8":[]}' )
+
+    def test_MocChan(self):
+        ss = TextStream()
+        ch = starlink.Ast.MocChan(ss, ss, "ReportLevel=3")
+        self.assertIsInstance(ch, starlink.Ast.Object)
+        self.assertIsInstance(ch, starlink.Ast.Channel)
+        self.assertIsInstance(ch, starlink.Ast.MocChan)
+        self.assertTrue(ch.isamocchan())
+        self.assertTrue(ch.isachannel())
+        self.assertTrue(ch.isaobject())
+
+        a = "6/500 7/997,1000-1002 9/"
+        ss.astsink(a)
+        obj = ch.read()
+        self.assertIsInstance(obj, starlink.Ast.Moc)
+        self.assertEqual(obj.Class, "Moc")
+
+        ss.reset()
+        n = ch.write( obj )
+        self.assertEqual(n, 1)
+
+        b = ss.get()
+        self.assertEqual(a, b[0] )
 
     def test_ChebyMap(self):
         lbnd = [0.,0.]

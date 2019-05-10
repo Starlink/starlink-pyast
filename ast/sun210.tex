@@ -10931,7 +10931,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    AST\_ADDCELL
 }{
-   Adds a single HEALPix cell into an axisting Moc
+   Adds a single HEALPix cell into an existing Moc
 }{
    \sstdescription{
       This function modifies a \htmlref{Moc}{Moc} by combining it with a single
@@ -10976,7 +10976,8 @@ Object             - Base class for all AST Objects
          higher than the maximum order allowed in the Moc (as given by its
          \htmlref{MaxOrder}{MaxOrder} attribute). If no value has been set for the MaxOrder
          attribute, calling this method causes it to be set to the supplied
-         order value.
+         order value. So the highest order cells should usually be added
+         first.
       }
       \sstsubsection{
          NPIX = INTEGER$*$8 (Given)
@@ -11214,7 +11215,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    AST\_ADDMOCDATA
 }{
-   Adds a FITS binary table into an axisting Moc
+   Adds a FITS binary table into an existing Moc
 }{
    \sstdescription{
       This function modifies a \htmlref{Moc}{Moc} by combining it with a binary data array
@@ -11317,6 +11318,116 @@ Object             - Base class for all AST Objects
          function will automatically set it to the value supplied for
          MAXORDER,
          or to the largest order present in the supplied binary MOC if
+         MAXORDER  is negative.
+      }
+   }
+}
+\sstroutine{
+   AST\_ADDMOCSTRING
+}{
+   Adds a JSON or string-encoded MOC into an existing Moc
+}{
+   \sstdescription{
+      This function modifies a \htmlref{Moc}{Moc} by combining it with the MOC described
+      by the supplied string - assumed to be encoded using either the string
+      or JSON serialisation described in the MOC recommendation. The way in
+      which they are combined is determined by the
+      CMODE parameter.
+   }
+   \sstinvocation{
+      CALL AST\_ADDMOCSTRING( THIS, CMODE, NEGATE, MAXORDER, LEN, STRING,
+                             JSON, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the Moc to be modified.
+      }
+      \sstsubsection{
+         CMODE = INTEGER (Given)
+      }{
+         Indicates how the supplied MOC is to be combined with the
+         existing Moc. Any of the following values may be supplied:
+         \sstitemlist{
+
+            \sstitem
+             AST\_\_AND: The modified Moc is the intersection of the original
+            Moc and the sipplied MOC.
+
+            \sstitem
+             AST\_\_OR: The modified Moc is the union of the original Moc and
+            the supplied MOC.
+
+            \sstitem
+             AST\_\_XOR: The modified Moc is the exclusive disjunction of the
+            original Moc and the supplied MOC.
+         }
+      }
+      \sstsubsection{
+         NEGATE = LOGICAL (Given)
+      }{
+         If
+         .FALSE.,
+         the cells added to the existing Moc will be those included in the
+         supplied MOC.
+         If
+         .TRUE.,
+         the cells added to the existing Moc will be those not included in the
+         supplied MOC.
+      }
+      \sstsubsection{
+         MAXORDER = INTEGER (Given)
+      }{
+         The maximum HEALPix order to use. If a negative value is supplied,
+         the maximum order will be determined by searching the supplied MOC
+         (this will take extra time). In either case, if a value has already
+         been set for the \htmlref{MaxOrder}{MaxOrder} attribute in the Moc, then the attribute
+         value is used in preference to the value supplied for this parameter.
+         Any HEALPix cells in the supplied MOC that refer to an order greater
+         than
+         MAXORDER
+         are ignored.
+      }
+      \sstsubsection{
+         LEN = INTEGER (Given)
+      }{
+         The number of characters to read from the supplied string. If
+         this is greater than the length of the string, it is ignored and the
+         whole string is read.
+      }
+      \sstsubsection{
+         STRING = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         The
+         array of characters holding the supplied MOC. It should be
+         encoded using either the string or JSON serialisation described
+         in the MOC recommendation. The used serialisation is determined
+         from the first non-blank character, which should be either a
+         curly brace (\texttt{'} \{\texttt{'} - JSON serialisation) or a digit (string
+         serialisation).
+      }
+      \sstsubsection{
+         JSON = LOGICAL (Returned)
+      }{
+         A
+         boolean flag indicating if the supplied string was interpreted
+         using the JSON (.TRUE.) or string (.FALSE.) serialisation.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          If no value has yet been set for attribute MaxOrder, then this
+         function will automatically set it to the value supplied for
+         MAXORDER,
+         or to the largest order present in the supplied string MOC if
          MAXORDER  is negative.
       }
    }
@@ -11686,7 +11797,9 @@ Object             - Base class for all AST Objects
          function will automatically set it to a value that depends on the
          class of Region being added. If the Region being added is another
          Moc, the MaxOrder attribute of the Moc is used. For other classes
-         of Region, a fixed value of 18 is used.
+         of Region, the value used corresponds to the resolution closest to
+         0.1\% of the linear size of the Region being added (determined using
+         method astGetRegionDisc).
       }
    }
 }
@@ -16853,13 +16966,13 @@ Object             - Base class for all AST Objects
          the value of the \htmlref{MocLength}{MocLength} attribute.
       }
       \sstsubsection{
-         ORDER = INTEGER (Given)
+         ORDER = INTEGER (Returned)
       }{
          Returned holding the HEALPix order of the cell at the requested
          index.
       }
       \sstsubsection{
-         NPIX = INTEGER$*$8 (Given)
+         NPIX = INTEGER$*$8 (Returned)
       }{
          Returned holding the \texttt{"} npix\texttt{"}  value of the cell at the requested
          index.
@@ -17432,6 +17545,62 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_GETMOCSTRING
+}{
+   Get the JSON or string-encoded representation of a Moc
+}{
+   \sstdescription{
+      This function stores the JSON or string-encoded representation of
+      the supplied \htmlref{Moc}{Moc} in the supplied string buffer.
+   }
+   \sstinvocation{
+      CALL AST\_GETMOCSTRING( THIS, JSON, MXSIZE, STRING, SIZE, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the Moc.
+      }
+      \sstsubsection{
+         JSON = LOGICAL (Given)
+      }{
+         If .TRUE.,
+         the Moc is encoded using JSON serialisation. Otherwise it is
+         encoded using string-serialisation.
+      }
+      \sstsubsection{
+         MXSIZE = INTEGER (Given)
+      }{
+         The length of the supplied string buffer in bytes. An error will
+         be reported if this value is smaller than the number required to
+         describe the Moc. However, if zero is supplied, the buffer will
+         be ignored - no string will be returned but the required size of
+         the buffer will still be returned in
+         SIZE.
+      }
+      \sstsubsection{
+         STRING( $*$ ) = BYTE (Returned)
+      }{
+         The
+         area of memory in which to return the JSON or string-encoded
+         representation of the Moc. This area is assumed to contain at least
+         MXSIZE bytes. Only used if MXSIZE is greater than zero.
+      }
+      \sstsubsection{
+         SIZE = INTEGER$*$8 (Returned)
+      }{
+         Returned holding the number of bytes needed to store the complete
+         JSON or string-encoded representation of the Moc.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+}
+\sstroutine{
    AST\_GETREFPOS
 }{
    Return the reference position in a specified celestial coordinate system
@@ -17553,6 +17722,65 @@ Object             - Base class for all AST Objects
          \sstitem
           If the bounds on an axis cannot be determined, AST\_\_BAD is returned for
          both upper and lower bounds
+      }
+   }
+}
+\sstroutine{
+   AST\_GETREGIONDisc
+}{
+   Returns the centre and radius of a disc containing a 2D Region
+}{
+   \sstdescription{
+      This routine
+      returns the centre and radius of a disce that just encloses the
+      supplied 2-dimensional \htmlref{Region}{Region}. The centre is returned as a pair
+      of axis values within the \htmlref{Frame}{Frame} represented by the Region. The
+      value of the \htmlref{Negated}{Negated} attribute is ignored (i.e. it is assumed
+      that the Region has not been negated).
+   }
+   \sstinvocation{
+      CALL AST\_GETREGIONDISC( THIS, CENTRE, RADIUS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the Region.
+      }
+      \sstsubsection{
+         CENTRE( 2 ) = DOUBLE PRECISION (Returned)
+      }{
+         A
+         two-element array in which to return the axis values at the centre
+         of the bounding disc.
+      }
+      \sstsubsection{
+         RADIUS = DOUBLE PRECISION (Returned)
+      }{
+         The
+         radius of the bounding disc, as a geodesic distance within the
+         Frame represented by the Region. It will be returned holding
+         AST\_\_BAD If the Region is unbounded.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          An error is reported if the Region is not 2-dimensional.
+
+         \sstitem
+          The value of the Negated attribute is ignored (i.e. it is assumed that
+         the Region has not been negated).
+
+         \sstitem
+          If the Region is unbounded, the radius will be returned set to
+         AST\_\_BAD and the supplied centre axis values will be returned unchanged.
       }
    }
 }
@@ -22992,6 +23220,125 @@ Object             - Base class for all AST Objects
       parameter at the end of the parameter list descirbed above. This
       parameter is a pointer to the integer inherited status
       variable: \texttt{"} int $*$status\texttt{"} .
+   }
+}
+\sstroutine{
+   AST\_MOCCHAN
+}{
+   Create a MocChan
+}{
+   \sstdescription{
+      This function creates a new \htmlref{MocChan}{MocChan} and optionally initialises
+      its attributes.
+
+      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
+      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
+      conventions of the JSON and string encodings described in
+      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
+      to a MocChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Moc is suitable, generate a
+      textual description of that Moc, and reading from a MocChan will
+      create a new Moc from its textual description. See the Moc class
+      for further information.
+
+      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a MocChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstinvocation{
+      RESULT = AST\_MOCCHAN( SOURCE, SINK, OPTIONS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         SOURCE = SUBROUTINE (Given)
+      }{
+         A source routine, which is a subroutine which takes a single
+         integer error status argument.   If no value has been set
+         for the SourceFile attribute, this routine will be used by
+         the MocChan to obtain lines of input text. On each
+         invocation, it should read the next input line from some
+         external data store, and then return the resulting text to
+         the AST library by calling \htmlref{AST\_PUTLINE}{AST\_PUTLINE}. It should supply a
+         negative line length when there are no more lines to read.
+         If an error occurs, it should set its own error status
+         argument to an error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SOURCE value,
+         and no value has been set for the SourceFile attribute,
+         the MocChan will read from standard input instead.
+      }
+      \sstsubsection{
+         SINK = SUBROUTINE (Given)
+      }{
+         A sink routine, which is a subroutine which takes a single
+         integer error status argument.  If no value has been set
+         for the SinkFile attribute, this routine will be used by
+         the MocChan to deliver lines of output text. On each
+         invocation, it should obtain the next output line from the
+         AST library by calling \htmlref{AST\_GETLINE}{AST\_GETLINE}, and then deliver the
+         resulting text to some external data store.  If an error
+         occurs, it should set its own error status argument to an
+         error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SINK value,
+         and no value has been set for the SinkFile attribute,
+         the MocChan will write to standard output instead.
+      }
+      \sstsubsection{
+         OPTIONS = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         A character string containing an optional comma-separated
+         list of attribute assignments to be used for initialising the
+         new MocChan. The syntax used is identical to that for the
+         \htmlref{AST\_SET}{AST\_SET} routine.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_MOCCHAN = INTEGER
+      }{
+         A pointer to the new MocChan.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          The names of the routines supplied for the SOURCE and SINK
+         arguments should appear in EXTERNAL statements in the Fortran
+         routine which invokes AST\_MOCCHAN. However, this is not generally
+         necessary for the null routine AST\_NULL (so long as the AST\_PAR
+         include file has been used).
+
+         \sstitem
+          If the external data source or sink uses a character encoding
+         other than ASCII, the supplied source and sink functions should
+         translate between the external character encoding and the internal
+         ASCII encoding used by AST.
+
+         \sstitem
+          A null \htmlref{Object}{Object} pointer (AST\_\_NULL) will be returned if this
+         function is invoked with the AST error status set, or if it
+         should fail for any reason.
+
+         \sstitem
+          Note that the null routine AST\_NULL (one underscore) is
+         different to AST\_\_NULL (two underscores), which is the null Object
+         pointer.
+      }
    }
 }
 \sstroutine{
@@ -39634,8 +39981,11 @@ Object             - Base class for all AST Objects
           \htmlref{AST\_ADDCELL}{AST\_ADDCELL}: the order of the specified cell.
 
          \sstitem
-          \htmlref{AST\_ADDREGION}{AST\_ADDREGION}: If the added \htmlref{Region}{Region} is a Moc, then the Moc\texttt{'} s MaxOrder
-                          value is used, Otherwise a fixed order of 18 is used.
+          \htmlref{AST\_ADDREGION}{AST\_ADDREGION}: if the added \htmlref{Region}{Region} is a Moc, then the Moc\texttt{'} s MaxOrder
+                         value is used, Otherwise the value used corresponds to
+                         the resolution closest to 0.1\% of the linear size of
+                         the Region being added (determined using method
+                         AST\_GETREGIONDISC).
 
          \sstitem
           \htmlref{AST\_ADDPIXELMASK$<$X$>$}{AST\_ADDPIXELMASK$<$X$>$}: the smallest order that results in the cells in
@@ -39645,6 +39995,9 @@ Object             - Base class for all AST Objects
          \sstitem
           \htmlref{AST\_ADDMOCDATA}{AST\_ADDMOCDATA}: the largest order present in the supplied normalised
           MOC data array.
+
+         \sstitem
+          AST\_ADDMOCString: the largest order present in the supplied MOC.
 
       }
       A default value of -1 will be returned for the MaxOrder attribute
@@ -39818,24 +40171,28 @@ Object             - Base class for all AST Objects
    The lowest HEALPix order used in the MOC
 }{
    \sstdescription{
-      This attribute controls the size of the largest hole that could be
-      missed when adding Regions or pixel masks into a \htmlref{Moc}{Moc} using methods
-      \htmlref{AST\_ADDREGION}{AST\_ADDREGION} or AST\_\_ADDPIXELMASK.
+      This attribute controls the size of the largest hole or island that
+      could be missed when adding Regions or pixel masks into a \htmlref{Moc}{Moc} using
+      methods \htmlref{AST\_ADDREGION}{AST\_ADDREGION} or AST\_\_ADDPIXELMASK.
       It gives the resolution of the initial grid used to identify areas
       that are inside or outside the \htmlref{Region}{Region} or pixel mask, expressed as a
       HEALPix order in the range zero to 27 (this class does not support
-      orders greater than 27). Unselected areas (i.e. bounded \texttt{"} holes\texttt{"}  in
-      the selection) that are smaller than one cell of this initial grid may
-      be missed (i.e. such holes may be \texttt{"} filled in\texttt{"}  in the resulting Moc).
+      orders greater than 27). Unselected areas (i.e. bounded \texttt{"} holes\texttt{"}  or
+      or \texttt{"} islands\texttt{"} in the selection) that are smaller than one cell of this
+      initial grid may be missed (i.e. such holes may be \texttt{"} filled in\texttt{"}  and
+      islands omitted in the resulting Moc).
 
-      The default value is 10, meaning that bounded holes within selected
-      areas may be filled in if the hole is smaller than 3.4 arc-minutes.
-      Increase the value of this attribute to ensures that only holes
-      smaller than this value can be missed. Note, doing so will increase
-      the time spent creating the Moc.
+      The default value is (\htmlref{MaxOrder}{MaxOrder}-4), with a lower limit of zero. For
+      instance, if MaxOrder is 16 (a resolution of 3.2 arc-seconds), then
+      MinOrder will be 12, meaning that bounded holes within selected areas
+      may be filled in if the hole is smaller than 51 arc-seconds. Increase
+      the value of this attribute to ensures that only holes smaller than
+      this value can be missed. Note, doing so will increase the time spent
+      creating the Moc.
 
-      If MinOrder is set greater than \htmlref{MaxOrder}{MaxOrder}, the value of MaxOrder
-      will be used whenever MinOrder is required.
+      To ensure no pixels are missed, set MinOrder to some very large
+      value (larger than 27). If MinOrder is set greater than MaxOrder, the
+      value of MaxOrder will be used whenever MinOrder is required.
 
       The \htmlref{MinRes}{MinRes} attribute is equivalent to MinOrder but expresses the
       resolution as a number of arc-seconds rather than as a HEALPix order.
@@ -39987,6 +40344,53 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   MocFormat
+}{
+   Format for encoding Mocs as text
+}{
+   \sstdescription{
+      This attribute specifies the format to use when AST \htmlref{Moc}{Moc}
+      Objects are converted to text by a \htmlref{MocChan}{MocChan}. There are currently two
+      ways (conventions) by which MOCs may be represented in the form of
+      text and the MocFormat attribute is used to specify which of these
+      should be used:
+
+      \sstitemlist{
+
+         \sstitem
+          \texttt{"} JSON\texttt{"} : Encodes a Moc \htmlref{Object}{Object} as a JSON string using the JSON
+         serialisation described in the MOC recommendation (version 1.1).
+
+         \sstitem
+          \texttt{"} STRING\texttt{"} : Encodes a Moc Object as using the string serialisation
+         described in the MOC recommendation (version 1.1).
+
+      }
+      The value assigned to the MocFormat does not affect the behaviour
+      of the
+      \htmlref{AST\_READ}{AST\_READ}
+      method, which automatically identifies the format used by the
+      external text and sets the MocFormat attribute to the
+      corresponding value.
+
+      The \htmlref{AST\_WRITE}{AST\_WRITE}
+      method will create the external text using the format
+      specified by the current value of the MocFormat attribute.
+
+      The initial default value of the attribute is \texttt{"} UNKNOWN\texttt{"} .
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         MocChan
+      }{
+         All MocChans have this attribute.
+      }
+   }
+}
+\sstroutine{
    MocLength
 }{
    The table length used to describe a Moc in FITS
@@ -40004,6 +40408,37 @@ Object             - Base class for all AST Objects
          Moc
       }{
          All Mocs have this attribute.
+      }
+   }
+}
+\sstroutine{
+   MocLineLen
+}{
+   Controls output buffer length
+}{
+   \sstdescription{
+      This attribute specifies the maximum length to use when writing out
+      text through the sink function supplied when the \htmlref{MocChan}{MocChan} was created.
+
+      The number of characters in each string written out through the sink
+      function will not be greater than the value of this attribute (but
+      may be less). The default value is 80.
+
+      Note, the default value of 80 may not be appropriate when a MocChan
+      is used within Fortran code. In this case, MocLineLen should usually
+      be set to the size of the CHARACTER variable used to receive the
+      text returned by \htmlref{AST\_GETLINE}{AST\_GETLINE} within the sink function. This avoids
+      the possibility of long lines being truncated invisibly within
+      AST\_GETLINE.
+   }
+   \sstattributetype{
+      Integer.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         MocChan
+      }{
+         All MocChans have this attribute.
       }
    }
 }
@@ -46581,8 +47016,6 @@ Object             - Base class for all AST Objects
 
       Note, this class is limited to MOCs for which the number of cells
       in the normalised MOC can be represented in a four byte signed integer.
-      No support is yet provided for the JSON or ASCII formats described
-      in the MOC reommendation.
    }
    \sstconstructor{
       AST\_MOC
@@ -46633,10 +47066,10 @@ Object             - Base class for all AST Objects
           \htmlref{AST\_ADDCELL}{AST\_ADDCELL}: Adds a single HEALPix cell into an existing Moc
 
          \sstitem
-          AST\_ADDMOC: Adds another Moc object into an existing Moc
+          ADT\_ADDMOCDATA: Adds a FITS binary table into an existing Moc
 
          \sstitem
-          ADT\_ADDMOCDATA: Adds a FITS binary table into an existing Moc
+          ADT\_ADDMOCSTRING: Adds a JSON or string-encoded MOC into an existing Moc
 
          \sstitem
           \htmlref{AST\_ADDPIXELMASK$<$X$>$}{AST\_ADDPIXELMASK$<$X$>$}: Adds a pixel mask to an existing Moc
@@ -46654,8 +47087,69 @@ Object             - Base class for all AST Objects
           \htmlref{AST\_GETMOCHEADER}{AST\_GETMOCHEADER}: Get the FITS binary table headers describing a Moc
 
          \sstitem
+          \htmlref{AST\_GETMOCSTRING}{AST\_GETMOCSTRING}: Get the JSON or string-encoded form of a Moc
+
+         \sstitem
           \htmlref{AST\_TESTCELL}{AST\_TESTCELL}: Test if a single HEALPix cell is included in a Moc
       }
+   }
+}
+\sstroutine{
+   MocChan
+}{
+   I/O Channel for textual representations of Mocs
+}{
+   \sstdescription{
+      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
+      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
+      conventions of the JSON and string encodings described in
+      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
+      to a MocChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Moc is suitable, generate a
+      textual description of that Moc, and reading from a MocChan will
+      create a new Moc from its textual description. See the Moc class
+      for further information.
+
+      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a MocChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstconstructor{
+      \htmlref{AST\_MOCCHAN}{AST\_MOCCHAN}
+   }
+   \sstdiytopic{
+      Inheritance
+   }{
+      The MocChan class inherits from the Channel class.
+   }
+   \sstdiytopic{
+      Attributes
+   }{
+      In addition to those attributes common to all Channels, every
+      MocChan also has the following attributes:
+
+      \sstitemlist{
+
+         \sstitem
+          \htmlref{MocFormat}{MocFormat}: Whether to use JSON or string format
+
+         \sstitem
+          \htmlref{MocLineLen}{MocLineLen}: Controls output buffer length
+      }
+   }
+   \sstdiytopic{
+      Functions
+   }{
+      The MocChan class does not define any new routines beyond those
+      which are applicable to all Channels.
    }
 }
 \sstroutine{
@@ -47752,7 +48246,7 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
-          \htmlref{AST\_GETREGIONBOUNDS}{AST\_GETREGIONBOUNDS}: Get the bounds of a Region
+          \htmlref{AST\_GETREGIONBOUNDS}{AST\_GETREGIONBOUNDS}: Get the bounds of a box containing a Region
 
          \sstitem
           \htmlref{AST\_GETREGIONFRAME}{AST\_GETREGIONFRAME}: Get a copy of the Frame represent by a Region
@@ -47765,6 +48259,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           \htmlref{AST\_GETREGIONPOINTS}{AST\_GETREGIONPOINTS}: Get the positions that define a Region
+
+         \sstitem
+          AST\_GETREGIONDISC: Get the bounds of disc containing a Region
 
          \sstitem
           \htmlref{AST\_GETUNC}{AST\_GETUNC}: Obtain uncertainty information from a Region
@@ -53101,15 +53598,17 @@ weight when pasting each separate input data array into the output mosaic.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V8.7.0}
-The following describes the most significant changes which have
-occurred in the AST library between versions V8.6.3 and V8.7.0 (the
-current version):
+\subsection{Changes Introduced in V8.7.0}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.6.3 and V8.7.0:
 
 \begin{enumerate}
 
-\item A new subclass of \htmlref{Region}{Region} called ``\htmlref{Moc}{Moc}'' has been added. A Moc
+\item The \htmlref{Region}{Region} class has a new method called astGetRegionDisc, which
+returns the centre and radius of a disc that just encloses a
+2-dimensional Region.
+
+\item A new subclass of Region called ``\htmlref{Moc}{Moc}'' has been added. A Moc
 describes an arbitrary region of the sky in the form of a set of HEALPix
 cells.
 
@@ -53118,6 +53617,24 @@ non-zero for Regions defined within a \htmlref{SkyFrame}{SkyFrame}, regardless o
 Region has been negated. Previously, it was non-zero only if the Region
 had not been negated. Note, this change only affects Regions defined
 within SkyFrames.
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V8.7.1}
+The following describes the most significant changes which have
+occurred in the AST library between versions V8.7.0 and V8.7.1 (the
+current version):
+
+\begin{enumerate}
+
+\item The \htmlref{Moc}{Moc} class now supports version 1.1 of the the MOC recommendation.
+This includes new support for string and JSON encoded MOCs. See methods
+astGetMocString and astAddMocString in the Moc class, and also the new
+\htmlref{MocChan}{MocChan} class.
+
+\item The \htmlref{FitsChan}{FitsChan} class will now read FITS-WCS headers that have
+alternate axis descriptions but no primary axis descriptions.
 
 \end{enumerate}
 

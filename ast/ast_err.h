@@ -504,5 +504,11 @@ enum { AST__BGMOC           	= 233934466 };	/* messid=464 */
 /* Invalid argument value supplied to an AST method */
 enum { AST__INVAR           	= 233934474 };	/* messid=465 */
 
+/* Invalid string-encoded MOC */
+enum { AST__INMOC           	= 233934482 };	/* messid=466 */
+
+/* Supplied buffer too small */
+enum { AST__SMBUF           	= 233934490 };	/* messid=467 */
+
 
 #endif	/* AST_ERROR_DEFINED */
