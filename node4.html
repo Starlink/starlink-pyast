@@ -463,6 +463,7 @@ table.writeto( 'astmoc.fits', overwrite=True )
 
 </pre>
 
+
 <h4 id="ex14">...Check for overlap between a FITS image and a FITS MOC</h4>
 <pre class=pycode>
 
@@ -522,6 +523,62 @@ else:
 
 </pre>
 
+
+<h4 id="ex15">...Read a MOC from a text file and plot its outline</h4>
+<pre class=pycode>
+import starlink.Ast as Ast
+
+#  Read the contents of the text file as a single string.
+with open('moc.txt', 'r') as file:
+    data = file.read()
+
+#  Create an empty Moc.
+moc = Ast.Moc()
+
+#  Add the data read from the text file into the empty Moc.
+is_json = moc.addmocstring( data )
+if is_json:
+   print("Read a JSON-encoded MOC from file 'moc.txt'")
+else:
+   print("Read a string-encoded MOC from file 'moc.txt'")
+
+#  After establishing a Plot as shown in the earlier example, "Display a
+#  Graphical Coordinate Grid Over a Greyscale Image", the outline of the
+#  MOC can be drawn as follows.
+plot.regionoutline( moc )
+
+</pre>
+
+<h4 id="ex16">...Create a string-encoded MOC describing a specified set of cells</h4>
+<pre class=pycode>
+import starlink.Ast as Ast
+
+#  Create an empty MOC, specifying its maximum order as 6 (about 1 degree)
+moc = Ast.Moc()
+moc.MaxOrder = 6
+
+#  Add in the four order 5 cells that touch the ICRS origin (RA=0,Dec=0)
+moc.addcell( 5, 4522 )
+moc.addcell( 5, 4864 )
+moc.addcell( 5, 4693 )
+moc.addcell( 5, 4351 )
+
+#  Remove the four order 6 cells that touch the ICRS origin, thus leaving
+#  a hole in the coverage at (RA=0,Dec=0).
+moc.addcell( 6, 17407, Ast.XOR )
+moc.addcell( 6, 18090, Ast.XOR )
+moc.addcell( 6, 18773, Ast.XOR )
+moc.addcell( 6, 19456, Ast.XOR )
+
+#  Convert the Moc to a string using the "string-encoding" defined in the
+#  IVOA's MOC standard.
+print( moc.getmocstring() )
+
+
+
+
+
+</pre>
 
 
 </body>
