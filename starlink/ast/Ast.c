@@ -7139,7 +7139,7 @@ static PyObject *Moc_getmocstring( Moc *self, PyObject *args ) {
 /* args: string:json=False */
 
    PyObject *result = NULL;
-   int json;
+   int json = 0;
    size_t mxsize;
    char junk[1];
    char *buf;
