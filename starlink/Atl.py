@@ -96,8 +96,15 @@ class PyFITSAdapter:
         except TypeError:
             self.hdu = hdu
 
-#  Initialise the index of the next card to read or write.
+#  Initialise the index within the pyfits header of the next card to read or write.
         self.index = 0
+
+#  The PyFits header may contatenate CONTINUE cards into a single card
+#  "image". The source function defined below will split such long images up
+#  into two or more sub-cards. These are managed using the following values.
+        self.subcards = None
+        self.nextsub = 0
+        self.nsub = 0
 
 #  Record whether the PyFITS header should be emptied before writing to
 #  it for the first time
@@ -118,9 +125,25 @@ class PyFITSAdapter:
         indicate that there are no more header cards to read.
         """
 
-        if self.index < len(self.hdu.header.cards):
-            result = self.hdu.header.cards[self.index].image
+        if self.subcards is not None:
+            result = self.subcards[ self.nextsub ]
+            self.nextsub += 1
+            if self.nextsub == self.nsub:
+               self.subcards = None
+
+        elif self.index < len(self.hdu.header.cards):
+            cards = self.hdu.header.cards[self.index].image
             self.index += 1
+
+            ln = len(cards)
+            if ln <= 80:
+               result = cards
+            else:
+               self.subcards = [ cards[i:i+80] for i in range(0,len(cards),80)]
+               self.nsub = len( self.subcards )
+               result = self.subcards[ 0 ]
+               self.nextsub = 1
+
         else:
             result = None
             self.index = 0
@@ -155,18 +178,18 @@ class PyFITSAdapter:
             else:
                 self.hdu.header.update(card.key, card.value, card.comment)
 
-#  Astropy, pyfits 3.1.0 and later
+#  Astropy, pyfits 3.1.0 and later.
         else:
-            if card.keyword == "" or card.keyword == "BLANK":
-                self.hdu.header.add_blank()
-            elif card.keyword == "COMMENT":
-                self.hdu.header.add_comment(card.value)
-            elif card.keyword == "HISTORY":
-                self.hdu.header.add_history(card.value)
-            else:
-                self.hdu.header[card.keyword] = (card.value, card.comment)
 
-        self.index += 1
+#  Doesn't seem to be any way to store a CONTINUE card, so all that is
+#  left is to truncated them by ignoring the continuations :-(
+           if card.keyword != "CONTINUE":
+              if isinstance( card.value, str ) and card.value.endswith('&'):
+                 value = card.value[:-1]
+              else:
+                 value = card.value
+              self.hdu.header.append((card.keyword,value,card.comment),end=True)
+              self.index += 1
 
 
 # ======================================================================
