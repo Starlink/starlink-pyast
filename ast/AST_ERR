@@ -665,3 +665,15 @@
       INTEGER AST__INVAR
       PARAMETER ( AST__INVAR = 233934474 )
 
+*     Invalid string-encoded MOC
+      INTEGER AST__INMOC
+      PARAMETER ( AST__INMOC = 233934482 )
+
+*     Supplied buffer too small
+      INTEGER AST__SMBUF
+      PARAMETER ( AST__SMBUF = 233934490 )
+
+*     Word is too long
+      INTEGER AST__BGWRD
+      PARAMETER ( AST__BGWRD = 233934498 )
+

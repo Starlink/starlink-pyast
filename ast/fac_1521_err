@@ -165,3 +165,6 @@ FACILITY AST
 463,NOIMP,Class does not implement the invoked method
 464,BGMOC,Normalised MOC is too big
 465,INVAR,Invalid argument value supplied to an AST method
+466,INMOC,Invalid string-encoded MOC
+467,SMBUF,Supplied buffer too small
+468,BGWRD,Word is too long

@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     10-MAY-2019 (makeh):
+*     20-SEP-2019 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -549,11 +549,11 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* ===== */
 #define AST__VMAJOR 8
 #define AST__VMINOR 7
-#define AST__RELEASE 0
+#define AST__RELEASE 2
 
 #define AST_MAJOR_VERS 8
 #define AST_MINOR_VERS 7
-#define AST_RELEASE 0
+#define AST_RELEASE 2
 
 #include <stdarg.h>
 #include <float.h>
@@ -582,6 +582,10 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 #define astEQUAL(aa,bb) astEQUALS(aa,bb,1.0E5)
 
 #define AST__NULL (astI2P(0))
+#include <stdint.h>
+#include <inttypes.h>
+typedef int64_t AstDim;
+#define AST__DIMFMT PRId64
 typedef struct AstObject {
 
    unsigned long check;
@@ -809,8 +813,6 @@ void astShowPoints_( AstPointSet *, int * );
 #define astBndPoints(this,lbnd,ubnd) astINVOKE(V,astBndPoints_(astCheckPointSet(this),lbnd,ubnd,STATUS_PTR))
 #define astReplaceNaN(this) astINVOKE(V,astReplaceNaN_(astCheckPointSet(this),STATUS_PTR))
 #define astShowPoints(this) astINVOKE(V,astShowPoints_(astCheckPointSet(this),STATUS_PTR))
-
-#include <stdint.h>
 #define STATUS_PTR astGetStatusPtr
 
 #define AST__MAPPING_GETATTRIB_BUFF_LEN 50
@@ -1286,6 +1288,8 @@ enum { AST__INVAR = 233934474 };
 enum { AST__INMOC = 233934482 };
 
 enum { AST__SMBUF = 233934490 };
+
+enum { AST__BGWRD = 233934498 };
 /* version. */
 /* ======== */
 /* object. */
@@ -3266,6 +3270,7 @@ typedef struct AstMoc {
    double ubnd[ 2 ];
    int *inorm;
    int *meshdist;
+   int mdlen;
    int maxorder;
    int minorder;
    int moclength;

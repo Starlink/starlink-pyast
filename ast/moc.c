@@ -124,6 +124,16 @@ f     - AST_TESTCELL: Test if a single HEALPix cell is included in a Moc
 *     7-MAY-2019 (DSB):
 *        Modify astAddMocString and astGetMocString so that they can
 *        handle JSON encoding as well as string encodiing.
+*     12-SEP-2019 (DSB):
+*        - Fix bugs in RegBaseMesh that could cause complex outlines to
+*        fail.
+*        - Check for illegal order values possibly caused by inappropriate
+*        removal of white space within the source function when reading
+*        string encoded MOCs.
+*     17-SEP-2019 (DSB):
+*        Modify the meshdist attribute of the Moc structure so that each
+*        disjoint region ends with a copy of the first point in the region.
+*        This causes the boundary drawn around each region to be closed.
 *class--
 */
 
@@ -413,10 +423,17 @@ static void Sink2( void *, size_t, const char *, int * );
 static const char *Source1( void *, size_t *, int * );
 static void TestPixels( PixelMask *, int *, AstPointSet *, int[9], int *);
 
-/* For debugging of astRegBaseMesh and astRegTrace......
+/* For debugging of astRegBaseMesh and astRegTrace. If the macro
+   MESH_DEBUG is defined, output ascii tables will be created when the
+   boundary of a MOC is plotted. The moctohtml script in the ast_tester
+   subdirectory of AST will convert these ascii tables into an HTML file
+   that allows the boundary-walking algorithm to be explored in a web
+   browser. See moctohtml for more details. */
+#ifdef MESH_DEBUG
 static void dump_cell( AstMoc *, Cell *, int );
 static void dump_corner( Corner *this, int );
-static void dump_moc( AstMoc *, const char *, int *); */
+static void dump_moc( AstMoc *, const char *, int *);
+#endif
 
 static const char *GetAttrib( AstObject *, const char *, int * );
 static void ClearAttrib( AstObject *, const char *, int * );
@@ -1035,8 +1052,8 @@ void astAddMocText_( AstMoc *this, int maxorder,
 *        supplied MOC that refer to an order greater than "maxorder" are
 *        ignored.
 *     source
-*        A function to call to read in each section of the MOC's string
-*        representation. It should have the following synopsis:
+*        A function that will be called to read in each section of the MOC's
+*        string representation. It should have the following synopsis:
 *
 *        const char *source( void *data, size_t *nc, int *status )
 *
@@ -1193,6 +1210,13 @@ void astAddMocText_( AstMoc *this, int maxorder,
                } else if( state == 2 ) {
                   if( isdigit( *pt ) ) {
                      order = ( *pt - '0' ) + 10*order;
+                     if( order > AST__MXORDHPX ){
+                        astError( AST__INMOC, "%s(%s): Error reading JSON MOC: '%.30s...'",
+                                  status, method, astGetClass( this ), text );
+                        astError( AST__INMOC, "Invalid MOC order %d encountrered.",
+                                  status, order );
+                        break;
+                     }
                   } else if( *pt == '"' ) {
                      state = 3;
                   } else {
@@ -1410,6 +1434,13 @@ void astAddMocText_( AstMoc *this, int maxorder,
    maximum order and then look for the start of the next numerical value. */
                   } else if( *pt == '/' ) {
                      order = npix;
+                     if( order > AST__MXORDHPX ){
+                        astError( AST__INMOC, "%s(%s): Error reading string MOC: '%.30s...'",
+                                  status, method, astGetClass( this ), text );
+                        astError( AST__INMOC, "Invalid MOC order %d encountrered.",
+                                  status, order );
+                        break;
+                     }
                      if( order > mxord ) mxord = order;
                      state = 1;
 
@@ -1448,86 +1479,103 @@ void astAddMocText_( AstMoc *this, int maxorder,
          text = (*source)( data, &nc, status );
       }
 
+/* Check no error has occurred. */
+      if( astOK ) {
+
+/* Report an error if no text was obtained. */
+         if( state == 0 ) {
+            astError( AST__INMOC, "%s(%s): Blank MOC text supplied.",
+                      status, method, astGetClass( this ) );
+
 /* Check JSON mocs are terminated properly. */
-      if( *json ) {
-         if( state != 9 && astOK ) {
-            astError( AST__INMOC, "%s(%s): Invalid JSON MOC supplied: '%.30s...'",
-                      status, method, astGetClass( this ), text );
-            astError( AST__INMOC, "No closing curly brace found.", status );
-         }
+         } else if( *json ) {
+            if( state != 9 && astOK ) {
+               astError( AST__INMOC, "%s(%s): Invalid JSON MOC supplied: '%.30s...'",
+                         status, method, astGetClass( this ), text );
+               astError( AST__INMOC, "No closing curly brace found.", status );
+            }
 
 /* Incorporate any final numerical value in a string moc. The end of
    string is like a terminator (space or comma) in "state 2" for
    string mocs above. */
-      } else if( state == 2 ) {
-         if( order < 0 ) {
-            astError( AST__INMOC, "%s(%s): Invalid string MOC supplied: '%.30s...'",
-                      status, method, astGetClass( this ), text );
-            astError( AST__INMOC, "No order value found at start of string.",
-                      status );
-         }
-
-         if( !isrange ) {
-            npix0 = npix;
-            nadd = 1;
-         } else {
-            isrange = 0;
-            nadd = npix - npix0 + 1;
-         }
-
-         nval = orders[ order ].nval;
-         nbyte = ( nval + nadd )*sizeof( size_t );
-         values = astGrow( orders[ order ].values, 1, nbyte );
-         if( astOK ) {
-            for( ; npix0 <= npix; npix0++ ) {
-               values[ nval++ ] = npix0;
+         } else if( state == 2 ) {
+            if( order < 0 ) {
+               astError( AST__INMOC, "%s(%s): Invalid string MOC supplied: '%.30s...'",
+                         status, method, astGetClass( this ), text );
+               astError( AST__INMOC, "No order value found at start of string.",
+                         status );
             }
 
-            orders[ order ].values = values;
-            orders[ order ].nval = nval;
+            if( !isrange ) {
+               npix0 = npix;
+               nadd = 1;
+            } else {
+               isrange = 0;
+               nadd = npix - npix0 + 1;
+            }
+
+            nval = orders[ order ].nval;
+            nbyte = ( nval + nadd )*sizeof( size_t );
+            values = astGrow( orders[ order ].values, 1, nbyte );
+            if( astOK ) {
+               for( ; npix0 <= npix; npix0++ ) {
+                  values[ nval++ ] = npix0;
+               }
+
+               orders[ order ].values = values;
+               orders[ order ].nval = nval;
+            }
          }
-      }
 
 /* If the MaxOrder attribute is set in the Moc, use it in preference to
    the value supplied for parameter "maxorder". */
-      if( astTestMaxOrder( this ) ) {
-         maxorder = astGetMaxOrder( this );
+         if( astTestMaxOrder( this ) ) {
+            maxorder = astGetMaxOrder( this );
 
 /* Otherwise, we use the supplied "maxorder" value unless "maxorder" was
    not supplied (i.e. is negative), in which case we use the value
    determind above from the supplied text. */
-      } else {
-         if( maxorder < 0 ) maxorder = mxord;
-         astSetMaxOrder( this, maxorder );
-      }
+         } else {
+            if( maxorder < 0 ) {
+               if( mxord < 0 && astOK ) {
+                  astError( AST__INMOC, "%s(%s): Failed to read string MOC.",
+                         status, method, astGetClass( this ) );
+                  astError( AST__INMOC, "No order value found.", status );
+               } else {
+                  maxorder = mxord;
+               }
+            }
+            astSetMaxOrder( this, maxorder );
+         }
 
 /* For each order and NPIX value found during the parsing of the text
    (except for any that have an order greater than 'maxorder', which are
    ignored), get the upper and lower bounds of the cells at maxorder
    contained within this cell, and append this as a new range to the Moc. */
-      for( order = 0; order <= maxorder; order++ ) {
-         nval = orders[ order ].nval;
-         values = orders[ order ].values;
-         shift = 2*( maxorder - order );
+         for( order = 0; order <= maxorder; order++ ) {
+            nval = orders[ order ].nval;
+            values = orders[ order ].values;
+            shift = 2*( maxorder - order );
 
-         for( ipix = 0; ipix < nval; ipix++,values++ ){
+            for( ipix = 0; ipix < nval; ipix++,values++ ){
 
-            ilow = ( *values << shift );
-            ihigh = ( (*values + 1 ) << shift ) - 1;
+               ilow = ( *values << shift );
+               ihigh = ( (*values + 1 ) << shift ) - 1;
 
-            irange = this->nrange++;
-            this->range = astGrow( this->range, this->nrange, 2*sizeof(*(this->range)) );
-            if( astOK ) {
-               pr = this->range + 2*irange;
-               pr[ 0 ] = ilow;
-               pr[ 1 ] = ihigh;
-            } else {
-               break;
+               irange = this->nrange++;
+               this->range = astGrow( this->range, this->nrange, 2*sizeof(*(this->range)) );
+               if( astOK ) {
+                  pr = this->range + 2*irange;
+                  pr[ 0 ] = ilow;
+                  pr[ 1 ] = ihigh;
+               } else {
+                  break;
+               }
             }
-         }
 
 /* Free the list of NPIX values at each order. */
-         orders[ order ].values = astFree( orders[ order ].values );
+            orders[ order ].values = astFree( orders[ order ].values );
+         }
       }
    }
 }
@@ -2740,6 +2788,7 @@ static void ClearCache( AstMoc *this, int *status ){
    orders the mesh points around the perimeter. */
    if( this->basemesh ) this->basemesh = astAnnul( this->basemesh );
    this->meshdist = astFree( this->meshdist );
+   this->mdlen = 0;
 
 /* Indicate the bounding box needs to be recalculated. */
    this->lbnd[ 0 ] = AST__BAD;
@@ -4740,6 +4789,7 @@ void astGetMocText_( AstMoc *this, int json, size_t buflen,
    order = -1;
    npix_start = 0;
    npix_prev = 0;
+   npix = 0;
    moclen = astGetMocLength( this );
    for( icell = 0; icell < moclen; icell++ ){
 
@@ -4805,13 +4855,15 @@ void astGetMocText_( AstMoc *this, int json, size_t buflen,
       }
    }
 
-/* Terminate the last pixlist. */
-   if( json ) {
-      nc = sprintf( token, "]" );
-      TOKEN_WRITE;
-   } else if( npix_start < npix ) {
-      nc = sprintf( token, "-%zu", npix );
-      TOKEN_WRITE;
+/* Terminate the last pixlist (if any pixlist has been started). */
+   if( !first ) {
+      if( json ) {
+         nc = sprintf( token, "]" );
+         TOKEN_WRITE;
+      } else if( npix_start < npix ) {
+         nc = sprintf( token, "-%zu", npix );
+         TOKEN_WRITE;
+      }
    }
 
 /* If the Moc's maximum order has not yet been reached, append it
@@ -4819,9 +4871,9 @@ void astGetMocText_( AstMoc *this, int json, size_t buflen,
    maxorder = astGetMaxOrder( this );
    if( order < maxorder ) {
       if( json ) {
-         nc = sprintf( token, ",\"%d\":[]", maxorder );
+         nc = sprintf( token, first?"{\"%d\":[]":",\"%d\":[]", maxorder );
       } else {
-         nc = sprintf( token, " %d/", maxorder );
+         nc = sprintf( token, first?"%d/":" %d/", maxorder );
       }
       TOKEN_WRITE;
    }
@@ -6220,7 +6272,7 @@ void astMocNorm_( AstMoc *this, int negate, int cmode, int nold,
 
 *  Description:
 *     This function normalises the supplied Moc. It is assumed that the
-*     ranges of HEALPix cell indices within Moc structure are in two
+*     ranges of HEALPix cell indices within the Moc structure are in two
 *     groups: 1) range zero to range 'nold-1' are assumed to be already
 *     normalised, 2) ranges 'nold' to the end are assumed not be be
 *     normalised.
@@ -6318,30 +6370,39 @@ static void NegateRanges( AstMoc *this, int start, int order,
 /* Check inherited status */
    if( !astOK ) return;
 
-/* Nothing to do if the Moc is empty. */
-   if( this->nrange > 0 ) {
+/* Nothing to do if the Moc is empty, or no ranges are to be negated. */
+   if( this->nrange > 0 && start < this->nrange ) {
 
-/* Get the maximum number of nested indices at the highest order in use. */
+/* Get the maximum number of nested indices at the highest order in use.
+   The indices go from zero to (max_nest-1). */
       max_nest = 12*( 1L << 2*order );
 
-/* Does the first range start at zero? If so, there is no gap before it. */
+/* Does the first range to be negated start at zero? If so, there is no
+   gap before it. */
       if( this->range[ 2*start ] == 0 ) {
 
-/* Loop round all the new ranges stored in the Moc above. Replace each
-   range with the gap between it and the following range. */
+/* Loop round all the ranges to be negated. Replace each range with the gap
+   between it and the following range. */
          pr = this->range + 2*start;
          for( irange = start; irange < this->nrange; irange++ ) {
 
-/* The start of the next "gap" is the end of the current "range". */
-            pr[ 0 ] = pr[ 1 ] + 1;
-
-/* Check that the current range does not extend all the way to the last
-   nested index value. If it does not, stoe the end of the current gap.
-   If it does, break out of the range loop. */
-            if( pr[ 0 ] < max_nest ) {
-               pr[ 1 ] = pr[ 2 ] - 1;
-            } else {
+/* If the current range extends all the way to the last nested index
+   value, there is no gap after it, so break out of the loop without
+   storing another gap. */
+            if( pr[ 1 ] >= max_nest - 1 ) {
                break;
+
+/* Otherwise, if there is another range to do, store the gap between the
+   end of the current range and the start of the next range. */
+            } else if( irange < this->nrange - 1 ) {
+               pr[ 0 ] = pr[ 1 ] + 1;
+               pr[ 1 ] = pr[ 2 ] - 1;
+
+/* Otherwise, if this is the last range, store the gap between the
+   end of the current range and the last nested index value. */
+            } else {
+               pr[ 0 ] = pr[ 1 ] + 1;
+               pr[ 1 ] = max_nest - 1;
             }
 
 /* Increment the pointer to the next range. */
@@ -6356,17 +6417,19 @@ static void NegateRanges( AstMoc *this, int start, int order,
    will be a gap before it. */
       } else {
 
-/* Loop round all the new ranges stored in the Moc above. Replace each
-   range with the gap between it and the preceding range. */
+/* Loop round all the ranges to be negated. Replace each range with the
+   gap between it and the preceding range (or cell zero if there is no
+   preceding range). */
          istart = 0;
          pr = this->range + 2*start;
          for( irange = start; irange < this->nrange; irange++ ) {
 
-/* Record the index at which the next gap starts. */
+/* Record the index at which the next gap (if any) starts. */
             next_start = pr[ 1 ] + 1;
 
 /* The end of the "current range" is changed to be the end of the gap
-   between the previous range and the current range. */
+   between the previous range and the current range. Note, we have
+   already checked that "pr[0]" is greater than zero. */
             pr[ 1 ] = pr[ 0 ] - 1;
 
 /* The start of the "current range" is changed to be the start of the gap
@@ -6977,15 +7040,20 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
    double **ptr;
    double *pdec;
    double *pra;
+   int *newdist;
    int *pni;
    int core;
    int dist;
+   int dstart;
    int icell;
    int icorner;
+   int i;
    int ix;
    int iy;
+   int j;
    int maxorder;
    int minorder;
+   int ndis;
    int npoint;
    int nused;
    int order;
@@ -7018,6 +7086,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
       this->basemesh = astPointSet( 1, 2, "", status );
       ptr = astGetPoints( this->basemesh );
       this->meshdist = astMalloc( sizeof( *(this->meshdist ) ) );
+      this->mdlen = 1;
       if( ptr ) {
          ptr[ 0 ][ 0 ] = AST__BAD;
          ptr[ 1 ][ 0 ] = AST__BAD;
@@ -7029,7 +7098,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
    } else {
 
 /* Get the resolution of the Moc. Convert from arc-seconds to radians.
-   Use a tenbgth of the MOC resolution at the current order. */
+   Use a tenth of the MOC resolution at the current order. */
       Comp_Corner_Tol = 0.1*AST__DD2R*OrderToRes( astGetMaxOrder( this ) )/3600.0;
 
 /* Initialise pointers to the end of the chain of Cell structures at each
@@ -7038,7 +7107,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
          cell_foot[ order ] = NULL;
       }
 
-/* Ensure the the normalised form of the MOC is available. */
+/* Ensure the normalised form of the MOC is available. */
       GetNorm( this, "astRegBaseMesh", status );
 
 /* Set the pointer to the first nuniq value in the normalised moc. Use a
@@ -7083,10 +7152,10 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
       }
 
 /* Find the edges of the cells at increasing orders. Each pass round this
-   loop moves bundary cells from 'order' to the equivalent 4 child cells
-   at 'order+1', and then deletes all remaining cells at 'order'. So after
-   the final pass (which has order = maxorder-1), all cells will be at
-   order 'maxorder'. */
+   loop moves boundary cells from 'order' to the equivalent 4 child cells
+   at 'order+1', and then deletes all remaining (i.e. non-boundary) cells
+   at 'order'. So after the final pass (which has order = maxorder-1), all
+   cells will be at order 'maxorder'. */
       for( order = minorder; order < maxorder; order++ ) {
 
 /* Skip this order if there are no cells at it. */
@@ -7094,7 +7163,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
 
 /* Create chains of Corner structures for all cells at the current order.
    A Corner holds the (RA,Dec) of a point on the sky, plus pointers to
-   up to four Cell structures that has that point at one of its corners.
+   up to four Cell structures that have that point at one of its corners.
    A Corner is an "interior position" if it corresponds to a corner of
    exactly four cells (there are a few special cases where interior
    points may only be used by 3 cells). Note, whether a corner is
@@ -7217,11 +7286,33 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
          }
       }
 
-/* All cells are now at the maximum order. Create the chain of Corners
-   for the cells at this order. Indicate that the chain should be sorted
+/* All cells are now at the maximum order and "core" cells have been
+   removed (i.e. each remaining cell is either a boundary cell or
+   adjacent to a boundary cell). Create the chain of Corners for the
+   cells at this order.  Indicate that the chain should be sorted
    (primary key is Dec, secondary key is RA). */
       MakeCorners( this, maxorder, cell_foot[ maxorder ], &corner_foot,
                    1, status );
+
+
+#ifdef MESH_DEBUG
+corner = corner_foot;
+while( corner ) {
+   dump_corner( corner, maxorder );
+   corner = corner->prev;
+}
+
+cell = cell_foot[ maxorder ];
+while( cell ) {
+   dump_cell( this, cell, maxorder );
+   cell = cell->prev;
+}
+
+FILE *fd = fopen( "path.asc", "w" );
+fprintf( fd, "# corner dist\n" );
+#endif
+
+
 
 /* We now measure how far around the perimeter we need to go to reach
    each non-interior corner, starting from an arbitrary starting point.
@@ -7259,9 +7350,14 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                corner->dist = dist++;
 
 /* The Moc may contain several disjoint regions. We mark the start of each such
-   region with a negative "dist" value. */
+   region with a negative "dist" value ( "dist" == 0 marks the start of
+   the first disjoint region). */
                if( !old_corner ) corner->dist = -corner->dist;
             }
+
+#ifdef MESH_DEBUG
+fprintf( fd, "%p %d\n", corner, corner->dist );
+#endif
 
 /* Indicate we have not yet chosen the next corner on the path. */
             new_corner = NULL;
@@ -7279,7 +7375,9 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
 /* If the corner is used by two cells, the cell that contains the old
    corner as well as the current corner becomes "cell1", and the other
    cell becomes "cell0". This gives priority to onward routes that go to
-   the new cell ("cell0") rather than going back to the old cell. */
+   the new cell ("cell0") rather than going back to the old cell. If
+   there is no old corner (i.e. this is the start of a new disjoint
+   region), the choice is arbitrary. */
             } else if( corner->ncell == 2 ) {
                cell1 = corner->cells[ 0 ];
                if( cell1->bl == old_corner ||
@@ -7289,27 +7387,34 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                   cell0 = corner->cells[ 1 ];
                } else {
                   cell0 = cell1;
-                  cell1 = corner->cells[ 0 ];
+                  cell1 = corner->cells[ 1 ];
                }
                cell2 = NULL;
 
 /* If the corner is used by three cells, the cell that contains the old
    corner as well as the current corner becomes "cell2" (lowest priority),
    and the other two cells become "cell0" and "cell1". This gives priority
-   to onward routes that do not go back to the old cell. */
+   to onward routes that do not go back to the old cell. If there is no
+   old corner (i.e. this is the start of a new disjoint region), the choice
+   is arbitrary. */
             } else if( corner->ncell == 3 ) {
-               for( icell = 0; icell < 3; icell++ ) {
-                  cell2 = corner->cells[ icell ];
-                  if( cell2->bl == old_corner ||
-                      cell2->tl == old_corner ||
-                      cell2->tr == old_corner ||
-                      cell2->br == old_corner ) break;
-               }
-               if( icell == 4 && old_corner ) {
-                  astError( AST__INTER, "astRegBaseMesh(%s): Old corner "
-                            "not found (internal programming error).",
-                            status, astGetClass( this ) );
-                  break;
+               if( old_corner ) {
+                  for( icell = 0; icell < 3; icell++ ) {
+                     cell2 = corner->cells[ icell ];
+                     if( cell2->bl == old_corner ||
+                         cell2->tl == old_corner ||
+                         cell2->tr == old_corner ||
+                         cell2->br == old_corner ) break;
+                  }
+                  if( icell == 4 && old_corner ) {
+                     astError( AST__INTER, "astRegBaseMesh(%s): Old corner "
+                               "not found (internal programming error).",
+                               status, astGetClass( this ) );
+                     break;
+                  }
+               } else {
+                  icell = 0;
+                  cell2 = corner->cells[ 0 ];
                }
 
 /* Of the other two cells, prefer routes that continue to the cell that
@@ -7335,9 +7440,10 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                break;
             }
 
-/* Find the corner in cell0 and see if the neighbouring corner in
+/* Find the corner in cell0 and see if the neighbouring corner in the
    clockwise direction within cell0 is a boundary point that has not yet
    been included in the path. If so, we use it as the next corner. */
+            new_corner = NULL;
             if( corner == cell0->bl && !cell0->tl->interior && cell0->tl->dist == INT_MAX ) {
                new_corner = cell0->tl;
             } else if( corner == cell0->tl && !cell0->tr->interior && cell0->tr->dist == INT_MAX ) {
@@ -7346,10 +7452,28 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                new_corner = cell0->br;
             } else if( corner == cell0->br && !cell0->bl->interior && cell0->bl->dist == INT_MAX ) {
                new_corner = cell0->bl;
+            }
+
+/* If both the original corner and the new corner are corners of one of the
+   neighbouring cells, then the boundary cannot pass between them since the
+   line between the two corners must be a border between the two cells. */
+            if( new_corner ) {
+               if( cell1 &&( new_corner == cell1->tl ||
+                             new_corner == cell1->tr ||
+                             new_corner == cell1->br ||
+                             new_corner == cell1->bl ) ){
+                  new_corner = NULL;
+               } else if( cell2 &&( new_corner == cell2->tl ||
+                             new_corner == cell2->tr ||
+                             new_corner == cell2->br ||
+                             new_corner == cell2->bl ) ){
+                  new_corner = NULL;
+               }
+            }
 
 /* If this failed to produce a new corner, then do the same using cell1
    (if it exists). */
-            } else if( cell1 ) {
+            if( !new_corner && cell1 ) {
                if( corner == cell1->bl && !cell1->tl->interior && cell1->tl->dist == INT_MAX ) {
                   new_corner = cell1->tl;
                } else if( corner == cell1->tl && !cell1->tr->interior && cell1->tr->dist == INT_MAX ) {
@@ -7358,18 +7482,46 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                   new_corner = cell1->br;
                } else if( corner == cell1->br && !cell1->bl->interior && cell1->bl->dist == INT_MAX ) {
                   new_corner = cell1->bl;
+               }
 
-/* If this failed to produce a new corner, then do the same using cell3
+               if( new_corner ) {
+                  if( cell0 &&( new_corner == cell0->tl ||
+                                new_corner == cell0->tr ||
+                                new_corner == cell0->br ||
+                                new_corner == cell0->bl ) ){
+                     new_corner = NULL;
+                  } else if( cell2 &&( new_corner == cell2->tl ||
+                                new_corner == cell2->tr ||
+                                new_corner == cell2->br ||
+                                new_corner == cell2->bl ) ){
+                     new_corner = NULL;
+                  }
+               }
+            }
+
+/* If this failed to produce a new corner, then do the same using cell2
    (if it exists). */
-               } else if( cell2 ) {
-                  if( corner == cell2->bl && !cell2->tl->interior && cell2->tl->dist == INT_MAX ) {
-                     new_corner = cell2->tl;
-                  } else if( corner == cell2->tl && !cell2->tr->interior && cell2->tr->dist == INT_MAX ) {
-                     new_corner = cell2->tr;
-                  } else if( corner == cell2->tr && !cell2->br->interior && cell2->br->dist == INT_MAX ) {
-                     new_corner = cell2->br;
-                  } else if( corner == cell2->br && !cell2->bl->interior && cell2->bl->dist == INT_MAX ) {
-                     new_corner = cell2->bl;
+            if( !new_corner && cell2 ) {
+               if( corner == cell2->bl && !cell2->tl->interior && cell2->tl->dist == INT_MAX ) {
+                  new_corner = cell2->tl;
+               } else if( corner == cell2->tl && !cell2->tr->interior && cell2->tr->dist == INT_MAX ) {
+                  new_corner = cell2->tr;
+               } else if( corner == cell2->tr && !cell2->br->interior && cell2->br->dist == INT_MAX ) {
+                  new_corner = cell2->br;
+               } else if( corner == cell2->br && !cell2->bl->interior && cell2->bl->dist == INT_MAX ) {
+                  new_corner = cell2->bl;
+               }
+               if( new_corner ) {
+                  if( cell0 &&( new_corner == cell0->tl ||
+                                new_corner == cell0->tr ||
+                                new_corner == cell0->br ||
+                                new_corner == cell0->bl ) ){
+                     new_corner = NULL;
+                  } else if( cell1 &&( new_corner == cell1->tl ||
+                                new_corner == cell1->tr ||
+                                new_corner == cell1->br ||
+                                new_corner == cell1->bl ) ){
+                     new_corner = NULL;
                   }
                }
             }
@@ -7391,8 +7543,23 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                   new_corner = cell0->br;
                } else if( corner == cell0->br && !cell0->bl->interior ) {
                   new_corner = cell0->bl;
+               }
 
-               } else if( cell1 ) {
+               if( new_corner ) {
+                  if( cell1 &&( new_corner == cell1->tl ||
+                                new_corner == cell1->tr ||
+                                new_corner == cell1->br ||
+                                new_corner == cell1->bl ) ){
+                     new_corner = NULL;
+                  } else if( cell2 &&( new_corner == cell2->tl ||
+                                new_corner == cell2->tr ||
+                                new_corner == cell2->br ||
+                                new_corner == cell2->bl ) ){
+                     new_corner = NULL;
+                  }
+               }
+
+               if( !new_corner && cell1 ) {
                   if( corner == cell1->bl && !cell1->tl->interior ) {
                      new_corner = cell1->tl;
                   } else if( corner == cell1->tl && !cell1->tr->interior ) {
@@ -7401,8 +7568,23 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                      new_corner = cell1->br;
                   } else if( corner == cell1->br && !cell1->bl->interior ) {
                      new_corner = cell1->bl;
+                  }
 
-                  } else if( cell2 ) {
+                  if( new_corner ) {
+                     if( cell0 &&( new_corner == cell0->tl ||
+                                   new_corner == cell0->tr ||
+                                   new_corner == cell0->br ||
+                                   new_corner == cell0->bl ) ){
+                        new_corner = NULL;
+                     } else if( cell2 &&( new_corner == cell2->tl ||
+                                   new_corner == cell2->tr ||
+                                   new_corner == cell2->br ||
+                                   new_corner == cell2->bl ) ){
+                        new_corner = NULL;
+                     }
+                  }
+
+                  if( !new_corner && cell2 ) {
                      if( corner == cell2->bl && !cell2->tl->interior ) {
                         new_corner = cell2->tl;
                      } else if( corner == cell2->tl && !cell2->tr->interior ) {
@@ -7411,6 +7593,19 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                         new_corner = cell2->br;
                      } else if( corner == cell2->br && !cell2->bl->interior ) {
                         new_corner = cell2->bl;
+                     }
+                     if( new_corner ) {
+                        if( cell0 &&( new_corner == cell0->tl ||
+                                      new_corner == cell0->tr ||
+                                      new_corner == cell0->br ||
+                                      new_corner == cell0->bl ) ){
+                           new_corner = NULL;
+                        } else if( cell1 &&( new_corner == cell1->tl ||
+                                      new_corner == cell1->tr ||
+                                      new_corner == cell1->br ||
+                                      new_corner == cell1->bl ) ){
+                           new_corner = NULL;
+                        }
                      }
                   }
                }
@@ -7423,6 +7618,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                             "previously drawn corners (internal "
                             "programming error).", status, astGetClass( this ) );
                }
+
             } else {
                nused = 0;
             }
@@ -7449,6 +7645,10 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
          }
       }
 
+#ifdef MESH_DEBUG
+fclose( fd );
+#endif
+
 /* Create the returned PointSet and put the (ra,dec) values into it
    from each non-interior corner. First count the number of non-interior
    corners. */
@@ -7474,7 +7674,9 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
    the corners. Also invert the "distance" values stored in the Corner
    structures to get an array that indexes the mesh in order of distance
    around the perimeter. Negative values in this array indicate breaks
-   in the perimeter between separate disjoint regions. */
+   in the perimeter between separate disjoint regions. Count the number
+   of disjoint regions. */
+         ndis = 1;
          icorner = 0;
          corner = corner_foot;
          while( corner ) {
@@ -7486,6 +7688,7 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
                    (this->meshdist)[ corner->dist ] = icorner++;
                 } else {
                    (this->meshdist)[ -corner->dist ] = -(icorner++);
+                   ndis++;
                 }
 
              }
@@ -7496,6 +7699,48 @@ static AstPointSet *RegBaseMesh( AstRegion *this_region, int *status ){
 
 /* Store it in the parent Region structure for future use. */
          this->basemesh = astClone( result );
+      }
+
+/* Add an extra point into the meshdist array at the end of each disjoint
+   region. This extra point is set to be a copy of the first point in the
+   same disjoint region, and causes each region to be closed (last point
+   joined to first point). */
+      this->mdlen = npoint + ndis;
+      newdist = astMalloc( this->mdlen*sizeof( *newdist ) );
+      if( astOK ) {
+         j = 0;
+         dstart = (this->meshdist)[ 0 ];
+
+/* Loop round each point in the existing meshdist array. */
+         for( i = 0; i < npoint; i++ ) {
+
+/* If the meshdist value is negative, insert a copy of the meshdist value
+   from the start of the current disjoint region. Then record the
+   distance at the start of the new disjoint region, negating it to make
+   it positive. */
+            if( (this->meshdist)[ i ] < 0 ) {
+               newdist[ j++ ] = dstart;
+               dstart = -(this->meshdist)[ i ];
+            }
+
+/* Copy the current meshdist value to the new array. */
+            newdist[ j++ ] = (this->meshdist)[ i ];
+         }
+
+/* Finish with a copy of the distance at the start of the final disjoint
+   region. */
+         newdist[ j++ ] = dstart;
+
+/* Sanity check. */
+         if( j != this->mdlen && astOK ) {
+            astError( AST__INTER, "astRegBaseMesh(%s): Mesh distance "
+                      "array has wrong length (internal programming error).",
+                      status, astGetClass( this ) );
+         }
+
+/* Free the original meshdist array and use the new one instead. */
+         (void) astFree( this->meshdist );
+         this->meshdist = newdist;
       }
 
 /* Free the remaining cells. */
@@ -7871,7 +8116,7 @@ static int RegTrace( AstRegion *this_region, int n, double *dist, double **ptr,
    All RA values are in the range [0,2PI[. */
       mesh = astRegBaseMesh( this );
       ptr_mesh = astGetPoints( mesh );
-      len_mesh = astGetNpoint( mesh );
+      len_mesh = this->mdlen;  /* Length of this->meshdist array */
       if( astOK ) {
 
 /* Another array is created at the same time as the above mesh, which
@@ -9585,30 +9830,17 @@ f     RESULT = AST_MOC( OPTIONS, STATUS )
 *     HEALPix cells. See the MOC recommendation for further information
 *     (http://www.ivoa.net/documents/MOC/).
 *
-*     As a description of a region on the sky, the Moc class can be seen
-*     as an alternative to the Region class. Note, Mocs and Regions
-*     are not interchangable (that is, a Moc is not a subclass of Region
-*     and therefore Region methods cannot be applied to Mocs). The Moc
-*     class is intended to describe an arbitrary collection of cells on
-*     the sky, whereas the Region classes describe exact geometric shapes.
-*     The Moc class has a method that allow a Region to be converted into
-*     an approximating Moc, but Mocs cannot be converted into Regions.
+*     The Moc class describes an arbitrary collection of cells on the sky,
+*     whereas other subclasses of Region describe exact geometric shapes
+*     in any arbitrary domain. This results in some differences between
+*     Mocs and other types of Region, the main one being that Mocs have
+*     no associated uncertainty.
 *
 *     The MOC recommendation requires that a MOC always describes a sky
-*     area using the ICRS coordinate system. However, the Moc class
-*     allows its attributes to be changed so that it represents any
-*     celestial coordinate system that can be mapped to ICRS. Note,
-*     changing the System attribute will not change the area on the
-*     sky covered by the Moc - it will just change the way that area is
-*     described. For instance, if a Moc is created that covers a particular
-*     galaxy in ICRS, and the System attriubute is then changed to Galactic,
-*     the Moc will still cover the same galaxy, but it will now be described
-*     in Galactic coordinates rather than ICRS. When a Moc is written out
-*     through a FitsChan, FITS headers describing the Moc will be stored
-*     in the FitsChan. The binary data for the single column of the
-*     coresponding FITS binary table can be retrieved from the Moc using
-c     method astGetMocData.
-f     method AST_GETMOCDATA.
+*     area using the ICRS coordinate system. However, the Moc class, like
+*     other subclasses of Region, allows its attributes to be changed so
+*     that it represents the equivalent area in any celestial coordinate
+*     system that can be mapped to ICRS. See attribute Adaptive.
 *
 *     In practice, to use this class an empty Moc object (i.e. a Moc
 *     describing a null area of the sky) should first be created using the
@@ -9616,6 +9848,19 @@ c     astMoc
 f     AST_MOC
 *     constructor. Areas of the sky should then be added into the empty
 *     Moc using one or more of the class methods.
+*
+*     If it is required to write a Moc out to a FITS binary table, the
+*     data value and headers to put in the table can be obtained using
+*     methods
+c     astGetMocData and astGetMocHeader
+f     AST_GETMOCDATA and AST_GETMOCHEADER.
+*     The MOC described by an existing FITS binary table can be added
+*     into a Moc object using the
+c     astAddMocData method.
+f     AST_ADDMOCDATA method.
+*
+*     Note, this class is limited to MOCs for which the number of cells
+*     in the normalised MOC can be represented in a four byte signed integer.
 
 *  Parameters:
 c     maxorder
@@ -9874,6 +10119,7 @@ AstMoc *astInitMoc_( void *mem, size_t size, int init, AstMocVtab *vtab,
       new->mocarea = AST__BAD;
       new->nrange = 0;
       new->meshdist = NULL;
+      new->mdlen = 0;
       new->maxorder = -INT_MAX;
       new->minorder = -INT_MAX;
       new->lbnd[ 0 ] = AST__BAD;
@@ -10102,6 +10348,7 @@ AstMoc *astLoadMoc_( void *mem, size_t size, AstMocVtab *vtab,
       new->moclength = 0;
       new->mocarea = AST__BAD;
       new->meshdist = NULL;
+      new->mdlen = 0;
       new->lbnd[ 0 ] = AST__BAD;
       new->lbnd[ 1 ] = AST__BAD;
       new->ubnd[ 0 ] = AST__BAD;
@@ -10241,7 +10488,8 @@ MAKE_ADDPIXELMASK_(UB,unsigned char)
 
 
 
-/* For debugging of astRegBaseMesh and astRegTrace......
+/* For debugging of astRegBaseMesh and astRegTrace...... */
+#ifdef MESH_DEBUG
 
 static void dump_corner( Corner *this, int order ) {
    static FILE *fd = NULL;
@@ -10385,7 +10633,6 @@ static void dump_moc( AstMoc *this, const char *fname, int *status ) {
    fclose( fd );
 }
 
-*/
-
+#endif
 
 
