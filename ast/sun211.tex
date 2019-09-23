@@ -11230,8 +11230,7 @@ Object             - Base class for all AST Objects
          higher than the maximum order allowed in the Moc (as given by its
          \htmlref{MaxOrder}{MaxOrder} attribute). If no value has been set for the MaxOrder
          attribute, calling this method causes it to be set to the supplied
-         order value. So the highest order cells should usually be added
-         first.
+         order value.
       }
       \sstsubsection{
          npix
@@ -23450,113 +23449,6 @@ Object             - Base class for all AST Objects
       parameter at the end of the parameter list descirbed above. This
       parameter is a pointer to the integer inherited status
       variable: \texttt{"} int $*$status\texttt{"} .
-   }
-}
-\sstroutine{
-   astMocChan
-}{
-   Create a MocChan
-}{
-   \sstdescription{
-      This function creates a new \htmlref{MocChan}{MocChan} and optionally initialises
-      its attributes.
-
-      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
-      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
-      conventions of the JSON and string encodings described in
-      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
-      to a MocChan (using
-      \htmlref{astWrite}{astWrite}) will, if the Moc is suitable, generate a
-      textual description of that Moc, and reading from a MocChan will
-      create a new Moc from its textual description. See the Moc class
-      for further information.
-
-      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
-      and \texttt{"} sink\texttt{"}  functions which connect it to an external data store
-      by reading and writing the resulting text. These functions
-      should perform any conversions needed between external character
-      encodings and the internal ASCII encoding. If no such functions
-      are supplied, a Channel will read from standard input and write
-      to standard output.
-
-      Alternatively, a MocChan can be told to read or write from
-      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
-      in which case no sink or source function need be supplied.
-   }
-   \sstsynopsis{
-      AstMocChan $*$astMocChan( const char $*$($*$ source)( void ),
-                              void ($*$ sink)( const char $*$ ),
-                              const char $*$options, ... )
-   }
-   \sstparameters{
-      \sstsubsection{
-         source
-      }{
-         Pointer to a source function that takes no arguments and
-         returns a pointer to a null-terminated string.  If no value
-         has been set for the SourceFile attribute, this function
-         will be used by the MocChan to obtain lines of input text. On
-         each invocation, it should return a pointer to the next input
-         line read from some external data store, and a NULL pointer
-         when there are no more lines to read.
-
-         If \texttt{"} source\texttt{"}  is NULL and no value has been set for the SourceFile
-         attribute, the MocChan will read from standard input instead.
-      }
-      \sstsubsection{
-         sink
-      }{
-         Pointer to a sink function that takes a pointer to a
-         null-terminated string as an argument and returns void.
-         If no value has been set for the SinkFile attribute, this
-         function will be used by the MocChan to deliver lines of
-         output text. On each invocation, it should deliver the
-         contents of the string supplied to some external data store.
-
-         If \texttt{"} sink\texttt{"}  is NULL, and no value has been set for the SinkFile
-         attribute, the MocChan will write to standard output instead.
-      }
-      \sstsubsection{
-         options
-      }{
-         Pointer to a null-terminated string containing an optional
-         comma-separated list of attribute assignments to be used for
-         initialising the new MocChan. The syntax used is identical to
-         that for the \htmlref{astSet}{astSet} function and may include \texttt{"} printf\texttt{"}  format
-         specifiers identified by \texttt{"} \%\texttt{"}  symbols in the normal way.
-      }
-      \sstsubsection{
-         ...
-      }{
-         If the \texttt{"} options\texttt{"}  string contains \texttt{"} \%\texttt{"}  format specifiers, then
-         an optional list of additional arguments may follow it in
-         order to supply values to be substituted for these
-         specifiers. The rules for supplying these are identical to
-         those for the astSet function (and for the C \texttt{"} printf\texttt{"}
-         function).
-      }
-   }
-   \sstreturnedvalue{
-      \sstsubsection{
-         astMocChan()
-      }{
-         A pointer to the new MocChan.
-      }
-   }
-   \sstnotes{
-      \sstitemlist{
-
-         \sstitem
-          If the external data source or sink uses a character encoding
-         other than ASCII, the supplied source and sink functions should
-         translate between the external character encoding and the internal
-         ASCII encoding used by AST.
-
-         \sstitem
-          A null \htmlref{Object}{Object} pointer (AST\_\_NULL) will be returned if this
-         function is invoked with the AST error status set, or if it
-         should fail for any reason.
-      }
    }
 }
 \sstroutine{
@@ -40978,53 +40870,6 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
-   MocFormat
-}{
-   Format for encoding Mocs as text
-}{
-   \sstdescription{
-      This attribute specifies the format to use when AST \htmlref{Moc}{Moc}
-      Objects are converted to text by a \htmlref{MocChan}{MocChan}. There are currently two
-      ways (conventions) by which MOCs may be represented in the form of
-      text and the MocFormat attribute is used to specify which of these
-      should be used:
-
-      \sstitemlist{
-
-         \sstitem
-          \texttt{"} JSON\texttt{"} : Encodes a Moc \htmlref{Object}{Object} as a JSON string using the JSON
-         serialisation described in the MOC recommendation (version 1.1).
-
-         \sstitem
-          \texttt{"} STRING\texttt{"} : Encodes a Moc Object as using the string serialisation
-         described in the MOC recommendation (version 1.1).
-
-      }
-      The value assigned to the MocFormat does not affect the behaviour
-      of the
-      \htmlref{astRead}{astRead}
-      method, which automatically identifies the format used by the
-      external text and sets the MocFormat attribute to the
-      corresponding value.
-
-      The \htmlref{astWrite}{astWrite}
-      method will create the external text using the format
-      specified by the current value of the MocFormat attribute.
-
-      The initial default value of the attribute is \texttt{"} UNKNOWN\texttt{"} .
-   }
-   \sstattributetype{
-      String.
-   }
-   \sstapplicability{
-      \sstsubsection{
-         MocChan
-      }{
-         All MocChans have this attribute.
-      }
-   }
-}
-\sstroutine{
    MocLength
 }{
    The table length used to describe a Moc in FITS
@@ -41042,30 +40887,6 @@ Object             - Base class for all AST Objects
          Moc
       }{
          All Mocs have this attribute.
-      }
-   }
-}
-\sstroutine{
-   MocLineLen
-}{
-   Controls output buffer length
-}{
-   \sstdescription{
-      This attribute specifies the maximum length to use when writing out
-      text through the sink function supplied when the \htmlref{MocChan}{MocChan} was created.
-
-      The number of characters in each string written out through the sink
-      function will not be greater than the value of this attribute (but
-      may be less). The default value is 80.
-   }
-   \sstattributetype{
-      Integer.
-   }
-   \sstapplicability{
-      \sstsubsection{
-         MocChan
-      }{
-         All MocChans have this attribute.
       }
    }
 }
@@ -47715,64 +47536,6 @@ Object             - Base class for all AST Objects
          \sstitem
           \htmlref{astTestCell}{astTestCell}: Test if a single HEALPix cell is included in a Moc
       }
-   }
-}
-\sstroutine{
-   MocChan
-}{
-   I/O Channel for textual representations of Mocs
-}{
-   \sstdescription{
-      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
-      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
-      conventions of the JSON and string encodings described in
-      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
-      to a MocChan (using
-      \htmlref{astWrite}{astWrite}) will, if the Moc is suitable, generate a
-      textual description of that Moc, and reading from a MocChan will
-      create a new Moc from its textual description. See the Moc class
-      for further information.
-
-      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
-      and \texttt{"} sink\texttt{"}  functions which connect it to an external data store
-      by reading and writing the resulting text. These functions
-      should perform any conversions needed between external character
-      encodings and the internal ASCII encoding. If no such functions
-      are supplied, a Channel will read from standard input and write
-      to standard output.
-
-      Alternatively, a MocChan can be told to read or write from
-      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
-      in which case no sink or source function need be supplied.
-   }
-   \sstconstructor{
-      \htmlref{astMocChan}{astMocChan}
-   }
-   \sstdiytopic{
-      Inheritance
-   }{
-      The MocChan class inherits from the Channel class.
-   }
-   \sstdiytopic{
-      Attributes
-   }{
-      In addition to those attributes common to all Channels, every
-      MocChan also has the following attributes:
-
-      \sstitemlist{
-
-         \sstitem
-          \htmlref{MocFormat}{MocFormat}: Whether to use JSON or string format
-
-         \sstitem
-          \htmlref{MocLineLen}{MocLineLen}: Controls output buffer length
-      }
-   }
-   \sstdiytopic{
-      Functions
-   }{
-      The MocChan class does not define any new functions beyond those
-      which are applicable to all Channels.
    }
 }
 \sstroutine{
@@ -55852,9 +55615,11 @@ weight when pasting each separate input data array into the output mosaic.
 
 \end{enumerate}
 
-\subsection{Changes Introduced in V8.7.0}
-The following describes the most significant changes which
-occurred in the AST library between versions V8.6.3 and V8.7.0:
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V8.7.0}
+The following describes the most significant changes which have
+occurred in the AST library between versions V8.6.3 and V8.7.0 (the
+current version):
 
 \begin{enumerate}
 
@@ -55871,24 +55636,6 @@ non-zero for Regions defined within a \htmlref{SkyFrame}{SkyFrame}, regardless o
 Region has been negated. Previously, it was non-zero only if the Region
 had not been negated. Note, this change only affects Regions defined
 within SkyFrames.
-
-\end{enumerate}
-
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V8.7.1}
-The following describes the most significant changes which have
-occurred in the AST library between versions V8.7.0 and V8.7.1 (the
-current version):
-
-\begin{enumerate}
-
-\item The \htmlref{Moc}{Moc} class now supports version 1.1 of the the MOC recommendation.
-This includes new support for string and JSON encoded MOCs. See methods
-\htmlref{astGetMocString}{astGetMocString} and \htmlref{astAddMocString}{astAddMocString} in the Moc class, and also the new
-\htmlref{MocChan}{MocChan} class.
-
-\item The \htmlref{FitsChan}{FitsChan} class will now read FITS-WCS headers that have
-alternate axis descriptions but no primary axis descriptions.
 
 \end{enumerate}
 

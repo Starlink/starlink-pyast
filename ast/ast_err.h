@@ -510,5 +510,8 @@ enum { AST__INMOC           	= 233934482 };	/* messid=466 */
 /* Supplied buffer too small */
 enum { AST__SMBUF           	= 233934490 };	/* messid=467 */
 
+/* Word is too long */
+enum { AST__BGWRD           	= 233934498 };	/* messid=468 */
+
 
 #endif	/* AST_ERROR_DEFINED */

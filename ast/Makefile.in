@@ -104,8 +104,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
 	$(am__configure_deps) $(dist_bin_SCRIPTS) \
 	$(dist_noinst_SCRIPTS) $(include_MESSAGES) \
-	$(dist_pkgdata_DATA) $(dist_starnews_DATA) $(include_HEADERS) \
-	$(am__DIST_COMMON)
+	$(dist_pkgdata_DATA) $(dist_starnews_DATA) $(cinclude_HEADERS) \
+	$(am__include_HEADERS_DIST) $(am__DIST_COMMON)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
@@ -144,7 +144,8 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)" \
 	"$(DESTDIR)$(pkgdatadir)" "$(DESTDIR)$(starnewsdir)" \
 	$(DESTDIR)$(stardocsdir) "$(DESTDIR)$(starfacsdir)" \
-	"$(DESTDIR)$(includedir)" "$(DESTDIR)$(includedir)"
+	"$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)" \
+	"$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 @EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES = libast_pal.la
 @EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la
@@ -153,11 +154,11 @@ am__libast_la_SOURCES_DIST = axis.c box.c channel.c chebymap.c \
 	dssmap.c ellipse.c error.c fitschan.c fitstable.c fluxframe.c \
 	frame.c frameset.c globals.c grismmap.c interval.c intramap.c \
 	keymap.c loader.c lutmap.c mapping.c mathmap.c matrixmap.c \
-	memory.c moc.c normmap.c nullregion.c object.c pcdmap.c \
-	permmap.c plot.c plot3d.c pointlist.c pointset.c polygon.c \
-	polymap.c prism.c ratemap.c region.c selectormap.c shiftmap.c \
-	skyaxis.c skyframe.c slamap.c specfluxframe.c specframe.c \
-	specmap.c sphmap.c stc.c stccatalogentrylocation.c \
+	memory.c moc.c mocchan.c normmap.c nullregion.c object.c \
+	pcdmap.c permmap.c plot.c plot3d.c pointlist.c pointset.c \
+	polygon.c polymap.c prism.c ratemap.c region.c selectormap.c \
+	shiftmap.c skyaxis.c skyframe.c slamap.c specfluxframe.c \
+	specframe.c specmap.c sphmap.c stc.c stccatalogentrylocation.c \
 	stcobsdatalocation.c stcresourceprofile.c stcschan.c \
 	stcsearchlocation.c switchmap.c table.c timeframe.c timemap.c \
 	tranmap.c unit.c unitmap.c unitnormmap.c wcsmap.c winmap.c \
@@ -166,10 +167,10 @@ am__libast_la_SOURCES_DIST = axis.c box.c channel.c chebymap.c \
 	fdsbspecframe.c fdssmap.c fellipse.c ferror.c ffitschan.c \
 	ffitstable.c ffluxframe.c fframe.c fframeset.c fgrismmap.c \
 	finterval.c fintramap.c fkeymap.c flutmap.c fmapping.c \
-	fmathmap.c fmatrixmap.c fmoc.c fnormmap.c fnullregion.c \
-	fobject.c fpcdmap.c fpermmap.c fplot.c fplot3d.c fpointlist.c \
-	fpolygon.c fpolymap.c fprism.c fratemap.c fregion.c \
-	fselectormap.c fshiftmap.c fskyframe.c fslamap.c \
+	fmathmap.c fmatrixmap.c fmoc.c fmocchan.c fnormmap.c \
+	fnullregion.c fobject.c fpcdmap.c fpermmap.c fplot.c fplot3d.c \
+	fpointlist.c fpolygon.c fpolymap.c fprism.c fratemap.c \
+	fregion.c fselectormap.c fshiftmap.c fskyframe.c fslamap.c \
 	fspecfluxframe.c fspecframe.c fspecmap.c fsphmap.c fstc.c \
 	fstccatalogentrylocation.c fstcobsdatalocation.c \
 	fstcresourceprofile.c fstcschan.c fstcsearchlocation.c \
@@ -188,12 +189,13 @@ am__libast_la_SOURCES_DIST = axis.c box.c channel.c chebymap.c \
 	interval.h moc.h nullregion.h pointlist.h polygon.h prism.h \
 	stc.h stcresourceprofile.h stcsearchlocation.h \
 	stccatalogentrylocation.h stcobsdatalocation.h timeframe.h \
-	channel.h fitschan.h stcschan.h xmlchan.h ems.h err.h Ers.h \
-	f77.h grf.h grf3d.h pg3d.h loader.h pal2ast.h erfa2ast.h \
-	wcsmath.h c2f77.h GRF_PAR AST_ERR cminpack/cminpack.h \
-	cminpack/cminpackP.h cminpack/lmder1.c cminpack/lmder.c \
-	cminpack/dpmpar.c cminpack/enorm.c cminpack/qrfac.c \
-	cminpack/lmpar.c cminpack/qrsolv.c proj.c tpn.c wcstrig.c
+	channel.h fitschan.h mocchan.h stcschan.h xmlchan.h ems.h \
+	err.h Ers.h f77.h grf.h grf3d.h pg3d.h loader.h pal2ast.h \
+	erfa2ast.h wcsmath.h c2f77.h GRF_PAR AST_ERR \
+	cminpack/cminpack.h cminpack/cminpackP.h cminpack/lmder1.c \
+	cminpack/lmder.c cminpack/dpmpar.c cminpack/enorm.c \
+	cminpack/qrfac.c cminpack/lmpar.c cminpack/qrsolv.c proj.c \
+	tpn.c wcstrig.c
 am__objects_1 = libast_la-axis.lo libast_la-box.lo \
 	libast_la-channel.lo libast_la-chebymap.lo libast_la-circle.lo \
 	libast_la-cmpframe.lo libast_la-cmpmap.lo \
@@ -206,9 +208,10 @@ am__objects_1 = libast_la-axis.lo libast_la-box.lo \
 	libast_la-intramap.lo libast_la-keymap.lo libast_la-loader.lo \
 	libast_la-lutmap.lo libast_la-mapping.lo libast_la-mathmap.lo \
 	libast_la-matrixmap.lo libast_la-memory.lo libast_la-moc.lo \
-	libast_la-normmap.lo libast_la-nullregion.lo \
-	libast_la-object.lo libast_la-pcdmap.lo libast_la-permmap.lo \
-	libast_la-plot.lo libast_la-plot3d.lo libast_la-pointlist.lo \
+	libast_la-mocchan.lo libast_la-normmap.lo \
+	libast_la-nullregion.lo libast_la-object.lo \
+	libast_la-pcdmap.lo libast_la-permmap.lo libast_la-plot.lo \
+	libast_la-plot3d.lo libast_la-pointlist.lo \
 	libast_la-pointset.lo libast_la-polygon.lo \
 	libast_la-polymap.lo libast_la-prism.lo libast_la-ratemap.lo \
 	libast_la-region.lo libast_la-selectormap.lo \
@@ -239,7 +242,7 @@ am__objects_1 = libast_la-axis.lo libast_la-box.lo \
 @NOFORTRAN_FALSE@	libast_la-fkeymap.lo libast_la-flutmap.lo \
 @NOFORTRAN_FALSE@	libast_la-fmapping.lo libast_la-fmathmap.lo \
 @NOFORTRAN_FALSE@	libast_la-fmatrixmap.lo libast_la-fmoc.lo \
-@NOFORTRAN_FALSE@	libast_la-fnormmap.lo \
+@NOFORTRAN_FALSE@	libast_la-fmocchan.lo libast_la-fnormmap.lo \
 @NOFORTRAN_FALSE@	libast_la-fnullregion.lo libast_la-fobject.lo \
 @NOFORTRAN_FALSE@	libast_la-fpcdmap.lo libast_la-fpermmap.lo \
 @NOFORTRAN_FALSE@	libast_la-fplot.lo libast_la-fplot3d.lo \
@@ -431,7 +434,9 @@ INSTALL_MESSAGE = $(INSTALL_DATA)
 stardocsDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(dist_pkgdata_DATA) $(dist_starnews_DATA) $(stardocs_DATA) \
 	$(starfacs_DATA)
-HEADERS = $(include_HEADERS) $(nodist_include_HEADERS)
+am__include_HEADERS_DIST = GRF_PAR grf.h grf3d.h
+HEADERS = $(cinclude_HEADERS) $(include_HEADERS) \
+	$(nodist_cinclude_HEADERS) $(nodist_include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
 	$(LISP)config.h.in
 # Read a list of newline-separated strings from the standard input,
@@ -861,6 +866,7 @@ GRP_C_ROUTINES = \
     matrixmap.c \
     memory.c \
     moc.c \
+    mocchan.c \
     normmap.c \
     nullregion.c \
     object.c \
@@ -934,6 +940,7 @@ GRP_C_ROUTINES = \
 @NOFORTRAN_FALSE@    fmathmap.c \
 @NOFORTRAN_FALSE@    fmatrixmap.c \
 @NOFORTRAN_FALSE@    fmoc.c \
+@NOFORTRAN_FALSE@    fmocchan.c \
 @NOFORTRAN_FALSE@    fnormmap.c \
 @NOFORTRAN_FALSE@    fnullregion.c \
 @NOFORTRAN_FALSE@    fobject.c \
@@ -1051,6 +1058,7 @@ AST_H_FILES = \
              timeframe.h \
        channel.h \
           fitschan.h \
+          mocchan.h \
           stcschan.h \
           xmlchan.h
 
@@ -1408,10 +1416,18 @@ dist_noinst_SCRIPTS = makeh
 
 # Headers required by library users.  Both of the following lines
 # indicate headers which are installed.
-include_HEADERS = GRF_PAR grf.h grf3d.h
+cincludedir = $(includedir)/star
+cinclude_HEADERS = GRF_PAR grf.h grf3d.h
 # Following are generated, so should not be distributed.
-nodist_include_HEADERS = ast.h AST_PAR
+nodist_cinclude_HEADERS = ast.h AST_PAR
 include_MESSAGES = AST_ERR ast_err.h
+
+# Also install headers in main include directory for the benefit of
+# legacy code that does '#include "ast.h"' instead of '#include
+# "star/ast.h"'. Note, currently _MESSAGES files must be installed in
+# the main include directory.
+@TOPINCLUDE_TRUE@include_HEADERS = GRF_PAR grf.h grf3d.h
+@TOPINCLUDE_TRUE@nodist_include_HEADERS = ast.h AST_PAR
 @EXTERNAL_PAL_FALSE@PAL_LIB = libast_pal.la
 @EXTERNAL_PAL_TRUE@PAL_LIB = 
 lib_LTLIBRARIES = \
@@ -1877,6 +1893,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fmathmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fmatrixmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fmoc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fmocchan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fnormmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fnullregion.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-fobject.Plo@am__quote@
@@ -1929,6 +1946,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-matrixmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-memory.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-moc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-mocchan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-normmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-nullregion.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_la-object.Plo@am__quote@
@@ -2214,6 +2232,13 @@ libast_la-moc.lo: moc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='moc.c' object='libast_la-moc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o libast_la-moc.lo `test -f 'moc.c' || echo '$(srcdir)/'`moc.c
+
+libast_la-mocchan.lo: mocchan.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT libast_la-mocchan.lo -MD -MP -MF $(DEPDIR)/libast_la-mocchan.Tpo -c -o libast_la-mocchan.lo `test -f 'mocchan.c' || echo '$(srcdir)/'`mocchan.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libast_la-mocchan.Tpo $(DEPDIR)/libast_la-mocchan.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mocchan.c' object='libast_la-mocchan.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o libast_la-mocchan.lo `test -f 'mocchan.c' || echo '$(srcdir)/'`mocchan.c
 
 libast_la-normmap.lo: normmap.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT libast_la-normmap.lo -MD -MP -MF $(DEPDIR)/libast_la-normmap.Tpo -c -o libast_la-normmap.lo `test -f 'normmap.c' || echo '$(srcdir)/'`normmap.c
@@ -2697,6 +2722,13 @@ libast_la-fmoc.lo: fmoc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fmoc.c' object='libast_la-fmoc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o libast_la-fmoc.lo `test -f 'fmoc.c' || echo '$(srcdir)/'`fmoc.c
+
+libast_la-fmocchan.lo: fmocchan.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT libast_la-fmocchan.lo -MD -MP -MF $(DEPDIR)/libast_la-fmocchan.Tpo -c -o libast_la-fmocchan.lo `test -f 'fmocchan.c' || echo '$(srcdir)/'`fmocchan.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libast_la-fmocchan.Tpo $(DEPDIR)/libast_la-fmocchan.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fmocchan.c' object='libast_la-fmocchan.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o libast_la-fmocchan.lo `test -f 'fmocchan.c' || echo '$(srcdir)/'`fmocchan.c
 
 libast_la-fnormmap.lo: fnormmap.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT libast_la-fnormmap.lo -MD -MP -MF $(DEPDIR)/libast_la-fnormmap.Tpo -c -o libast_la-fnormmap.lo `test -f 'fnormmap.c' || echo '$(srcdir)/'`fnormmap.c
@@ -3274,6 +3306,30 @@ uninstall-starfacsDATA:
 	@list='$(starfacs_DATA)'; test -n "$(starfacsdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(starfacsdir)'; $(am__uninstall_files_from_dir)
+install-cincludeHEADERS: $(cinclude_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(cinclude_HEADERS)'; test -n "$(cincludedir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(cincludedir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(cincludedir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(cincludedir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(cincludedir)" || exit $$?; \
+	  for f in $$files; do \
+	      $(MANIFEST) && echo "MANIFEST:$(DESTDIR)$(cincludedir)/$$f" || :; \
+	  done; \
+	done
+
+uninstall-cincludeHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(cinclude_HEADERS)'; test -n "$(cincludedir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(cincludedir)'; $(am__uninstall_files_from_dir)
 install-includeHEADERS: $(include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
@@ -3298,6 +3354,30 @@ uninstall-includeHEADERS:
 	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(includedir)'; $(am__uninstall_files_from_dir)
+install-nodist_cincludeHEADERS: $(nodist_cinclude_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(nodist_cinclude_HEADERS)'; test -n "$(cincludedir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(cincludedir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(cincludedir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(cincludedir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(cincludedir)" || exit $$?; \
+	  for f in $$files; do \
+	      $(MANIFEST) && echo "MANIFEST:$(DESTDIR)$(cincludedir)/$$f" || :; \
+	  done; \
+	done
+
+uninstall-nodist_cincludeHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_cinclude_HEADERS)'; test -n "$(cincludedir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(cincludedir)'; $(am__uninstall_files_from_dir)
 install-nodist_includeHEADERS: $(nodist_include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(nodist_include_HEADERS)'; test -n "$(includedir)" || list=; \
@@ -3760,7 +3840,7 @@ all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(SCRIPTS) $(MESSAGES) \
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(SCRIPTS) $(MESSAGES) \
 		$(DATA) $(HEADERS) config.h
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)" "$(DESTDIR)$(pkgdatadir)" "$(DESTDIR)$(starnewsdir)" $(DESTDIR)$(stardocsdir) "$(DESTDIR)$(starfacsdir)" "$(DESTDIR)$(includedir)" "$(DESTDIR)$(includedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)" "$(DESTDIR)$(pkgdatadir)" "$(DESTDIR)$(starnewsdir)" $(DESTDIR)$(stardocsdir) "$(DESTDIR)$(starfacsdir)" "$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)" "$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install-exec: install-exec-am
@@ -3873,8 +3953,9 @@ info: info-am
 
 info-am:
 
-install-data-am: install-dist_pkgdataDATA install-dist_starnewsDATA \
-	install-includeHEADERS install-includeMESSAGES \
+install-data-am: install-cincludeHEADERS install-dist_pkgdataDATA \
+	install-dist_starnewsDATA install-includeHEADERS \
+	install-includeMESSAGES install-nodist_cincludeHEADERS \
 	install-nodist_includeHEADERS install-stardocsDATA \
 	install-starfacsDATA
 
@@ -3926,11 +4007,13 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binSCRIPTS uninstall-dist_binSCRIPTS \
-	uninstall-dist_pkgdataDATA uninstall-dist_starnewsDATA \
-	uninstall-includeHEADERS uninstall-includeMESSAGES \
-	uninstall-libLTLIBRARIES uninstall-nodist_includeHEADERS \
-	uninstall-stardocsDATA uninstall-starfacsDATA
+uninstall-am: uninstall-binSCRIPTS uninstall-cincludeHEADERS \
+	uninstall-dist_binSCRIPTS uninstall-dist_pkgdataDATA \
+	uninstall-dist_starnewsDATA uninstall-includeHEADERS \
+	uninstall-includeMESSAGES uninstall-libLTLIBRARIES \
+	uninstall-nodist_cincludeHEADERS \
+	uninstall-nodist_includeHEADERS uninstall-stardocsDATA \
+	uninstall-starfacsDATA
 
 .MAKE: all check check-am install install-am install-exec-am \
 	install-strip
@@ -3944,24 +4027,27 @@ uninstall-am: uninstall-binSCRIPTS uninstall-dist_binSCRIPTS \
 	distclean-generic distclean-hdr distclean-libtool \
 	distclean-tags distcleancheck distdir distuninstallcheck dvi \
 	dvi-am html html-am info info-am install install-am \
-	install-binSCRIPTS install-data install-data-am \
-	install-dist_binSCRIPTS install-dist_pkgdataDATA \
-	install-dist_starnewsDATA install-dvi install-dvi-am \
-	install-exec install-exec-am install-exec-hook install-html \
-	install-html-am install-includeHEADERS install-includeMESSAGES \
-	install-info install-info-am install-libLTLIBRARIES \
-	install-man install-manifest install-nodist_includeHEADERS \
+	install-binSCRIPTS install-cincludeHEADERS install-data \
+	install-data-am install-dist_binSCRIPTS \
+	install-dist_pkgdataDATA install-dist_starnewsDATA install-dvi \
+	install-dvi-am install-exec install-exec-am install-exec-hook \
+	install-html install-html-am install-includeHEADERS \
+	install-includeMESSAGES install-info install-info-am \
+	install-libLTLIBRARIES install-man install-manifest \
+	install-nodist_cincludeHEADERS install-nodist_includeHEADERS \
 	install-pdf install-pdf-am install-ps install-ps-am \
 	install-stardocsDATA install-starfacsDATA install-strip \
 	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	recheck tags tags-am uninstall uninstall-am \
-	uninstall-binSCRIPTS uninstall-dist_binSCRIPTS \
-	uninstall-dist_pkgdataDATA uninstall-dist_starnewsDATA \
-	uninstall-includeHEADERS uninstall-includeMESSAGES \
-	uninstall-libLTLIBRARIES uninstall-nodist_includeHEADERS \
-	uninstall-stardocsDATA uninstall-starfacsDATA
+	uninstall-binSCRIPTS uninstall-cincludeHEADERS \
+	uninstall-dist_binSCRIPTS uninstall-dist_pkgdataDATA \
+	uninstall-dist_starnewsDATA uninstall-includeHEADERS \
+	uninstall-includeMESSAGES uninstall-libLTLIBRARIES \
+	uninstall-nodist_cincludeHEADERS \
+	uninstall-nodist_includeHEADERS uninstall-stardocsDATA \
+	uninstall-starfacsDATA
 
 .PRECIOUS: Makefile
 
