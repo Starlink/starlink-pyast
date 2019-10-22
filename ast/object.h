@@ -1437,6 +1437,9 @@ int astTest##attribute##_( Ast##class *this, int *status ) { \
    pointer. */
 #define AST__NULL (astI2P(0))
 
+/* Maximum number of array pixel axes that can be handled by the Fortran
+   interface */
+#define AST__MXDIM 7
 
 #if defined(astCLASS)            /* Protected */
 
@@ -1474,6 +1477,25 @@ int astTest##attribute##_( Ast##class *this, int *status ) { \
 
 /* Type Definitions. */
 /* ================= */
+
+/* The type used to hold array indices and pixel counts */
+#if HAVE_INT64_T && HAVE_UINT64_T
+#include <stdint.h>
+#include <inttypes.h>
+typedef int64_t AstDim;
+#define AST__DIMFMT PRId64
+
+#elif SIZEOF_LONG == 8
+typedef long int AstDim;
+#define AST__DIMFMT "ld"
+
+#elif SIZEOF_LONG_LONG == 8
+typedef long long int AstDim;
+#define AST__DIMFMT "lld"
+
+#else
+#define AstDim "no int64_t type available"
+#endif
 
 /* Object structure. */
 /* ----------------- */
@@ -1566,7 +1588,7 @@ typedef struct AstObjectVtab {
    void *(* GetProxy)( AstObject *, int * );
    void (* SetProxy)( AstObject *, void *, int * );
 
-   int (* GetObjSize)( AstObject *, int * );
+   size_t (* GetObjSize)( AstObject *, int * );
 
    int (* TestUseDefs)( AstObject *, int * );
    int (* GetUseDefs)( AstObject *, int * );
@@ -1726,7 +1748,7 @@ AstObject *astCastCopy_( AstObject *, AstObject *, int * );
 int astManageLock_( AstObject *, int, int, AstObject **, int * );
 #endif
 
-int astGetObjSize_( AstObject *, int * );
+size_t astGetObjSize_( AstObject *, int * );
 
 int astTestUseDefs_( AstObject *, int * );
 int astGetUseDefs_( AstObject *, int * );

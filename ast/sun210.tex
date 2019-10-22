@@ -11,15 +11,15 @@
 \stardocsource      {sun\stardocnumber}
 
 % Variable part - replace [xxx] as appropriate.
-\stardocnumber      {210.28}
+\stardocnumber      {210.29}
 \stardocauthors     {R.F. Warren-Smith \& D.S. Berry}
-\stardocdate        {6th December 2018}
+\stardocdate        {3rd October 2019}
 \stardoctitle     {AST\linebreak%
                                 A Library for Handling\linebreak%
                                 World Coordinate Systems\linebreak%
                                 in Astronomy}
-\stardoccopyright   {Copyright (C) 2017 East Asian Observatory}
-\stardocversion     {V8.7}
+\stardoccopyright   {Copyright (C) 2019 East Asian Observatory}
+\stardocversion     {V9.0}
 \stardocmanual      {Programmer's Guide\\(Fortran Version)}
 \startitlepic{
    \includegraphics[width=0.25\textwidth]{sun210_figures/fronta}~~~~~\hfill
@@ -204,7 +204,7 @@ included using:
 \begin{small}
 \begin{terminalv}
 extern "C" {
-#include "ast.h"
+#include "star/ast.h"
 }
 \end{terminalv}
 \end{small}
@@ -10976,7 +10976,8 @@ Object             - Base class for all AST Objects
          higher than the maximum order allowed in the Moc (as given by its
          \htmlref{MaxOrder}{MaxOrder} attribute). If no value has been set for the MaxOrder
          attribute, calling this method causes it to be set to the supplied
-         order value.
+         order value. So the highest order cells should usually be added
+         first.
       }
       \sstsubsection{
          NPIX = INTEGER$*$8 (Given)
@@ -11706,6 +11707,20 @@ Object             - Base class for all AST Objects
       For compatibility with other Starlink facilities, the codes W
       and UW are provided as synonyms for S and US respectively (but
       only in the Fortran interface to AST).
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the argument
+      DIMS is changed from type INTEGER to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_ADDPIXELMASK$<$X$>$ becomes AST\_ADDPIXELMASK8$<$X$>$.
    }
 }
 \sstroutine{
@@ -14465,6 +14480,20 @@ Object             - Base class for all AST Objects
       For compatibility with other Starlink facilities, the codes W
       and UW are provided as synonyms for S and US respectively (but
       only in the Fortran interface to AST).
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND and UBND are changed from type INTEGER to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_CONVEX$<$X$>$ becomes AST\_CONVEX8$<$X$>$.
    }
 }
 \sstroutine{
@@ -22121,6 +22150,22 @@ Object             - Base class for all AST Objects
       and UW are provided as synonyms for S and US respectively (but
       only in the Fortran interface to AST).
    }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND, UBND are changed from
+      type INTEGER to type INTEGER$*$8. The function return type is similarly
+      changed to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_MASK$<$X$>$ becomes AST\_MASK8$<$X$>$.
+   }
 }
 \sstroutine{
    AST\_MATCHAXES
@@ -23144,35 +23189,34 @@ Object             - Base class for all AST Objects
       HEALPix cells. See the MOC recommendation for further information
       (http://www.ivoa.net/documents/MOC/).
 
-      As a description of a region on the sky, the Moc class can be seen
-      as an alternative to the \htmlref{Region}{Region} class. Note, Mocs and Regions
-      are not interchangable (that is, a Moc is not a subclass of Region
-      and therefore Region methods cannot be applied to Mocs). The Moc
-      class is intended to describe an arbitrary collection of cells on
-      the sky, whereas the Region classes describe exact geometric shapes.
-      The Moc class has a method that allow a Region to be converted into
-      an approximating Moc, but Mocs cannot be converted into Regions.
+      The Moc class describes an arbitrary collection of cells on the sky,
+      whereas other subclasses of \htmlref{Region}{Region} describe exact geometric shapes
+      in any arbitrary domain. This results in some differences between
+      Mocs and other types of Region, the main one being that Mocs have
+      no associated uncertainty.
 
       The MOC recommendation requires that a MOC always describes a sky
-      area using the ICRS coordinate system. However, the Moc class
-      allows its attributes to be changed so that it represents any
-      celestial coordinate system that can be mapped to ICRS. Note,
-      changing the \htmlref{System}{System} attribute will not change the area on the
-      sky covered by the Moc - it will just change the way that area is
-      described. For instance, if a Moc is created that covers a particular
-      galaxy in ICRS, and the System attriubute is then changed to Galactic,
-      the Moc will still cover the same galaxy, but it will now be described
-      in Galactic coordinates rather than ICRS. When a Moc is written out
-      through a \htmlref{FitsChan}{FitsChan}, FITS headers describing the Moc will be stored
-      in the FitsChan. The binary data for the single column of the
-      coresponding FITS binary table can be retrieved from the Moc using
-      method \htmlref{AST\_GETMOCDATA}{AST\_GETMOCDATA}.
+      area using the ICRS coordinate system. However, the Moc class, like
+      other subclasses of Region, allows its attributes to be changed so
+      that it represents the equivalent area in any celestial coordinate
+      system that can be mapped to ICRS. See attribute \htmlref{Adaptive}{Adaptive}.
 
       In practice, to use this class an empty Moc object (i.e. a Moc
       describing a null area of the sky) should first be created using the
       AST\_MOC
       constructor. Areas of the sky should then be added into the empty
       Moc using one or more of the class methods.
+
+      If it is required to write a Moc out to a FITS binary table, the
+      data value and headers to put in the table can be obtained using
+      methods
+      \htmlref{AST\_GETMOCDATA}{AST\_GETMOCDATA} and \htmlref{AST\_GETMOCHEADER}{AST\_GETMOCHEADER}.
+      The MOC described by an existing FITS binary table can be added
+      into a Moc object using the
+      \htmlref{AST\_ADDMOCDATA}{AST\_ADDMOCDATA} method.
+
+      Note, this class is limited to MOCs for which the number of cells
+      in the normalised MOC can be represented in a four byte signed integer.
    }
    \sstinvocation{
       RESULT = AST\_MOC( OPTIONS, STATUS )
@@ -23219,6 +23263,125 @@ Object             - Base class for all AST Objects
       parameter at the end of the parameter list descirbed above. This
       parameter is a pointer to the integer inherited status
       variable: \texttt{"} int $*$status\texttt{"} .
+   }
+}
+\sstroutine{
+   AST\_MOCCHAN
+}{
+   Create a MocChan
+}{
+   \sstdescription{
+      This function creates a new \htmlref{MocChan}{MocChan} and optionally initialises
+      its attributes.
+
+      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
+      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
+      conventions of the JSON and string encodings described in
+      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
+      to a MocChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Moc is suitable, generate a
+      textual description of that Moc, and reading from a MocChan will
+      create a new Moc from its textual description. See the Moc class
+      for further information.
+
+      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a MocChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstinvocation{
+      RESULT = AST\_MOCCHAN( SOURCE, SINK, OPTIONS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         SOURCE = SUBROUTINE (Given)
+      }{
+         A source routine, which is a subroutine which takes a single
+         integer error status argument.   If no value has been set
+         for the SourceFile attribute, this routine will be used by
+         the MocChan to obtain lines of input text. On each
+         invocation, it should read the next input line from some
+         external data store, and then return the resulting text to
+         the AST library by calling \htmlref{AST\_PUTLINE}{AST\_PUTLINE}. It should supply a
+         negative line length when there are no more lines to read.
+         If an error occurs, it should set its own error status
+         argument to an error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SOURCE value,
+         and no value has been set for the SourceFile attribute,
+         the MocChan will read from standard input instead.
+      }
+      \sstsubsection{
+         SINK = SUBROUTINE (Given)
+      }{
+         A sink routine, which is a subroutine which takes a single
+         integer error status argument.  If no value has been set
+         for the SinkFile attribute, this routine will be used by
+         the MocChan to deliver lines of output text. On each
+         invocation, it should obtain the next output line from the
+         AST library by calling \htmlref{AST\_GETLINE}{AST\_GETLINE}, and then deliver the
+         resulting text to some external data store.  If an error
+         occurs, it should set its own error status argument to an
+         error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SINK value,
+         and no value has been set for the SinkFile attribute,
+         the MocChan will write to standard output instead.
+      }
+      \sstsubsection{
+         OPTIONS = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         A character string containing an optional comma-separated
+         list of attribute assignments to be used for initialising the
+         new MocChan. The syntax used is identical to that for the
+         \htmlref{AST\_SET}{AST\_SET} routine.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_MOCCHAN = INTEGER
+      }{
+         A pointer to the new MocChan.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          The names of the routines supplied for the SOURCE and SINK
+         arguments should appear in EXTERNAL statements in the Fortran
+         routine which invokes AST\_MOCCHAN. However, this is not generally
+         necessary for the null routine AST\_NULL (so long as the AST\_PAR
+         include file has been used).
+
+         \sstitem
+          If the external data source or sink uses a character encoding
+         other than ASCII, the supplied source and sink functions should
+         translate between the external character encoding and the internal
+         ASCII encoding used by AST.
+
+         \sstitem
+          A null \htmlref{Object}{Object} pointer (AST\_\_NULL) will be returned if this
+         function is invoked with the AST error status set, or if it
+         should fail for any reason.
+
+         \sstitem
+          Note that the null routine AST\_NULL (one underscore) is
+         different to AST\_\_NULL (two underscores), which is the null Object
+         pointer.
+      }
    }
 }
 \sstroutine{
@@ -23901,6 +24064,21 @@ Object             - Base class for all AST Objects
       For compatibility with other Starlink facilities, the codes W
       and UW are provided as synonyms for S and US respectively (but
       only in the Fortran interface to AST).
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND, UBND and INSIDE are changed from
+      type INTEGER to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_OUTLINE$<$X$>$ becomes AST\_OUTLINE8$<$X$>$.
    }
 }
 \sstroutine{
@@ -26837,6 +27015,22 @@ Object             - Base class for all AST Objects
       calculated) may be declared bad and flagged with the BADVAL
       value in the OUT\_VAR array for similar reasons.
    }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input or output grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND\_IN, UBND\_IN, LBND\_OUT, UBND\_OUT, LBND, UBND are changed from
+      type INTEGER to type INTEGER$*$8. The function return type is similarly
+      changed to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_REBIN$<$X$>$ becomes AST\_REBIN8$<$X$>$.
+   }
 }
 \sstroutine{
    AST\_REBINSEQ$<$X$>$
@@ -27408,6 +27602,22 @@ Object             - Base class for all AST Objects
       In addition, associated output variance estimates (if
       calculated) may be declared bad and flagged with the BADVAL
       value in the OUT\_VAR array for similar reasons.
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input or output grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND\_IN, UBND\_IN, LBND\_OUT, UBND\_OUT, LBND, UBND are changed from
+      type INTEGER to type INTEGER$*$8. The function return type is similarly
+      changed to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_REBINSEQ$<$X$>$ becomes AST\_REBINSEQ8$<$X$>$.
    }
 }
 \sstroutine{
@@ -28614,6 +28824,22 @@ Object             - Base class for all AST Objects
       are instead left holding the value they had on entry to this
       function. The number of such array elements is returned as
       the function value.
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the input or output grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND\_IN, UBND\_IN, LBND\_OUT, UBND\_OUT, LBND, UBND are changed from
+      type INTEGER to type INTEGER$*$8. The function return type is similarly
+      changed to type INTEGER$*$8.
+      The function name is changed by inserting the digit \texttt{"} 8\texttt{"}  before the
+      trailing data type code. Thus,
+      AST\_RESAMPLE$<$X$>$ becomes AST\_RESAMPLE8$<$X$>$.
    }
 }
 \sstroutine{
@@ -32628,6 +32854,19 @@ Object             - Base class for all AST Objects
          and \htmlref{Nout}{Nout} attributes.
       }
    }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the number of points to be transformed exceeds the largest value that
+      can be represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte). Specifically, the
+      argument
+      NPOINT is changed from type INTEGER to type INTEGER$*$8.
+      The function name is changed by appending the digit \texttt{"} 8\texttt{"}  to the
+      name. Thus,
+      AST\_TRAN1 becomes AST\_TRAN18.
+   }
 }
 \sstroutine{
    AST\_TRAN2
@@ -32697,6 +32936,19 @@ Object             - Base class for all AST Objects
           The Mapping supplied must have the value 2 for both its \htmlref{Nin}{Nin}
          and \htmlref{Nout}{Nout} attributes.
       }
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the number of points to be transformed exceeds the largest value that
+      can be represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte). Specifically, the
+      argument
+      NPOINT is changed from type INTEGER to type INTEGER$*$8.
+      The function name is changed by appending the digit \texttt{"} 8\texttt{"}  to the
+      name. Thus,
+      AST\_TRAN2 becomes AST\_TRAN28.
    }
 }
 \sstroutine{
@@ -32853,6 +33105,21 @@ Object             - Base class for all AST Objects
          the inverse transformation is being applied, these values should
          be reversed.
       }
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the output grid is so large that an integer pixel index,
+      (or a count of pixels) could exceed the largest value that can be
+      represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte) to hold pixel
+      indices and pixel counts. Specifically, the arguments
+      LBND, UBND, OUTDIM are changed from
+      type INTEGER to type INTEGER$*$8.
+      The function name is changed by appending the digit \texttt{"} 8\texttt{"}  to the
+      name. Thus,
+      AST\_TRANGRID becomes AST\_TRANGRID8.
    }
 }
 \sstroutine{
@@ -33051,6 +33318,19 @@ Object             - Base class for all AST Objects
          the inverse transformation is being applied, these values should
          be reversed.
       }
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the number of points to be transformed exceeds the largest value that
+      can be represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte). Specifically, the
+      arguments
+      NPOINT, INDIM and OUTDIM are changed from type INTEGER to type INTEGER$*$8.
+      The function name is changed by appending the digit \texttt{"} 8\texttt{"}  to the
+      name. Thus,
+      AST\_TRANN becomes AST\_TRANN8.
    }
 }
 \sstroutine{
@@ -37734,6 +38014,38 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   ForceTab
+}{
+   Force the use of the -TAB algorithm when writing FITS-WCS headers?
+}{
+   \sstdescription{
+      This attribute is a  boolean value which indicates if the \texttt{"} -TAB\texttt{"}
+      algorithm, defined in FITS-WCS paper III, should be used if at all
+      possible when writing out a \htmlref{FrameSet}{FrameSet} using the FITS-WCS encoding.
+
+      Note this attribute has no effect unless the \htmlref{TabOK}{TabOK} attribute is set
+      to a positive non-zero value. If, in addition to setting TabOK,
+      ForceTab is set to non-zero value, astWrite will attempt to use the
+      \sstitemlist{
+
+         \sstitem
+          TAB algorithm even if another algorithm could have been used. If
+         ForceTab is left at its default value of zero, then the -TAB algorithm
+         will be used only if no other algorithm can be used.
+      }
+   }
+   \sstattributetype{
+      Integer (boolean).
+   }
+   \sstapplicability{
+      \sstsubsection{
+         \htmlref{FitsChan}{FitsChan}
+      }{
+         All FitsChans have this attribute.
+      }
+   }
+}
+\sstroutine{
    Format(axis)
 }{
    Format specification for axis values
@@ -40224,6 +40536,53 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   MocFormat
+}{
+   Format for encoding Mocs as text
+}{
+   \sstdescription{
+      This attribute specifies the format to use when AST \htmlref{Moc}{Moc}
+      Objects are converted to text by a \htmlref{MocChan}{MocChan}. There are currently two
+      ways (conventions) by which MOCs may be represented in the form of
+      text and the MocFormat attribute is used to specify which of these
+      should be used:
+
+      \sstitemlist{
+
+         \sstitem
+          \texttt{"} JSON\texttt{"} : Encodes a Moc \htmlref{Object}{Object} as a JSON string using the JSON
+         serialisation described in the MOC recommendation (version 1.1).
+
+         \sstitem
+          \texttt{"} STRING\texttt{"} : Encodes a Moc Object as using the string serialisation
+         described in the MOC recommendation (version 1.1).
+
+      }
+      The value assigned to the MocFormat does not affect the behaviour
+      of the
+      \htmlref{AST\_READ}{AST\_READ}
+      method, which automatically identifies the format used by the
+      external text and sets the MocFormat attribute to the
+      corresponding value.
+
+      The \htmlref{AST\_WRITE}{AST\_WRITE}
+      method will create the external text using the format
+      specified by the current value of the MocFormat attribute.
+
+      The initial default value of the attribute is \texttt{"} UNKNOWN\texttt{"} .
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         MocChan
+      }{
+         All MocChans have this attribute.
+      }
+   }
+}
+\sstroutine{
    MocLength
 }{
    The table length used to describe a Moc in FITS
@@ -40241,6 +40600,37 @@ Object             - Base class for all AST Objects
          Moc
       }{
          All Mocs have this attribute.
+      }
+   }
+}
+\sstroutine{
+   MocLineLen
+}{
+   Controls output buffer length
+}{
+   \sstdescription{
+      This attribute specifies the maximum length to use when writing out
+      text through the sink function supplied when the \htmlref{MocChan}{MocChan} was created.
+
+      The number of characters in each string written out through the sink
+      function will not be greater than the value of this attribute (but
+      may be less). The default value is 80.
+
+      Note, the default value of 80 may not be appropriate when a MocChan
+      is used within Fortran code. In this case, MocLineLen should usually
+      be set to the size of the CHARACTER variable used to receive the
+      text returned by \htmlref{AST\_GETLINE}{AST\_GETLINE} within the sink function. This avoids
+      the possibility of long lines being truncated invisibly within
+      AST\_GETLINE.
+   }
+   \sstattributetype{
+      Integer.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         MocChan
+      }{
+         All MocChans have this attribute.
       }
    }
 }
@@ -43521,7 +43911,8 @@ Object             - Base class for all AST Objects
       The AST\_WRITE
       method will generate headers that use the -TAB algorithm (if
       possible) if no other known FITS-WCS algorithm can be used to
-      describe the supplied \htmlref{FrameSet}{FrameSet}. This will result in a table of
+      describe the supplied \htmlref{FrameSet}{FrameSet} (but see the \htmlref{ForceTab}{ForceTab} attribute). This
+      will result in a table of
       coordinate values and index vectors being stored in the FitsChan.
       After the write operation, the calling application should check to
       see if such a table has been stored in the FitsChan. If so, the
@@ -45718,6 +46109,9 @@ Object             - Base class for all AST Objects
           \htmlref{FitsDigits}{FitsDigits}: Digits of precision for floating-point FITS values
 
          \sstitem
+          \htmlref{ForceTab}{ForceTab}: Force use of the FITS \texttt{"} -TAB\texttt{"}  algorithm?
+
+         \sstitem
           \htmlref{Iwc}{Iwc}: Add a \htmlref{Frame}{Frame} describing Intermediate World Coords?
 
          \sstitem
@@ -46894,6 +47288,64 @@ Object             - Base class for all AST Objects
          \sstitem
           \htmlref{AST\_TESTCELL}{AST\_TESTCELL}: Test if a single HEALPix cell is included in a Moc
       }
+   }
+}
+\sstroutine{
+   MocChan
+}{
+   I/O Channel for textual representations of Mocs
+}{
+   \sstdescription{
+      A MocChan is a specialised form of \htmlref{Channel}{Channel} which supports the
+      reading and writing of AST \htmlref{Moc}{Moc} objects as text, using the
+      conventions of the JSON and string encodings described in
+      the IVOA\texttt{'} s MOC recommendation, version 1.1. Writing a Moc
+      to a MocChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Moc is suitable, generate a
+      textual description of that Moc, and reading from a MocChan will
+      create a new Moc from its textual description. See the Moc class
+      for further information.
+
+      Normally, when you use a MocChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a MocChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstconstructor{
+      \htmlref{AST\_MOCCHAN}{AST\_MOCCHAN}
+   }
+   \sstdiytopic{
+      Inheritance
+   }{
+      The MocChan class inherits from the Channel class.
+   }
+   \sstdiytopic{
+      Attributes
+   }{
+      In addition to those attributes common to all Channels, every
+      MocChan also has the following attributes:
+
+      \sstitemlist{
+
+         \sstitem
+          \htmlref{MocFormat}{MocFormat}: Whether to use JSON or string format
+
+         \sstitem
+          \htmlref{MocLineLen}{MocLineLen}: Controls output buffer length
+      }
+   }
+   \sstdiytopic{
+      Functions
+   }{
+      The MocChan class does not define any new routines beyond those
+      which are applicable to all Channels.
    }
 }
 \sstroutine{
@@ -53342,11 +53794,9 @@ weight when pasting each separate input data array into the output mosaic.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V8.7.0}
-The following describes the most significant changes which have
-occurred in the AST library between versions V8.6.3 and V8.7.0 (the
-current version):
+\subsection{Changes Introduced in V8.7.0}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.6.3 and V8.7.0:
 
 \begin{enumerate}
 
@@ -53363,6 +53813,70 @@ non-zero for Regions defined within a \htmlref{SkyFrame}{SkyFrame}, regardless o
 Region has been negated. Previously, it was non-zero only if the Region
 had not been negated. Note, this change only affects Regions defined
 within SkyFrames.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V8.7.1}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.7.0 and V8.7.1:
+
+\begin{enumerate}
+
+\item The \htmlref{Moc}{Moc} class now supports version 1.1 of the the MOC recommendation.
+This includes new support for string and JSON encoded MOCs. See methods
+astGetMocString and astAddMocString in the Moc class, and also the new
+\htmlref{MocChan}{MocChan} class.
+
+\item The \htmlref{FitsChan}{FitsChan} class will now read FITS-WCS headers that have
+alternate axis descriptions but no primary axis descriptions.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V8.7.2}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.7.1 and V8.7.2:
+
+\begin{enumerate}
+
+\item By default, the AST header file ``ast.h'' is now installed into both
+\texttt{STARLINK\_DIR/include} and \texttt{STARLINK\_DIR/include/star}. The
+new configure option ``\texttt{--without-topinclude}'' can be used to prevent
+the header file being installed into \texttt{STARLINK\_DIR/include}.
+
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V9.0.0}
+The following describes the most significant changes which
+occurred in the AST library between versions V8.7.2 and V9.0.0:
+
+\begin{enumerate}
+\item Functions such as
+AST\_RESAMPLE and AST\_MASK
+that handle grids of data values now have alternative interfaces that can
+handle grids that contain more pixels than can be represented in a 4-byte
+integer. This is achieved by using 8-byte integer arguments in place of
+4-byte arguments. The names of these ``8-byte'' interfaces are the same
+as the 4-byte interfaces but have the digit ``8'' appended to the
+function name (before any trailing data type code). These new interfaces
+are documented in an extra paragraph entitled \emph{Handling of Huge
+Pixel Arrays} attached to the reference documentation for each such
+function.
+
+\end{enumerate}
+
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V9.0.2}
+The following describes the most significant changes which have
+occurred in the AST library between versions V9.0.0 and V9.0.2 (the
+current version):
+
+\begin{enumerate}
+\item The AST sharable libraries now use a non-zero version number.
+\item The \htmlref{FitsChan}{FitsChan} class has a new attribute called \htmlref{ForceTab}{ForceTab}, which is used
+in conjunction with the \htmlref{TabOK}{TabOK} attribute to force the use of the
+``-TAB'' algorithm when writing a \htmlref{FrameSet}{FrameSet} out using the FITS-WCS encoding.
 
 \end{enumerate}
 

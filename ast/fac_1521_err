@@ -168,3 +168,4 @@ FACILITY AST
 466,INMOC,Invalid string-encoded MOC
 467,SMBUF,Supplied buffer too small
 468,BGWRD,Word is too long
+469,TOOBG,Array is too big

@@ -866,7 +866,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
                if( PyObject_IsInstance( o, (PyObject *) &MappingType ) ) {
                   mymaplist[ i ] = (AstMapping *) AST( o );
                } else {
-                  char *buf[200];
+                  char buf[200];
                   sprintf( buf, "Element %d of the 'maplist' argument of the "
                            "Ast.Mapping.mapmerge() method is a %s (must be "
                            "an AST Mapping).", i, GetObjectType( o ) );
@@ -6110,6 +6110,7 @@ typedef struct {
 /* Prototypes for class functions */
 static PyObject *Region_getregionframe( Region *self );
 static PyObject *Region_getregionbounds( Region *self );
+static PyObject *Region_getregiondisc( Region *self );
 static PyObject *Region_negate( Region *self );
 static PyObject *Region_overlap( Region *self, PyObject *args );
 static PyObject *Region_mapregion( Region *self, PyObject *args );
@@ -6138,6 +6139,7 @@ static PyGetSetDef Region_getseters[] = {
 static PyMethodDef Region_methods[] = {
   {"getregionframe", (PyCFunction)Region_getregionframe, METH_NOARGS, "Obtain an object of the encapsulated Frame within a Region"},
   {"getregionbounds", (PyCFunction)Region_getregionbounds, METH_NOARGS, "Returns the bounding box of Region"},
+  {"getregiondisc", (PyCFunction)Region_getregiondisc, METH_NOARGS, "Returns the centre and radius of a disc containing a 2D Region"},
   {"mapregion", (PyCFunction)Region_mapregion, METH_VARARGS, "Transform a Region into a new Frame using a given Mapping"},
   {"negate", (PyCFunction)Region_negate, METH_NOARGS, "Negate the area represented by a Region"},
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
@@ -6207,6 +6209,34 @@ static PyObject *Region_getregionbounds( Region *self ) {
   }
   Py_XDECREF(lbnd);
   Py_XDECREF(ubnd);
+
+  TIDY;
+  return result;
+}
+
+#undef NAME
+#define NAME CLASS ".getregiondisc"
+static PyObject *Region_getregiondisc( Region *self ) {
+
+/* args: centre,radius: */
+
+  PyObject *result = NULL;
+  int naxes;
+  npy_intp dims[1];
+  PyArrayObject *centre = NULL;
+  double radius;
+
+  if( PyErr_Occurred() ) return NULL;
+
+  naxes = astGetI( THIS, "Naxes" );
+  dims[0] = naxes;
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  if( centre ) {
+     astGetRegionDisc( THIS, (double *)centre->data, &radius );
+     if( astOK ) result = Py_BuildValue( "Od", PyArray_Return(centre),
+                                         radius );
+  }
+  Py_XDECREF(centre);
 
   TIDY;
   return result;
@@ -12022,6 +12052,7 @@ void tabsource_wrapper( AstFitsChan *this, const char *extname,
 /* ================================= */
 
 /* Static method prototypes */
+static PyObject *PyAst_convex( PyObject *self, PyObject *args );
 static PyObject *PyAst_escapes( PyObject *self, PyObject *args );
 static PyObject *PyAst_tune( PyObject *self, PyObject *args );
 static PyObject *PyAst_tunec( PyObject *self, PyObject *args );
@@ -12031,6 +12062,175 @@ static PyObject *PyAst_get_include( PyObject *self );
 static PyObject *PyAst_activememory( PyObject *self, PyObject *args );
 
 /* Static method implementations */
+
+#undef NAME
+#define NAME MODULE ".convex"
+static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
+
+/* args: result:value,oper,array,lbnd,ubnd,starpix */
+
+   PyObject *array_object = NULL;
+   PyObject *lbnd_object = NULL;
+   PyObject *result = NULL;
+   PyObject *ubnd_object = NULL;
+   char format[] = "diOOOi:" NAME;
+   char value_b;
+   double value_d;
+   float value_f;
+   int dims[ 2 ];
+   int i;
+   int ndim = 0;
+   int oper;
+   int starpix;
+   int type = 0;
+   int value_i;
+   long int value_l;
+   npy_intp *pdims = NULL;
+   short int value_h;
+   unsigned char value_B;
+   unsigned int value_I;
+   unsigned long int value_L;
+   unsigned short int value_H;
+   void *pvalue = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* We do not know yet what format code to use for value. We need to parse
+   the arguments twice. The first time, we determine the data type from
+   the "array" argument. This allows us to choose the correct format code
+   for value, so we then parse the arguments a second time, using the
+   correct code. */
+   if( PyArg_ParseTuple( args, format, &value_d, &oper, &array_object,
+                         &lbnd_object, &ubnd_object, &starpix ) && astOK ) {
+
+      if( !PyArray_Check(  array_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
+                          "an array object" );
+      } else {
+         type = ((PyArrayObject*) array_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 0 ] = 'd';
+            pvalue = &value_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 0 ] = 'f';
+            pvalue = &value_f;
+         } else if( type == PyArray_INT ) {
+            format[ 0 ] = 'i';
+            pvalue = &value_i;
+         } else if( type == PyArray_LONG ) {
+            format[ 0 ] = 'l';
+            pvalue = &value_l;
+         } else if( type == PyArray_UINT ) {
+            format[ 0 ] = 'I';
+            pvalue = &value_I;
+         } else if( type == PyArray_ULONG ) {
+            format[ 0 ] = 'L';
+            pvalue = &value_L;
+         } else if( type == PyArray_SHORT ) {
+            format[ 0 ] = 'h';
+            pvalue = &value_h;
+         } else if( type == PyArray_USHORT ) {
+            format[ 0 ] = 'H';
+            pvalue = &value_H;
+         } else if( type == PyArray_BYTE ) {
+            format[ 0 ] = 'b';
+            pvalue = &value_b;
+         } else if( type == PyArray_UBYTE ) {
+            format[ 0 ] = 'B';
+            pvalue = &value_B;
+         } else {
+            PyErr_Format( PyExc_ValueError, "The 'array' array supplied "
+                          "to " NAME " has a data type of %s that is not "
+                          "supported by " NAME " (must be float64, "
+                          "float32 or int32).",
+                          numpydtype2str(type));
+         }
+
+/* Also record the number of axes and dimensions in the input array. */
+         ndim = ((PyArrayObject*) array_object)->nd;
+         pdims = ((PyArrayObject*) array_object)->dimensions;
+         if( ndim != 2 ) {
+            PyErr_Format( PyExc_ValueError, "The 'in' array supplied to " NAME
+                          " has %d dimensions - must be 2.", ndim );
+            pvalue = NULL;
+         } else {
+            for( i = 0; i < 2; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
+         }
+      }
+   }
+
+/* Parse the arguments again, this time with the correct code for badval. */
+   if( PyArg_ParseTuple( args, format, pvalue, &oper, &array_object,
+                         &lbnd_object, &ubnd_object, &starpix ) && pvalue ) {
+      PyArrayObject *array = GetArray( array_object, type, 1, ndim, dims, "array", NAME );
+      PyArrayObject *lbnd = GetArray1I( lbnd_object, &ndim, "lbnd", NAME );
+      PyArrayObject *ubnd = GetArray1I( ubnd_object, &ndim, "ubnd", NAME );
+
+      if( array && lbnd && ubnd ) {
+         AstPolygon *new = NULL;
+
+         if( type == PyArray_DOUBLE ) {
+            new = astConvexD( value_d, oper, (const double *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_FLOAT ) {
+            new = astConvexF( value_f, oper, (const float *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_LONG) {
+            new = astConvexL( value_l, oper, (const long int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_INT) {
+            new = astConvexI( value_i, oper, (const int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_ULONG) {
+            new = astConvexUL( value_L, oper, (const unsigned long int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_UINT) {
+            new = astConvexUI( value_I, oper, (const unsigned int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_SHORT) {
+            new = astConvexS( value_h, oper, (const short int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_USHORT) {
+            new = astConvexUS( value_H, oper, (const unsigned short int *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_BYTE) {
+            new = astConvexB( value_b, oper, (const signed char *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         } else if( type == PyArray_UBYTE) {
+            new = astConvexUB( value_B, oper, (const unsigned char *)array->data,
+                               (const int *)lbnd->data, (const int *)ubnd->data,
+                               starpix );
+         }
+
+         if( astOK ) {
+            PyObject *new_object = NewObject( (AstObject *) new );
+            if( new_object ) {
+               result = Py_BuildValue( "O", new_object );
+               Py_DECREF( new_object );
+            }
+         }
+         new = astAnnul( new );
+      }
+
+      Py_XDECREF(array);
+      Py_XDECREF(lbnd);
+      Py_XDECREF(ubnd);
+   }
+
+   TIDY;
+   return result;
+}
 
 #undef NAME
 #define NAME MODULE ".escapes"
@@ -12362,6 +12562,7 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 
 /* Describe the static methods of the class */
 static PyMethodDef PyAst_methods[] = {
+   {"convex", (PyCFunction)PyAst_convex, METH_VARARGS, "Create the shortest Polygon outlining values in a pixel array"},
    {"escapes", (PyCFunction)PyAst_escapes, METH_VARARGS, "Control whether graphical escape sequences are included in strings"},
    {"outline", (PyCFunction)PyAst_outline, METH_VARARGS, "Create a Polygon outlining values in a pixel array"},
    {"tune", (PyCFunction)PyAst_tune, METH_VARARGS,  "Set or get an integer-valued AST global tuning parameter"},

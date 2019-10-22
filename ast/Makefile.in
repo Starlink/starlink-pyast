@@ -287,61 +287,65 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 libast_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libast_la_CFLAGS) \
-	$(CFLAGS) $(STAR_LDFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(STAR_LDFLAGS) $(libast_la_LDFLAGS) $(LDFLAGS) -o \
+	$@
 libast_drama_la_LIBADD =
 am_libast_drama_la_OBJECTS = libast_drama_la-err_drama.lo
 libast_drama_la_OBJECTS = $(am_libast_drama_la_OBJECTS)
 libast_drama_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_drama_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_drama_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_ems_la_LIBADD =
 am_libast_ems_la_OBJECTS = libast_ems_la-err_ems.lo
 libast_ems_la_OBJECTS = $(am_libast_ems_la_OBJECTS)
 libast_ems_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libast_ems_la_CFLAGS) \
-	$(CFLAGS) $(STAR_LDFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(STAR_LDFLAGS) $(libast_ems_la_LDFLAGS) $(LDFLAGS) \
+	-o $@
 libast_err_la_LIBADD =
 am_libast_err_la_OBJECTS = libast_err_la-err_null.lo
 libast_err_la_OBJECTS = $(am_libast_err_la_OBJECTS)
 libast_err_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libast_err_la_CFLAGS) \
-	$(CFLAGS) $(STAR_LDFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(STAR_LDFLAGS) $(libast_err_la_LDFLAGS) $(LDFLAGS) \
+	-o $@
 libast_grf3d_la_LIBADD =
 am_libast_grf3d_la_OBJECTS = libast_grf3d_la-grf3d.lo
 libast_grf3d_la_OBJECTS = $(am_libast_grf3d_la_OBJECTS)
 libast_grf3d_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_grf3d_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_grf3d_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_grf_2_0_la_LIBADD =
 am_libast_grf_2_0_la_OBJECTS = libast_grf_2_0_la-grf_2.0.lo
 libast_grf_2_0_la_OBJECTS = $(am_libast_grf_2_0_la_OBJECTS)
 libast_grf_2_0_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_grf_2_0_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_grf_2_0_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_grf_3_2_la_LIBADD =
 am_libast_grf_3_2_la_OBJECTS = libast_grf_3_2_la-grf_3.2.lo
 libast_grf_3_2_la_OBJECTS = $(am_libast_grf_3_2_la_OBJECTS)
 libast_grf_3_2_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_grf_3_2_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_grf_3_2_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_grf_5_6_la_LIBADD =
 am_libast_grf_5_6_la_OBJECTS = libast_grf_5_6_la-grf_5.6.lo
 libast_grf_5_6_la_OBJECTS = $(am_libast_grf_5_6_la_OBJECTS)
 libast_grf_5_6_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_grf_5_6_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_grf_5_6_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_pal_la_LIBADD =
 am__objects_7 = libast_pal_la-palwrap.lo
 am_libast_pal_la_OBJECTS = $(am__objects_7)
 libast_pal_la_OBJECTS = $(am_libast_pal_la_OBJECTS)
 libast_pal_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libast_pal_la_CFLAGS) \
-	$(CFLAGS) $(STAR_LDFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(STAR_LDFLAGS) $(libast_pal_la_LDFLAGS) $(LDFLAGS) \
+	-o $@
 @EXTERNAL_PAL_FALSE@am_libast_pal_la_rpath = -rpath $(libdir)
 libast_pgplot_la_LIBADD =
 am__libast_pgplot_la_SOURCES_DIST = grf_pgplot.c grf_5.6.c
@@ -352,7 +356,7 @@ libast_pgplot_la_OBJECTS = $(am_libast_pgplot_la_OBJECTS)
 libast_pgplot_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_pgplot_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_pgplot_la_LDFLAGS) $(LDFLAGS) -o $@
 libast_pgplot3d_la_LIBADD =
 am__libast_pgplot3d_la_SOURCES_DIST = grf3d_pgplot.c grf3d.c
 @NOFORTRAN_FALSE@am__objects_9 = libast_pgplot3d_la-grf3d_pgplot.lo
@@ -362,7 +366,7 @@ libast_pgplot3d_la_OBJECTS = $(am_libast_pgplot3d_la_OBJECTS)
 libast_pgplot3d_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libast_pgplot3d_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+	$(libast_pgplot3d_la_LDFLAGS) $(LDFLAGS) -o $@
 PROGRAMS = $(noinst_PROGRAMS)
 am_ast_test_OBJECTS = ast_test.$(OBJEXT)
 ast_test_OBJECTS = $(am_ast_test_OBJECTS)
@@ -833,6 +837,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+version_info = @version_info@
 
 # First declare various groups of files.  These were initially extracted
 # from the grp.make file, as constructed by the SDT newdev command
@@ -1477,6 +1482,7 @@ libast_la_SOURCES = \
     $(WCSLIB_FILES) \
     ast_err.h
 
+libast_la_LDFLAGS = -version-info @version_info@
 @EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la
 
 # Ensure libast links against libraries containing functions used within
@@ -1494,37 +1500,47 @@ nodist_libast_la_SOURCES = \
 
 #  The default error reporting module.
 libast_err_la_SOURCES = err_null.c
+libast_err_la_LDFLAGS = -version-info @version_info@
 
 #  The error reporting module that uses EMS to deliver errors.
 libast_ems_la_SOURCES = err_ems.c
+libast_ems_la_LDFLAGS = -version-info @version_info@
 
 #  The error reporting module that uses DRAMA Ers to deliver errors.
 libast_drama_la_SOURCES = err_drama.c
+libast_drama_la_LDFLAGS = -version-info @version_info@
 
 #  The module containing null implementations of the 3D graphics routines
 #  required by AST
 libast_grf3d_la_SOURCES = grf3d.c
+libast_grf3d_la_LDFLAGS = -version-info @version_info@
 
 #  The module containing null implementations of the graphics routines
 #  required by AST V2.0
 libast_grf_2_0_la_SOURCES = grf_2.0.c
+libast_grf_2_0_la_LDFLAGS = -version-info @version_info@
 
 #  The module containing null implementations of the graphics routines
 #  added by AST V3.2 and not present in V2.0
 libast_grf_3_2_la_SOURCES = grf_3.2.c
+libast_grf_3_2_la_LDFLAGS = -version-info @version_info@
 
 #  The module containing null implementations of the graphics routines
 #  added by AST V5.6 and not present in V3.2
 libast_grf_5_6_la_SOURCES = grf_5.6.c
+libast_grf_5_6_la_LDFLAGS = -version-info @version_info@
 
 #  The graphics module that uses PGPLOT for 2D graphical output.
 libast_pgplot_la_SOURCES = $(GRF_PGPLOT_SOURCES)
+libast_pgplot_la_LDFLAGS = -version-info @version_info@
 
 #  The graphics module that uses PGPLOT for 3D graphical output.
 libast_pgplot3d_la_SOURCES = $(GRF3D_PGPLOT_SOURCES)
+libast_pgplot3d_la_LDFLAGS = -version-info @version_info@
 
 #  Positional astronomy libraries.
 libast_pal_la_SOURCES = $(PAL_FILES)
+libast_pal_la_LDFLAGS = -version-info @version_info@
 
 # The following files are built by the targets in this makefile.
 MAINTAINERCLEANFILES = version.h builddocs addversion \

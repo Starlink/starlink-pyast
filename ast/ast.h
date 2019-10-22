@@ -29,12 +29,12 @@
 *     License as published by the Free Software Foundation, either
 *     version 3 of the License, or (at your option) any later
 *     version.
-*     
+*
 *     This program is distributed in the hope that it will be useful,
 *     but WITHOUT ANY WARRANTY; without even the implied warranty of
 *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *     GNU Lesser General Public License for more details.
-*     
+*
 *     You should have received a copy of the GNU Lesser General
 *     License along with this program.  If not, see
 *     <http://www.gnu.org/licenses/>.
@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     20-SEP-2019 (makeh):
+*     9-OCT-2019 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -547,13 +547,13 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 #define astINIT_GLOBALS
 /* unit. */
 /* ===== */
-#define AST__VMAJOR 8
-#define AST__VMINOR 7
-#define AST__RELEASE 2
+#define AST__VMAJOR 9
+#define AST__VMINOR 0
+#define AST__RELEASE 1
 
-#define AST_MAJOR_VERS 8
-#define AST_MINOR_VERS 7
-#define AST_RELEASE 2
+#define AST_MAJOR_VERS 9
+#define AST_MINOR_VERS 0
+#define AST_RELEASE 1
 
 #include <stdarg.h>
 #include <float.h>
@@ -582,6 +582,8 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 #define astEQUAL(aa,bb) astEQUALS(aa,bb,1.0E5)
 
 #define AST__NULL (astI2P(0))
+
+#define AST__MXDIM 7
 #include <stdint.h>
 #include <inttypes.h>
 typedef int64_t AstDim;
@@ -782,18 +784,18 @@ typedef struct AstPointSet {
    double **ptr;
    double *values;
    int ncoord;
-   int npoint;
+   AstDim npoint;
    double *acc;
 } AstPointSet;
 astPROTO_CHECK(PointSet)
 astPROTO_ISA(PointSet)
 
-AstPointSet *astPointSetId_( int, int, const char *, ... )__attribute__((format(printf,3,4)));
+AstPointSet *astPointSetId_( AstDim, int, const char *, ... )__attribute__((format(printf,3,4)));
 double **astGetPoints_( AstPointSet *, int * );
 void astPermPoints_( AstPointSet *, int, const int[], int * );
 void astSetPoints_( AstPointSet *, double **, int * );
-void astSetNpoint_( AstPointSet *, int, int * );
-void astSetSubPoints_( AstPointSet *, int, int, AstPointSet *, int * );
+void astSetNpoint_( AstPointSet *, AstDim, int * );
+void astSetSubPoints_( AstPointSet *, AstDim, int, AstPointSet *, int * );
 AstPointSet *astAppendPoints_( AstPointSet *, AstPointSet *, int * );
 void astBndPoints_( AstPointSet *, double *, double *, int * );
 int astReplaceNaN_( AstPointSet *, int * );
@@ -864,7 +866,7 @@ typedef struct AstMapping {
 } AstMapping;
 astPROTO_CHECK(Mapping)
 astPROTO_ISA(Mapping)
-#define PROTO_GENERIC_ALL(X,Xtype) int astResample##X##_( AstMapping *, int, const int [], const int [], const Xtype [], const Xtype [], int, void (*)( void ), const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * );
+#define PROTO_GENERIC_ALL(X,Xtype) AstDim astResample8##X##_( AstMapping *, int, const AstDim [], const AstDim [], const Xtype [], const Xtype [], int, void (*)( void ), const double [], int, double, int, Xtype, int, const AstDim [], const AstDim [], const AstDim [], const AstDim [], Xtype [], Xtype [], int * );
 PROTO_GENERIC_ALL(B,signed char)
 PROTO_GENERIC_ALL(D,double)
 PROTO_GENERIC_ALL(F,float)
@@ -880,7 +882,27 @@ PROTO_GENERIC_ALL(US,unsigned short int)
 
 PROTO_GENERIC_ALL(LD,long double)
 
-#define PROTO_GENERIC_DFI(X,Xtype) void astRebin##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * ); void astRebinSeq##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], double [], int64_t *, int * );
+#undef PROTO_GENERIC_ALL
+
+#define PROTO_GENERIC_ALL(X,Xtype) int astResample4##X##_( AstMapping *, int, const int [], const int [], const Xtype [], const Xtype [], int, void (*)( void ), const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * );
+PROTO_GENERIC_ALL(B,signed char)
+PROTO_GENERIC_ALL(D,double)
+PROTO_GENERIC_ALL(F,float)
+PROTO_GENERIC_ALL(I,int)
+PROTO_GENERIC_ALL(K,INT_BIG)
+PROTO_GENERIC_ALL(L,long int)
+PROTO_GENERIC_ALL(S,short int)
+PROTO_GENERIC_ALL(UB,unsigned char)
+PROTO_GENERIC_ALL(UI,unsigned int)
+PROTO_GENERIC_ALL(UK,UINT_BIG)
+PROTO_GENERIC_ALL(UL,unsigned long int)
+PROTO_GENERIC_ALL(US,unsigned short int)
+
+PROTO_GENERIC_ALL(LD,long double)
+
+#undef PROTO_GENERIC_ALL
+
+#define PROTO_GENERIC_DFI(X,Xtype) void astRebin4##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], int * ); void astRebin8##X##_( AstMapping *, double, int, const AstDim [], const AstDim [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const AstDim [], const AstDim [], const AstDim [], const AstDim [], Xtype [], Xtype [], int * ); void astRebinSeq4##X##_( AstMapping *, double, int, const int [], const int [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const int [], const int [], const int [], const int [], Xtype [], Xtype [], double [], int64_t *, int * ); void astRebinSeq8##X##_( AstMapping *, double, int, const AstDim [], const AstDim [], const Xtype [], const Xtype [], int, const double [], int, double, int, Xtype, int, const AstDim [], const AstDim [], const AstDim [], const AstDim [], Xtype [], Xtype [], double [], int64_t *, int * );
 
 PROTO_GENERIC_DFI(D,double)
 PROTO_GENERIC_DFI(F,float)
@@ -890,16 +912,19 @@ PROTO_GENERIC_DFI(UB,unsigned char)
 
 PROTO_GENERIC_DFI(LD,long double)
 
+#undef PROTO_GENERIC_DFI
+
 AstMapping *astRemoveRegions_( AstMapping *, int * );
 AstMapping *astSimplify_( AstMapping *, int * );
 void astInvert_( AstMapping *, int * );
 int astLinearApprox_( AstMapping *, const double *, const double *, double, double *, int * );
 int astQuadApprox_( AstMapping *, const double[2], const double[2], int, int, double *, double *, int * );
-void astTran1_( AstMapping *, int, const double [], int, double [], int * );
-void astTran2_( AstMapping *, int, const double [], const double [], int, double [], double [], int * );
-void astTranGrid_( AstMapping *, int, const int[], const int[], double, int, int, int, int, double *, int * );
-void astTranN_( AstMapping *, int, int, int, const double *, int, int, int, double *, int * );
-void astTranP_( AstMapping *, int, int, const double *[], int, int, double *[], int * );
+void astTran18_( AstMapping *, AstDim, const double [], int, double [], int * );
+void astTran28_( AstMapping *, AstDim, const double [], const double [], int, double [], double [], int * );
+void astTranGrid4_( AstMapping *, int, const int[], const int[], double, int, int, int, int, double *, int * );
+void astTranGrid8_( AstMapping *, int, const AstDim[], const AstDim[], double, int, int, int, AstDim, double *, int * );
+void astTranN8_( AstMapping *, AstDim, int, AstDim, const double *, int, int, AstDim, double *, int * );
+void astTranP8_( AstMapping *, AstDim, int, const double *[], int, int, double *[], int * );
 
 void astDecomposeId_( AstMapping *, AstMapping **, AstMapping **, int *, int *, int *, int * );
 void astMapBoxId_( AstMapping *, const double [], const double [], int, int, double *, double *, double [], double [], int * );
@@ -909,40 +934,85 @@ void astMapSplitId_( AstMapping *, int, const int *, int *, AstMapping **, int *
 #define astVerifyMapping(this) astINVOKE_CHECK(Mapping,this,1)
 
 #define astIsAMapping(this) astINVOKE_ISA(Mapping,this)
-#define astResampleLD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleLD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResampleB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4B_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8B(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8B_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4D_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8D(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8D_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleF(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4F_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8F(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8F_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4I_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8I(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8I_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4K_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8K(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8K_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4L_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8L(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8L_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4S_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8S(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8S_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleUB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4UB_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8UB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8UB_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleUI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4UI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8UI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8UI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleUK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4UK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8UK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8UK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleUL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4UL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8UL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8UL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleUS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4US_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8US(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8US_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astResampleLD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample4LD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astResample8LD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResample8LD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
 
 #define astInvert(this) astINVOKE(V,astInvert_(astCheckMapping(this),STATUS_PTR))
 #define astLinearApprox(this,lbnd,ubnd,tol,fit) astINVOKE(V,astLinearApprox_(astCheckMapping(this),lbnd,ubnd,tol,fit,STATUS_PTR))
 #define astQuadApprox(this,lbnd,ubnd,nx,ny,fit,rms) astINVOKE(V,astQuadApprox_(astCheckMapping(this),lbnd,ubnd,nx,ny,fit,rms,STATUS_PTR))
-#define astRebinD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinF_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinI_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebinUB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astRebinSeqD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqD_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
-#define astRebinSeqF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqF_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
-#define astRebinSeqI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqI_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
-#define astRebinSeqB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
-#define astRebinSeqUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeqUB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
-#define astResampleD(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleD_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleF(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleF_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleUL(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUL_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleUI(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUI_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleUK(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUK_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleS_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleUS(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUS_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleB_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
-#define astResampleUB(this,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astResampleUB_(astCheckMapping(this),ndim_in,lbnd_in,ubnd_in,in,in_var,interp,finterp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astRebinD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin4D_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin4F_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin4I_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin4B_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebinUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin4UB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astRebin8D(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin8D_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebin8F(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin8F_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebin8I(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin8I_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebin8B(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin8B_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+#define astRebin8UB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var) astINVOKE(V,astRebin8UB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,STATUS_PTR))
+
+#define astRebinSeqD(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq4D_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqF(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq4F_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqI(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq4I_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq4B_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeqUB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq4UB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+
+#define astRebinSeq8D(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq8D_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeq8F(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq8F_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeq8I(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq8I_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeq8B(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq8B_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+#define astRebinSeq8UB(this,wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused) astINVOKE(V,astRebinSeq8UB_(astCheckMapping(this),wlim,ndim_in,lbnd_in,ubnd_in,in,in_var,interp,params,flags,tol,maxpix,badval,ndim_out,lbnd_out,ubnd_out,lbnd,ubnd,out,out_var,weights,nused,STATUS_PTR))
+
 #define astRemoveRegions(this) astINVOKE(O,astRemoveRegions_(astCheckMapping(this),STATUS_PTR))
 #define astSimplify(this) astINVOKE(O,astSimplify_(astCheckMapping(this),STATUS_PTR))
-#define astTran1(this,npoint,xin,forward,xout) astINVOKE(V,astTran1_(astCheckMapping(this),npoint,xin,forward,xout,STATUS_PTR))
-#define astTran2(this,npoint,xin,yin,forward,xout,yout) astINVOKE(V,astTran2_(astCheckMapping(this),npoint,xin,yin,forward,xout,yout,STATUS_PTR))
-#define astTranGrid(this,ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out) astINVOKE(V,astTranGrid_(astCheckMapping(this),ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out,STATUS_PTR))
-#define astTranN(this,npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out) astINVOKE(V,astTranN_(astCheckMapping(this),npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out,STATUS_PTR))
-#define astTranP(this,npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out) astINVOKE(V,astTranP_(astCheckMapping(this),npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out,STATUS_PTR))
+#define astTran1(this,npoint,xin,forward,xout) astINVOKE(V,astTran18_(astCheckMapping(this),npoint,xin,forward,xout,STATUS_PTR))
+#define astTran18(this,npoint,xin,forward,xout) astINVOKE(V,astTran18_(astCheckMapping(this),npoint,xin,forward,xout,STATUS_PTR))
+#define astTran2(this,npoint,xin,yin,forward,xout,yout) astINVOKE(V,astTran28_(astCheckMapping(this),npoint,xin,yin,forward,xout,yout,STATUS_PTR))
+#define astTran28(this,npoint,xin,yin,forward,xout,yout) astINVOKE(V,astTran28_(astCheckMapping(this),npoint,xin,yin,forward,xout,yout,STATUS_PTR))
+#define astTranGrid(this,ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out) astINVOKE(V,astTranGrid4_(astCheckMapping(this),ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out,STATUS_PTR))
+#define astTranGrid8(this,ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out) astINVOKE(V,astTranGrid8_(astCheckMapping(this),ncoord_in,lbnd,ubnd,tol,maxpix,forward,ncoord_out,outdim,out,STATUS_PTR))
+#define astTranN(this,npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out) astINVOKE(V,astTranN8_(astCheckMapping(this),npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out,STATUS_PTR))
+#define astTranN8(this,npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out) astINVOKE(V,astTranN8_(astCheckMapping(this),npoint,ncoord_in,indim,in,forward,ncoord_out,outdim,out,STATUS_PTR))
+#define astTranP(this,npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out) astINVOKE(V,astTranP8_(astCheckMapping(this),npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out,STATUS_PTR))
+#define astTranP8(this,npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out) astINVOKE(V,astTranP8_(astCheckMapping(this),npoint,ncoord_in,ptr_in,forward,ncoord_out,ptr_out,STATUS_PTR))
 
 #define astDecompose(this,map1,map2,series,inv1,inv2) astINVOKE(V,astDecomposeId_(astCheckMapping(this),(AstMapping **)(map1),(AstMapping **)(map2),series,inv1,inv2,STATUS_PTR))
 #define astMapBox(this,lbnd_in,ubnd_in,forward,coord_out,lbnd_out,ubnd_out,xl,xu) astINVOKE(V,astMapBoxId_(astCheckMapping(this),lbnd_in,ubnd_in,forward,coord_out,lbnd_out,ubnd_out,xl,xu,STATUS_PTR))
@@ -1290,6 +1360,8 @@ enum { AST__INMOC = 233934482 };
 enum { AST__SMBUF = 233934490 };
 
 enum { AST__BGWRD = 233934498 };
+
+enum { AST__TOOBG = 233934506 };
 /* version. */
 /* ======== */
 /* object. */
@@ -1962,7 +2034,7 @@ typedef struct AstMatrixMap {
    double *f_matrix;
    double *i_matrix;
    int form;
-
+   double det;
 } AstMatrixMap;
 astPROTO_CHECK(MatrixMap)
 astPROTO_ISA(MatrixMap)
@@ -2400,18 +2472,30 @@ AstFrameSet *astGetRegionFrameSet_( AstRegion *, int * );
 int astOverlap_( AstRegion *, AstRegion *, int * );
 void astNegate_( AstRegion *, int * );
 
-int astMaskLD_( AstRegion *, AstMapping *, int, int, const int[], const int[], long double [], long double, int * );
+int astMask4LD_( AstRegion *, AstMapping *, int, int, const int[], const int[], long double [], long double, int * );
+AstDim astMask8LD_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], long double [], long double, int * );
 
-int astMaskB_( AstRegion *, AstMapping *, int, int, const int[], const int[], signed char[], signed char, int * );
-int astMaskD_( AstRegion *, AstMapping *, int, int, const int[], const int[], double[], double, int * );
-int astMaskF_( AstRegion *, AstMapping *, int, int, const int[], const int[], float[], float, int * );
-int astMaskI_( AstRegion *, AstMapping *, int, int, const int[], const int[], int[], int, int * );
-int astMaskL_( AstRegion *, AstMapping *, int, int, const int[], const int[], long int[], long int, int * );
-int astMaskS_( AstRegion *, AstMapping *, int, int, const int[], const int[], short int[], short int, int * );
-int astMaskUB_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned char[], unsigned char, int * );
-int astMaskUI_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned int[], unsigned int, int * );
-int astMaskUL_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned long int[], unsigned long int, int * );
-int astMaskUS_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned short int[], unsigned short int, int * );
+int astMask4B_( AstRegion *, AstMapping *, int, int, const int[], const int[], signed char[], signed char, int * );
+int astMask4D_( AstRegion *, AstMapping *, int, int, const int[], const int[], double[], double, int * );
+int astMask4F_( AstRegion *, AstMapping *, int, int, const int[], const int[], float[], float, int * );
+int astMask4I_( AstRegion *, AstMapping *, int, int, const int[], const int[], int[], int, int * );
+int astMask4L_( AstRegion *, AstMapping *, int, int, const int[], const int[], long int[], long int, int * );
+int astMask4S_( AstRegion *, AstMapping *, int, int, const int[], const int[], short int[], short int, int * );
+int astMask4UB_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned char[], unsigned char, int * );
+int astMask4UI_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned int[], unsigned int, int * );
+int astMask4UL_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned long int[], unsigned long int, int * );
+int astMask4US_( AstRegion *, AstMapping *, int, int, const int[], const int[], unsigned short int[], unsigned short int, int * );
+AstDim astMask8B_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], signed char[], signed char, int * );
+AstDim astMask8D_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], double[], double, int * );
+AstDim astMask8F_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], float[], float, int * );
+AstDim astMask8I_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], int[], int, int * );
+AstDim astMask8L_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], long int[], long int, int * );
+AstDim astMask8S_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], short int[], short int, int * );
+AstDim astMask8UB_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], unsigned char[], unsigned char, int * );
+AstDim astMask8UI_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], unsigned int[], unsigned int, int * );
+AstDim astMask8UL_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], unsigned long int[], unsigned long int, int * );
+AstDim astMask8US_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], unsigned short int[], unsigned short int, int * );
+
 void astSetUnc_( AstRegion *, AstRegion *, int * );
 AstRegion *astGetNegation_( AstRegion *, int * );
 AstRegion *astGetUnc_( AstRegion *, int, int * );
@@ -2425,23 +2509,43 @@ AstRegion *astMapRegionId_( AstRegion *, AstMapping *, AstFrame *, int * );
 #define astVerifyRegion(this) astINVOKE_CHECK(Region,this,1)
 
 #define astIsARegion(this) astINVOKE_ISA(Region,this)
+#define astMaskLD(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4LD_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8LD(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8LD_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskB(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4B_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8B(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8B_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskD(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4D_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8D(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8D_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskF(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4F_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8F(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8F_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskI(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4I_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8I(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8I_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskL(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4L_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8L(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8L_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskS(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4S_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8S(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8S_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskUB(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4UB_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8UB(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8UB_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskUI(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4UI_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8UI(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8UI_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskUL(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4UL_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8UL(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8UL_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
+#define astMaskUS(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask4US_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+#define astMask8US(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMask8US_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
+
 #define astGetRegionFrame(this) astINVOKE(O,astGetRegionFrame_(astCheckRegion(this),STATUS_PTR))
 #define astGetRegionFrameSet(this) astINVOKE(O,astGetRegionFrameSet_(astCheckRegion(this),STATUS_PTR))
 #define astNegate(this) astINVOKE(V,astNegate_(astCheckRegion(this),STATUS_PTR))
 #define astOverlap(this,that) astINVOKE(V,astOverlap_(astCheckRegion(this),astCheckRegion(that),STATUS_PTR))
-
-#define astMaskLD(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskLD_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-
-#define astMaskB(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskB_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskD(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskD_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskF(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskF_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskI(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskI_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskL(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskL_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskS(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskS_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskUB(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskUB_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskUI(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskUI_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskUL(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskUL_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
-#define astMaskUS(this,map,inside,ndim,lbnd,ubnd,in,val) astINVOKE(V,astMaskUS_(astCheckRegion(this),(map?astCheckMapping(map):NULL),inside,ndim,lbnd,ubnd,in,val,STATUS_PTR))
 #define astSetUnc(this,unc) astINVOKE(V,astSetUnc_(astCheckRegion(this),unc?astCheckRegion(unc):NULL,STATUS_PTR))
 #define astGetUnc(this,def) astINVOKE(O,astGetUnc_(astCheckRegion(this),def,STATUS_PTR))
 #define astGetRegionBounds(this,lbnd,ubnd) astINVOKE(V,astGetRegionBounds_(astCheckRegion(this),lbnd,ubnd,STATUS_PTR))
@@ -3284,18 +3388,31 @@ astPROTO_ISA(Moc)
 AstMoc *astMocId_( const char *, ... )__attribute__((format(printf,1,2)));
 void astAddRegion_( AstMoc *, int, AstRegion *, int * );
 
-void astAddPixelMaskLD_( AstMoc *, int, AstFrameSet *, long double, int, int, long double, const long double[], const int[2], int * );
+void astAddPixelMask4LD_( AstMoc *, int, AstFrameSet *, long double, int, int, long double, const long double[], const int[2], int * );
 
-void astAddPixelMaskB_( AstMoc *, int, AstFrameSet *, signed char, int, int, signed char, const signed char[], const int[2], int * );
-void astAddPixelMaskD_( AstMoc *, int, AstFrameSet *, double, int, int, double, const double[], const int[2], int * );
-void astAddPixelMaskF_( AstMoc *, int, AstFrameSet *, float, int, int, float, const float[], const int[2], int * );
-void astAddPixelMaskI_( AstMoc *, int, AstFrameSet *, int, int, int, int, const int[], const int[2], int * );
-void astAddPixelMaskL_( AstMoc *, int, AstFrameSet *, long int, int, int, long int, const long int[], const int[2], int * );
-void astAddPixelMaskS_( AstMoc *, int, AstFrameSet *, short int, int, int, short int, const short int[], const int[2], int * );
-void astAddPixelMaskUB_( AstMoc *, int, AstFrameSet *, unsigned char, int, int, unsigned char, const unsigned char[], const int[2], int * );
-void astAddPixelMaskUI_( AstMoc *, int, AstFrameSet *, unsigned int, int, int, unsigned int, const unsigned int[], const int[2], int * );
-void astAddPixelMaskUL_( AstMoc *, int, AstFrameSet *, unsigned long int, int, int, unsigned long int, const unsigned long int[], const int[2], int * );
-void astAddPixelMaskUS_( AstMoc *, int, AstFrameSet *, unsigned short int, int, int, unsigned short int,const unsigned short int[], const int[2], int * );
+void astAddPixelMask4B_( AstMoc *, int, AstFrameSet *, signed char, int, int, signed char, const signed char[], const int[2], int * );
+void astAddPixelMask4D_( AstMoc *, int, AstFrameSet *, double, int, int, double, const double[], const int[2], int * );
+void astAddPixelMask4F_( AstMoc *, int, AstFrameSet *, float, int, int, float, const float[], const int[2], int * );
+void astAddPixelMask4I_( AstMoc *, int, AstFrameSet *, int, int, int, int, const int[], const int[2], int * );
+void astAddPixelMask4L_( AstMoc *, int, AstFrameSet *, long int, int, int, long int, const long int[], const int[2], int * );
+void astAddPixelMask4S_( AstMoc *, int, AstFrameSet *, short int, int, int, short int, const short int[], const int[2], int * );
+void astAddPixelMask4UB_( AstMoc *, int, AstFrameSet *, unsigned char, int, int, unsigned char, const unsigned char[], const int[2], int * );
+void astAddPixelMask4UI_( AstMoc *, int, AstFrameSet *, unsigned int, int, int, unsigned int, const unsigned int[], const int[2], int * );
+void astAddPixelMask4UL_( AstMoc *, int, AstFrameSet *, unsigned long int, int, int, unsigned long int, const unsigned long int[], const int[2], int * );
+void astAddPixelMask4US_( AstMoc *, int, AstFrameSet *, unsigned short int, int, int, unsigned short int,const unsigned short int[], const int[2], int * );
+
+void astAddPixelMask8LD_( AstMoc *, int, AstFrameSet *, long double, int, int, long double, const long double[], const AstDim[2], int * );
+
+void astAddPixelMask8B_( AstMoc *, int, AstFrameSet *, signed char, int, int, signed char, const signed char[], const AstDim[2], int * );
+void astAddPixelMask8D_( AstMoc *, int, AstFrameSet *, double, int, int, double, const double[], const AstDim[2], int * );
+void astAddPixelMask8F_( AstMoc *, int, AstFrameSet *, float, int, int, float, const float[], const AstDim[2], int * );
+void astAddPixelMask8I_( AstMoc *, int, AstFrameSet *, int, int, int, int, const int[], const AstDim[2], int * );
+void astAddPixelMask8L_( AstMoc *, int, AstFrameSet *, long int, int, int, long int, const long int[], const AstDim[2], int * );
+void astAddPixelMask8S_( AstMoc *, int, AstFrameSet *, short int, int, int, short int, const short int[], const AstDim[2], int * );
+void astAddPixelMask8UB_( AstMoc *, int, AstFrameSet *, unsigned char, int, int, unsigned char, const unsigned char[], const AstDim[2], int * );
+void astAddPixelMask8UI_( AstMoc *, int, AstFrameSet *, unsigned int, int, int, unsigned int, const unsigned int[], const AstDim[2], int * );
+void astAddPixelMask8UL_( AstMoc *, int, AstFrameSet *, unsigned long int, int, int, unsigned long int, const unsigned long int[], const AstDim[2], int * );
+void astAddPixelMask8US_( AstMoc *, int, AstFrameSet *, unsigned short int, int, int, unsigned short int,const unsigned short int[], const AstDim[2], int * );
 
 void astGetCell_( AstMoc *, int, int *, int64_t *, int * );
 void astAddCell_( AstMoc *, int, int, int64_t, int * );
@@ -3322,16 +3439,29 @@ AstFitsChan *astGetMocHeader_( AstMoc *, int * );
 
 #define astAddPixelMaskLD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskLD_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
 
-#define astAddPixelMaskB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskD_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskF(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskF_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskS_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskUB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskUI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskUL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
-#define astAddPixelMaskUS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMaskUS_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4B_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4D_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskF(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4F_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4I_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4L_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4S_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4UB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4UI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4UL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMaskUS(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask4US_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+
+#define astAddPixelMask8LD(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8LD_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+
+#define astAddPixelMask8B(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8B_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8D(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8D_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8F(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8F_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8I(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8I_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8L(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8L_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8S(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8S_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8UB(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8UB_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8UI(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8UI_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8UL(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8UL_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
+#define astAddPixelMask8US(this,cmode,wcs,value,oper,flags,badval,array,dims) astINVOKE(V,astAddPixelMask8US_(astCheckMoc(this),cmode,astCheckFrameSet(wcs),value,oper,flags,badval,array,dims,STATUS_PTR))
 
 #define astGetMocData(this,mxsize,data) astINVOKE(V,astGetMocData_(astCheckMoc(this),mxsize,data,STATUS_PTR))
 #define astGetMocHeader(this) astINVOKE(O,astGetMocHeader_(astCheckMoc(this),STATUS_PTR))
@@ -3440,31 +3570,57 @@ astPROTO_ISA(Polygon)
 AstPolygon *astPolygonId_( void *, int, int, const double *, AstRegion *, const char *, ... )__attribute__((format(printf,6,7)));
 AstPolygon *astDownsize_( AstPolygon *, double, int, int * );
 
-AstPolygon *astOutlineLD_( long double, int, const long double[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4LD_( long double, int, const long double[], const int[2], const int[2], double, int, const int[2], int, int * );
 
-AstPolygon *astOutlineB_( signed char, int, const signed char[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineD_( double, int, const double[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineF_( float, int, const float[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineI_( int, int, const int[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineL_( long int, int, const long int[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineS_( short int, int, const short int[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineUB_( unsigned char, int, const unsigned char[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineUI_( unsigned int, int, const unsigned int[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineUL_( unsigned long int, int, const unsigned long int[], const int[2], const int[2], double, int, const int[2], int, int * );
-AstPolygon *astOutlineUS_( unsigned short int, int, const unsigned short int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4B_( signed char, int, const signed char[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4D_( double, int, const double[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4F_( float, int, const float[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4I_( int, int, const int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4L_( long int, int, const long int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4S_( short int, int, const short int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4UB_( unsigned char, int, const unsigned char[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4UI_( unsigned int, int, const unsigned int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4UL_( unsigned long int, int, const unsigned long int[], const int[2], const int[2], double, int, const int[2], int, int * );
+AstPolygon *astOutline4US_( unsigned short int, int, const unsigned short int[], const int[2], const int[2], double, int, const int[2], int, int * );
 
-AstPolygon *astConvexLD_( long double, int, const long double[], const int[2], const int[2], int, int * );
+AstPolygon *astOutline8LD_( long double, int, const long double[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
 
-AstPolygon *astConvexB_( signed char, int, const signed char[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexD_( double, int, const double[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexF_( float, int, const float[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexI_( int, int, const int[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexL_( long int, int, const long int[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexS_( short int, int, const short int[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexUB_( unsigned char, int, const unsigned char[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexUI_( unsigned int, int, const unsigned int[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexUL_( unsigned long int, int, const unsigned long int[], const int[2], const int[2], int, int * );
-AstPolygon *astConvexUS_( unsigned short int, int, const unsigned short int[], const int[2], const int[2], int, int * );
+AstPolygon *astOutline8B_( signed char, int, const signed char[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8D_( double, int, const double[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8F_( float, int, const float[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8I_( int, int, const int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8L_( long int, int, const long int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8S_( short int, int, const short int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8UB_( unsigned char, int, const unsigned char[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8UI_( unsigned int, int, const unsigned int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8UL_( unsigned long int, int, const unsigned long int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+AstPolygon *astOutline8US_( unsigned short int, int, const unsigned short int[], const AstDim[2], const AstDim[2], double, int, const AstDim[2], int, int * );
+
+AstPolygon *astConvex4LD_( long double, int, const long double[], const int[2], const int[2], int, int * );
+
+AstPolygon *astConvex4B_( signed char, int, const signed char[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4D_( double, int, const double[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4F_( float, int, const float[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4I_( int, int, const int[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4L_( long int, int, const long int[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4S_( short int, int, const short int[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4UB_( unsigned char, int, const unsigned char[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4UI_( unsigned int, int, const unsigned int[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4UL_( unsigned long int, int, const unsigned long int[], const int[2], const int[2], int, int * );
+AstPolygon *astConvex4US_( unsigned short int, int, const unsigned short int[], const int[2], const int[2], int, int * );
+
+AstPolygon *astConvex8LD_( long double, int, const long double[], const AstDim[2], const AstDim[2], int, int * );
+
+AstPolygon *astConvex8B_( signed char, int, const signed char[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8D_( double, int, const double[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8F_( float, int, const float[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8I_( int, int, const int[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8L_( long int, int, const long int[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8S_( short int, int, const short int[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8UB_( unsigned char, int, const unsigned char[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8UI_( unsigned int, int, const unsigned int[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8UL_( unsigned long int, int, const unsigned long int[], const AstDim[2], const AstDim[2], int, int * );
+AstPolygon *astConvex8US_( unsigned short int, int, const unsigned short int[], const AstDim[2], const AstDim[2], int, int * );
 #define astCheckPolygon(this) astINVOKE_CHECK(Polygon,this,0)
 #define astVerifyPolygon(this) astINVOKE_CHECK(Polygon,this,1)
 
@@ -3473,31 +3629,57 @@ AstPolygon *astConvexUS_( unsigned short int, int, const unsigned short int[], c
 #define astPolygon astINVOKE(F,astPolygonId_)
 #define astDownsize(this,maxerr,maxvert) astINVOKE(O,astDownsize_(astCheckPolygon(this),maxerr,maxvert,STATUS_PTR))
 
-#define astOutlineLD(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineLD_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineLD(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4LD_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
 
-#define astOutlineB(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineB_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineD(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineD_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineF(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineF_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineI(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineI_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineL(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineL_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineS(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineS_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineUB(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineUB_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineUI(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineUI_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineUL(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineUL_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
-#define astOutlineUS(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutlineUS_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineB(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4B_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineD(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4D_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineF(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4F_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineI(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4I_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineL(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4L_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineS(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4S_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineUB(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4UB_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineUI(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4UI_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineUL(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4UL_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutlineUS(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline4US_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
 
-#define astConvexLD(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O,astConvexLD_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astOutline8LD(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8LD_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
 
-#define astConvexB(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexB_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexD(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexD_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexF(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexF_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexI(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexI_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexL(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexL_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexS(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexS_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexUB(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexUB_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexUI(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexUI_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexUL(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexUL_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
-#define astConvexUS(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvexUS_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astOutline8B(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8B_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8D(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8D_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8F(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8F_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8I(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8I_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8L(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8L_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8S(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8S_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8UB(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8UB_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8UI(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8UI_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8UL(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8UL_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+#define astOutline8US(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix) astINVOKE(O,astOutline8US_(value,oper,array,lbnd,ubnd,maxerr,maxvert,inside,starpix,STATUS_PTR))
+
+#define astConvexLD(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O,astConvex4LD_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+
+#define astConvexB(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4B_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexD(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4D_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexF(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4F_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexI(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4I_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexL(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4L_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexS(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4S_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexUB(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4UB_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexUI(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4UI_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexUL(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4UL_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvexUS(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex4US_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+
+#define astConvex8LD(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O,astConvex8LD_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+
+#define astConvex8B(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8B_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8D(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8D_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8F(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8F_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8I(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8I_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8L(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8L_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8S(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8S_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8UB(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8UB_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8UI(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8UI_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8UL(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8UL_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
+#define astConvex8US(value,oper,array,lbnd,ubnd,starpix) astINVOKE(O, astConvex8US_(value,oper,array,lbnd,ubnd,starpix,STATUS_PTR))
 /* prism. */
 /* ====== */
 #define STATUS_PTR astGetStatusPtr

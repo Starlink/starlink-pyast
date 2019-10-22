@@ -448,7 +448,7 @@ static const char *GetIdent( AstObject *, int * );
 static const char *Get( AstObject *, const char *, int * );
 static const char *FromStringSource( void );
 static int Equal( AstObject *, AstObject *, int * );
-static int GetObjSize( AstObject *, int * );
+static size_t GetObjSize( AstObject *, int * );
 static int HasAttribute( AstObject *, const char *, int * );
 static int Same( AstObject *, AstObject *, int * );
 static int TestAttrib( AstObject *, const char *, int * );
@@ -2103,7 +2103,7 @@ static const char *GetAttrib( AstObject *this, const char *attrib, int *status )
    astDECLARE_GLOBALS            /* Thread-specific global data */
    const char *result;           /* Pointer value to return */
    int nobject;                  /* Nobject attribute value */
-   int objsize;                  /* ObjSize attribute value */
+   size_t objsize;               /* ObjSize attribute value */
    int ref_count;                /* RefCount attribute value */
    int usedefs;                  /* UseDefs attribute value */
 
@@ -2159,7 +2159,7 @@ static const char *GetAttrib( AstObject *this, const char *attrib, int *status )
    } else if ( !strcmp( attrib, "objsize" ) ) {
       objsize = astGetObjSize( this );
       if ( astOK ) {
-         (void) sprintf( getattrib_buff, "%d", objsize );
+         (void) sprintf( getattrib_buff, "%zu", objsize );
          result = getattrib_buff;
       }
 
@@ -2291,7 +2291,7 @@ int astGetNobject_( const AstObject *this, int *status ) {
    return this->vtab->nobject;
 }
 
-static int GetObjSize( AstObject *this, int *status ) {
+static size_t GetObjSize( AstObject *this, int *status ) {
 /*
 *+
 *  Name:
@@ -2305,7 +2305,7 @@ static int GetObjSize( AstObject *this, int *status ) {
 
 *  Synopsis:
 *     #include "object.h"
-*     int astGetObjSize( AstObject *this )
+*     size_t astGetObjSize( AstObject *this )
 
 *  Class Membership:
 *     Object method.
@@ -5875,6 +5875,7 @@ int astManageLock_( AstObject *this, int mode, int extra, AstObject **fail,
 int astEqual_( AstObject *this, AstObject *that, int *status ) {
    if ( !astOK ) return 0;
    if( this == that ) return 1;
+   if( !this || !that ) return 0;
    return (**astMEMBER(this,Object,Equal))( this, that, status );
 }
 const char *astGetAttrib_( AstObject *this, const char *attrib, int *status ) {
@@ -5901,7 +5902,7 @@ void astVSet_( AstObject *this, const char *settings, char **text, va_list args,
    if ( !astOK ) return;
    (**astMEMBER(this,Object,VSet))( this, settings, text, args, status );
 }
-int astGetObjSize_( AstObject *this, int *status ) {
+size_t astGetObjSize_( AstObject *this, int *status ) {
    if ( !astOK || !this ) return 0;
    return (**astMEMBER(this,Object,GetObjSize))( this, status );
 }

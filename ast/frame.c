@@ -734,7 +734,7 @@ static int (* parent_testattrib)( AstObject *, const char *, int * );
 static void (* parent_clearattrib)( AstObject *, const char *, int * );
 static void (* parent_setattrib)( AstObject *, const char *, int * );
 static void (* parent_cleanattribs)( AstObject *, int * );
-static int (* parent_getobjsize)( AstObject *, int * );
+static size_t (* parent_getobjsize)( AstObject *, int * );
 
 #if defined(THREAD_SAFE)
 static int (* parent_managelock)( AstObject *, int, int, AstObject **, int * );
@@ -861,8 +861,8 @@ static int GetDirection( AstFrame *, int, int * );
 static int GetIsLinear( AstMapping *, int * );
 static int GetIsSimple( AstMapping *, int * );
 static int LineContains( AstFrame *, AstLineDef *, int, double *, int * );
-static int LineCrossing( AstFrame *, AstLineDef *, AstLineDef *, double **, int * );
-static int GetObjSize( AstObject *, int * );
+static int LineCrossing( AstFrame *, AstLineDef *, AstLineDef *, double[5], int * );
+static size_t GetObjSize( AstObject *, int * );
 static void AxNorm( AstFrame *, int, int, int, double *, int * );
 static void CleanAttribs( AstObject *, int * );
 static void LineOffset( AstFrame *, AstLineDef *, double, double, double[2], int * );
@@ -5766,7 +5766,7 @@ static int GetNout( AstMapping *this_mapping, int *status ) {
    return result;
 }
 
-static int GetObjSize( AstObject *this_object, int *status ) {
+static size_t GetObjSize( AstObject *this_object, int *status ) {
 /*
 *  Name:
 *     GetObjSize
@@ -5779,7 +5779,7 @@ static int GetObjSize( AstObject *this_object, int *status ) {
 
 *  Synopsis:
 *     #include "frame.h"
-*     int GetObjSize( AstObject *this, int *status )
+*     size_t GetObjSize( AstObject *this, int *status )
 
 *  Class Membership:
 *     Frame member function (over-rides the astGetObjSize protected
@@ -5806,7 +5806,7 @@ static int GetObjSize( AstObject *this_object, int *status ) {
 /* Local Variables: */
    AstFrame *this;            /* Pointer to Frame structure */
    int axis;                  /* Axis index */
-   int result;                /* Result value to return */
+   size_t result;             /* Result value to return */
 
 /* Initialise. */
    result = 0;
@@ -6542,7 +6542,7 @@ static int LineContains( AstFrame *this, AstLineDef *l, int def, double *point, 
 }
 
 static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
-                         double **cross, int *status ) {
+                         double cross[5], int *status ) {
 /*
 *+
 *  Name:
@@ -6557,7 +6557,7 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 *  Synopsis:
 *     #include "frame.h"
 *     int astLineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
-*                          double **cross )
+*                          double cross[5] )
 
 *  Class Membership:
 *     Frame method.
@@ -6577,18 +6577,15 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 *     l2
 *        Pointer to the structure defining the second line.
 *     cross
-*        Pointer to a location at which to put a pointer to a dynamically
-*        alocated array containing the axis values at the crossing. If
-*        NULL is supplied no such array is returned. Otherwise, the returned
-*        array should be freed using astFree when no longer needed. If the
+*        Pointer to an array in which to return the axis values at the
+*        crossing. If NULL is supplied the axis values are not returned. If the
 *        lines are parallel (i.e. do not cross) then AST__BAD is returned for
 *        all axis values. Note usable axis values are returned even if the
 *        lines cross outside the segment defined by the start and end points
 *        of the lines. The order of axes in the returned array will take
 *        account of the current axis permutation array if appropriate. Note,
 *        sub-classes such as SkyFrame may append extra values to the end
-*        of the basic frame axis values. A NULL pointer is returned if an
-*        error occurs.
+*        of the basic frame axis values.
 
 *  Returned Value:
 *     A non-zero value is returned if the lines cross at a point which is
@@ -6611,7 +6608,7 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 */
 
 /* Local Variables: */
-   double *crossing;          /* Returned array */
+   double crossing[5];        /* Local array to use if no array supplied */
    double den;                /* Denominator */
    double dx;                 /* Offset in start X values */
    double dy;                 /* Offset in start Y values */
@@ -6624,7 +6621,9 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 
 /* Initialise. */
    result = 0;
-   crossing = astMalloc( sizeof(double)*2 );
+
+/* Use a local array for storage if no array was supplied. */
+   if( !cross ) cross = crossing;
 
 /* Check that both lines refer to the supplied Frame. */
    if( l1->frame != this ) {
@@ -6637,7 +6636,7 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
                 "not relate to the supplied %s (AST internal programming "
                 "error).", status, astGetClass( this ), astGetClass( this ) );
 
-   } else if( crossing ){
+   } else {
 
 /* Each of the lines can be represented as "p = start + t.v" where start is
    the start position, v is the unit vector pointing from start to end,
@@ -6653,11 +6652,11 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
 
 /* Store the crossing point, using the smaller t value to redue error. */
          if( fabs( t1 ) < fabs( t2 ) ) {
-            crossing[ 0 ] = l1->start[ 0 ] + t1*l1->dir[ 0 ];
-            crossing[ 1 ] = l1->start[ 1 ] + t1*l1->dir[ 1 ];
+            cross[ 0 ] = l1->start[ 0 ] + t1*l1->dir[ 0 ];
+            cross[ 1 ] = l1->start[ 1 ] + t1*l1->dir[ 1 ];
          } else {
-            crossing[ 0 ] = l2->start[ 0 ] + t2*l2->dir[ 0 ];
-            crossing[ 1 ] = l2->start[ 1 ] + t2*l2->dir[ 1 ];
+            cross[ 0 ] = l2->start[ 0 ] + t2*l2->dir[ 0 ];
+            cross[ 1 ] = l2->start[ 1 ] + t2*l2->dir[ 1 ];
          }
 
 /* See if the intersection is within the length of both lines (excluding
@@ -6670,23 +6669,13 @@ static int LineCrossing( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
              t2 >= 0.0 && t2 < l2->length ) result = 1;
 
       } else {
-         crossing[ 0 ] = AST__BAD;
-         crossing[ 1 ] = AST__BAD;
+         cross[ 0 ] = AST__BAD;
+         cross[ 1 ] = AST__BAD;
       }
    }
 
 /* Return zero if an error occurred. */
-   if( !astOK ) {
-      crossing = astFree( crossing );
-      result = 0;
-   }
-
-/* Return the crossing pointer. */
-   if( cross ) {
-      *cross = crossing;
-   } else if( crossing ){
-      crossing = astFree( crossing );
-   }
+   if( !astOK ) result = 0;
 
 /* Return a pointer to the output structure. */
    return result;
@@ -14955,7 +14944,7 @@ AstLineDef *astLineDef_( AstFrame *this, const double start[2],
    return (**astMEMBER(this,Frame,LineDef))( this, start, end, status );
 }
 int astLineCrossing_( AstFrame *this, AstLineDef *l1, AstLineDef *l2,
-                      double **cross, int *status ) {
+                      double cross[5], int *status ) {
    if ( !astOK ) return 0;
    return (**astMEMBER(this,Frame,LineCrossing))( this, l1, l2, cross, status );
 }
