@@ -513,5 +513,8 @@ enum { AST__SMBUF           	= 233934490 };	/* messid=467 */
 /* Word is too long */
 enum { AST__BGWRD           	= 233934498 };	/* messid=468 */
 
+/* Array is too big */
+enum { AST__TOOBG           	= 233934506 };	/* messid=469 */
+
 
 #endif	/* AST_ERROR_DEFINED */

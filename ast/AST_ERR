@@ -677,3 +677,7 @@
       INTEGER AST__BGWRD
       PARAMETER ( AST__BGWRD = 233934498 )
 
+*     Array is too big
+      INTEGER AST__TOOBG
+      PARAMETER ( AST__TOOBG = 233934506 )
+

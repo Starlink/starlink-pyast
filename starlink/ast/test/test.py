@@ -711,6 +711,11 @@ class TestAst(unittest.TestCase):
         self.assertEqual(overlap, 4)
         self.assertTrue(box.removeregions().isaframe())
 
+        centre, radius = box.getregiondisc()
+        self.assertEqual(centre[0], 1.5)
+        self.assertEqual(centre[1], 2.0)
+        self.assertAlmostEqual(radius, 2.5000025)
+
     def test_MapRegion(self):
         box = starlink.Ast.Box(starlink.Ast.Frame(2), 1,
                                [0, 0], [3, 4])
@@ -1442,6 +1447,20 @@ class TestAst(unittest.TestCase):
         new2 = new.downsize(0, 3)
         self.assertTrue(new2.isapolygon())
 
+        new = starlink.Ast.convex(1, starlink.Ast.EQ, array, [-1, 2], [2, 5],
+                                  True)
+
+        pin = numpy.array([[0., 0., 0., 0.], [2.4, 2.6, 3.4, 3.7]])
+        pout = new.tran(pin, True)
+        self.assertEqual(pout[0][0], starlink.Ast.BAD)
+        self.assertEqual(pout[0][1], 0.)
+        self.assertEqual(pout[0][2], 0.)
+        self.assertEqual(pout[0][3], starlink.Ast.BAD)
+        self.assertEqual(pout[1][0], starlink.Ast.BAD)
+        self.assertEqual(pout[1][1], 2.6)
+        self.assertEqual(pout[1][2], 3.4)
+        self.assertEqual(pout[1][3], starlink.Ast.BAD)
+
     def test_PointList(self):
         pointlist = starlink.Ast.PointList(starlink.Ast.Frame(2),
                                            [[0, 1, 0], [0, 1, 2]])
@@ -1568,7 +1587,7 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(moc.MaxRes, 12.883, delta=1.0E-3)
 
         mesh = moc.getregionmesh( 1 )
-        self.assertEqual( mesh.shape[1], 298 )
+        self.assertEqual( mesh.shape[1], 294 )
 
         centre = [ math.radians( 35 ), math.radians( 55 ) ]
         mxerr = math.radians( 0.01 )
