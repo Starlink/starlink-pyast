@@ -3,7 +3,7 @@
 #include "numpy/arrayobject.h"
 #include "ast.h"
 #include "pyast_extra.h"
-#include "grf.h"
+#include "src/grf.h"
 
 /* Define macros for things that changed between Python V2.7 and V3.2 */
 #if PY_MAJOR_VERSION >= 3

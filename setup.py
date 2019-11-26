@@ -15,6 +15,7 @@ include_dirs = []
 include_dirs.append(numpy.get_include())
 include_dirs.append(os.path.join('.', 'starlink', 'include'))
 include_dirs.append(os.path.join('.', 'ast'))
+include_dirs.append(os.path.join('.', 'ast', 'src'))
 
 #  Create the support files needed for the build. These find the AST
 #  source code using the environment variable AST_SOURCE, so set AST_SOURCE
@@ -33,7 +34,8 @@ if not os.path.exists('sun211.htx'):
 cminpack_c = ('enorm.c', 'lmder.c', 'qrfac.c', 'dpmpar.c', 'lmder1.c',
               'lmpar.c', 'qrsolv.c')
 
-#  List the C source files for implemented AST classes:
+#  List the C source files for implemented AST classes (in ast/src
+#  subdirectory):
 ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'cmpmap.c', 'cmpregion.c', 'dsbspecframe.c', 'dssmap.c',
          'ellipse.c', 'error.c', 'fitschan.c', 'fluxframe.c', 'frame.c',
@@ -41,14 +43,20 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'grf_5.6.c', 'grismmap.c', 'interval.c', 'keymap.c',
          'loader.c', 'lutmap.c', 'mapping.c', 'mathmap.c', 'matrixmap.c',
          'memory.c', 'moc.c', 'mocchan.c', 'normmap.c', 'nullregion.c',
-         'object.c', 'palwrap.c', 'pcdmap.c', 'permmap.c', 'plot.c',
+         'object.c', 'pcdmap.c', 'permmap.c', 'plot.c',
          'pointlist.c', 'pointset.c', 'polygon.c', 'polymap.c',
-         'prism.c', 'proj.c', 'ratemap.c', 'region.c', 'shiftmap.c',
+         'prism.c', 'ratemap.c', 'region.c', 'shiftmap.c',
          'skyaxis.c', 'skyframe.c', 'specfluxframe.c', 'specframe.c',
-         'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c', 'tpn.c',
-         'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c', 'wcstrig.c',
+         'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c',
+         'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c',
          'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c', 'specmap.c',
-         'slamap.c', 'chebymap.c', 'unitnormmap.c', 'pyast_extra.c' )
+         'slamap.c', 'chebymap.c', 'unitnormmap.c' )
+
+#  List the other required C source files (in ast subdirectory):
+ast_c2 = ( 'palwrap.c', 'pyast_extra.c' )
+
+#  List the other required C source files (in ast/wcslib subdirectory):
+ast_c3 = ( 'proj.c', 'tpn.c', 'wcstrig.c' )
 
 #  List the erfa source files required by AST.
 erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
@@ -95,7 +103,7 @@ erfa_c = ('a2af.c', 'a2tf.c', 'ab.c', 'af2a.c', 'anp.c', 'anpm.c',
           'xy06.c', 'xys00a.c', 'xys00b.c', 'xys06a.c', 'zp.c', 'zpv.c',
           'zr.c')
 
-#  List the C source files for unimplemeneted AST classes:
+#  List the C source files for unimplemeneted AST classes in ast/src:
 ast_c_extra = ('fitstable.c', 'intramap.c', 'plot3d.c', 'selectormap.c',
                'stc.c', 'stccatalogentrylocation.c', 'stcobsdatalocation.c',
                'stcresourceprofile.c', 'stcsearchlocation.c', 'switchmap.c',
@@ -107,13 +115,17 @@ sources = [os.path.join('starlink', 'ast', 'Ast.c')]
 
 #  Append all the .c and .h files needed to build the AST library locally.
 for cfile in ast_c:
+    sources.append(os.path.join('ast', 'src', cfile))
+for cfile in ast_c2:
     sources.append(os.path.join('ast', cfile))
+for cfile in ast_c3:
+    sources.append(os.path.join('ast', 'wcslib', cfile))
 for cfile in cminpack_c:
     sources.append(os.path.join(os.path.join('ast', 'cminpack'), cfile))
 for cfile in erfa_c:
     sources.append(os.path.join(os.path.join('ast', 'erfa'), cfile))
 for cfile in ast_c_extra:
-    sources.append(os.path.join('ast', cfile))
+    sources.append(os.path.join('ast', 'src', cfile))
 
 # Test the compiler
 define_macros = []
@@ -158,7 +170,7 @@ if sys.platform.startswith("darwin"):
 
 
 setup(name='starlink-pyast',
-      version='3.13.0',
+      version='3.13.1',
       description='A Python wrapper for the Starlink AST library',
       url='http://www.starlink.ac.uk/ast',
       author='David Berry',

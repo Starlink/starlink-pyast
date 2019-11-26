@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     9-OCT-2019 (makeh):
+*     26-NOV-2019 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -549,17 +549,20 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* ===== */
 #define AST__VMAJOR 9
 #define AST__VMINOR 0
-#define AST__RELEASE 1
+#define AST__RELEASE 3
 
 #define AST_MAJOR_VERS 9
 #define AST_MINOR_VERS 0
-#define AST_RELEASE 1
+#define AST_RELEASE 3
 
 #include <stdarg.h>
 #include <float.h>
 #include <stdio.h>
 #define STATUS_PTR astGetStatusPtr
 #define AST__THREADSAFE 1
+#define AST__UNLOCKED 1
+#define AST__RUNNING 2
+#define AST__OTHER 3
 #define AST__DBL_WIDTH ((DBL_DIG + 3) + 6)
 #define AST__FLT_WIDTH ((FLT_DIG + 3) + 6)
 #define astINVOKE(rettype,function) astERROR_INVOKE(astRet##rettype##_(function))
@@ -1617,6 +1620,7 @@ typedef struct AstFitsChan {
    int encoding;
    int defb1950;
    int tabok;
+   int forcetab;
    int cdmatrix;
    int polytan;
    int sipok;
