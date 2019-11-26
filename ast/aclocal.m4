@@ -8662,17 +8662,17 @@ m4_ifval([$1],
 
 m4_define([per_dir_PREFIX],   [m4_ifdef([OVERRIDE_PREFIX],
                                         [OVERRIDE_PREFIX],
-                                        [/stardev/git/starlink_cndf/star])])
+                                        [/stardev/git/starlink/star])])
 m4_define([per_dir_STARLINK], [m4_ifdef([OVERRIDE_STARLINK],
                                         [OVERRIDE_STARLINK],
-                                        [/stardev/git/starlink_cndf/star])])
+                                        [/stardev/git/starlink/star])])
 
 test -n "$_star_per_package_dirs" || _star_per_package_dirs=false
 test -n "$_star_docs_only"        || _star_docs_only=false
 
 
 # Ensure that STARLINK has a value, defaulting to
-# /stardev/git/starlink_cndf/star.  Note that this directory may be
+# /stardev/git/starlink/star.  Note that this directory may be
 # different from /star, and reflects the value of
 # STARCONF_DEFAULT_STARLINK that the `starconf' package was configured
 # with before its installation. 
@@ -8686,7 +8686,7 @@ test -n "$_star_docs_only"        || _star_docs_only=false
 # is possible to make a test version of a new package, using tools
 # from an old installation, but installing in a new place.
 #
-# However, we install software in /stardev/git/starlink_cndf/star by
+# However, we install software in /stardev/git/starlink/star by
 # default.  This is so even if $STARLINK and STARCONF_DEFAULT_STARLINK
 # are different, because in this case we are planning to use a
 # previous installation in $STARLINK or $STARCONF_DEFAULT_STARLINK,
