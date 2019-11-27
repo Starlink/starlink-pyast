@@ -1,4 +1,6 @@
 include ast/*.h
+include ast/src/*.h
+include ast/wcslib/*.h
 include ast/pal/*
 include ast/erfa/*
 include ast/cminpack/*
