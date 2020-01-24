@@ -1176,6 +1176,9 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 
       if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd && in ) {
 
+/* Calculate the dimensions of the output array. The call to PyArray_SimpleNew
+   requires dimensions supplied in C order - (nrow,ncol) - so reverse them as
+   they are calculated. */
          j = ncoord_out - 1;
          for( i = 0; i < ncoord_out; i++,j-- ) {
             pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
@@ -1644,6 +1647,9 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
 
       if( lbnd_in && ubnd_in && lbnd_out && ubnd_out && lbnd && ubnd && in ) {
 
+/* Calculate the dimensions of the output array. The call to PyArray_SimpleNew
+   requires dimensions supplied in C order - (nrow,ncol) - so reverse them as
+   they are calculated. */
          j = ncoord_out - 1;
          for( i = 0; i < ncoord_out; i++,j-- ) {
             pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
@@ -6116,6 +6122,8 @@ static PyObject *Region_overlap( Region *self, PyObject *args );
 static PyObject *Region_mapregion( Region *self, PyObject *args );
 static PyObject *Region_getregionpoints( Region *self, PyObject *args );
 static PyObject *Region_getregionmesh( Region *self, PyObject *args );
+static PyObject *Region_mask( Region *self, PyObject *args );
+static PyObject *Region_pointinregion( Region *self, PyObject *args );
 
 /* Define the AST attributes of the class */
 MAKE_GETSETL(Region,Adaptive)
@@ -6145,6 +6153,8 @@ static PyMethodDef Region_methods[] = {
   {"overlap", (PyCFunction)Region_overlap, METH_VARARGS, "Test if two Regions overlap each other"},
   {"getregionpoints", (PyCFunction)Region_getregionpoints, METH_VARARGS, "Get the positions that define a Region"},
   {"getregionmesh", (PyCFunction)Region_getregionmesh, METH_VARARGS, "Get a mesh of points covering a Region"},
+  {"mask", (PyCFunction)Region_mask, METH_VARARGS, "Mask a region of a data grid"},
+  {"pointinregion", (PyCFunction)Region_pointinregion, METH_VARARGS, "Test if a single point is inside a Region"},
   {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -6420,6 +6430,212 @@ static PyObject *Region_getregionmesh( Region *self, PyObject *args ) {
 
       if( astOK ) result = Py_BuildValue("O", PyArray_Return(points) );
       Py_XDECREF(points);
+   }
+
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".mask"
+static PyObject *Region_mask( Region *self, PyObject *args ) {
+
+/* args: result:map,inside,lbnd,ubnd,in,val */
+
+   Object *other = NULL;
+   PyArrayObject *in = NULL;
+   PyArrayObject *lbnd = NULL;
+   PyArrayObject *ubnd = NULL;
+   PyObject *in_object = NULL;
+   PyObject *lbnd_object = NULL;
+   PyObject *ubnd_object = NULL;
+   PyObject *result = NULL;
+   char buf[200];
+   char format[] = "O!iOOOd:" NAME;
+   char val_b;
+   double val_d;
+   float val_f;
+   int dims[ MXDIM ];
+   int i;
+   int inside = 1;
+   int lbnd_vals[ MXDIM ];
+   int ndim;
+   int nmasked = 0;
+   int type = 0;
+   int ubnd_vals[ MXDIM ];
+   int val_i;
+   long val_l;
+   npy_intp *pdims = NULL;
+   short int val_h;
+   unsigned char val_B;
+   unsigned int val_I;
+   unsigned short int val_H;
+   void *pval = NULL;
+
+   if( PyErr_Occurred() ) return NULL;
+
+/* We do not know yet what format code to use for val. We need to parse
+   the arguments twice. The first time, we determine the data type from
+   the "in" array. This allows us to choose the correct format code for
+   val, so we then parse the arguments a second time, using the correct
+   code. */
+   if( PyArg_ParseTuple( args, format, &MappingType, (PyObject**)&other,
+                         &inside, &lbnd_object, &ubnd_object, &in_object, &val_d )
+       && astOK ) {
+
+      if( !PyArray_Check(  in_object ) ) {
+         PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
+                          "an array object" );
+      } else {
+         type = ((PyArrayObject*) in_object)->descr->type_num;
+         if( type == PyArray_DOUBLE ) {
+            format[ 6 ] = 'd';
+            pval = &val_d;
+         } else if( type == PyArray_FLOAT ) {
+            format[ 6 ] = 'f';
+            pval = &val_f;
+         } else if( type == PyArray_INT ) {
+            format[ 6 ] = 'i';
+            pval = &val_i;
+         } else if( type == PyArray_LONG ) {
+            format[ 6 ] = 'l';
+            pval = &val_l;
+         } else if( type == PyArray_SHORT ) {
+            format[ 6 ] = 'h';
+            pval = &val_h;
+         } else if( type == PyArray_BYTE ) {
+            format[ 6 ] = 'b';
+            pval = &val_b;
+         } else if( type == PyArray_UINT ) {
+            format[ 6 ] = 'I';
+            pval = &val_I;
+         } else if( type == PyArray_USHORT ) {
+            format[ 6 ] = 'H';
+            pval = &val_H;
+         } else if( type == PyArray_UBYTE ) {
+            format[ 6 ] = 'B';
+            pval = &val_B;
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
+
+/* Also record the number of axes and dimensions in the input array. */
+         ndim = ((PyArrayObject*) in_object)->nd;
+         pdims = ((PyArrayObject*) in_object)->dimensions;
+         if( ndim > MXDIM ) {
+            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+                     "many (%d) dimensions (must be no more than %d).",
+                     ndim, MXDIM );
+            PyErr_SetString( PyExc_ValueError, buf );
+            pval = NULL;
+
+         } else {
+            for( i = 0; i < ndim; i++ ) {
+               dims[ i ] = pdims[ i ];
+            }
+         }
+      }
+   }
+
+/* Parse the arguments again, this time with the correct code for
+   val. */
+   if( PyArg_ParseTuple( args, format, &MappingType, (PyObject**)&other,
+                         &inside, &lbnd_object, &ubnd_object, &in_object, pval ) &&
+                         pval && astOK ) {
+
+      lbnd = GetArray1I( lbnd_object, &ndim, "lbnd", NAME );
+      if( lbnd ) {
+         for( i = 0; i < ndim; i++ ) lbnd_vals[ i ] = ((int *) lbnd->data)[ i ];
+      }
+
+      ubnd = GetArray1I( ubnd_object, &ndim, "ubnd", NAME );
+      if( ubnd ) {
+         for( i = 0; i < ndim; i++ ) ubnd_vals[ i ] = ((int *) ubnd->data)[ i ];
+      }
+
+      in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
+      if( lbnd && ubnd && in ){
+
+         if( type == PyArray_DOUBLE ) {
+            nmasked = astMaskD( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (double *)in->data, val_d );
+
+         } else if( type == PyArray_FLOAT ) {
+            nmasked = astMaskF( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (float *)in->data, val_f );
+
+         } else if( type == PyArray_LONG ) {
+            nmasked = astMaskL( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (long *)in->data, val_l );
+
+         } else if( type == PyArray_INT ) {
+            nmasked = astMaskI( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (int *)in->data, val_i );
+
+         } else if( type == PyArray_SHORT ) {
+            nmasked = astMaskS( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (short int *)in->data, val_h );
+
+         } else if( type == PyArray_BYTE ) {
+            nmasked = astMaskB( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (signed char *)in->data, val_b );
+
+         } else if( type == PyArray_UINT ) {
+            nmasked = astMaskUI( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (unsigned int *)in->data, val_I );
+
+         } else if( type == PyArray_USHORT ) {
+            nmasked = astMaskUS( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (unsigned short int *)in->data, val_H );
+
+         } else if( type == PyArray_UBYTE ) {
+            nmasked = astMaskUB( THIS, THAT, inside, ndim, lbnd_vals,
+                                ubnd_vals, (unsigned char *)in->data, val_B );
+
+         } else {
+            PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
+                             "to " NAME " has a data type that is not "
+                             "supported by " NAME "." );
+         }
+
+         if( astOK ) {
+            result = Py_BuildValue( "i", nmasked );
+         }
+      }
+
+      Py_XDECREF( lbnd );
+   }
+
+   TIDY;
+   return result;
+}
+
+
+#undef NAME
+#define NAME CLASS ".pointinregion"
+static PyObject *Region_pointinregion( Region *self, PyObject *args ) {
+
+/* args: result:point */
+
+   PyObject *result = NULL;
+   PyArrayObject *point = NULL;
+   PyObject *point_object = NULL;
+   int naxes;
+   int inside;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   naxes = astGetI( THIS, "Naxes" );
+   if ( PyArg_ParseTuple( args, "O:" NAME,
+                         &point_object ) && astOK ) {
+      point = GetArray1D( point_object, &naxes, "point", NAME );
+      if ( point ) {
+         inside = astPointInRegion( THIS, (double *)point->data );
+         if( astOK ) result = Py_BuildValue( "O", (inside ?  Py_True : Py_False));
+      }
+      Py_XDECREF( point );
    }
 
    TIDY;
