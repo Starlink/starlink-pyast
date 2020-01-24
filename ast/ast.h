@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     26-NOV-2019 (makeh):
+*     23-JAN-2020 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -548,12 +548,12 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 9
-#define AST__VMINOR 0
-#define AST__RELEASE 3
+#define AST__VMINOR 1
+#define AST__RELEASE 0
 
 #define AST_MAJOR_VERS 9
-#define AST_MINOR_VERS 0
-#define AST_RELEASE 3
+#define AST_MINOR_VERS 1
+#define AST_RELEASE 0
 
 #include <stdarg.h>
 #include <float.h>
@@ -2475,6 +2475,7 @@ AstFrame *astGetRegionFrame_( AstRegion *, int * );
 AstFrameSet *astGetRegionFrameSet_( AstRegion *, int * );
 int astOverlap_( AstRegion *, AstRegion *, int * );
 void astNegate_( AstRegion *, int * );
+int astPointInRegion_( AstRegion *, const double *, int * );
 
 int astMask4LD_( AstRegion *, AstMapping *, int, int, const int[], const int[], long double [], long double, int * );
 AstDim astMask8LD_( AstRegion *, AstMapping *, int, int, const AstDim[], const AstDim[], long double [], long double, int * );
@@ -2550,6 +2551,7 @@ AstRegion *astMapRegionId_( AstRegion *, AstMapping *, AstFrame *, int * );
 #define astGetRegionFrameSet(this) astINVOKE(O,astGetRegionFrameSet_(astCheckRegion(this),STATUS_PTR))
 #define astNegate(this) astINVOKE(V,astNegate_(astCheckRegion(this),STATUS_PTR))
 #define astOverlap(this,that) astINVOKE(V,astOverlap_(astCheckRegion(this),astCheckRegion(that),STATUS_PTR))
+#define astPointInRegion(this,point) astINVOKE(V,astPointInRegion_(astCheckRegion(this),point,STATUS_PTR))
 #define astSetUnc(this,unc) astINVOKE(V,astSetUnc_(astCheckRegion(this),unc?astCheckRegion(unc):NULL,STATUS_PTR))
 #define astGetUnc(this,def) astINVOKE(O,astGetUnc_(astCheckRegion(this),def,STATUS_PTR))
 #define astGetRegionBounds(this,lbnd,ubnd) astINVOKE(V,astGetRegionBounds_(astCheckRegion(this),lbnd,ubnd,STATUS_PTR))

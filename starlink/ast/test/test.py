@@ -443,12 +443,12 @@ class TestAst(unittest.TestCase):
         zoommap = starlink.Ast.ZoomMap(2, 1.0)
         out, outv = zoommap.rebin(0.5, [1, 0], [3, 2], data_in, None,
                                   starlink.Ast.NEAREST, None, starlink.Ast.USEBAD,
-                                  0.0, 100, starlink.Ast.BAD, [2, 0], [4, 2], [1, 0],
+                                  0.0, 100, starlink.Ast.BAD, [2, 0], [5, 2], [1, 0],
                                   [3, 2])
 
-        answer = numpy.array([[2., 3., starlink.Ast.BAD],
-                              [5., 6., starlink.Ast.BAD],
-                              [8., 9., starlink.Ast.BAD]])
+        answer = numpy.array([[2., 3., starlink.Ast.BAD, starlink.Ast.BAD],
+                              [5., 6., starlink.Ast.BAD, starlink.Ast.BAD],
+                              [8., 9., starlink.Ast.BAD, starlink.Ast.BAD]])
         d = (answer - out)**2
         self.assertEqual(d.sum(), 0.0)
         self.assertIsNone(outv)
@@ -728,6 +728,29 @@ class TestAst(unittest.TestCase):
         self.assertEqual(lbnd[1], 0)
         self.assertEqual(ubnd[1], 8)
 
+    def test_mask(self):
+        box = starlink.Ast.Box(starlink.Ast.Frame(2), 1,
+                               [-0.5,-0.5], [5.5,4.5])
+        data = numpy.full((10,15), 7, dtype=int)
+        map = starlink.Ast.UnitMap(2)
+
+# lbnd/ubnd are given as (col,row) (F77 order). This may seem odd in python,
+# but then the same is done when using AST from C.
+        nmasked = box.mask( map, True, [-3,2], [11,11], data, 0 )
+        self.assertEqual(nmasked, 18)
+        self.assertEqual(data[0,2], 7)
+        self.assertEqual(data[0,3], 0)
+        self.assertEqual(data[2,2], 7)
+        self.assertEqual(data[2,3], 0)
+        self.assertEqual(data[3,2], 7)
+        self.assertEqual(data[3,3], 7)
+        self.assertEqual(data[0,8], 0)
+        self.assertEqual(data[0,9], 7)
+        self.assertEqual(data[2,8], 0)
+        self.assertEqual(data[2,9], 7)
+        self.assertEqual(data[3,8], 7)
+        self.assertEqual(data[3,9], 7)
+
     def test_Circle(self):
         circle = starlink.Ast.Circle(starlink.Ast.Frame(2), 0,
                                      [0, 0], [3, 4])
@@ -745,6 +768,9 @@ class TestAst(unittest.TestCase):
         self.assertEqual(radius, 5)
         self.assertEqual(p1[0], 3)
         self.assertEqual(p1[1], 4)
+
+        self.assertTrue( testcircle.pointinregion( [4.5,0.0] ) )
+        self.assertFalse( testcircle.pointinregion( [5.5,0.0] ) )
 
     def test_Ellipse(self):
         ell = starlink.Ast.Ellipse(starlink.Ast.Frame(2), 0,
