@@ -225,6 +225,15 @@ separate parameter, as is done in the C interface.
 point values, or any sequence (lists, tuples, etc.) that can be converted
 to a numpy array, should be supplied.
 
+<li>When a set of integer indices are supplied to identify a position
+within a multi-dimensional pixel array, the indices should be supplied in
+an order such that the fastest changing index (within the linear list of
+contiguous values) comes first. For instance, several functions require
+the upper and lower bounds of a pixel array to be supplied. If the array
+is (say) 2-dimensional the first supplied element in each case should
+should be the index of a column and the second should be the index of a
+row.
+
 <li> Most methods for which AST provides variants for different data
 types (e.g. astRebin, astRebinSeq, astResample, etc) are unified into one
 method in the Python interface. The names of such function are the same

@@ -644,6 +644,13 @@ that provides the method.
 </span></li>
 </ul>
 </div>
+<div class="implemented" id="Mask">
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astMask">astMask</a> - Mask a region of a data grid 
+<ul>
+<li><span class=inv>result = region.mask( map, inside, lbnd, ubnd, in, val  )
+</span></li>
+</ul>
+</div>
 <div class="implemented" id="MatchAxes">
 &#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astMatchAxes">astMatchAxes</a> - Find any corresponding axes in two Frames 
 <ul>
@@ -771,6 +778,13 @@ that provides the method.
 <ul>
 <li><span class=inv>plot = starlink.Ast.Plot( frame, gbox, bbox, grf, options=None  )</span></li>
 <li class="note">The "grf" argument is a reference to an object that provides primitive drawing fiunctions for the Plot. PyAST provides the starlink.Grf.grf_matplotlib class that implements the required operations using the matplotlib plotting package. Others can be written following the same pattern.</li>
+</ul>
+</div>
+<div class="implemented" id="PointInRegion">
+&#149; &nbsp; <a href="http://starlink.eao.hawaii.edu/cgi-bin/dsb/htxserver/sun211.htx/?xref_astPointInRegion">astPointInRegion</a> - Tests if a single point is inside a Region 
+<ul>
+<li><span class=inv>result = region.pointinregion( point  )
+</span></li>
 </ul>
 </div>
 <div class="implemented" id="PointList">
