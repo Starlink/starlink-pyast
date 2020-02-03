@@ -697,6 +697,7 @@ that provides the method.
 <ul>
 <li><span class=inv>value = frame.norm( value  )
 </span></li>
+<li class="note">The "value" array may be 1 or 2 dimensional. If 1-dimensional, it should hold the axes values at a single point in the supplied Frame and its length should equal the number of axes in the Frame. If 2-dimensional, it should hold the axes values at a set of points in the supplied Frame - the length of the first axis should equal the number of axes in the Frame, and the length of the second axis gives the number of points. In both cases, the returned array will have the same shape and size as the supplied array.</li>
 </ul>
 </div>
 <div class="implemented" id="NormMap">
