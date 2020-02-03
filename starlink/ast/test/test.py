@@ -295,9 +295,20 @@ class TestAst(unittest.TestCase):
 
     def test_FrameNorm(self):
         frame = starlink.Ast.Frame(2)
+
         coords = [3, 2]
         ncoords = frame.norm(coords)
+        self.assertEqual(len(ncoords), 2)
         self.assertEqual(ncoords[0], coords[0])
+
+        coords = [[3, -3, 0], [2, -2, 0]]
+        ncoords = frame.norm(coords)
+        self.assertEqual(len(ncoords), 2)
+        self.assertEqual(len(ncoords[0]), 3)
+        self.assertEqual(ncoords[0][0], coords[0][0])
+        self.assertEqual(ncoords[1][2], coords[1][2])
+        self.assertEqual(ncoords[0][2], coords[0][2])
+        self.assertEqual(ncoords[1][0], coords[1][0])
 
     def test_FrameOffset(self):
         frame = starlink.Ast.Frame(2)

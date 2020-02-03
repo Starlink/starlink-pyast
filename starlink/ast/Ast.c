@@ -4052,33 +4052,132 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
 static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* args: value:value */
+/* Note: The "value" array may be 1 or 2 dimensional. If 1-dimensional,
+         it should hold the axes values at a single point in the supplied
+         Frame and its length should equal the number of axes in the
+         Frame. If 2-dimensional, it should hold the axes values at a set
+         of points in the supplied Frame - the length of the first axis
+         should equal the number of axes in the Frame, and the length of
+         the second axis gives the number of points. In both cases, the
+         returned array will have the same shape and size as the supplied
+         array. */
 
-  PyObject *result = NULL;
-  PyArrayObject *value = NULL;
-  PyArrayObject *axes = NULL;
-  PyObject *value_object = NULL;
-  int naxes;
-  npy_intp dims[1];
+   PyArrayObject *axes = NULL;
+   PyArrayObject *value = NULL;
+   PyObject *result = NULL;
+   PyObject *value_object = NULL;
+   char buf[300];
+   double *pin[ MXDIM ];
+   double *pout[ MXDIM ];
+   double pos[ MXDIM ];
+   int astride0;
+   int astride1;
+   int iaxis;
+   int ipos;
+   int naxes;
+   int npos;
+   int vstride0;
+   int vstride1;
+   npy_intp dims[2];
 
-  if( PyErr_Occurred() ) return NULL;
+   if( PyErr_Occurred() ) return NULL;
 
-  naxes = astGetI( THIS, "Naxes" );
-  if ( PyArg_ParseTuple( args, "O:" NAME,
+   naxes = astGetI( THIS, "Naxes" );
+   if ( PyArg_ParseTuple( args, "O:" NAME,
                           &value_object ) && astOK ) {
-    value = GetArray1D( value_object, &naxes, "value", NAME );
-    dims[0] = naxes;
-    axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-    if ( value && axes ) {
-      memcpy( axes->data, value->data, sizeof(double)*naxes);
-      astNorm( THIS, (double *)axes->data );
-      if( astOK ) result = Py_BuildValue( "O", PyArray_Return(axes) );
-    }
-    Py_XDECREF( value );
-    Py_XDECREF( axes );
-  }
 
-  TIDY;
-  return result;
+/* Get a PyArrayObject from the PyObject, allowing any number of
+   dimensions. */
+      value = (PyArrayObject *) PyArray_ContiguousFromAny( value_object,
+                                                      PyArray_DOUBLE, 0, 100 );
+      if( value ) {
+
+/* In all cases the length of the first dimensions should be "naxes". */
+         if( value->dimensions[ 0 ] != naxes ) {
+            sprintf( buf, "The 'value' array supplied to %s has a length "
+                     "of %d for dimension 1 (one-based) - should be %d.",
+                     NAME, (int) value->dimensions[ 0 ], naxes );
+            PyErr_SetString( PyExc_ValueError, buf );
+            Py_DECREF( value );
+            value = NULL;
+
+/* If the array is one-dimensional, it is assumed to be a list of "naxes"
+   axis values representing a single point in the Frame. Copy it to a new
+   output array and then call astNorm to normalise it. */
+         } else if( value->nd == 1 ) {
+            dims[0] = naxes;
+            axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+            if ( value && axes ) {
+              memcpy( axes->data, value->data, sizeof(double)*naxes);
+              astNorm( THIS, (double *)axes->data );
+              if( astOK ) result = Py_BuildValue( "O", PyArray_Return(axes) );
+            }
+            Py_XDECREF( value );
+            Py_XDECREF( axes );
+
+/* If it is a 2-dimensional array, it is assumed to be a list of positions
+   each of which is to be normalised. */
+         } else if( value->nd == 2 ) {
+            npos = value->dimensions[ 1 ];
+
+            dims[0] = naxes;
+            dims[1] = npos;
+            axes = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+            if ( value && axes ) {
+
+
+/* Initialise pointers to the first value on each axis in both input
+   and output arrays. */
+               vstride0 = value->strides[ 0 ]/sizeof(double);
+               vstride1 = value->strides[ 1 ]/sizeof(double);
+               astride0 = axes->strides[ 0 ]/sizeof(double);
+               astride1 = axes->strides[ 1 ]/sizeof(double);
+               pin[ 0 ] = (double *) value->data;
+               pout[ 0 ] = (double *) axes->data;
+               for( iaxis = 1; iaxis < naxes; iaxis++ ) {
+                  pin[ iaxis ] = pin[ iaxis - 1 ] + vstride0;
+                  pout[ iaxis ] = pout[ iaxis - 1 ] + astride0;
+               }
+
+/* Normalise each position in turn. */
+               for( ipos = 0; ipos < npos; ipos++ ) {
+
+/* Copy the axis values for the current input positions into "pos",
+   then update the pointers to refer to the next input position. */
+                  for( iaxis = 0; iaxis < naxes; iaxis++ ) {
+                     pos[ iaxis ] = *( pin[ iaxis ] );
+                     pin[ iaxis ] += vstride1;
+                  }
+
+/* Normalise the position in "pos". */
+                  astNorm( THIS, pos );
+
+/* Copy the normalised axis values for the current output positions,
+   then update the pointers to refer to the next output position. */
+                  for( iaxis = 0; iaxis < naxes; iaxis++ ) {
+                     *( pout[ iaxis ] ) = pos[ iaxis ];
+                     pout[ iaxis ] += astride1;
+                  }
+               }
+
+               if( astOK ) result = Py_BuildValue( "O", PyArray_Return(axes) );
+            }
+            Py_XDECREF( value );
+            Py_XDECREF( axes );
+
+/* Input array must have 1 or 2 axes. */
+         } else {
+            sprintf( buf, "The 'value' array supplied to %s has %d "
+                     "dimensions - should be 1 or 2.", NAME, (int)
+                     value->nd );
+            PyErr_SetString( PyExc_ValueError, buf );
+            Py_DECREF( value );
+            value = NULL;
+         }
+      }
+   }
+   TIDY;
+   return result;
 }
 
 #undef NAME
