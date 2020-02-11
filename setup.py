@@ -5,10 +5,23 @@ from distutils import ccompiler
 from distutils.core import setup, Extension
 import sys
 import os
+import re
 import numpy
 import tarfile
 import ctypes
 from tools import make_exceptions, make_attributes
+
+def get_version():
+   result = None
+   with open('starlink/ast/Ast.c') as f:
+      for line in f:
+         mt = re.search(r'#define\s+PYAST_VERSION\s+"(\S+)"',line)
+         if mt:
+            result = mt.group(1)
+            break
+   if result is None:
+      raise RuntimeError("Cannot read pyast version number from starlink/ast/Ast.c")
+   return result
 
 include_dirs = []
 
@@ -170,7 +183,7 @@ if sys.platform.startswith("darwin"):
 
 
 setup(name='starlink-pyast',
-      version='3.14.1',
+      version=get_version(),
       description='A Python wrapper for the Starlink AST library',
       url='http://www.starlink.ac.uk/ast',
       author='David Berry',
