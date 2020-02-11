@@ -1,3 +1,5 @@
+#define PYAST_VERSION "3.14.2"
+
 #include <Python.h>
 #include <string.h>
 #include "numpy/arrayobject.h"
@@ -13255,6 +13257,8 @@ MOD_INIT(Ast) {
    PyModule_AddObject( m, "FitsTable", (PyObject *)&FitsTableType);
 
 /* The constants provided by this module. */
+   PyModule_AddObject( m, "__version__", PyUnicode_FromString(PYAST_VERSION) );
+
 #define ICONST(Name) \
    PyModule_AddIntConstant( m, #Name, AST__##Name )
 
