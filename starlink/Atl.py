@@ -324,6 +324,7 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
           >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
           >>>    matplotlib.pyplot.show()
     """
+    import starlink.Grf as Grf
 
     import starlink.Grf as Grf
 
