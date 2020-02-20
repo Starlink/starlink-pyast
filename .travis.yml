@@ -1,13 +1,66 @@
 language: python
-sudo: false
-python:
-  - "2.7"
-  - "3.5"
 
 install:
-  - pip install pytest
-  - python setup.py build
-  - python setup.py install
+ - $PIP install --upgrade cibuildwheel==1.0;
 
 script:
-  - py.test starlink/ast/test/test.py
+ - cibuildwheel --output-dir wheelhouse
+ - if [[ $TRAVIS_TAG ]]; then
+     echo $TRAVIS_TAG;
+     brew update;
+     brew install python2;
+     brew link --overwrite python2;
+     sudo $PIP install twine;
+     twine upload --skip-existing wheelhouse/*.whl;
+   fi
+
+jobs:
+    include:
+     - services:
+         - docker
+       python: "3.6"
+       env:  PIP=pip CIBW_BUILD="cp27-*"
+
+     - services:
+         - docker
+       python: "3.6"
+       env:  PIP=pip CIBW_BUILD="cp35-*"
+
+     - services:
+         - docker
+       python: "3.6"
+       env:  PIP=pip CIBW_BUILD="*cp36-*"
+
+     - services:
+         - docker
+       python: "3.6"
+       env:  PIP=pip CIBW_BUILD="cp37-*"
+
+
+
+     - os: osx
+       before_install: brew update;
+       language: generic
+       env:  PIP=pip2 CIBW_BUILD="cp27*"
+
+     - os: osx
+       before_install: brew update;
+       language: generic
+       env:  PIP=pip2 CIBW_BUILD="cp35*"
+
+     - os: osx
+       before_install: brew update;
+       language: generic
+       env:  PIP=pip2 CIBW_BUILD="cp36*"
+
+     - os: osx
+       before_install: brew update;
+       language: generic
+       env:  PIP=pip2 CIBW_BUILD="cp37*"
+
+
+
+env:
+  global:
+    - CIBW_BEFORE_BUILD="pip install numpy==1.16"
+    - TWINE_USERNAME=sgraves
