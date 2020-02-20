@@ -63,4 +63,5 @@ jobs:
 env:
   global:
     - CIBW_BEFORE_BUILD="pip install numpy==1.16"
+    - CIBW_TEST_COMMAND="python {project}/starlink/ast/test/test.py"
     - TWINE_USERNAME=sgraves
