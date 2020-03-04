@@ -2,7 +2,7 @@ The pyast html docs are hosted on github project pages
 (https://help.github.com/articles/creating-project-pages-manually/)
 associated with the main pyast repo. The main page is published at
 
-http://timj.github.io/starlink-pyast/pyast.html
+http://starlink.github.io/starlink-pyast/pyast.html
 
 The associated files are stored on the "gh-pages" branch of the main
 repository.

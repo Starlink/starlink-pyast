@@ -723,8 +723,8 @@ class TestAst(unittest.TestCase):
         self.assertTrue(box.removeregions().isaframe())
 
         centre, radius = box.getregiondisc()
-        self.assertEqual(centre[0], 1.5)
-        self.assertEqual(centre[1], 2.0)
+        self.assertAlmostEqual(centre[0], 1.5)
+        self.assertAlmostEqual(centre[1], 2.0)
         self.assertAlmostEqual(radius, 2.5000025)
 
     def test_MapRegion(self):
