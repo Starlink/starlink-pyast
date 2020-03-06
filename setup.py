@@ -198,7 +198,9 @@ setup(name='starlink-pyast',
            'Programming Language :: Python',
            'Programming Language :: C',
           'Topic :: Scientific/Engineering :: Astronomy'
-      ])
+      ],
+      setup_requires=['numpy'],
+      install_requires=['numpy'],)
 
 if os.path.exists(symbol_list):
     os.unlink(symbol_list)
