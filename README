@@ -12,7 +12,7 @@ To test it, do:
 
 python starlink/ast/test/test.py
 
-User docs are available at http://timj.github.io/starlink-pyast/pyast.html
+User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 
 
 
