@@ -409,6 +409,39 @@ typedef unsigned long long int UINT_BIG;
 #if defined(astCLASS)         /* Protected */
 #define AST__ISSIMPLE_FLAG 1  /* Mapping has been simplified */
 #define AST__FROZEN_FLAG 2    /* Mapping cannot be nominated for simplification */
+#define AST__RESTRICTED_SIMPLIFY_FLAG 4 /* Simplify should nominate only those
+                                 Mappings with the ALLOW_SIMPLIFY flag set */
+#define AST__ALLOW_SIMPLIFY_FLAG 8 /* Nominate Mapping even if Simplify has
+                                 been restricted */
+
+#define astSetIsSimple(this) \
+((void)(this&&(((AstMapping*)this)->flags|=AST__ISSIMPLE_FLAG)))
+#define astClearIsSimple(this) \
+((void)(this&&(((AstMapping*)this)->flags&=~AST__ISSIMPLE_FLAG)))
+#define astIsSimple(this) \
+(this&&((((AstMapping*)this)->flags&AST__ISSIMPLE_FLAG)!=0))
+
+#define astSetFrozen(this) \
+((void)(this&&(((AstMapping*)this)->flags|=AST__FROZEN_FLAG)))
+#define astClearFrozen(this) \
+((void)(this&&(((AstMapping*)this)->flags&=~AST__FROZEN_FLAG)))
+#define astFrozen(this) \
+(this&&((((AstMapping*)this)->flags&AST__FROZEN_FLAG)!=0))
+
+#define astSetRestrictedSimplify(this) \
+((void)(this&&(((AstMapping*)this)->flags|=AST__RESTRICTED_SIMPLIFY_FLAG)))
+#define astClearRestrictedSimplify(this) \
+((void)(this&&(((AstMapping*)this)->flags&=~AST__RESTRICTED_SIMPLIFY_FLAG)))
+#define astRestrictedSimplify(this) \
+(this&&((((AstMapping*)this)->flags&AST__RESTRICTED_SIMPLIFY_FLAG)!=0))
+
+#define astSetAllowSimplify(this) \
+((void)(this&&(((AstMapping*)this)->flags|=AST__ALLOW_SIMPLIFY_FLAG)))
+#define astClearAllowSimplify(this) \
+((void)(this&&(((AstMapping*)this)->flags&=~AST__ALLOW_SIMPLIFY_FLAG)))
+#define astAllowSimplify(this) \
+(this&&((((AstMapping*)this)->flags&AST__ALLOW_SIMPLIFY_FLAG)!=0))
+
 #endif
 
 
@@ -970,6 +1003,7 @@ astINVOKE(V,astDoNotSimplify_(astCheckMapping(this),STATUS_PTR))
    twice - this is unlikely to matter, but is there a better way?) */
 #define astTransform(this,in,forward,out) \
 astINVOKE(O,astTransform_(astCheckMapping(this),astCheckPointSet(in),forward,(out)?astCheckPointSet(out):NULL,STATUS_PTR))
+
 #endif
 #endif
 
