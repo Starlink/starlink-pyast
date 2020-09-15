@@ -1123,6 +1123,38 @@ class TestAst(unittest.TestCase):
         self.assertEqual(lbnd[3], 4000.0)
         self.assertEqual(ubnd[3], 7000.0)
 
+    def test_YamlChan(self):
+        ch = starlink.Ast.YamlChan()
+        self.assertIsInstance(ch, starlink.Ast.Object)
+        self.assertIsInstance(ch, starlink.Ast.Channel)
+        self.assertIsInstance(ch, starlink.Ast.YamlChan)
+        self.assertTrue(ch.isayamlchan())
+        self.assertTrue(ch.isachannel())
+        self.assertTrue(ch.isaobject())
+
+        f1 = starlink.Ast.Frame( 2, "Domain=PIXEL" )
+        frameset = starlink.Ast.FrameSet(f1)
+        zoommap = starlink.Ast.ZoomMap(2, 0.01, "Ident=Hello there")
+        f2 = starlink.Ast.SkyFrame( "System=ICRS" )
+        frameset.addframe( starlink.Ast.BASE, zoommap, f2 )
+
+        ch.SinkFile = "fred.asdf"
+        n = ch.write(frameset)
+        self.assertEqual(n, 1)
+        ch.SourceFile = "fred.asdf"
+        with self.assertRaises(starlink.Ast.RDERR):
+            obj = ch.read()
+        ch.SinkFile = None
+        ch.SourceFile = "fred.asdf"
+        obj = ch.read()
+        ch.SinkFile = "fred2.asdf"
+        ch.write(obj)
+        ch.SinkFile = None
+        ch.SourceFile = None
+        self.assertTrue(filecmp.cmp("fred.asdf", "fred2.asdf", shallow=False))
+        os.remove("fred.asdf")
+        os.remove("fred2.asdf")
+
     def test_KeyMap(self):
 
         with self.assertRaises(starlink.Ast.BADAT):

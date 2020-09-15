@@ -10,6 +10,7 @@ import numpy
 import tarfile
 import ctypes
 from tools import make_exceptions, make_attributes
+from textwrap import dedent
 
 def get_version():
    result = None
@@ -22,6 +23,64 @@ def get_version():
    if result is None:
       raise RuntimeError("Cannot read pyast version number from starlink/ast/Ast.c")
    return result
+
+
+def check_libyaml():
+    """check if the C module can be build by trying to compile a small
+    program against the libyaml development library"""
+
+    import tempfile
+    import shutil
+
+    import distutils.sysconfig
+    import distutils.ccompiler
+    from distutils.errors import CompileError, LinkError
+
+    libraries = ['yaml']
+
+    # write a temporary .c file to compile
+    c_code = dedent("""
+    #include <yaml.h>
+
+    int main(int argc, char* argv[])
+    {
+        yaml_parser_t parser;
+        parser = parser;  /* prevent warning */
+        return 0;
+    }
+    """)
+    tmp_dir = tempfile.mkdtemp(prefix = 'tmp_ruamel_yaml_')
+    bin_file_name = os.path.join(tmp_dir, 'test_yaml')
+    file_name = bin_file_name + '.c'
+    with open(file_name, 'w') as fp:
+        fp.write(c_code)
+
+    # and try to compile it
+    compiler = distutils.ccompiler.new_compiler()
+    assert isinstance(compiler, distutils.ccompiler.CCompiler)
+    distutils.sysconfig.customize_compiler(compiler)
+
+    try:
+        compiler.link_executable(
+            compiler.compile([file_name]),
+            bin_file_name,
+            libraries=libraries,
+        )
+    except CompileError:
+        print('libyaml compile error')
+        ret_val = False
+    except LinkError:
+        print('libyaml link error')
+        ret_val = False
+    else:
+        ret_val = True
+
+    shutil.rmtree(tmp_dir)
+    return ret_val
+
+
+
+
 
 include_dirs = []
 
@@ -63,7 +122,7 @@ ast_c = ('axis.c', 'box.c', 'channel.c', 'circle.c', 'cmpframe.c',
          'sphmap.c', 'stcschan.c', 'timeframe.c', 'timemap.c',
          'tranmap.c', 'unit.c', 'unitmap.c', 'wcsmap.c',
          'winmap.c', 'xml.c', 'xphmap.c', 'zoommap.c', 'specmap.c',
-         'slamap.c', 'chebymap.c', 'unitnormmap.c' )
+         'slamap.c', 'chebymap.c', 'unitnormmap.c', 'yamlchan.c' )
 
 #  List the other required C source files (in ast subdirectory):
 ast_c2 = ( 'palwrap.c', 'pyast_extra.c' )
@@ -140,6 +199,8 @@ for cfile in erfa_c:
 for cfile in ast_c_extra:
     sources.append(os.path.join('ast', 'src', cfile))
 
+extra_link_args = []
+
 # Test the compiler
 define_macros = []
 compiler = ccompiler.new_compiler()
@@ -151,6 +212,10 @@ if compiler.has_function('strerror_r'):
 
 if compiler.has_function('isfinite'):
     define_macros.append(('HAVE_DECL_ISFINITE', '1'))
+
+if check_libyaml():
+    define_macros.append(('YAML', '1'))
+    extra_link_args.append( "-lyaml" )
 
 #  We need to tell AST what type a 64-bit int will have
 #  Not really sure how to determine whether we have int64_t
@@ -179,8 +244,12 @@ if sys.platform.startswith("darwin"):
         symname = "_initAst"
     print(symname, file=symfile)
     symfile.close()
-    Ast.extra_link_args = ["-exported_symbols_list", symbol_list]
+    extra_link_args.append("-exported_symbols_list")
+    extra_link_args.append(symbol_list)
 
+
+if len( extra_link_args ) > 0:
+   Ast.extra_link_args = extra_link_args
 
 setup(name='starlink-pyast',
       version=get_version(),

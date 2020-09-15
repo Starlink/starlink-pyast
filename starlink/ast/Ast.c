@@ -1,4 +1,4 @@
-#define PYAST_VERSION "3.14.5"
+#define PYAST_VERSION "3.15.0"
 
 #include <Python.h>
 #include <string.h>
@@ -198,6 +198,7 @@ MAKE_ISA(UnitMap)
 MAKE_ISA(UnitNormMap)
 MAKE_ISA(WcsMap)
 MAKE_ISA(WinMap)
+MAKE_ISA(YamlChan)
 MAKE_ISA(ZoomMap)
 
 /* Describe the methods of the class */
@@ -253,6 +254,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(UnitNormMap,unitnormmap),
    DEF_ISA(WcsMap,wcsmap),
    DEF_ISA(WinMap,winmap),
+   DEF_ISA(YamlChan,yamlchan),
    DEF_ISA(ZoomMap,zoommap),
    {"__deepcopy__", (PyCFunction)Object_deepcopy, METH_VARARGS, "Create a deep copy of an Object - used by the copy module"},
    {"clear", (PyCFunction)Object_clear, METH_VARARGS, "Clear attribute values for an Object"},
@@ -12364,6 +12366,133 @@ void tabsource_wrapper( AstFitsChan *this, const char *extname,
 }
 
 
+/* YamlChan */
+/* ======== */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".YamlChan"
+
+/* Define the class structure */
+typedef struct {
+   Channel parent;
+} YamlChan;
+
+/* Prototypes for class functions */
+static int YamlChan_init( YamlChan *self, PyObject *args, PyObject *kwds );
+static int YamlChan_setproxy( AstObject *this, Object *self );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETL(YamlChan,VerboseRead)
+MAKE_GETSETL(YamlChan,PreserveName)
+MAKE_GETSETC(YamlChan,YamlEncoding)
+
+static PyGetSetDef YamlChan_getseters[] = {
+   DEFATT(VerboseRead,"Echo YAML text to standard output as it is read?"),
+   DEFATT(PreserveName,"Save the ASDF name attributes as AST Ident values?"),
+   DEFATT(YamlEncoding,"The external formatting system to use"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject YamlChanType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(YamlChan),          /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST YamlChan",            /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   YamlChan_getseters,        /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)YamlChan_init,   /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+static int YamlChan_init( YamlChan *self, PyObject *args, PyObject *kwds ){
+
+/* args: :source=None,sink=None,options=None */
+/* Note: If supplied, the "source" argument can either be a reference to an
+         object that provides a method named "astsource", or a sequence. In the
+         first case, the "source" method is called with no arguments, and
+         should return the next line of text on each invocation, returning
+         None when all text has been read. In the second case, each
+         element of the sequence is converted to a string and used as the
+         next line of text. */
+/* Note: If supplied, the "sink" argument should be a reference to an object that
+         provides a method named "astsink". This method is called with each succesive
+         line of text as its only argument, and should store each line in some
+         external data sink. */
+
+   PyObject *source = NULL;
+   PyObject *sink = NULL;
+   const char *(* source_wrap)( void ) = NULL;
+   void (* sink_wrap)( const char * ) = NULL;
+   const char *options = " ";
+   int result = -1;
+   if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
+
+/* Choose the source and sink wrapper functions and store info required
+   by the source and sink functions in the Channel structure. */
+      result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
+                             &sink_wrap );
+
+/* Create the YamlChan using the above selected wrapper functions. */
+      if( result == 0 ) {
+         AstYamlChan *this = astYamlChan( source_wrap, sink_wrap, "%s", options );
+
+/* Set up "self" to be a proxy for "this". */
+         result = YamlChan_setproxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+   }
+
+   TIDY;
+   return result;
+}
+
+/* Set up "self" to be a proxy for "this". */
+static int YamlChan_setproxy( AstObject *this, Object *self ){
+   int result = -1;
+   if( astOK ) {
+
+/* Use the parent class (Channel) to set the proxy and do any other
+   initialisation required by the Channel class. */
+      result = Channel_setproxy( this, self );
+   }
+   return result;
+}
+
+
+
 
 /* Now describe the whole AST module */
 /* ================================= */
@@ -13232,6 +13361,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&StcsChanType);
    PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
 
+   YamlChanType.tp_new = PyType_GenericNew;
+   YamlChanType.tp_base = &ChannelType;
+   if( PyType_Ready(&YamlChanType) < 0) RETURN( NULL );
+   Py_INCREF(&YamlChanType);
+   PyModule_AddObject( m, "YamlChan", (PyObject *)&YamlChanType);
+
    MocChanType.tp_new = PyType_GenericNew;
    MocChanType.tp_base = &ChannelType;
    if( PyType_Ready(&MocChanType) < 0) RETURN( NULL );
@@ -13832,6 +13967,10 @@ static PyTypeObject *GetType( AstObject *this,
       } else if( !strcmp( class, "StcsChan" ) ) {
          result = (PyTypeObject *) &StcsChanType;
          *setproxy_function = StcsChan_setproxy;
+         *def_function = Channel_def;
+      } else if( !strcmp( class, "YamlChan" ) ) {
+         result = (PyTypeObject *) &YamlChanType;
+         *setproxy_function = YamlChan_setproxy;
          *def_function = Channel_def;
       } else if( !strcmp( class, "MocChan" ) ) {
          result = (PyTypeObject *) &MocChanType;
