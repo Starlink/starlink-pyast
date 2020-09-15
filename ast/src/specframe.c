@@ -158,6 +158,12 @@ f     - AST_GETREFPOS: Get reference position in any celestial system
 *     29-APR-2011 (DSB):
 *        Prevent astFindFrame from matching a subclass template against a
 *        superclass target.
+*     11-MAR-2020 (DSB):
+*         In Overlay, only clear the results Units, Label, etc if the result
+*         and template Systems differ AND the template System has been set
+*         explicitly.
+*     27-APR-2020 (DSB):
+*         Correct "Heliographic" to "heliocentric".
 *class--
 */
 
@@ -3480,8 +3486,12 @@ static void Overlay( AstFrame *template, const int *template_axes,
    if( specframe ) {
 
 /* If the coordinate system will change, any value already set for the result
-   SpecFrame's Title will no longer be appropriate, so clear it. */
-      if ( new_system != old_system ) {
+   SpecFrame's Title will no longer be appropriate, so clear it. But note
+   the coordinate system will change only if the system values are
+   different AND the system has been set explicitly in the template. If
+   the system has not been set explicitly in the template, the result will
+   retain its original system value. */
+      if ( new_system != old_system && astTestSystem( template ) ) {
          astClearTitle( result );
 
 /* If the systems have the same default units, we can retain the current
@@ -4338,7 +4348,7 @@ static int SorConvert( AstSpecFrame *this, AstSpecFrame *that,
    the conversions used below). */
       VerifyAttrs( this, vmess, "RefRA RefDec", "astMatch", status );
 
-/* Convert from the "this" rest frame to heliographic. */
+/* Convert from the "this" rest frame to heliocentric. */
       if( from == AST__TPSOR ) {
          VerifyAttrs( this, vmess, "ObsLon ObsLat ObsAlt Epoch", "astMatch", status );
          TRANSFORM_6( "TPF2HL", lon, lat, alt, epoch, ra, dec )
@@ -5811,7 +5821,7 @@ f     AST_FINDFRAME or AST_CONVERT) as a template to match another (target)
 *     SpecFrame. It identifies the standard of rest in which alignment is
 *     to occur. See the StdOfRest attribute for a desription of the values
 *     which may be assigned to this attribute. The default AlignStdOfRest
-*     value is "Helio" (heliographic).
+*     value is "Helio" (heliocentric).
 *
 c     When astFindFrame or astConvert is used on two SpecFrames (potentially
 f     When AST_FindFrame or AST_CONVERT is used on two SpecFrames (potentially

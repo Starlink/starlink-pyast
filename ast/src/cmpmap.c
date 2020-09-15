@@ -159,6 +159,8 @@ f     The CmpMap class does not define any new routines beyond those
 *        (e.g. MatrixMap) make temporary modifications to the Mappings in the
 *        list causing unpredictable behaviour since changing one Mapping may
 *        cause other Mappings to change.
+*     31-JUL-2020 (DSB):
+*        Modify Simplify to honour the RESTRICTED_SIMPLIFY and ALLOW_SIMPLIFY flags.
 *class--
 */
 
@@ -3435,6 +3437,7 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
    int modified;                 /* Index of first modified Mapping */
    int nmap;                     /* Mapping count */
    int nominated;                /* Index of nominated Mapping */
+   int restricted;               /* Restrict simplification to flagged mappings? */
    int set;                      /* Invert attribute set? */
    int set_n;                    /* Invert set for final Mapping? */
    int simpler;                  /* Simplification possible? */
@@ -3498,6 +3501,20 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
    simpler = astMapList( this_mapping, this->series, astGetInvert( this ), &nmap,
                          &map_list, &invert_list );
 
+/* If the RESTRICTED_SIMPLIFY flag is set in the supplied CmpMap it
+   indicates that the simplification should be restricted to a subset
+   of the component Mappings - namely, those components that have the
+   ALLOW_SIMPLIFY flag set. By default, Mappings do not have this flag
+   set - it must be set explicitly if required using the astSetAllowSimplify
+   macro. */
+   restricted = astRestrictedSimplify( this_mapping );
+
+/* If the CmpMap is subject to a restricted simplify, the we ignore the
+   simpler flag set above if any inverted CmpMaps were found, since we do
+   not know yet whether the inverted CmpMap will be available for
+   simplification or not (as indicated by the ALLOW_SIMPLY flag). */
+   if( restricted ) simpler = 0;
+
 /* Ensure that the mappings in the list are independent of each other, so
    that modifying one does not modify any of the others. This is needed
    because some Mapping classes make temporary changes to the Mappings. */
@@ -3507,10 +3524,10 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
    be nominated for simplification). Mappings become frozen if nominating them
    would create an infinite loop in which neighbouring mappings argue as to
    their form. Freezing a mapping prevents the frozen mapping contributing any
-   further to the argument, so the other Mapping "wins" the argument.
-   Ensure no Mappings are frozen to begin with. */
+   further to the argument, so the other Mapping "wins" the argument. All
+   component Mappings are unfrozen initially. */
    for( i = 0; i < nmap; i++ ) {
-      map_list[ i ]->flags &= ~AST__FROZEN_FLAG;
+      astClearFrozen(map_list[ i ]);
    }
 
 /* Initialise pointers to memory used to hold lists of the modified
@@ -3532,8 +3549,11 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
 /* If the current nominated mapping has been frozen, then we do not allow
    it to suggest changes to the mapping sequence. Instead, just increment
    the index of the next mapping to be checked and continue on to the next
-   pass round the while loop. */
-         if( map_list[ nominated ]->flags & AST__FROZEN_FLAG ) {
+   pass round the while loop. We also do this if the simplification is
+   restricted to just those components that have the AllowSimplify flag set
+   and the current component does not have the AllowSimplify flag set.*/
+         if( astFrozen(map_list[ nominated ]) ||
+             ( restricted && !astAllowSimplify(map_list[ nominated ]) ) ) {
             nominated++;
             continue;
          }
@@ -3577,7 +3597,7 @@ static AstMapping *Simplify( AstMapping *this_mapping, int *status ) {
 /* If a repeating pattern is occurring, set the frozen flag in order to
    prevent the modified mapping from being modified any more. */
             if( wlen1 > 0 ) {
-               map_list[ modified ]->flags |= AST__FROZEN_FLAG;
+               astSetFrozen(map_list[ modified ]);
 
 /* Otherwise, indicate we have improved the mapping and go round to test
    the next nominated mapping. */

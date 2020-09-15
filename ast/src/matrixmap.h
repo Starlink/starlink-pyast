@@ -200,8 +200,10 @@ typedef struct AstMatrixMapVtab {
 /* Properties (e.g. methods) specific to this class. */
    AstMatrixMap *(* MtrRot)( AstMatrixMap *, double, const double[], int * );
    AstMatrixMap *(* MtrMult)( AstMatrixMap *,  AstMatrixMap *, int * );
+   AstMatrixMap *(* MtrZoom)( AstMatrixMap *,  double, int * );
    int (* MtrEuler)( AstMatrixMap *, double[3], int * );
-   double *(* MtrGet)( AstMatrixMap *, int, int * );
+   double *(* MtrGet)( AstMatrixMap *, int, int, int *, int * );
+   int (* IsDiagonal)( AstMatrixMap *, int * );
 } AstMatrixMapVtab;
 
 #if defined(THREAD_SAFE)
@@ -256,8 +258,10 @@ AstMatrixMap *astLoadMatrixMap_( void *, size_t, AstMatrixMapVtab *,
 # if defined(astCLASS)           /* Protected */
 AstMatrixMap *astMtrRot_( AstMatrixMap *, double, const double[], int * );
 AstMatrixMap *astMtrMult_( AstMatrixMap *, AstMatrixMap *, int * );
+AstMatrixMap *astMtrZoom_( AstMatrixMap *,  double, int * );
 int astMtrEuler_( AstMatrixMap *, double[3], int * );
-double *astMtrGet_( AstMatrixMap *, int, int * );
+double *astMtrGet_( AstMatrixMap *, int, int, int *, int * );
+int astIsDiagonal_( AstMatrixMap *, int * );
 #endif
 
 /* Function interfaces. */
@@ -313,11 +317,17 @@ astINVOKE(O,astMtrRot_(astCheckMatrixMap(this),theta,axis,STATUS_PTR))
 #define astMtrMult(this,a) \
 astINVOKE(O,astMtrMult_(astCheckMatrixMap(this),astCheckMatrixMap(a),STATUS_PTR))
 
+#define astMtrZoom(this,zoom) \
+astINVOKE(O,astMtrZoom_(astCheckMatrixMap(this),zoom,STATUS_PTR))
+
 #define astMtrEuler(this,euler) \
 astINVOKE(V,astMtrEuler_(astCheckMatrixMap(this),euler,STATUS_PTR))
 
-#define astMtrGet(this,fwd) \
-astINVOKE(V,astMtrGet_(astCheckMatrixMap(this),fwd,STATUS_PTR))
+#define astMtrGet(this,fwd,expand,form) \
+astINVOKE(V,astMtrGet_(astCheckMatrixMap(this),fwd,expand,form,STATUS_PTR))
+
+#define astIsDiagonal(this) \
+astINVOKE(V,astIsDiagonal_(astCheckMatrixMap(this),STATUS_PTR))
 
 #endif
 #endif

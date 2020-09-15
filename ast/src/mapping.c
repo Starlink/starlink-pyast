@@ -399,6 +399,22 @@ f     - AST_TRANN: Transform N-dimensional coordinates
 *        - Added 8-byte interface for astResample<X>.
 *        - Added 8-byte interface for astTran1, astTran2, astTranN and
 *        astTranP.
+*     31-JUL-2020 (DSB):
+*        Added the RESTRICTED_SIMPLIFY and ALLOW_SIMPLIFY flags to the base
+*        Mapping structure. If the astSimplify method is called on a Mapping
+*        for which the RESTRICTED_SIMPLIFY flag is set, the simplification
+*        is restricted to component Mappings that have the ALLOW_SIMPLIFY
+*        flag set. Both of these flags are initially cleared when a Mapping
+*        is constructed. The RESTRICTED_SIMPLIFY flag is always cleared in
+*        the Mapping returned by astSimplify. The purpose of all this is to
+*        allow selected sections of a complex CmpMaps to be protected from
+*        simplification. These flags are protected (not available in the
+*        public API).
+*     4-AUG-2020 (DSB):
+*        Only include the Invert value in a Mapping dump if it is set to
+*        a true value. Otherwise, it will default to unset.
+*     20-AUG-2020 (DSB):
+*        Fix possible segfault in astMapMerge wrapper
 *
 *class--
 */
@@ -1039,7 +1055,7 @@ static int DoNotSimplify( AstMapping *this, int *status ) {
 /*
 *+
 *  Name:
-*     astMapMerge
+*     astDoNotSimplify
 
 *  Purpose:
 *     Check if a Mapping is appropriate for simplification.
@@ -1049,14 +1065,15 @@ static int DoNotSimplify( AstMapping *this, int *status ) {
 
 *  Synopsis:
 *     #include "mapping.h"
-*     int astDoNotSImplify( AstMapping *this );
+*     int astDoNotSimplify( AstMapping *this );
 
 *  Class Membership:
 *     Mapping method.
 
 *  Description:
 *     This function returns a flag indivating if the supplied Mapping is
-*     appropriate for simplification.
+*     appropriate for simplification. This causes the Mapping to be left
+*     unchanged by the astSimplify, astMapMerge and astMapList methods.
 
 *  Parameters:
 *     this
@@ -16698,6 +16715,15 @@ f     function is invoked with STATUS set to an error value, or if it
 /* Check the inherited status. */
    if ( !astOK ) return result;
 
+/* Check the flag that indicates if the supplied Mapping uses the restricted
+   simplify method. If so, we only simplify the Mapping if it also has the
+   ALLOW_SIMPLIFY flag set. If not, return the Mapping unchanged. In
+   either case, we clear the RESTRICTED_SIMPLIFY flag before returning. */
+   if( astRestrictedSimplify(this) ) {
+      astClearRestrictedSimplify(this);
+      if( !astAllowSimplify(this) ) return astClone( this );
+   }
+
 /* Initialise dynamic arrays of Mapping pointers and associated invert
    flags. */
    nmap = 0;
@@ -16708,10 +16734,14 @@ f     function is invoked with STATUS set to an error value, or if it
    have 1 element). */
    astMapList( this, 1, astGetInvert( this ), &nmap, &map_list, &invert_list );
 
-/* Pass the list repeatedly to the "astMapMerge" method for
-   simplification. */
+/* Indicate that the Mapping is original not frozen (i.e. it can be
+   nominated for merging via the astMapMerge method). */
+   astClearFrozen( map_list[ 0 ] );
+
+/* Pass the list repeatedly to the "astMapMerge" method for simplification.
+   Leave the loop if the Mapping becomes frozen. */
    simpler = 0;
-   while ( astOK ) {
+   while ( !astFrozen(map_list[ 0 ]) && astOK ) {
       map = astClone( map_list[ 0 ] );
       modified = astMapMerge( map, 0, 1, &nmap, &map_list, &invert_list );
       map = astAnnul( map );
@@ -23098,7 +23128,7 @@ f     performed with the AST_INVERT routine.
 astMAKE_CLEAR(Mapping,Invert,invert,CHAR_MAX)
 astMAKE_GET(Mapping,Invert,int,0,( ( this->invert == CHAR_MAX ) ?
                                    0 : this->invert ))
-astMAKE_SET(Mapping,Invert,int,invert,( (this->flags&=~AST__ISSIMPLE_FLAG),(value!=0) ))
+astMAKE_SET(Mapping,Invert,int,invert,(astClearIsSimple(this),(value!=0)))
 astMAKE_TEST(Mapping,Invert,( this->invert != CHAR_MAX ))
 
 /*
@@ -23185,7 +23215,7 @@ f     AST_SIMPLIFY
 
 *att--
 */
-astMAKE_GET(Mapping,IsSimple,int,0,((this->flags)&AST__ISSIMPLE_FLAG))
+astMAKE_GET(Mapping,IsSimple,int,0,astIsSimple(this))
 
 /*
 *att++
@@ -23606,11 +23636,24 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
                 ival ? "Mapping has been simplified" :
                        "Mapping has not been simplified" );
 
+/* RestrictedSimplify. */
+/* ------------------- */
+   ival = astRestrictedSimplify( this );
+   astWriteInt( channel, "ReSimp", ival, 0, ival,
+                ival ? "Simplify restricted to allowed Mappings" :
+                       "Simplify uses all Mappings" );
+
+/* AllowSimplify. */
+/* -------------- */
+   ival = astAllowSimplify( this );
+   astWriteInt( channel, "AlSimp", ival, 0, ival,
+                ival ? "Will be used by restricted Simplify" :
+                       "Will not be used by restricted Simplify" );
+
 /* Invert. */
 /* ------- */
-   set = TestInvert( this, status );
    ival = set ? GetInvert( this, status ) : astGetInvert( this );
-   astWriteInt( channel, "Invert", set, 0, ival,
+   astWriteInt( channel, "Invert", ival, 0, ival,
                 ival ? "Mapping inverted" :
                        "Mapping not inverted" );
 
@@ -23942,7 +23985,16 @@ AstMapping *astLoadMapping_( void *mem, size_t size,
 
 /* IsSimple. */
 /* --------- */
-      if( astReadInt( channel, "issimp", 0 ) ) new->flags |= AST__ISSIMPLE_FLAG;
+      if( astReadInt( channel, "issimp", 0 ) ) astSetIsSimple(new);
+
+
+/* RestrictedSimplify. */
+/* ------------------- */
+      if( astReadInt( channel, "resimp", 0 ) ) astSetRestrictedSimplify(new);
+
+/* AllowSimplify. */
+/* -------------- */
+      if( astReadInt( channel, "alsimp", 0 ) ) astSetAllowSimplify(new);
 
 /* TranForward. */
 /* ------------ */
@@ -24037,13 +24089,102 @@ int *astMapSplit_( AstMapping *this, int nin, const int *in, AstMapping **map,
 
    return result;
 }
+
 int astMapMerge_( AstMapping *this, int where, int series, int *nmap,
                   AstMapping ***map_list, int **invert_list, int *status ) {
 
-   if ( !astOK || astDoNotSimplify( this ) ) return -1;
-   return (**astMEMBER(this,Mapping,MapMerge))( this, where, series, nmap,
-                                                map_list, invert_list, status );
+   AstMapping **clones;
+   int result = -1;
+   int nmap_old;
+   int allset;
+   int iin;
+   int iout;
+
+   if ( !astOK || astDoNotSimplify( this ) ) return result;
+
+/* If the nominated Mapping has the AllowSimplify flag set we are
+   probably doing a restricted simplication, in which case we need to
+   take some care to propagate the AllowSimplify flag to the new or
+   modified output Mappings. Nothing is lost other than some CPU
+   cycles if in fact we are not doing a  restricted simplication. */
+   if( astAllowSimplify( this ) ) {
+
+/* Save clones of all the supplied Mapping pointers. */
+      nmap_old = *nmap;
+      clones = astMalloc( *nmap*sizeof(*clones) );
+      if( astOK ) {
+         nmap_old = *nmap;
+         for( iin = 0; iin < *nmap; iin++ ) {
+            clones[ iin ] = astClone( (*map_list)[ iin ] );
+         }
+      }
+
+   } else {
+      clones = NULL;
+   }
+
+/* Attemp to the merge the nominated Mapping into its neighbours. */
+   result = (**astMEMBER(this,Mapping,MapMerge))( this, where, series, nmap,
+                                                  map_list, invert_list,
+                                                  status );
+
+/* If the only change is that one or more Mappings have been removed from
+   the end of the list, then "result" will refer to a Mapping beyond the
+   end of the returned list. For instance, if the last Mapping in a list of
+   4 Mappings (i.e. index 3) is removed, whithout any change to earlier
+   Mappings, then "result" will be returned as 3, but the last Mapping in
+   the returned list will have index 2 (since the returned list only
+   contains 3 Mappings). In such cases, change "result" to -1 since there
+   is no need to do another pass through the list looking for further
+   changes. */
+   if( result >= *nmap ) result = -1;
+
+/* If anything changed, and we may be doing a restricted simplification,
+   find the indices within the input and output mapping lists of the last
+   modified Mapping pointer. */
+   if( result >= 0 && clones ) {
+      iin = nmap_old;
+      iout = *nmap;
+      while( iin > result && iout > result ){
+         if( (*map_list)[ --iout ] != clones[ --iin ] ) break;
+      }
+
+/* Set a flag indicating if *all* the input Mappings between the first
+   and last modified input Mapping had the AllowSimplify flag set. */
+      allset = 1;
+      while( iin >= result ){
+         if( !astAllowSimplify( clones[ iin ] ) ) {
+            allset = 0;
+            break;
+         }
+         iin--;
+      }
+
+/* Ensure all the output Mappings in the modified range have AllowSimplify
+   set to the above value (i.e. if all the removed or modified input
+   Mappings were candidates for simplification, then indicate that all
+   the new Mappings are also candidates for simplification). */
+      while( iout >= result ){
+         if( allset ) {
+            astSetAllowSimplify( (*map_list)[ iout ] );
+         } else {
+            astClearAllowSimplify( (*map_list)[ iout ] );
+         }
+         iout--;
+      }
+   }
+
+/* Free resources. */
+   if( clones ) {
+      for( iin = 0; iin < nmap_old; iin++ ) {
+         clones[ iin ] = astAnnul( clones[ iin ] );
+      }
+      clones = astFree( clones );
+   }
+
+   return result;
 }
+
 int astDoNotSimplify_( AstMapping *this, int *status ) {
    if ( !astOK ) return 0;
    return (**astMEMBER(this,Mapping,DoNotSimplify))( this, status );
@@ -24430,12 +24571,19 @@ AstMapping *astSimplify_( AstMapping *this, int *status ) {
       result = (**astMEMBER(this,Mapping,Simplify))( this, status );
 
 /* If a result was returned, indicate it has been simplified and so does
-   not need to be simplified again. */
+   not need to be simplified again. Only do this if the supplied Mapping was
+   not subjected to a restricted simplify, since more simplification may be
+   possible in such cases. Also ensure that any future simplification
+   will not be restricted. */
       if( result ) {
-         result->flags |= AST__ISSIMPLE_FLAG;
+         if( astRestrictedSimplify( this ) ){
+            astClearRestrictedSimplify( result );
+         } else {
+            astSetIsSimple(result);
+         }
 
 /* If the simplification process failed due to the supplied Mappings
-   being inappropriate (e.g. because it attempted to ue an undefined
+   being inappropriate (e.g. because it attempted to use an undefined
    transformation), clear the error status and return a clone of the
    supplied Mapping. */
       } else if( astStatus == AST__NODEF || astStatus == AST__TRNND ){

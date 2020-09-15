@@ -628,15 +628,14 @@ class TestAst(unittest.TestCase):
         maplist = [unitmap1, zoommap1, shiftmap, unitmap2, zoommap2]
         invlist = [0,0,0,0,1]
         (result,newmaplist,newinvlist) = shiftmap.mapmerge( 2, True, maplist,
-                                                           invlist )
-        self.assertEqual(result,2)
-        self.assertEqual(len(newmaplist),5)
-        self.assertEqual(len(newinvlist),5)
+                                                            invlist )
+        self.assertEqual(result,1)
+        self.assertEqual(len(newmaplist),4)
+        self.assertEqual(len(newinvlist),4)
         self.assertIsInstance(newmaplist[0], starlink.Ast.UnitMap)
-        self.assertIsInstance(newmaplist[1], starlink.Ast.ZoomMap)
-        self.assertIsInstance(newmaplist[2], starlink.Ast.WinMap)
-        self.assertIsInstance(newmaplist[3], starlink.Ast.UnitMap)
-        self.assertIsInstance(newmaplist[4], starlink.Ast.ZoomMap)
+        self.assertIsInstance(newmaplist[1], starlink.Ast.WinMap)
+        self.assertIsInstance(newmaplist[2], starlink.Ast.UnitMap)
+        self.assertIsInstance(newmaplist[3], starlink.Ast.ZoomMap)
 
         del newmaplist
         del maplist

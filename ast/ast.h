@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     23-JAN-2020 (makeh):
+*     9-SEP-2020 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -549,11 +549,11 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* ===== */
 #define AST__VMAJOR 9
 #define AST__VMINOR 1
-#define AST__RELEASE 0
+#define AST__RELEASE 3
 
 #define AST_MAJOR_VERS 9
 #define AST_MINOR_VERS 1
-#define AST_RELEASE 0
+#define AST_RELEASE 3
 
 #include <stdarg.h>
 #include <float.h>
@@ -1463,6 +1463,7 @@ int astMapLength_( AstKeyMap *, const char *, int * );
 int astMapSize_( AstKeyMap *, int * );
 int astMapType_( AstKeyMap *, const char *, int * );
 void astMapCopy_( AstKeyMap *, AstKeyMap *, int * );
+void astMapCopyEntry_( AstKeyMap *, const char *, AstKeyMap *, int, int * );
 void astMapPut0A_( AstKeyMap *, const char *, AstObject *, const char *, int * );
 void astMapPut0B_( AstKeyMap *, const char *, unsigned char, const char *, int * );
 void astMapPut0C_( AstKeyMap *, const char *, const char *, const char *, int * );
@@ -1541,6 +1542,7 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapRemove(this,key) astINVOKE(V,astMapRemove_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapRename(this,oldkey,newkey) astINVOKE(V,astMapRename_(astCheckKeyMap(this),oldkey,newkey,STATUS_PTR))
 #define astMapCopy(this,that) astINVOKE(V,astMapCopy_(astCheckKeyMap(this),astCheckKeyMap(that),STATUS_PTR))
+#define astMapCopyEntry(this,key,that,merge) astINVOKE(V,astMapCopyEntry_(astCheckKeyMap(this),key,astCheckKeyMap(that),merge,STATUS_PTR))
 #define astMapSize(this) astINVOKE(V,astMapSize_(astCheckKeyMap(this),STATUS_PTR))
 #define astMapLength(this,key) astINVOKE(V,astMapLength_(astCheckKeyMap(this),key,STATUS_PTR))
 #define astMapLenC(this,key) astINVOKE(V,astMapLenC_(astCheckKeyMap(this),key,STATUS_PTR))

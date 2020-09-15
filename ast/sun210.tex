@@ -13,13 +13,13 @@
 % Variable part - replace [xxx] as appropriate.
 \stardocnumber      {210.29}
 \stardocauthors     {R.F. Warren-Smith \& D.S. Berry}
-\stardocdate        {23rd January 2020}
+\stardocdate        {12th Jun 2020}
 \stardoctitle     {AST\linebreak%
                                 A Library for Handling\linebreak%
                                 World Coordinate Systems\linebreak%
                                 in Astronomy}
-\stardoccopyright   {Copyright (C) 2019 East Asian Observatory}
-\stardocversion     {V9.1}
+\stardoccopyright   {Copyright (C) 2020 East Asian Observatory}
+\stardocversion     {V9.2}
 \stardocmanual      {Programmer's Guide\\(Fortran Version)}
 \startitlepic{
    \includegraphics[width=0.25\textwidth]{sun210_figures/fronta}~~~~~\hfill
@@ -559,6 +559,10 @@ reverse is not possible. That is, AST objects can not currently be
 written out in the form of STC documents.}. The version of STC-X that has
 been adopted by the IVOA differs in several significant respects from
 V1.20, and therefore this XmlChan format is of historical interest only.
+
+The \htmlref{YamlChan}{YamlChan} class provides facilities for reading and writing WCS
+information stored in YAML format using a subset of the the ASDF model
+developed at StSci (see \url{http://asdf-standard.readthedocs.io}).
 
 Finally, the \htmlref{StcsChan}{StcsChan} class provides facilities for reading and writing
 IVOA STC-S region descriptions. STC-S (see
@@ -5363,11 +5367,11 @@ rest frame to the local group is about 5 $km/s$ over a 1 degree field of
 view.
 
 \subsection{\label{ss:handlingdualsidebandspectra}Handling Dual-Sideband Spectra}
-Dual sideband super-heterodyne receivers produce spectra in which each channel
-contains contributions from two different frequencies, referred to as the
-``upper sideband frequency'' and the ``lower sideband frequency''. In the
-rest frame of the observer (topocentric), these are related to each other as
-follows:
+Dual sideband super-heterodyne receivers produce spectra in which each
+channel contains contributions from two different frequencies, referred to
+as the ``upper sideband'' (USB) frequency and the ``lower sideband'' (LSB)
+frequency. In the rest frame of the observer (topocentric), these are
+related to each other as follows:
 
 \begin{quote}
 \begin{small}
@@ -5382,46 +5386,47 @@ where $f_{LO}$ is a fixed frequency known as the ``local oscillator
 frequency''. In other words, the local oscillator frequency is always
 mid-way between any pair of corresponding upper and lower sideband
 frequencies\footnote{Note, this simple relationship only applies if all
-frequencies are topocentric.}. If you want to describe the spectral axis
-of such a spectrum using a \htmlref{SpecFrame}{SpecFrame} you must choose whether you want the
-SpecFrame to describe $f_{lsb}$ or $f_{usb}$ - a basic SpecFrame cannot
-describe both sidebands simultaneously. However, there is a sub-class of
-SpecFrame, called \htmlref{DSBSpecFrame}{DSBSpecFrame}, which overcomes this difficulty.
+frequencies are topocentric.}. This is illustrated in
+Figure~\ref{fig:dsbspec1}. The astronomical signal received in the two
+spectral windows (one corresponding to each sideband) are superimposed in
+the final measured spectrum, with the signal from the USB window first being
+reversed in frequency.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{sun211_figures/dsbspec1}
+\caption[A dual-sideband spectrum is formed by superimposing the
+signal received from two spectral windows]{A dual-sideband spectrum is
+formed by superimposing the signal received from two spectral windows---the
+lower sideband (LSB) and upper sideband (USB). In topocentric frequency,
+the two sidebands are equally spaced on either side of the local oscillator
+(LO) frequency. In other spectral systems the width and placement of the
+windows may not be symetric about the LO.}
+\label{fig:dsbspec1}
+\end{center}
+\end{figure}
+
+To describe the spectral axis of the final measured spectrum
+using a \htmlref{SpecFrame}{SpecFrame} you must choose whether you want the SpecFrame to
+describe the frequency of the LSB window ($f_{lsb}$) or of the USB window
+($f_{usb}$) - a basic SpecFrame cannot describe both sidebands
+simultaneously. However, there is a sub-class of SpecFrame, called
+\htmlref{DSBSpecFrame}{DSBSpecFrame}, which overcomes this difficulty.
 
 A DSBSpecFrame has a \htmlref{SideBand}{SideBand} attribute which indicates if the
 DSBSpecFrame is currently being used to describe the upper or lower
 sideband spectral axis. The value of this attribute can be changed at any
-time. If you use the
+time. A DSBSpecFrame knows how to transform frequencies between the two
+sidebands. For instance, if you have two DSBSpecFrame objects that
+describe topocentric frequency and are identical except that they
+describe opposite sidebands, then the
 \htmlref{AST\_CONVERT}{AST\_CONVERT}
-function to find the \htmlref{Mapping}{Mapping} between two DSBSpecFrames, the setting for
-the two SideBand attributes will be taken into account. Thus, if you take
-a copy of a DSBSpecFrame, toggle its SideBand attribute, and then use
-AST\_CONVERT
-to find a Mapping from the original to the modified copy, the resulting
-Mapping will be of the form of equation \ref{eqn:dsb} (if the
-DSBSpecFrame has its \htmlref{StdOfRest}{StdOfRest} attribute set to ``Topocentric'').
-
-In general, when finding a Mapping between two arbitrary DSBSpecFrames,
-the total Mapping is made of of three parts in series:
-
-\begin{enumerate}
-\item A Mapping which converts the first DSBSpecFrame into its upper
-sideband representation. If the DSBSpecFrame already represents its upper
-sideband, this Mapping will be a \htmlref{UnitMap}{UnitMap}.
-\item A Mapping which converts from the first to the second DSBSpecFrame,
-treating them as if they were both basic SpecFrames. This takes account of
-any difference in units, standard of rest, system, \emph{etc} between the
-two DSBSpecFrames.
-\item A Mapping which converts the second DSBSpecFrame from its upper
-sideband representation to its current sideband. If the DSBSpecFrame
-currently represents its upper sideband, this Mapping will be a UnitMap.
-\end{enumerate}
-
-If an attempt is made to find the Mapping between a DSBSpecFrame and a
-basic SpecFrame, then the DSBSpecFrame will be treated like a basic
-SpecFrame. In other words, the returned Mapping will not be affected by
-the setting of the SideBand attribute (or any of the other attributes
-specific to the DSBSpecFrame class).
+function will return a \htmlref{Mapping}{Mapping} that implement equation
+\ref{eqn:dsb}\footnote{This requires the AlignSideband attribute to be
+set to a non-zero value in both DSBSpecFrames.}. If the DSBSpecFrames
+describe anything other than topocentric frequency, then the returned
+Mapping will be more complicated since it will include conversions to and
+from topocentric frequency.
 
 In practice, the local oscillator frequency for a dual sideband
 instrument may not be easily available to an observer. Instead, it is
@@ -5442,18 +5447,240 @@ oscillator. So:
 \end{small}
 \end{quote}
 
-The DSBSpecFrame class uses the \htmlref{DSBCentre}{DSBCentre} attribute to specify the central
-spectral position ($f_{central}$), and the \htmlref{IF}{IF} attribute to specify the
-intermediate frequency ($f_{if}$). The DSBCentre value is given and returned
-in the spectral system described by the DSBSpecFrame (thus you do not need to
-calculate the corresponding topocentric frequency yourself - this will be
-done automatically by the DSBSpecFrame when you assign a new value to the
+The DSBSpecFrame class uses the \htmlref{DSBCentre}{DSBCentre} attribute to specify the
+central spectral position ($f_{central}$), and the \htmlref{IF}{IF} attribute to
+specify the intermediate frequency ($f_{if}$). This is illustrated in
+Figure~\ref{fig:dsbspec1}, where the values of the DSBCentre and IF
+attributes have been chosen to put an emission line at the centre of the
+LSB window. The DSBSpecFrame determines LO from these two attribute values.
+
+Note, in principle there is no reason why the attribute values should not
+have been chosen to put the spectral line in the USB instead of the LSB.
+The choice of which sideband to use for the observed feature is usually
+made in order to exclude any bright features from the other window. The
+sideband that contains the observation centre is known as the ``observed''
+sideband, and the other sideband is known as the ``image'' sideband.
+
+The DSBCentre value is given and returned in the spectral system
+described by the DSBSpecFrame (thus you do not need to calculate the
+corresponding topocentric frequency yourself - this will be done
+automatically by the DSBSpecFrame when you assign a new value to the
 DSBCentre attribute). The value assigned to the IF attribute should
-always be a topocentric frequency in units of Hz, however a negative
-value may be given to indicate that the DSBCentre value is in the upper
-sideband (that is, if $IF < 0$  then $f_{central} > f_{LO}$). A positive
-value for IF indicates that the DSBCentre value is in the lower sideband
-(that is, if $IF > 0$  then $f_{central} < f_{LO}$).
+always be a topocentric frequency in units of Hz. It's sign indicates
+whether the observation centre (given by DSBCentre) is in the LSB or the
+USB---a positive IF puts the observation centre in the LSB and a negative
+IF puts it in the USB.
+
+
+\subsubsection{Aligning Dual-Sideband Spectra}
+Usually, a \htmlref{DSBSpecFrame}{DSBSpecFrame} will be used to describe the WCS for a
+1-dimensional array of data values measured using a dual-sideband
+instrument. The \htmlref{FrameSet}{FrameSet} for this sort of situation will typically
+contain two Frames: the base \htmlref{Frame}{Frame} will be a simple 1-dimensional Frame
+describing the value used to index the data array (i.e. ``pixel''
+coordinates) and the current Frame will be a DSBSpecFrame with values for
+the \htmlref{DSBCentre}{DSBCentre} and \htmlref{IF}{IF} attributes that match the settings of the dual
+side-band instrument. The \htmlref{Mapping}{Mapping} connecting the base (pixel) Frame to
+the current (spectral) Frame will depend on exactly how the instrument
+samples the spectrum (linear, logarithmic, \emph{etc}) but should always
+generate spectral values\footnote{Within the spectral system described by
+the attributes of the parent \htmlref{SpecFrame}{SpecFrame} class - \htmlref{System}{System}, \htmlref{StdOfRest}{StdOfRest}, Units,
+\htmlref{Epoch}{Epoch}, etc.} within the window corresponding to the value of the \htmlref{SideBand}{SideBand}
+attribute in the DSBSpecFrame. For instance, if the SideBand attribute is
+set to USB, then the Mapping should generate the USB
+frequency (or wavelength, velocity, etc\footnote{As selected by the
+System attribute.}) for each pixel.
+
+As an example, the following code creates a FrameSet that associates a
+radio velocity (km/s) in the LSRK standard of rest with each element
+in an array of 1000 data values. The velocity range -100 to 100 km/s in
+the LSB window (see Figure~\ref{fig:dsbspec1}) is mapped linearly onto the
+pixel array. The spectral feature of interest is at 10 km/s (i.e. within the
+velocity range of the LSB window) and the IF is +5 GHz (topocentric).
+
+\small
+\begin{terminalv}
+
+*  Declare required functions and constants
+      INCLUDE 'AST_PAR'
+      INCLUDE 'SAE_PAR'
+
+*  Declare local variables.
+      INTEGER FRAMESET
+      INTEGER PIXEL_FRAME
+      INTEGER SPECTRAL_FRAME
+      INTEGER PIX_TO_SPEC
+      INTEGER STATUS
+      DOUBLE PRECISION XIN( 2 )
+      DOUBLE PRECISION VOUT( 2 )
+
+*  Initialise the inherited status value
+      STATUS = SAI__OK
+
+*  Create a Frame to describe 1-D pixel coordinates within the data
+*  array.
+      PIXEL_FRAME = AST_FRAME( 1, 'Domain=PIXEL', STATUS )
+
+*  Create a DSBSpecFrame to describe radio velocity in the LSB window of
+*  the dual-sideband spectral axis.
+      SPECTRAL_FRAME = AST_DSBSPECFRAME( 'System=VRAD,' //
+     :                               'StdOfRest=LSRK,' //
+     :                               'Unit=km/s,' //
+     :                               'RefRA=7:10:04.5,' //
+     :                               'RefDec=-10:48:50,' //
+     :                               'Epoch=2020-Oct-2T12:13:56.985,' //
+     :                               'RestFreq=345.7959899 GHz,' //
+     :                               'SideBand=LSB,' //
+     :                               'DSBCentre=10.0,' //
+     :                               'IF=5.0 GHz', STATUS )
+
+*  Create a linear mapping to describe the transformation from pixel
+*  coordinate to the spectral coordinate system described by spectral_frame.
+*  The definition of pixel coordinates used here puts the centre of the
+*  first pixel at pixel coordinate 1.0, corresponding to a velocity of
+*  -100.0 km/s, and puts the centre of the last pixel at pixel coordinate
+*  1000.0, corresponding to a velocity of +100.0 km/s.
+      PIX_TO_SPEC = AST_WINMAP( 1, 1.0D0, 1000.0D0, -100.0D0, 100.0D0,
+     :                          ' ', STATUS )
+
+*  Construct the FrameSet. First create a FrameSet holding just the pixel
+*  Frame (which becomes the base Frame). Then add in the spectral Frame,
+*  using the above mapping to connect it to the pixel Frame (i.e. the base
+*  Frame). The spectral Frame becomes the current Frame (the base Frame
+*  remains the pixel Frame).
+      FRAMESET = AST_FRAMESET( PIXEL_FRAME, ' ', STATUS )
+      CALL AST_ADDFRAME( FRAMESET, AST__BASE, PIX_TO_SPEC,
+     :                   SPECTRAL_FRAME, STATUS )
+
+*  Use the FrameSet as a Mapping to get the range of radio velocity
+*  spanned by the pixel array. This is done by transforming the first and
+*  last pixel coordinate into radio velocity. The displayed velocity range
+*  should be vel_lo to vel_hi.
+      XIN( 1 ) = 1.0
+      XIN( 2 ) = 1000.0
+      CALL AST_TRAN1( FRAMESET, 2, XIN, .TRUE., VOUT, STATUS )
+      WRITE(*,*) 'The LSB window covers the radio velocity range ',
+     :           VOUT( 1 ),' to ',VOUT(2),' km/s'
+
+*  Now change the FrameSet so that the DSBSpecFrame represents the USB
+*  instead of the LSB. Doing this modifies the Mapping inside the
+*  FrameSet so that transforming a given pixel position generates the
+*  equivalent USB velocity rather tha the original LSB velocity.
+       CALL AST_SET( FRAMESET, 'Sideband=USB', STATUS )
+
+*  Display the range of USB radio velocity now spanned by the pixel
+*  array.
+      CALL AST_TRAN1( FRAMESET, 2, XIN, .TRUE., VOUT, STATUS )
+      WRITE(*,*) 'The USB window covers the radio velocity range ',
+     :           VOUT( 1 ),' to ',VOUT(2),' km/s'
+\end{terminalv}
+\normalsize
+The code above should generate the following screen output:
+\small
+\begin{terminalv}
+The LSB window covers the radio velocity range -100 to 100 km/s
+The USB window covers the radio velocity range -8549.46 to -8749.46 km/s
+\end{terminalv}
+\normalsize
+
+Note, changing the value of the Sideband attribute using the FrameSet
+pointer, as is done above, automatically causes the Mapping inside the
+FrameSet to be updated to include the mapping from LSB frequency to USB
+frequency. This automatic modification of the Mappings inside a FrameSet
+is described further in \secref{ss:framesetintegrity} and illustrated in
+Figure~\ref{fig:dsbspec2}. It relies on  the
+\htmlref{AST\_CONVERT}{AST\_CONVERT}
+function to find the Mapping that converts values from one DSBSpecFrame
+to another.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{sun211_figures/dsbspec2}
+\caption{When a FrameSet pointer is used to change the attributes of its
+current Frame (C) a copy of the original current Frame is first made (C')
+and the requested attribute changes are applied to this copy. The Mapping
+from the original Frame to the modified Frame is then found using the
+astConvert function. The modified Frame (C') is then added into the
+FrameSet, using the Mapping returned by astConvert (shown by the dotted
+arrow) to connect it to the original Frame (C). Finally, the original
+Frame is removed leaving the new modified Frame as the current Frame. The
+base Frame (B) is unchanged.}
+\label{fig:dsbspec2}
+\end{center}
+\end{figure}
+
+When the
+AST\_CONVERT
+function to used to find the Mapping between two DSBSpecFrames, it is
+sometimes appropriate for it to take account of the potentially different
+settings of the Sideband attribute in the two DSBSpecFrames. The above
+example, in which
+AST\_CONVERT
+is used to modify the Mapping inside a FrameSet to accomodate a change to
+the Sideband attribute of the current Frame, is such a case -
+AST\_CONVERT
+returns a Mapping that implements equation \ref{eqn:dsb} in some form.
+
+However, there are also cases where it is better for
+AST\_CONVERT
+\emph{not} to take account of differences in the settings of the Sideband
+attribute. For instance, if a spectral line is observed twice such that
+the line is in the LSB in one observation and in the USB in the other, as
+illustrated in Figure~\ref{fig:dsbspec3}, then it would be inappropriate
+to take account of this difference when co-adding the two observations.
+In this case, a frequency in one observation should be matched to exactly
+the same frequency in the other observation, regardless of the difference
+in Sideband.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{sun211_figures/dsbspec3}
+\caption{Two observations of a single line are made - observation 1
+places the line in the LSB and observation 2 places the line in the USB.}
+\label{fig:dsbspec3}
+\end{center}
+\end{figure}
+
+The AlignSideband attribute is used to determine whether any difference
+is Sideband setting should be taken into account when finding the Mapping
+between two DSBSpecFrame objects. The default for this attribute is zero,
+meaning that the Sideband settings are usually ignored by the
+AST\_CONVERT and \htmlref{AST\_FINDFRAME}{AST\_FINDFRAME}
+functions (i.e. the DSBSpecFrames are aligned as if they were simple
+SpecFrames). The one exception is that differences in Sideband are always
+taken into account, regardless of the value of the AlignSideband atribute,
+when using
+AST\_CONVERT
+to find the Mapping required to restore a FrameSet's integrity following
+a change to the Sideband attribute in the current Frame (as described
+earlier in this section).
+
+If an attempt is made to find the Mapping between a pair of DSBSpecFrame,
+then the Sideband attribute will be ignored if the AlignSideband
+attribute is zero in either of the DSBSpecFrames. In other words, the
+Mapping will be determined as if both objects were simple SpecFrames
+rather than DSBSpecFrames. This also happens if an attempt is made to
+align a DSBSpecFrame with a simple SpecFrame. See
+\secref{ss:alignmentsystem} for more about how simple SpecFrames align.
+
+If both DSBSpecFrames have non-zero AlignSideband attributes, the Mapping
+from one to the other is made of three parts in series:
+
+\begin{enumerate}
+\item A Mapping which converts the first DSBSpecFrame into its observed
+sideband representation (i.e. the sideband that contains the DSBCentre
+value). If the DSBSpecFrame already represents its observed sideband, this
+Mapping will be a \htmlref{UnitMap}{UnitMap}.
+\item A Mapping which converts from the first to the second DSBSpecFrame,
+treating them as if they were both basic SpecFrames. This takes account of
+any difference in units, standard of rest, system, \emph{etc} between the
+two DSBSpecFrames.
+\item A Mapping which converts the second DSBSpecFrame from its observed
+sideband representation to its current sideband. If the DSBSpecFrame
+currently represents its observed sideband, this Mapping will be a UnitMap.
+\end{enumerate}
+
+
 
 
 \cleardoublepage
@@ -9469,7 +9696,6 @@ region within an AST-supported astronomical coordinate system to be converted
 into an equivalent AST \htmlref{Region}{Region} object, and vice-versa. For further
 details, see the full description of the StcsChan class in
 \appref{ss:classdescriptions}.
-
 
 \cleardoublepage
 \section{\label{ss:intramaps}Creating Your Own Private Mappings (IntraMaps)}
@@ -17761,7 +17987,7 @@ Object             - Base class for all AST Objects
 }{
    \sstdescription{
       This routine
-      returns the centre and radius of a disce that just encloses the
+      returns the centre and radius of a disc that just encloses the
       supplied 2-dimensional \htmlref{Region}{Region}. The centre is returned as a pair
       of axis values within the \htmlref{Frame}{Frame} represented by the Region. The
       value of the \htmlref{Negated}{Negated} attribute is ignored (i.e. it is assumed
@@ -20407,7 +20633,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    AST\_MAPCOPY
 }{
-   Copy entries from one KeyMap into another
+   Copy all entries from one KeyMap into another
 }{
    \sstdescription{
       This routine
@@ -20446,6 +20672,75 @@ Object             - Base class for all AST Objects
          scalar KeyMap entry with the same key, then the source KeyMap entry
          will be copied into the destination KeyMap entry using this function,
          rather than simply replacing the destination KeyMap entry.
+
+         \sstitem
+          If the destination entry has a non-zero value for its \htmlref{MapLocked}{MapLocked}
+         attribute, then an error will be reported if the source KeyMap
+         contains any keys that do not already exist within the destination
+         KeyMap.
+      }
+   }
+}
+\sstroutine{
+   AST\_MAPCOPYENTRY
+}{
+   Copy a single entry from one KeyMap into another
+}{
+   \sstdescription{
+      This routine
+      copies a single entry from one \htmlref{KeyMap}{KeyMap} into another.
+   }
+   \sstinvocation{
+      CALL AST\_MAPCOPYENTRY( THIS, KEY, THAT, MERGE, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         THIS = INTEGER (Given)
+      }{
+         Pointer to the destination KeyMap.
+      }
+      \sstsubsection{
+         KEY = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         The character string identifying the value to be copied. Trailing
+         spaces are ignored. The supplied string is converted to upper
+         case before use if the \htmlref{KeyCase}{KeyCase} attribute is currently set to zero.
+      }
+      \sstsubsection{
+         THAT = INTEGER (Given)
+      }{
+         Pointer to the source KeyMap.
+      }
+      \sstsubsection{
+         MERGE = LOGICAL (Given)
+      }{
+         Indicates what to do if the named entry holds a KeyMap and a KeyMap
+         entry with the same key already exists in the destination
+         KeyMap.
+         If .FALSE.,
+         the existing destination KeyMap will be deleted and replaced by a copy
+         of the source KeyMap.
+         If .TRUE.,
+         all entries in the source KeyMap will be copied into the existing
+         destination KeyMap using
+         routine \htmlref{AST\_MAPCOPY}{AST\_MAPCOPY}.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          This fuction returns without action if the named entry does not
+         exist in the source KeyMap.
+
+         \sstitem
+          Entries from the source KeyMap will replace any existing entries in
+         the destination KeyMap that have the same key.
 
          \sstitem
           If the destination entry has a non-zero value for its \htmlref{MapLocked}{MapLocked}
@@ -34986,6 +35281,121 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AST\_YAMLCHAN
+}{
+   Create a YamlChan
+}{
+   \sstdescription{
+      This function creates a new \htmlref{YamlChan}{YamlChan} and optionally initialises
+      its attributes.
+
+      A YamlChan is a specialised form of \htmlref{Channel}{Channel} which supports YAML
+      I/O operations. Writing an \htmlref{Object}{Object} to a YamlChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Object is suitable, generate an
+      YAML description of that Object, and reading from a YamlChan will
+      create a new Object from its YAML description.
+
+      Normally, when you use a YamlChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a YamlChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstinvocation{
+      RESULT = AST\_YAMLCHAN( SOURCE, SINK, OPTIONS, STATUS )
+   }
+   \sstarguments{
+      \sstsubsection{
+         SOURCE = SUBROUTINE (Given)
+      }{
+         A source routine, which is a subroutine which takes a single
+         integer error status argument.   If no value has been set
+         for the SourceFile attribute, this routine will be used by
+         the YamlChan to obtain lines of input text. On each
+         invocation, it should read the next input line from some
+         external data store, and then return the resulting text to
+         the AST library by calling \htmlref{AST\_PUTLINE}{AST\_PUTLINE}. It should supply a
+         negative line length when there are no more lines to read.
+         If an error occurs, it should set its own error status
+         argument to an error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SOURCE value,
+         and no value has been set for the SourceFile attribute,
+         the YamlChan will read from standard input instead.
+      }
+      \sstsubsection{
+         SINK = SUBROUTINE (Given)
+      }{
+         A sink routine, which is a subroutine which takes a single
+         integer error status argument.  If no value has been set
+         for the SinkFile attribute, this routine will be used by
+         the YamlChan to deliver lines of output text. On each
+         invocation, it should obtain the next output line from the
+         AST library by calling \htmlref{AST\_GETLINE}{AST\_GETLINE}, and then deliver the
+         resulting text to some external data store.  If an error
+         occurs, it should set its own error status argument to an
+         error value before returning.
+
+         If the null routine AST\_NULL is suppied as the SINK value,
+         and no value has been set for the SinkFile attribute,
+         the YamlChan will write to standard output instead.
+      }
+      \sstsubsection{
+         OPTIONS = CHARACTER $*$ ( $*$ ) (Given)
+      }{
+         A character string containing an optional comma-separated
+         list of attribute assignments to be used for initialising the
+         new YamlChan. The syntax used is identical to that for the
+         \htmlref{AST\_SET}{AST\_SET} routine.
+      }
+      \sstsubsection{
+         STATUS = INTEGER (Given and Returned)
+      }{
+         The global status.
+      }
+   }
+   \sstreturnedvalue{
+      \sstsubsection{
+         AST\_YAMLCHAN = INTEGER
+      }{
+         A pointer to the new YamlChan.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          The names of the routines supplied for the SOURCE and SINK
+         arguments should appear in EXTERNAL statements in the Fortran
+         routine which invokes AST\_YAMLCHAN. However, this is not generally
+         necessary for the null routine AST\_NULL (so long as the AST\_PAR
+         include file has been used).
+
+         \sstitem
+          If the external data source or sink uses a character encoding
+         other than ASCII, the supplied source and sink functions should
+         translate between the external character encoding and the internal
+         ASCII encoding used by AST.
+
+         \sstitem
+          A null Object pointer (AST\_\_NULL) will be returned if this
+         function is invoked with the AST error status set, or if it
+         should fail for any reason.
+
+         \sstitem
+          Note that the null routine AST\_NULL (one underscore) is
+         different to AST\_\_NULL (two underscores), which is the null Object
+         pointer.
+      }
+   }
+}
+\sstroutine{
    AST\_ZOOMMAP
 }{
    Create a ZoomMap
@@ -35306,7 +35716,7 @@ Object             - Base class for all AST Objects
       SpecFrame. It identifies the standard of rest in which alignment is
       to occur. See the \htmlref{StdOfRest}{StdOfRest} attribute for a desription of the values
       which may be assigned to this attribute. The default AlignStdOfRest
-      value is \texttt{"} Helio\texttt{"}  (heliographic).
+      value is \texttt{"} Helio\texttt{"}  (heliocentric).
 
       When AST\_FindFrame or AST\_CONVERT is used on two SpecFrames (potentially
       describing different spectral coordinate systems), it returns a \htmlref{Mapping}{Mapping}
@@ -36353,6 +36763,12 @@ Object             - Base class for all AST Objects
          \htmlref{XmlChan}{XmlChan}
       }{
          The default value is zero for an XmlChan.
+      }
+      \sstsubsection{
+         \htmlref{YamlChan}{YamlChan}
+      }{
+         This attribute is ignored by the YamlChan class. Comments are
+         never produced.
       }
    }
 }
@@ -38328,15 +38744,20 @@ Object             - Base class for all AST Objects
          The default value is zero for a FitsChan.
       }
       \sstsubsection{
+         \htmlref{StcsChan}{StcsChan}
+      }{
+         The default value is zero for an StcsChan. Set a positive value
+         to cause default values to be included in STC-S descriptions.
+      }
+      \sstsubsection{
          \htmlref{XmlChan}{XmlChan}
       }{
          The default value is -1 for an XmlChan.
       }
       \sstsubsection{
-         \htmlref{StcsChan}{StcsChan}
+         \htmlref{YamlChan}{YamlChan}
       }{
-         The default value is zero for an StcsChan. Set a positive value
-         to cause default values to be included in STC-S descriptions.
+         This attribute is ignored by the YamlChan class.
       }
    }
    \sstnotes{
@@ -38921,6 +39342,12 @@ Object             - Base class for all AST Objects
          space characters will be inserted as necessary to ensure that each
          XML tag starts on a new line, and each tag will be indented by
          a further 3 spaces to show its depth in the containment hierarchy.
+      }
+      \sstsubsection{
+         \htmlref{YamlChan}{YamlChan}
+      }{
+         The default value for a YamlChan is two. Only non-zero values in
+         the range 1-10 are allowed.
       }
    }
 }
@@ -41787,6 +42214,36 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   PreserveName
+}{
+   Save the ASDF name attributes as AST Ident values?
+}{
+   \sstdescription{
+      This is a boolean attribute that controls how astRead behaves. If
+      PreserveName is non-zero, the value of the \texttt{"} name\texttt{"}  property of each
+      ASDF transform is stored as the value for the \htmlref{Ident}{Ident} attribute of the
+      corresponding AST \htmlref{Mapping}{Mapping}. If PreserveName is zero, the \texttt{"} name\texttt{"}  property
+      is stored as the value for the \htmlref{ID}{ID} attribute of the corresponding AST
+      Mapping. The main difference between the Ident and ID attributes is
+      that the value of ID is not transferred to the new \htmlref{Object}{Object} when an
+      Object is copied, whereas the Ident value is transferred. However,
+      a secondary difference is that a Mapping cannot be simplified (using
+      \htmlref{AST\_SIMPLIFY}{AST\_SIMPLIFY})
+      if its Ident value is set (this is because the Ident value could be
+      lost in the process). For this reason, the default for PreserveName
+      is zero.
+   }
+   \sstattributetype{
+      Integer (boolean).
+   }
+   \sstapplicability{
+      \sstsubsection{
+         All yamlchans have this attribute.
+      }{
+      }
+   }
+}
+\sstroutine{
    ProjP(m)
 }{
    FITS-WCS projection parameters
@@ -42049,7 +42506,7 @@ Object             - Base class for all AST Objects
       1 - \htmlref{Report}{Report} only conditions where significant information content has been
       changed. For instance, an unsupported time-scale has been replaced by a
       supported near-equivalent time-scale. Another example is if a basic
-      \htmlref{Channel}{Channel} unexpected encounters data items that may have been introduced
+      \htmlref{Channel}{Channel} encounters unexpected data items that may have been introduced
       by later versions of AST.
 
       2 - Report the above, and in addition report significant default
@@ -42066,9 +42523,13 @@ Object             - Base class for all AST Objects
       another example.
 
       The default value is 1. Note, there are many other conditions that
-      can occur whilst reading or writing an Object that completely
-      prevent the conversion taking place. Such conditions will always
-      generate errors, irrespective of the ReportLevel and Strict attributes.
+      can occur whilst reading an Object that completely prevent the
+      conversion taking place. Such conditions will always generate errors,
+      irrespective of the ReportLevel and Strict attributes. Note, failure
+      to write an Object to a Channel does not usually generate an error.
+      Instead,
+      \htmlref{AST\_WRITE}{AST\_WRITE}
+      returns a function value of zero.
    }
    \sstattributetype{
       Integer.
@@ -42626,6 +43087,11 @@ Object             - Base class for all AST Objects
          The FitsChan class sets the default value of this attribute
          to 1, so that all irrelevant FITS headers will normally be
          ignored.
+      }
+      \sstsubsection{
+         \htmlref{YamlChan}{YamlChan}
+      }{
+         The YamlChan class ignores this attribute.
       }
    }
 }
@@ -43522,7 +43988,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    Strict
 }{
-   Report an error if any unexpeted data items are found?
+   Report an error if any unexpected data items are found?
 }{
    \sstdescription{
       This is a boolean attribute which indicates whether a warning
@@ -43541,9 +44007,9 @@ Object             - Base class for all AST Objects
    }
    \sstapplicability{
       \sstsubsection{
-         Channel
+         \htmlref{YamlChan}{YamlChan}
       }{
-         All Channels have this attribute.
+         The YamlChan class ignores this attribute.
       }
    }
    \sstnotes{
@@ -45000,6 +45466,27 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   VerboseRead
+}{
+   Echo YAML text to standard output as it is read?
+}{
+   \sstdescription{
+      This is a boolean attribute which indicates whether YAML text should
+      be displayed on standard output as it is read. Doing so can help to
+      locate YAML syntax errors reported by libyaml. The default is zero
+      (i.e. the text is not echoed by default).
+   }
+   \sstattributetype{
+      Integer (boolean).
+   }
+   \sstapplicability{
+      \sstsubsection{
+         All yamlchans have this attribute.
+      }{
+      }
+   }
+}
+\sstroutine{
    Warnings
 }{
    Controls the issuing of warnings about various conditions
@@ -45417,13 +45904,15 @@ Object             - Base class for all AST Objects
 }{
    \sstdescription{
       This attribute holds the \htmlref{ZoomMap}{ZoomMap} scale factor, by which
-      coordinate values are multiplied (by the forward transformation)
-      or divided (by the inverse transformation). The default value
-      is unity.
+      coordinate values are multiplied. The default value is unity.
 
-      Note that if a ZoomMap is inverted (e.g. by using \htmlref{AST\_INVERT}{AST\_INVERT}),
-      then the reciprocal of this zoom factor will, in effect, be
-      used.
+      Note that the returned value describes the multiplication factor
+      applied to the inputs by the forward transformation of the ZoomMap
+      assuming the ZoomMap has not been inverted. If the ZoomMap has been
+      inverted (e.g. by using
+      \htmlref{AST\_INVERT}{AST\_INVERT}),
+      then the reciprocal of the returned factor will, in effect,
+      be used by the forward transformation of the ZoomMap.
 
       In general, \htmlref{Mapping}{Mapping} attributes cannot be changed after the Mapping
       has been created (the exception to this is the \htmlref{Invert}{Invert} attribute,
@@ -46919,16 +47408,22 @@ Object             - Base class for all AST Objects
       \sstitemlist{
 
          \sstitem
-          \htmlref{AST\_MAPDEFINED}{AST\_MAPDEFINED}: Does a KeyMap contain a defined value for a key?
+          \htmlref{AST\_MAPCOPY}{AST\_MAPCOPY}: Copy all entries from one KeyMap into another
 
          \sstitem
-          \htmlref{AST\_MAPGETC}{AST\_MAPGETC}: Get a scalar or vector entry as a single string.
+          \htmlref{AST\_MAPCOPYENTRY}{AST\_MAPCOPYENTRY}: Copy a single entry from one KeyMap into another
+
+         \sstitem
+          \htmlref{AST\_MAPDEFINED}{AST\_MAPDEFINED}: Does a KeyMap contain a defined value for a key?
 
          \sstitem
           \htmlref{AST\_MAPGET0$<$X$>$}{AST\_MAPGET0$<$X$>$}: Get a named scalar entry from a KeyMap
 
          \sstitem
           \htmlref{AST\_MAPGET1$<$X$>$}{AST\_MAPGET1$<$X$>$}: Get a named vector entry from a KeyMap
+
+         \sstitem
+          \htmlref{AST\_MAPGETC}{AST\_MAPGETC}: Get a scalar or vector entry as a single string.
 
          \sstitem
           \htmlref{AST\_MAPGETELEM$<$X$>$}{AST\_MAPGETELEM$<$X$>$}: Get an element of a named vector entry from a KeyMap
@@ -46944,9 +47439,6 @@ Object             - Base class for all AST Objects
 
          \sstitem
           \htmlref{AST\_MAPLENGTH}{AST\_MAPLENGTH}: Get the length of a named entry in a KeyMap
-
-         \sstitem
-          \htmlref{AST\_MAPCOPY}{AST\_MAPCOPY}: Copy entries from one KeyMap into another
 
          \sstitem
           \htmlref{AST\_MAPPUT0$<$X$>$}{AST\_MAPPUT0$<$X$>$}: Add a new scalar entry to a KeyMap
@@ -50055,6 +50547,133 @@ Object             - Base class for all AST Objects
    }{
       The XmlChan class does not define any new routines beyond those
       which are applicable to all Mappings.
+   }
+}
+\sstroutine{
+   YamlChan
+}{
+   I/O Channel that uses YAML to represent Objects
+}{
+   \sstdescription{
+      A YamlChan is a specialised form of \htmlref{Channel}{Channel} which supports
+      YAML I/O operations. Writing an \htmlref{Object}{Object} to a YamlChan (using
+      \htmlref{AST\_WRITE}{AST\_WRITE}) will, if the Object is suitable, generate an
+      YAML description of that Object, and reading from a YamlChan will
+      create a new Object from its YAML description.
+
+      YAML itself does not define a way to store coordinate systems or
+      transformations - such definitions must be provided by a suitable
+      WCS-oriented schema.  Currently, the only schema supported by this
+      class is \texttt{"} ASDF\texttt{"} , defined by the Space Telescope Science Institute.
+      (see http://asdf-standard.readthedocs.io). At some point in the future
+      support will be added for the AST NATIVE scheme.
+
+      Normally, when you use a YamlChan, you should provide \texttt{"} source\texttt{"}
+      and \texttt{"} sink\texttt{"}  routines which connect it to an external data store
+      by reading and writing the resulting text. These routines
+      should perform any conversions needed between external character
+      encodings and the internal ASCII encoding. If no such routines
+      are supplied, a Channel will read from standard input and write
+      to standard output.
+
+      Alternatively, a YamlChan can be told to read or write from
+      specific text files using the \htmlref{SinkFile}{SinkFile} and \htmlref{SourceFile}{SourceFile} attributes,
+      in which case no sink or source function need be supplied.
+   }
+   \sstconstructor{
+      \htmlref{AST\_YAMLCHAN}{AST\_YAMLCHAN}
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          This class uses the limyaml library to read and write yaml. If the
+         libyaml library cannot be found when the AST library is configured,
+         then an error will be reported if any YamlChan methods are invoked.
+      }
+   }
+   \sstdiytopic{
+      Notes on Reading ASDF WCS Information
+   }{
+      This class does not currently support the complete ASDF WCS
+      schema. When reading an AST Object from an ASDF YAML file, the
+      following restrictions on the ASDF file apply:
+
+      \sstitemlist{
+
+         \sstitem
+          The ASDF spectral\_frame, temporal\_frame and composite\_frame
+         classes are not supported.
+
+         \sstitem
+          Only the following celestial coordinate frames are supported:
+         icrs, fk4, fk4noeterms, fk5, galactic, supergalactic, altaz,
+         barycentricmeanecliptic.
+
+         \sstitem
+          Earth locations must be specified using the WGS84 ellipsoid.
+
+         \sstitem
+          Times must be specified in one of the following formats: iso,
+         byear, jyear, jd, mjd.
+
+         \sstitem
+          Only the following transform classes are supported:
+         identity, scale, multiplyscale, remap\_axes, shift, compose,
+         concatenate, constant, fix\_inputs, affine, rotate2d,
+         rotate\_sequence\_3d, rotate3d, linear1d, ortho\_polynomial
+         (chebyshev only), planar2d, polynomial. In addition, all sky
+         projections are supported.
+      }
+   }
+   \sstdiytopic{
+      Notes on Writing ASDF WCS Information
+   }{
+      This class does not currently support the complete ASDF WCS
+      schema. When writing an AST Object to an ASDF YAML file, the
+      following restrictions on the AST object apply:
+
+      \sstitemlist{
+
+         \sstitem
+          Only Frames, Mappings and FrameSets can be written.
+
+         \sstitem
+          Frames must be basic Frames or SkyFrames.
+
+         \sstitem
+          The following \htmlref{SkyFrame}{SkyFrame} systems are not supported: GAPPT,
+         HELIOECLIPTIC, J2000, UNKNOWN.
+
+         \sstitem
+          Only the following Napping classes are supported:
+      }
+   }
+   \sstdiytopic{
+      Inheritance
+   }{
+      The YamlChan class inherits from the Channel class.
+   }
+   \sstdiytopic{
+      Attributes
+   }{
+      In addition to those attributes common to all Channels, every
+      YamlChan also has the following attributes:
+
+      \sstitemlist{
+
+         \sstitem
+          \htmlref{VerboseRead}{VerboseRead}: Echo YAML text to standard output as it is read?
+
+         \sstitem
+          \htmlref{PreserveName}{PreserveName}: Save the ASDF name attributes as AST \htmlref{Ident}{Ident} values?
+      }
+   }
+   \sstdiytopic{
+      Functions
+   }{
+      The YamlChan class does not define any new routines beyond those
+      which are applicable to all Channels.
    }
 }
 \sstroutine{
@@ -53947,11 +54566,9 @@ in conjunction with the \htmlref{TabOK}{TabOK} attribute to force the use of the
 \end{enumerate}
 
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V9.1.0}
-The following describes the most significant changes which have
-occurred in the AST library between versions V9.0.2 and V9.1.0 (the
-current version):
+\subsection{Changes Introduced in V9.1.0}
+The following describes the most significant changes which
+occurred in the AST library between versions V9.0.2 and V9.1.0.
 
 \begin{enumerate}
 \item The AST source directory has been reorganised to put most of the AST
@@ -53962,6 +54579,56 @@ returned by astCurrentTime to be wrong by 37 seconds.
 
 \item The \htmlref{Region}{Region} class has a new convenience method (astPointInRegion) to
 test a if a single point is inside a Region.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V9.1.2}
+The following describes the most significant changes which
+occurred in the AST library between versions V9.1.0 and V9.1.2:
+
+\begin{enumerate}
+
+\item A bug in the way in which the \htmlref{FitsChan}{FitsChan} class reads FITS-WCS headers
+that have more WCS axes than pixel axes has been fixed (i.e. axes for
+which there is no CRPIX value). Previously, the missing pixel axes were
+assigned a constant value 1.0. However, the default value for CRPIX
+specified by FITS-WCS Paper I is 0.0, not 1.0. So now the missing pixel
+axes are assigned the value 0.0.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V9.1.3}
+The following describes the most significant changes which
+occurred in the AST library between versions V9.1.2 and V9.1.3:
+
+\begin{enumerate}
+
+\item The \htmlref{KeyMap}{KeyMap} class has a new method called astMapCopyEntry that can be used
+to copy a single entry from one KeyMap to another.
+
+\item The
+\htmlref{AST\_SIMPLIFY}{AST\_SIMPLIFY}
+method now prefers ShiftMaps over equivalent WinMaps.
+
+\item The
+AST\_SIMPLIFY
+method will now merge WinMaps with neighbouring diagonal MatrixMaps.
+
+
+\end{enumerate}
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V9.2.0}
+The following describes the most significant changes which have
+occurred in the AST library between versions V9.1.3 and V9.2.0 (the
+current version):
+
+\begin{enumerate}
+
+\item - A new subclass of \htmlref{Channel}{Channel} called \htmlref{YamlChan}{YamlChan} has been added. It allows AST
+objects to be read and written using YAML. Currently, the ASDF format
+developed by STSci (\url{https://asdf-standard.readthedocs.io}) is the only
+supported encoding.
 
 \end{enumerate}
 
