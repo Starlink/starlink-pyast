@@ -46523,6 +46523,106 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   YamlEncoding
+}{
+   System for formatting Objects as YAML
+}{
+   \sstdescription{
+      This attribute specifies the formatting system to use when AST
+      Objects are written out as YAML through a \htmlref{YamlChan}{YamlChan}. It
+      affects the behaviour of the \htmlref{astWrite}{astWrite} function when
+      they are used to transfer any AST \htmlref{Object}{Object} to or from an external
+      XML representation.
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         YamlChan
+      }{
+         All YamlChans have this attribute.
+      }
+   }
+   \sstdiytopic{
+      Formats Available
+   }{
+      The YamlEncoding attribute can take any of the following (case
+      insensitive) string values to select the corresponding formatting
+      system:
+
+      \sstitemlist{
+
+         \sstitem
+          \texttt{"} ASDF\texttt{"} : Currently, this is the only schema supported by the
+         YamlChan class. It is defined by the Space Telescope Science Institute.
+         (see http://asdf-standard.readthedocs.io). See below for details of
+         the support this class provides for reading and writing ASDF objects.
+         In future, the YamlChan class may allow AST objects to be represented
+         in other ways (e.g. AST Native format).
+      }
+   }
+   \sstdiytopic{
+      Notes on Reading ASDF WCS Information
+   }{
+      This class does not currently support the complete ASDF WCS
+      schema. When reading an AST Object from an ASDF YAML file, the
+      following restrictions on the ASDF file apply:
+
+      \sstitemlist{
+
+         \sstitem
+          The ASDF spectral\_frame, temporal\_frame and composite\_frame
+         classes are not supported.
+
+         \sstitem
+          Only the following celestial coordinate frames are supported:
+         icrs, fk4, fk4noeterms, fk5, galactic, supergalactic, altaz,
+         barycentricmeanecliptic.
+
+         \sstitem
+          Earth locations must be specified using the WGS84 ellipsoid.
+
+         \sstitem
+          Times must be specified in one of the following formats: iso,
+         byear, jyear, jd, mjd.
+
+         \sstitem
+          Only the following transform classes are supported:
+         identity, scale, multiplyscale, remap\_axes, shift, compose,
+         concatenate, constant, fix\_inputs, affine, rotate2d,
+         rotate\_sequence\_3d, rotate3d, linear1d, ortho\_polynomial
+         (chebyshev only), planar2d, polynomial. In addition, all sky
+         projections are supported.
+      }
+   }
+   \sstdiytopic{
+      Notes on Writing ASDF WCS Information
+   }{
+      This class does not currently support the complete ASDF WCS
+      schema. When writing an AST Object to an ASDF YAML file, the
+      following restrictions on the AST object apply:
+
+      \sstitemlist{
+
+         \sstitem
+          Only Frames, Mappings and FrameSets can be written.
+
+         \sstitem
+          Frames must be basic Frames or SkyFrames.
+
+         \sstitem
+          The following \htmlref{SkyFrame}{SkyFrame} systems are not supported: GAPPT,
+         HELIOECLIPTIC, J2000, UNKNOWN.
+
+         \sstitem
+          Only the following \htmlref{Mapping}{Mapping} classes are supported: \htmlref{CmpMap}{CmpMap}, \htmlref{TranMap}{TranMap},
+         \htmlref{UnitMap}{UnitMap}, \htmlref{ZoomMap}{ZoomMap}, \htmlref{ShiftMap}{ShiftMap}, \htmlref{WinMap}{WinMap}, \htmlref{MatrixMap}{MatrixMap}, \htmlref{PermMap}{PermMap}, \htmlref{WcsMap}{WcsMap},
+         \htmlref{PolyMap}{PolyMap}, \htmlref{ChebyMap}{ChebyMap}.
+      }
+   }
+}
+\sstroutine{
    Zoom
 }{
    ZoomMap scale factor
@@ -51217,7 +51317,8 @@ Object             - Base class for all AST Objects
 
       YAML itself does not define a way to store coordinate systems or
       transformations - such definitions must be provided by a suitable
-      WCS-oriented schema.  Currently, the only schema supported by this
+      WCS-oriented schema.  The scheme to use is defined by the
+      \htmlref{YamlEncoding}{YamlEncoding} attribute. Currently, the only schema supported by this
       class is \texttt{"} ASDF\texttt{"} , defined by the Space Telescope Science Institute.
       (see http://asdf-standard.readthedocs.io). At some point in the future
       support will be added for the AST NATIVE scheme.
@@ -51247,63 +51348,6 @@ Object             - Base class for all AST Objects
       }
    }
    \sstdiytopic{
-      Notes on Reading ASDF WCS Information
-   }{
-      This class does not currently support the complete ASDF WCS
-      schema. When reading an AST Object from an ASDF YAML file, the
-      following restrictions on the ASDF file apply:
-
-      \sstitemlist{
-
-         \sstitem
-          The ASDF spectral\_frame, temporal\_frame and composite\_frame
-         classes are not supported.
-
-         \sstitem
-          Only the following celestial coordinate frames are supported:
-         icrs, fk4, fk4noeterms, fk5, galactic, supergalactic, altaz,
-         barycentricmeanecliptic.
-
-         \sstitem
-          Earth locations must be specified using the WGS84 ellipsoid.
-
-         \sstitem
-          Times must be specified in one of the following formats: iso,
-         byear, jyear, jd, mjd.
-
-         \sstitem
-          Only the following transform classes are supported:
-         identity, scale, multiplyscale, remap\_axes, shift, compose,
-         concatenate, constant, fix\_inputs, affine, rotate2d,
-         rotate\_sequence\_3d, rotate3d, linear1d, ortho\_polynomial
-         (chebyshev only), planar2d, polynomial. In addition, all sky
-         projections are supported.
-      }
-   }
-   \sstdiytopic{
-      Notes on Writing ASDF WCS Information
-   }{
-      This class does not currently support the complete ASDF WCS
-      schema. When writing an AST Object to an ASDF YAML file, the
-      following restrictions on the AST object apply:
-
-      \sstitemlist{
-
-         \sstitem
-          Only Frames, Mappings and FrameSets can be written.
-
-         \sstitem
-          Frames must be basic Frames or SkyFrames.
-
-         \sstitem
-          The following \htmlref{SkyFrame}{SkyFrame} systems are not supported: GAPPT,
-         HELIOECLIPTIC, J2000, UNKNOWN.
-
-         \sstitem
-          Only the following Napping classes are supported:
-      }
-   }
-   \sstdiytopic{
       Inheritance
    }{
       The YamlChan class inherits from the Channel class.
@@ -51321,6 +51365,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           \htmlref{PreserveName}{PreserveName}: Save the ASDF name attributes as AST \htmlref{Ident}{Ident} values?
+
+         \sstitem
+          \htmlref{YamlEncoding}{YamlEncoding}: The external formatting system to use.
       }
    }
    \sstdiytopic{

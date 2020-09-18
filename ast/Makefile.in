@@ -149,100 +149,100 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES)
 @EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES = libast_pal.la
 @EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la
-am__libast_la_SOURCES_DIST = src/axis.c src/box.c src/channel.c \
-	src/chebymap.c src/circle.c src/cmpframe.c src/cmpmap.c \
-	src/cmpregion.c src/dsbspecframe.c src/dssmap.c src/ellipse.c \
-	src/error.c src/fitschan.c src/fitstable.c src/fluxframe.c \
-	src/frame.c src/frameset.c src/globals.c src/grismmap.c \
-	src/interval.c src/intramap.c src/keymap.c src/loader.c \
-	src/lutmap.c src/mapping.c src/mathmap.c src/matrixmap.c \
-	src/memory.c src/moc.c src/mocchan.c src/normmap.c \
-	src/nullregion.c src/object.c src/pcdmap.c src/permmap.c \
-	src/plot.c src/plot3d.c src/pointlist.c src/pointset.c \
-	src/polygon.c src/polymap.c src/prism.c src/ratemap.c \
-	src/region.c src/selectormap.c src/shiftmap.c src/skyaxis.c \
-	src/skyframe.c src/slamap.c src/specfluxframe.c \
+am__libast_la_SOURCES_DIST = src/yamlchan.c src/axis.c src/box.c \
+	src/channel.c src/chebymap.c src/circle.c src/cmpframe.c \
+	src/cmpmap.c src/cmpregion.c src/dsbspecframe.c src/dssmap.c \
+	src/ellipse.c src/error.c src/fitschan.c src/fitstable.c \
+	src/fluxframe.c src/frame.c src/frameset.c src/globals.c \
+	src/grismmap.c src/interval.c src/intramap.c src/keymap.c \
+	src/loader.c src/lutmap.c src/mapping.c src/mathmap.c \
+	src/matrixmap.c src/memory.c src/moc.c src/mocchan.c \
+	src/normmap.c src/nullregion.c src/object.c src/pcdmap.c \
+	src/permmap.c src/plot.c src/plot3d.c src/pointlist.c \
+	src/pointset.c src/polygon.c src/polymap.c src/prism.c \
+	src/ratemap.c src/region.c src/selectormap.c src/shiftmap.c \
+	src/skyaxis.c src/skyframe.c src/slamap.c src/specfluxframe.c \
 	src/specframe.c src/specmap.c src/sphmap.c src/stc.c \
 	src/stccatalogentrylocation.c src/stcobsdatalocation.c \
 	src/stcresourceprofile.c src/stcschan.c \
 	src/stcsearchlocation.c src/switchmap.c src/table.c \
 	src/timeframe.c src/timemap.c src/tranmap.c src/unit.c \
 	src/unitmap.c src/unitnormmap.c src/wcsmap.c src/winmap.c \
-	src/xml.c src/xmlchan.c src/xphmap.c src/zoommap.c src/c2f77.c \
-	src/fbox.c src/fchannel.c src/fchebymap.c src/fcircle.c \
-	src/fcmpframe.c src/fcmpmap.c src/fcmpregion.c \
-	src/fdsbspecframe.c src/fdssmap.c src/fellipse.c src/ferror.c \
-	src/ffitschan.c src/ffitstable.c src/ffluxframe.c src/fframe.c \
-	src/fframeset.c src/fgrismmap.c src/finterval.c \
-	src/fintramap.c src/fkeymap.c src/flutmap.c src/fmapping.c \
-	src/fmathmap.c src/fmatrixmap.c src/fmoc.c src/fmocchan.c \
-	src/fnormmap.c src/fnullregion.c src/fobject.c src/fpcdmap.c \
-	src/fpermmap.c src/fplot.c src/fplot3d.c src/fpointlist.c \
-	src/fpolygon.c src/fpolymap.c src/fprism.c src/fratemap.c \
-	src/fregion.c src/fselectormap.c src/fshiftmap.c \
-	src/fskyframe.c src/fslamap.c src/fspecfluxframe.c \
-	src/fspecframe.c src/fspecmap.c src/fsphmap.c src/fstc.c \
-	src/fstccatalogentrylocation.c src/fstcobsdatalocation.c \
-	src/fstcresourceprofile.c src/fstcschan.c \
-	src/fstcsearchlocation.c src/fswitchmap.c src/ftable.c \
-	src/ftimeframe.c src/ftimemap.c src/ftranmap.c src/funitmap.c \
-	src/funitnormmap.c src/fwcsmap.c src/fwinmap.c src/fxmlchan.c \
-	src/fzoommap.c src/xml.h wcslib/wcstrig.h wcslib/proj.h \
-	src/memory.h src/error.h src/globals.h src/unit.h ast_err.h \
-	src/version.h src/object.h src/keymap.h src/table.h \
-	src/fitstable.h src/pointset.h src/axis.h src/skyaxis.h \
-	src/mapping.h src/cmpmap.h src/dssmap.h src/grismmap.h \
-	src/intramap.h src/lutmap.h src/mathmap.h src/matrixmap.h \
-	src/pcdmap.h src/permmap.h src/polymap.h src/chebymap.h \
-	src/ratemap.h src/normmap.h src/shiftmap.h src/slamap.h \
-	src/specmap.h src/sphmap.h src/timemap.h src/selectormap.h \
-	src/switchmap.h src/tranmap.h src/unitmap.h src/unitnormmap.h \
-	src/wcsmap.h src/winmap.h src/xphmap.h src/zoommap.h \
-	src/frame.h src/cmpframe.h src/specfluxframe.h src/fluxframe.h \
-	src/frameset.h src/plot.h src/plot3d.h src/skyframe.h \
-	src/specframe.h src/dsbspecframe.h src/region.h src/box.h \
-	src/circle.h src/cmpregion.h src/ellipse.h src/interval.h \
-	src/moc.h src/nullregion.h src/pointlist.h src/polygon.h \
-	src/prism.h src/stc.h src/stcresourceprofile.h \
+	src/xml.c src/xmlchan.c src/xphmap.c src/zoommap.c \
+	src/fyamlchan.c src/c2f77.c src/fbox.c src/fchannel.c \
+	src/fchebymap.c src/fcircle.c src/fcmpframe.c src/fcmpmap.c \
+	src/fcmpregion.c src/fdsbspecframe.c src/fdssmap.c \
+	src/fellipse.c src/ferror.c src/ffitschan.c src/ffitstable.c \
+	src/ffluxframe.c src/fframe.c src/fframeset.c src/fgrismmap.c \
+	src/finterval.c src/fintramap.c src/fkeymap.c src/flutmap.c \
+	src/fmapping.c src/fmathmap.c src/fmatrixmap.c src/fmoc.c \
+	src/fmocchan.c src/fnormmap.c src/fnullregion.c src/fobject.c \
+	src/fpcdmap.c src/fpermmap.c src/fplot.c src/fplot3d.c \
+	src/fpointlist.c src/fpolygon.c src/fpolymap.c src/fprism.c \
+	src/fratemap.c src/fregion.c src/fselectormap.c \
+	src/fshiftmap.c src/fskyframe.c src/fslamap.c \
+	src/fspecfluxframe.c src/fspecframe.c src/fspecmap.c \
+	src/fsphmap.c src/fstc.c src/fstccatalogentrylocation.c \
+	src/fstcobsdatalocation.c src/fstcresourceprofile.c \
+	src/fstcschan.c src/fstcsearchlocation.c src/fswitchmap.c \
+	src/ftable.c src/ftimeframe.c src/ftimemap.c src/ftranmap.c \
+	src/funitmap.c src/funitnormmap.c src/fwcsmap.c src/fwinmap.c \
+	src/fxmlchan.c src/fzoommap.c src/xml.h wcslib/wcstrig.h \
+	wcslib/proj.h src/memory.h src/error.h src/globals.h \
+	src/unit.h ast_err.h src/version.h src/object.h src/keymap.h \
+	src/table.h src/fitstable.h src/pointset.h src/axis.h \
+	src/skyaxis.h src/mapping.h src/cmpmap.h src/dssmap.h \
+	src/grismmap.h src/intramap.h src/lutmap.h src/mathmap.h \
+	src/matrixmap.h src/pcdmap.h src/permmap.h src/polymap.h \
+	src/chebymap.h src/ratemap.h src/normmap.h src/shiftmap.h \
+	src/slamap.h src/specmap.h src/sphmap.h src/timemap.h \
+	src/selectormap.h src/switchmap.h src/tranmap.h src/unitmap.h \
+	src/unitnormmap.h src/wcsmap.h src/winmap.h src/xphmap.h \
+	src/zoommap.h src/frame.h src/cmpframe.h src/specfluxframe.h \
+	src/fluxframe.h src/frameset.h src/plot.h src/plot3d.h \
+	src/skyframe.h src/specframe.h src/dsbspecframe.h src/region.h \
+	src/box.h src/circle.h src/cmpregion.h src/ellipse.h \
+	src/interval.h src/moc.h src/nullregion.h src/pointlist.h \
+	src/polygon.h src/prism.h src/stc.h src/stcresourceprofile.h \
 	src/stcsearchlocation.h src/stccatalogentrylocation.h \
 	src/stcobsdatalocation.h src/timeframe.h src/channel.h \
-	src/fitschan.h src/mocchan.h src/stcschan.h src/xmlchan.h \
-	pal2ast.h erfa2ast.h src/ems.h src/err.h src/Ers.h src/f77.h \
-	src/grf.h src/grf3d.h src/pg3d.h src/loader.h wcslib/wcsmath.h \
-	src/c2f77.h GRF_PAR AST_ERR cminpack/cminpack.h \
-	cminpack/cminpackP.h cminpack/lmder1.c cminpack/lmder.c \
-	cminpack/dpmpar.c cminpack/enorm.c cminpack/qrfac.c \
-	cminpack/lmpar.c cminpack/qrsolv.c wcslib/proj.c wcslib/tpn.c \
-	wcslib/wcstrig.c
+	src/yamlchan.h src/fitschan.h src/mocchan.h src/stcschan.h \
+	src/xmlchan.h pal2ast.h erfa2ast.h src/ems.h src/err.h \
+	src/Ers.h src/f77.h src/grf.h src/grf3d.h src/pg3d.h \
+	src/loader.h wcslib/wcsmath.h src/c2f77.h GRF_PAR AST_ERR \
+	cminpack/cminpack.h cminpack/cminpackP.h cminpack/lmder1.c \
+	cminpack/lmder.c cminpack/dpmpar.c cminpack/enorm.c \
+	cminpack/qrfac.c cminpack/lmpar.c cminpack/qrsolv.c \
+	wcslib/proj.c wcslib/tpn.c wcslib/wcstrig.c
 am__dirstamp = $(am__leading_dot)dirstamp
-am__objects_1 = src/libast_la-axis.lo src/libast_la-box.lo \
-	src/libast_la-channel.lo src/libast_la-chebymap.lo \
-	src/libast_la-circle.lo src/libast_la-cmpframe.lo \
-	src/libast_la-cmpmap.lo src/libast_la-cmpregion.lo \
-	src/libast_la-dsbspecframe.lo src/libast_la-dssmap.lo \
-	src/libast_la-ellipse.lo src/libast_la-error.lo \
-	src/libast_la-fitschan.lo src/libast_la-fitstable.lo \
-	src/libast_la-fluxframe.lo src/libast_la-frame.lo \
-	src/libast_la-frameset.lo src/libast_la-globals.lo \
-	src/libast_la-grismmap.lo src/libast_la-interval.lo \
-	src/libast_la-intramap.lo src/libast_la-keymap.lo \
-	src/libast_la-loader.lo src/libast_la-lutmap.lo \
-	src/libast_la-mapping.lo src/libast_la-mathmap.lo \
-	src/libast_la-matrixmap.lo src/libast_la-memory.lo \
-	src/libast_la-moc.lo src/libast_la-mocchan.lo \
-	src/libast_la-normmap.lo src/libast_la-nullregion.lo \
-	src/libast_la-object.lo src/libast_la-pcdmap.lo \
-	src/libast_la-permmap.lo src/libast_la-plot.lo \
-	src/libast_la-plot3d.lo src/libast_la-pointlist.lo \
-	src/libast_la-pointset.lo src/libast_la-polygon.lo \
-	src/libast_la-polymap.lo src/libast_la-prism.lo \
-	src/libast_la-ratemap.lo src/libast_la-region.lo \
-	src/libast_la-selectormap.lo src/libast_la-shiftmap.lo \
-	src/libast_la-skyaxis.lo src/libast_la-skyframe.lo \
-	src/libast_la-slamap.lo src/libast_la-specfluxframe.lo \
-	src/libast_la-specframe.lo src/libast_la-specmap.lo \
-	src/libast_la-sphmap.lo src/libast_la-stc.lo \
-	src/libast_la-stccatalogentrylocation.lo \
+am__objects_1 = src/libast_la-yamlchan.lo src/libast_la-axis.lo \
+	src/libast_la-box.lo src/libast_la-channel.lo \
+	src/libast_la-chebymap.lo src/libast_la-circle.lo \
+	src/libast_la-cmpframe.lo src/libast_la-cmpmap.lo \
+	src/libast_la-cmpregion.lo src/libast_la-dsbspecframe.lo \
+	src/libast_la-dssmap.lo src/libast_la-ellipse.lo \
+	src/libast_la-error.lo src/libast_la-fitschan.lo \
+	src/libast_la-fitstable.lo src/libast_la-fluxframe.lo \
+	src/libast_la-frame.lo src/libast_la-frameset.lo \
+	src/libast_la-globals.lo src/libast_la-grismmap.lo \
+	src/libast_la-interval.lo src/libast_la-intramap.lo \
+	src/libast_la-keymap.lo src/libast_la-loader.lo \
+	src/libast_la-lutmap.lo src/libast_la-mapping.lo \
+	src/libast_la-mathmap.lo src/libast_la-matrixmap.lo \
+	src/libast_la-memory.lo src/libast_la-moc.lo \
+	src/libast_la-mocchan.lo src/libast_la-normmap.lo \
+	src/libast_la-nullregion.lo src/libast_la-object.lo \
+	src/libast_la-pcdmap.lo src/libast_la-permmap.lo \
+	src/libast_la-plot.lo src/libast_la-plot3d.lo \
+	src/libast_la-pointlist.lo src/libast_la-pointset.lo \
+	src/libast_la-polygon.lo src/libast_la-polymap.lo \
+	src/libast_la-prism.lo src/libast_la-ratemap.lo \
+	src/libast_la-region.lo src/libast_la-selectormap.lo \
+	src/libast_la-shiftmap.lo src/libast_la-skyaxis.lo \
+	src/libast_la-skyframe.lo src/libast_la-slamap.lo \
+	src/libast_la-specfluxframe.lo src/libast_la-specframe.lo \
+	src/libast_la-specmap.lo src/libast_la-sphmap.lo \
+	src/libast_la-stc.lo src/libast_la-stccatalogentrylocation.lo \
 	src/libast_la-stcobsdatalocation.lo \
 	src/libast_la-stcresourceprofile.lo src/libast_la-stcschan.lo \
 	src/libast_la-stcsearchlocation.lo src/libast_la-switchmap.lo \
@@ -253,8 +253,8 @@ am__objects_1 = src/libast_la-axis.lo src/libast_la-box.lo \
 	src/libast_la-winmap.lo src/libast_la-xml.lo \
 	src/libast_la-xmlchan.lo src/libast_la-xphmap.lo \
 	src/libast_la-zoommap.lo
-@NOFORTRAN_FALSE@am__objects_2 = src/libast_la-c2f77.lo \
-@NOFORTRAN_FALSE@	src/libast_la-fbox.lo \
+@NOFORTRAN_FALSE@am__objects_2 = src/libast_la-fyamlchan.lo \
+@NOFORTRAN_FALSE@	src/libast_la-c2f77.lo src/libast_la-fbox.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fchannel.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fchebymap.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fcircle.lo \
@@ -830,6 +830,7 @@ TAR = @TAR@
 THREADS = @THREADS@
 TRAIL_TYPE = @TRAIL_TYPE@
 VERSION = @VERSION@
+YAML = @YAML@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -894,6 +895,7 @@ version_info = @version_info@
 # First declare various groups of files.  These were initially extracted
 # from the grp.make file, as constructed by the SDT newdev command
 GRP_C_ROUTINES = \
+    src/yamlchan.c \
     src/axis.c \
     src/box.c \
     src/channel.c \
@@ -971,6 +973,7 @@ GRP_C_ROUTINES = \
 
 # The C source files required for the Fortran interface
 @NOFORTRAN_FALSE@F_C_ROUTINES = \
+@NOFORTRAN_FALSE@    src/fyamlchan.c \
 @NOFORTRAN_FALSE@    src/c2f77.c \
 @NOFORTRAN_FALSE@    src/fbox.c \
 @NOFORTRAN_FALSE@    src/fchannel.c \
@@ -1114,6 +1117,7 @@ AST_H_FILES = \
                    src/stcobsdatalocation.h \
              src/timeframe.h \
        src/channel.h \
+          src/yamlchan.h \
           src/fitschan.h \
           src/mocchan.h \
           src/stcschan.h \
@@ -1503,15 +1507,18 @@ lib_LTLIBRARIES = \
 stardocs_DATA = @STAR_LATEX_DOCUMENTATION@
 dist_starnews_DATA = ast.news
 dist_pkgdata_DATA = COPYING COPYING.LESSER COPYING.LIB
+@NOYAML_FALSE@yaml = -DYAML
+@NOYAML_TRUE@yaml = 
+@NOTHREADS_FALSE@threadsafe = -DTHREAD_SAFE
+@NOTHREADS_TRUE@threadsafe = 
 
 # Make all library code position independent by default. This is handy for
 # creating shareable libraries from the static ones (Java JNI libraries).
 # Note we do not simply set the AM_CFLAGS variable, as this would also
 # apply to programs compiled without using libtool, possibly causing the
 # compilation to fail.
-@NOPIC_FALSE@@NOTHREADS_FALSE@libast_la_CFLAGS = $(AM_CFLAGS) -prefer-pic -DTHREAD_SAFE
-@NOPIC_TRUE@@NOTHREADS_FALSE@libast_la_CFLAGS = $(AM_CFLAGS) -DTHREAD_SAFE
-@NOTHREADS_TRUE@libast_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
+@NOPIC_FALSE@libast_la_CFLAGS = $(AM_CFLAGS) -prefer-pic $(threadsafe) $(yaml)
+@NOPIC_TRUE@libast_la_CFLAGS = $(AM_CFLAGS) $(threadsafe) $(yaml)
 @NOPIC_FALSE@libast_err_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 @NOPIC_FALSE@libast_ems_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 @NOPIC_FALSE@libast_drama_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
@@ -1764,6 +1771,8 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/libast_la-yamlchan.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-axis.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-box.lo: src/$(am__dirstamp) \
@@ -1909,6 +1918,8 @@ src/libast_la-xmlchan.lo: src/$(am__dirstamp) \
 src/libast_la-xphmap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-zoommap.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/libast_la-fyamlchan.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-c2f77.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -2331,6 +2342,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fwcsmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fwinmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fxmlchan.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fyamlchan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fzoommap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-globals.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-grismmap.Plo@am__quote@
@@ -2387,6 +2399,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-xml.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-xmlchan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-xphmap.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-yamlchan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-zoommap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_pgplot3d_la-grf3d.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_pgplot3d_la-grf3d_pgplot.Plo@am__quote@
@@ -2419,6 +2432,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+src/libast_la-yamlchan.lo: src/yamlchan.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-yamlchan.lo -MD -MP -MF src/$(DEPDIR)/libast_la-yamlchan.Tpo -c -o src/libast_la-yamlchan.lo `test -f 'src/yamlchan.c' || echo '$(srcdir)/'`src/yamlchan.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libast_la-yamlchan.Tpo src/$(DEPDIR)/libast_la-yamlchan.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/yamlchan.c' object='src/libast_la-yamlchan.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-yamlchan.lo `test -f 'src/yamlchan.c' || echo '$(srcdir)/'`src/yamlchan.c
 
 src/libast_la-axis.lo: src/axis.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-axis.lo -MD -MP -MF src/$(DEPDIR)/libast_la-axis.Tpo -c -o src/libast_la-axis.lo `test -f 'src/axis.c' || echo '$(srcdir)/'`src/axis.c
@@ -2930,6 +2950,13 @@ src/libast_la-zoommap.lo: src/zoommap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/zoommap.c' object='src/libast_la-zoommap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-zoommap.lo `test -f 'src/zoommap.c' || echo '$(srcdir)/'`src/zoommap.c
+
+src/libast_la-fyamlchan.lo: src/fyamlchan.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-fyamlchan.lo -MD -MP -MF src/$(DEPDIR)/libast_la-fyamlchan.Tpo -c -o src/libast_la-fyamlchan.lo `test -f 'src/fyamlchan.c' || echo '$(srcdir)/'`src/fyamlchan.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libast_la-fyamlchan.Tpo src/$(DEPDIR)/libast_la-fyamlchan.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/fyamlchan.c' object='src/libast_la-fyamlchan.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-fyamlchan.lo `test -f 'src/fyamlchan.c' || echo '$(srcdir)/'`src/fyamlchan.c
 
 src/libast_la-c2f77.lo: src/c2f77.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-c2f77.lo -MD -MP -MF src/$(DEPDIR)/libast_la-c2f77.Tpo -c -o src/libast_la-c2f77.lo `test -f 'src/c2f77.c' || echo '$(srcdir)/'`src/c2f77.c

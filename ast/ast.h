@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     9-SEP-2020 (makeh):
+*     15-SEP-2020 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -460,6 +460,10 @@ void astErrorPublic_( int, const char *, ... )__attribute__((format(printf,2,3))
 
 #define AST__TUNULL -99999
 #define AST__TUNULLC "<NOTUNEPAR>"
+typedef struct AstStringList {
+   size_t nline;
+   char **lines;
+} AstStringList;
 int astMemCaching_( int, int * );
 void astChrClean_( char * );
 void astChrRemoveBlanks_( char * );
@@ -474,6 +478,9 @@ char *astStringCase_( const char *, int, int * );
 char *astString_( const char *, int, int * );
 int astSscanf_( const char *str, const char *format, ...);
 size_t astSizeOf_( const void *, int * );
+AstStringList *astStringList_( size_t, int * );
+AstStringList *astFreeStringList_( AstStringList *, int * );
+void astAppendStringList_( AstStringList *, const char *, int * );
 int astIsDynamic_( const void *, int * );
 size_t astTSizeOf_( const void *, int * );
 void *astFree_( void *, int * );
@@ -548,12 +555,12 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 9
-#define AST__VMINOR 1
-#define AST__RELEASE 3
+#define AST__VMINOR 2
+#define AST__RELEASE 0
 
 #define AST_MAJOR_VERS 9
-#define AST_MINOR_VERS 1
-#define AST_RELEASE 3
+#define AST_MINOR_VERS 2
+#define AST_RELEASE 0
 
 #include <stdarg.h>
 #include <float.h>
@@ -1365,6 +1372,24 @@ enum { AST__SMBUF = 233934490 };
 enum { AST__BGWRD = 233934498 };
 
 enum { AST__TOOBG = 233934506 };
+
+enum { AST__NOTSP = 233934514 };
+
+enum { AST__TRUNC = 233934522 };
+
+enum { AST__LYAML = 233934530 };
+
+enum { AST__YAML = 233934538 };
+
+enum { AST__NOYAML = 233934546 };
+
+enum { AST__NOTMP = 233934554 };
+
+enum { AST__BYAML = 233934562 };
+
+enum { AST__BASDF = 233934570 };
+
+enum { AST__UASDF = 233934578 };
 /* version. */
 /* ======== */
 /* object. */
@@ -3814,6 +3839,39 @@ AstStcObsDataLocation *astStcObsDataLocationId_( void *, int, AstKeyMap **, cons
 /* ========== */
 /* channel. */
 /* ======== */
+/* yamlchan. */
+/* ========= */
+#define STATUS_PTR astGetStatusPtr
+
+#define AST__YAMLCHAN_GETATTRIB_BUFF_LEN 200
+typedef struct AstYamlChan {
+
+   AstChannel channel;
+
+   int preservename;
+   int verboseread;
+   int yamlencoding;
+   AstKeyMap *anchors;
+   int gotwcs;
+} AstYamlChan;
+astPROTO_CHECK(YamlChan)
+astPROTO_ISA(YamlChan)
+
+AstYamlChan *astYamlChanId_( const char *(*)( void ), void (*)( const char * ),
+                            const char *, ... );
+AstYamlChan *astYamlChanForId_( const char *(*)( void ),
+                              char *(*)( const char *(*)( void ), int * ),
+                              void (*)( const char * ),
+                              void (*)( void (*)( const char * ),
+                                        const char *, int * ),
+                              const char *, ... );
+#define astCheckYamlChan(this) astINVOKE_CHECK(YamlChan,this,0)
+#define astVerifyYamlChan(this) astINVOKE_CHECK(YamlChan,this,1)
+
+#define astIsAYamlChan(this) astINVOKE_ISA(YamlChan,this)
+
+#define astYamlChan astINVOKE(F,astYamlChanId_)
+#define astYamlChanFor astINVOKE(F,astYamlChanForId_)
 /* fitschan. */
 /* ========= */
 /* mocchan. */
