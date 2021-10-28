@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     15-SEP-2020 (makeh):
+*     28-OCT-2021 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -485,7 +485,7 @@ int astIsDynamic_( const void *, int * );
 size_t astTSizeOf_( const void *, int * );
 void *astFree_( void *, int * );
 void *astFreeDouble_( void *, int * );
-void *astGrow_( void *, int, size_t, int * );
+void *astGrow_( void *, size_t, size_t, int * );
 void *astCalloc_( size_t, size_t, int * );
 void *astMalloc_( size_t, int, int * );
 void *astRealloc_( void *, size_t, int * );
@@ -556,11 +556,11 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* ===== */
 #define AST__VMAJOR 9
 #define AST__VMINOR 2
-#define AST__RELEASE 0
+#define AST__RELEASE 5
 
 #define AST_MAJOR_VERS 9
 #define AST_MINOR_VERS 2
-#define AST_RELEASE 0
+#define AST_RELEASE 5
 
 #include <stdarg.h>
 #include <float.h>
@@ -1396,6 +1396,8 @@ enum { AST__UASDF = 233934578 };
 /* ======= */
 /* keymap. */
 /* ======= */
+#define AST__BAD_STRING "<bad>"
+
 #define AST__BADTYPE 0
 #define AST__INTTYPE 1
 #define AST__DOUBLETYPE 2
@@ -1406,6 +1408,7 @@ enum { AST__UASDF = 233934578 };
 #define AST__SINTTYPE 7
 #define AST__UNDEFTYPE 8
 #define AST__BYTETYPE 9
+#define AST__KINTTYPE 10
 
 #define AST__KEYMAP_GETATTRIB_BUFF_LEN 50
 #define AST__KEYMAP_CONVERTVALUE_MAX_STRINGS 50
@@ -1466,6 +1469,7 @@ int astMapGet0F_( AstKeyMap *, const char *, float *, int * );
 int astMapGet0I_( AstKeyMap *, const char *, int *, int * );
 int astMapGet0P_( AstKeyMap *, const char *, void **, int * );
 int astMapGet0S_( AstKeyMap *, const char *, short int *, int * );
+int astMapGet0K_( AstKeyMap *, const char *, int64_t *, int * );
 int astMapGet1B_( AstKeyMap *, const char *, int, int *, unsigned char *, int * );
 int astMapGet1C_( AstKeyMap *, const char *, int, int, int *, char *, int * );
 int astMapGet1D_( AstKeyMap *, const char *, int, int *, double *, int * );
@@ -1473,6 +1477,7 @@ int astMapGet1F_( AstKeyMap *, const char *, int, int *, float *, int * );
 int astMapGet1I_( AstKeyMap *, const char *, int, int *, int *, int * );
 int astMapGet1P_( AstKeyMap *, const char *, int, int *, void **, int * );
 int astMapGet1S_( AstKeyMap *, const char *, int, int *, short int *, int * );
+int astMapGet1K_( AstKeyMap *, const char *, int, int *, int64_t *, int * );
 int astMapGetC_( AstKeyMap *, const char *, const char **, int * );
 int astMapGetElemB_( AstKeyMap *, const char *, int, unsigned char *, int * );
 int astMapGetElemC_( AstKeyMap *, const char *, int, int, char *, int * );
@@ -1481,6 +1486,7 @@ int astMapGetElemF_( AstKeyMap *, const char *, int, float *, int * );
 int astMapGetElemI_( AstKeyMap *, const char *, int, int *, int * );
 int astMapGetElemP_( AstKeyMap *, const char *, int, void **, int * );
 int astMapGetElemS_( AstKeyMap *, const char *, int, short int *, int * );
+int astMapGetElemK_( AstKeyMap *, const char *, int, int64_t *, int * );
 int astMapHasKey_( AstKeyMap *, const char *, int * );
 int astMapDefined_( AstKeyMap *, const char *, int * );
 int astMapLenC_( AstKeyMap *, const char *, int * );
@@ -1497,6 +1503,7 @@ void astMapPut0F_( AstKeyMap *, const char *, float, const char *, int * );
 void astMapPut0I_( AstKeyMap *, const char *, int, const char *, int * );
 void astMapPut0P_( AstKeyMap *, const char *, void *, const char *, int * );
 void astMapPut0S_( AstKeyMap *, const char *, short int, const char *, int * );
+void astMapPut0K_( AstKeyMap *, const char *, int64_t, const char *, int * );
 void astMapPut1B_( AstKeyMap *, const char *, int, const unsigned char[], const char *, int * );
 void astMapPut1C_( AstKeyMap *, const char *, int, const char *const [], const char *, int * );
 void astMapPut1D_( AstKeyMap *, const char *, int, const double *, const char *, int * );
@@ -1504,6 +1511,7 @@ void astMapPut1F_( AstKeyMap *, const char *, int, const float *, const char *, 
 void astMapPut1I_( AstKeyMap *, const char *, int, const int *, const char *, int * );
 void astMapPut1P_( AstKeyMap *, const char *, int, void *const [], const char *, int * );
 void astMapPut1S_( AstKeyMap *, const char *, int, const short int *, const char *, int * );
+void astMapPut1K_( AstKeyMap *, const char *, int, const int64_t *, const char *, int * );
 void astMapPutElemA_( AstKeyMap *, const char *, int, AstObject *, int * );
 void astMapPutElemB_( AstKeyMap *, const char *, int, unsigned char, int * );
 void astMapPutElemC_( AstKeyMap *, const char *, int, const char *, int * );
@@ -1512,6 +1520,7 @@ void astMapPutElemF_( AstKeyMap *, const char *, int, float, int * );
 void astMapPutElemI_( AstKeyMap *, const char *, int, int, int * );
 void astMapPutElemP_( AstKeyMap *, const char *, int, void *, int * );
 void astMapPutElemS_( AstKeyMap *, const char *, int, short int, int * );
+void astMapPutElemK_( AstKeyMap *, const char *, int, int64_t, int * );
 void astMapPutU_( AstKeyMap *, const char *, const char *, int * );
 void astMapRemove_( AstKeyMap *, const char *, int * );
 void astMapRename_( AstKeyMap *, const char *, const char *, int * );
@@ -1525,6 +1534,7 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapPut0I(this,key,value,comment) astINVOKE(V,astMapPut0I_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
 #define astMapPut0B(this,key,value,comment) astINVOKE(V,astMapPut0B_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
 #define astMapPut0S(this,key,value,comment) astINVOKE(V,astMapPut0S_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
+#define astMapPut0K(this,key,value,comment) astINVOKE(V,astMapPut0K_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
 #define astMapPut0D(this,key,value,comment) astINVOKE(V,astMapPut0D_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
 #define astMapPut0F(this,key,value,comment) astINVOKE(V,astMapPut0F_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
 #define astMapPut0C(this,key,value,comment) astINVOKE(V,astMapPut0C_(astCheckKeyMap(this),key,value,comment,STATUS_PTR))
@@ -1533,12 +1543,14 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapPut1I(this,key,size,value,comment) astINVOKE(V,astMapPut1I_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapPut1B(this,key,size,value,comment) astINVOKE(V,astMapPut1B_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapPut1S(this,key,size,value,comment) astINVOKE(V,astMapPut1S_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
+#define astMapPut1K(this,key,size,value,comment) astINVOKE(V,astMapPut1K_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapPut1D(this,key,size,value,comment) astINVOKE(V,astMapPut1D_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapPut1F(this,key,size,value,comment) astINVOKE(V,astMapPut1F_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapPut1C(this,key,size,value,comment) astINVOKE(V,astMapPut1C_(astCheckKeyMap(this),key,size,value,comment,STATUS_PTR))
 #define astMapGet0I(this,key,value) astINVOKE(V,astMapGet0I_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0B(this,key,value) astINVOKE(V,astMapGet0B_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0S(this,key,value) astINVOKE(V,astMapGet0S_(astCheckKeyMap(this),key,value,STATUS_PTR))
+#define astMapGet0K(this,key,value) astINVOKE(V,astMapGet0K_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0D(this,key,value) astINVOKE(V,astMapGet0D_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0F(this,key,value) astINVOKE(V,astMapGet0F_(astCheckKeyMap(this),key,value,STATUS_PTR))
 #define astMapGet0C(this,key,value) astINVOKE(V,astMapGet0C_(astCheckKeyMap(this),key,value,STATUS_PTR))
@@ -1546,12 +1558,14 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapGet1I(this,key,mxval,nval,value) astINVOKE(V,astMapGet1I_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1B(this,key,mxval,nval,value) astINVOKE(V,astMapGet1B_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1S(this,key,mxval,nval,value) astINVOKE(V,astMapGet1S_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
+#define astMapGet1K(this,key,mxval,nval,value) astINVOKE(V,astMapGet1K_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1D(this,key,mxval,nval,value) astINVOKE(V,astMapGet1D_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1F(this,key,mxval,nval,value) astINVOKE(V,astMapGet1F_(astCheckKeyMap(this),key,mxval,nval,value,STATUS_PTR))
 #define astMapGet1C(this,key,l,mxval,nval,value) astINVOKE(V,astMapGet1C_(astCheckKeyMap(this),key,l,mxval,nval,value,STATUS_PTR))
 #define astMapGetElemI(this,key,elem,value) astINVOKE(V,astMapGetElemI_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapGetElemB(this,key,elem,value) astINVOKE(V,astMapGetElemB_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapGetElemS(this,key,elem,value) astINVOKE(V,astMapGetElemS_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
+#define astMapGetElemK(this,key,elem,value) astINVOKE(V,astMapGetElemK_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapGetElemD(this,key,elem,value) astINVOKE(V,astMapGetElemD_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapGetElemF(this,key,elem,value) astINVOKE(V,astMapGetElemF_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapGetElemC(this,key,l,elem,value) astINVOKE(V,astMapGetElemC_(astCheckKeyMap(this),key,l,elem,value,STATUS_PTR))
@@ -1560,6 +1574,7 @@ void astMapRename_( AstKeyMap *, const char *, const char *, int * );
 #define astMapPutElemI(this,key,elem,value) astINVOKE(V,astMapPutElemI_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapPutElemB(this,key,elem,value) astINVOKE(V,astMapPutElemB_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapPutElemS(this,key,elem,value) astINVOKE(V,astMapPutElemS_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
+#define astMapPutElemK(this,key,elem,value) astINVOKE(V,astMapPutElemK_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapPutElemD(this,key,elem,value) astINVOKE(V,astMapPutElemD_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapPutElemF(this,key,elem,value) astINVOKE(V,astMapPutElemF_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
 #define astMapPutElemC(this,key,elem,value) astINVOKE(V,astMapPutElemC_(astCheckKeyMap(this),key,elem,value,STATUS_PTR))
@@ -1656,6 +1671,7 @@ typedef struct AstFitsChan {
    double fitstol;
    int iwc;
    int clean;
+   int altaxes;
    int fitsdigits;
    char *fitsaxisorder;
    char *warnings;
@@ -2316,6 +2332,7 @@ void astResolve_( AstFrame *, const double [], const double [], const double [],
 void astSetActiveUnit_( AstFrame *, int, int * );
 AstFrameSet *astGetFrameVariants_( AstFrame *, int * );
 void astSetFrameVariants_( AstFrame *, AstFrameSet *, int * );
+void astNormPoints8_( AstFrame *, AstDim, int, AstDim, const double *, int, int, AstDim, double *, int * );
 AstFrame *astPickAxesId_( AstFrame *, int, const int[], AstMapping **, int * );
 const char *astFormatId_( AstFrame *, int, double, int * );
 int astUnformatId_( AstFrame *, int, const char *, double *, int * );
@@ -2332,6 +2349,9 @@ void astPermAxesId_( AstFrame *, const int[], int * );
 #define astFindFrame(target,template,domainlist) astINVOKE(O,astFindFrame_(astCheckFrame(target),astCheckFrame(template),domainlist,STATUS_PTR))
 #define astMatchAxes(frm1,frm2,axes) astINVOKE(V,astMatchAxes_(astCheckFrame(frm1),astCheckFrame(frm2),axes,STATUS_PTR))
 #define astNorm(this,value) astINVOKE(V,astNorm_(astCheckFrame(this),value,STATUS_PTR))
+#define astNormPoints(this,npoint,ncoord_in,indim,in,contig,ncoord_out,outdim,out) astINVOKE(V,astNormPoints8_(astCheckFrame(this),npoint,ncoord_in,indim,in,contig,ncoord_out,outdim,out,STATUS_PTR))
+#define astNormPoints8(this,npoint,ncoord_in,indim,in,contig,ncoord_out,outdim,out) astINVOKE(V,astNormPoints8_(astCheckFrame(this),npoint,ncoord_in,indim,in,contig,ncoord_out,outdim,out,STATUS_PTR))
+
 #define astAxDistance(this,axis,v1,v2) astINVOKE(V,astAxDistance_(astCheckFrame(this),axis,v1,v2,STATUS_PTR))
 #define astAxNorm(this,axis,oper,nval,values) astINVOKE(V,astAxNorm_(astCheckFrame(this),axis,oper,nval,values,STATUS_PTR))
 #define astAxOffset(this,axis,v1,dist) astINVOKE(V,astAxOffset_(astCheckFrame(this),axis,v1,dist,STATUS_PTR))
@@ -3851,8 +3871,15 @@ typedef struct AstYamlChan {
    int preservename;
    int verboseread;
    int yamlencoding;
+   int defenc;
    AstKeyMap *anchors;
    int gotwcs;
+   const char *objectname;
+   int objectset;
+   int write_isa;
+   AstKeyMap *obj;
+   int index;
+
 } AstYamlChan;
 astPROTO_CHECK(YamlChan)
 astPROTO_ISA(YamlChan)

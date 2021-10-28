@@ -231,6 +231,7 @@
 /* C header files. */
 /* --------------- */
 #include <stddef.h>
+#include <stdint.h>
 
 /* Macros */
 /* ====== */
@@ -306,6 +307,7 @@ typedef struct AstChannelVtab {
    int (* GetFull)( AstChannel *, int * );
    int (* GetStrict)( AstChannel *, int * );
    int (* ReadInt)( AstChannel *, const char *, int, int * );
+   int64_t (* ReadInt64)( AstChannel *, const char *, int64_t, int * );
    int (* TestComment)( AstChannel *, int * );
    int (* TestFull)( AstChannel *, int * );
    int (* TestStrict)( AstChannel *, int * );
@@ -325,9 +327,11 @@ typedef struct AstChannelVtab {
    void (* WriteDouble)( AstChannel *, const char *, int, int, double, const char *, int * );
    void (* WriteEnd)( AstChannel *, const char *, int * );
    void (* WriteInt)( AstChannel *, const char *, int, int, int, const char *, int * );
+   void (* WriteInt64)( AstChannel *, const char *, int, int, int64_t, const char *, int * );
    void (* WriteIsA)( AstChannel *, const char *, const char *, int * );
    void (* WriteObject)( AstChannel *, const char *, int, int, AstObject *, const char *, int * );
    void (* WriteString)( AstChannel *, const char *, int, int, const char *, const char *, int * );
+   void (* WriteFlush)( AstChannel *, int * );
 
    int (* GetSkip)( AstChannel *, int * );
    int (* TestSkip)( AstChannel *, int * );
@@ -463,6 +467,7 @@ int astGetComment_( AstChannel *, int * );
 int astGetFull_( AstChannel *, int * );
 int astGetStrict_( AstChannel *, int * );
 int astReadInt_( AstChannel *, const char *, int, int * );
+int64_t astReadInt64_( AstChannel *, const char *, int64_t, int * );
 int astTestComment_( AstChannel *, int * );
 int astTestFull_( AstChannel *, int * );
 int astTestStrict_( AstChannel *, int * );
@@ -480,10 +485,12 @@ void astWriteBegin_( AstChannel *, const char *, const char *, int * );
 void astWriteDouble_( AstChannel *, const char *, int, int, double, const char *, int * );
 void astWriteEnd_( AstChannel *, const char *, int * );
 void astWriteInt_( AstChannel *, const char *, int, int, int, const char *, int * );
+void astWriteInt64_( AstChannel *, const char *, int, int, int64_t, const char *, int * );
 int astWriteInvocations_( int * );
 void astWriteIsA_( AstChannel *, const char *, const char *, int * );
 void astWriteObject_( AstChannel *, const char *, int, int, AstObject *, const char *, int * );
 void astWriteString_( AstChannel *, const char *, int, int, const char *, const char *, int * );
+void astWriteFlush_( AstChannel *, int * );
 
 int astGetSkip_( AstChannel *, int * );
 int astTestSkip_( AstChannel *, int * );
@@ -600,6 +607,8 @@ astINVOKE(V,astReadClassData_(astCheckChannel(this),class,STATUS_PTR))
 astINVOKE(V,astReadDouble_(astCheckChannel(this),name,def,STATUS_PTR))
 #define astReadInt(this,name,def) \
 astINVOKE(V,astReadInt_(astCheckChannel(this),name,def,STATUS_PTR))
+#define astReadInt64(this,name,def) \
+astINVOKE(V,astReadInt64_(astCheckChannel(this),name,def,STATUS_PTR))
 #define astReadObject(this,name,def) \
 astINVOKE(O,astReadObject_(astCheckChannel(this),name,(def)?astCheckObject(def):NULL,STATUS_PTR))
 #define astReadString(this,name,def) \
@@ -624,12 +633,16 @@ astINVOKE(V,astWriteDouble_(astCheckChannel(this),name,set,helpful,value,comment
 astINVOKE(V,astWriteEnd_(astCheckChannel(this),class,STATUS_PTR))
 #define astWriteInt(this,name,set,helpful,value,comment) \
 astINVOKE(V,astWriteInt_(astCheckChannel(this),name,set,helpful,value,comment,STATUS_PTR))
+#define astWriteInt64(this,name,set,helpful,value,comment) \
+astINVOKE(V,astWriteInt64_(astCheckChannel(this),name,set,helpful,value,comment,STATUS_PTR))
 #define astWriteIsA(this,class,comment) \
 astINVOKE(V,astWriteIsA_(astCheckChannel(this),class,comment,STATUS_PTR))
 #define astWriteObject(this,name,set,helpful,value,comment) \
 astINVOKE(V,astWriteObject_(astCheckChannel(this),name,set,helpful,astCheckObject(value),comment,STATUS_PTR))
 #define astWriteString(this,name,set,helpful,value,comment) \
 astINVOKE(V,astWriteString_(astCheckChannel(this),name,set,helpful,value,comment,STATUS_PTR))
+#define astWriteFlush(this) \
+astINVOKE(V,astWriteFlush_(astCheckChannel(this),STATUS_PTR))
 
 #define astWriteInvocations astWriteInvocations_(STATUS_PTR)
 

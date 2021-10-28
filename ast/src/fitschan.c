@@ -114,6 +114,7 @@ f     encodings), then write operations using AST_WRITE will
 *     FitsChan also has the following attributes:
 *
 *     - AllWarnings: A list of the available conditions
+*     - AltAxes: Controls generation of FITS-WCS alternate axis descriptions
 *     - Card: Index of current FITS card in a FitsChan
 *     - CardComm: The comment of the current FITS card in a FitsChan
 *     - CardName: The keyword name of the current FITS card in a FitsChan
@@ -1242,6 +1243,18 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        define the number of available CDELT values.
 *     17-AUG-2020 (DSB):
 *        Fix potential infinite loop in SpecTrans.
+*     28-JAN-2021 (GSB):
+*        Correct the use of offset coords axis indices in SkySys.
+*     29-JAN-2021 (DSB):
+*        - Check that the pointer returned by astGetC is not NULL before
+*        attempting to use it.
+*        - Fix sorting of vector magnitudes in OrthVector. This bug accounts for why
+*        FITS_WCS keywords describing alternate axes were often not produced.
+*        - Add AltAxes attribute, which controls the creation of FITS-WCS
+*        alternate axis descriptions.
+*     19-FEB-2021 (DSB):
+*        - Fix bug in IsMapLinear for cases where the number of mapping
+         inputs and outputs differ and the Mapping can be split.
 *class--
 */
 
@@ -1290,6 +1303,12 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #define ZEROANG(aa) (fabs(aa)<1.0E-9)
 
 /* Constants: */
+#define ALTAXES_ALL          0
+#define ALTAXES_IDENT        1
+#define ALTAXES_NONE         2
+#define ALTAXES_ALL_STRING   "ALL"
+#define ALTAXES_IDENT_STRING "IDENT"
+#define ALTAXES_NONE_STRING  "NONE"
 #define UNKNOWN_ENCODING  -1
 #define NATIVE_ENCODING    0
 #define FITSPC_ENCODING    1
@@ -1348,6 +1367,10 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #define SPD               86400.0
 #define FL  1.0/298.257  /*  Reference spheroid flattening factor */
 #define A0  6378140.0    /*  Earth equatorial radius (metres) */
+
+
+
+
 
 /* String used to represent AST__BAD externally. */
 #define BAD_STRING "<bad>"
@@ -1549,11 +1572,16 @@ static const char *type_names[9] = {"comment", "integer", "floating point",
                                     "continuation string", "undef" };
 
 /* Text values used to represent Encoding values externally. */
-
 static const char *xencod[8] = { NATIVE_STRING, FITSPC_STRING,
                                  DSS_STRING, FITSWCS_STRING,
                                  FITSIRAF_STRING, FITSAIPS_STRING,
                                  FITSAIPSPP_STRING, FITSCLASS_STRING };
+
+/* Text values used to represent AltAxes values externally. */
+static const char *xaltax[3] = { ALTAXES_ALL_STRING,
+                                 ALTAXES_IDENT_STRING,
+                                 ALTAXES_NONE_STRING };
+
 /* Define two variables to hold TimeFrames which will be used for converting
    MJD values between time scales. */
 static AstTimeFrame *tdbframe = NULL;
@@ -1750,6 +1778,10 @@ static void ClearFitsDigits( AstFitsChan *, int * );
 static int GetFitsDigits( AstFitsChan *, int * );
 static int TestFitsDigits( AstFitsChan *, int * );
 static void SetFitsDigits( AstFitsChan *, int, int * );
+static void ClearAltAxes( AstFitsChan *, int * );
+static int GetAltAxes( AstFitsChan *, int * );
+static int TestAltAxes( AstFitsChan *, int * );
+static void SetAltAxes( AstFitsChan *, int, int * );
 static void ClearFitsAxisOrder( AstFitsChan *, int * );
 static const char *GetFitsAxisOrder( AstFitsChan *, int * );
 static int TestFitsAxisOrder( AstFitsChan *, int * );
@@ -1914,7 +1946,7 @@ static int HasAIPSSpecAxis( AstFitsChan *, const char *, const char *, int * );
 static int HasCard( AstFitsChan *, const char *, const char *, const char *, int * );
 static int IRAFFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
 static int IsAIPSSpectral( const char *, char **, char **, int * );
-static int IsMapLinear( AstMapping *, const double [], const double [], int, int * );
+static int IsMapLinear( AstMapping *, const double [], const double [], int, int *, int * );
 static int IsSkyOff( AstFrameSet *, int, int * );
 static int KeyFields( AstFitsChan *, const char *, int, int *, int *, int * );
 static int LooksLikeClass( AstFitsChan *, const char *, const char *, int * );
@@ -6574,6 +6606,11 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
 /* ----- */
    if ( !strcmp( attrib, "card" ) ) {
       astClearCard( this );
+
+/* AltAxes. */
+/* -------- */
+   } else if ( !strcmp( attrib, "altaxes" ) ) {
+      astClearAltAxes( this );
 
 /* Encoding. */
 /* --------- */
@@ -11397,6 +11434,7 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
    FitsStore *ret;      /* Returned FitsStore */
    char s;              /* Next available co-ordinate version character */
    char s0;             /* Co-ordinate version character */
+   int altaxes;         /* Value of AltAxes  attribute */
    int ibase;           /* Base Frame index */
    int icurr;           /* Current Frame index */
    int ifrm;            /* Next Frame index */
@@ -11470,9 +11508,14 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
       primok = AddVersion( this, fset, ibase, icurr, ret, dim, ' ',
                            encoding, isoff, method, class, status );
 
+/* Get the value of the FitsChan AltAxes attribute. This controls which
+   Frames are used to generate alternate axis descriptions. */
+      altaxes =astGetAltAxes( this );
+
 /* Do not add any alternate axis descriptions if the primary axis
-   descriptions could not be produced. */
-      if( primok && astOK ) {
+   descriptions could not be produced or the AltAxes attribute indicates
+   that no alternate axis descriptions should be created. */
+      if( primok && astOK && altaxes != ALTAXES_NONE ) {
 
 /* Get the number of Frames in the FrameSet. */
          nfrm = astGetNframe( fset );
@@ -11517,15 +11560,19 @@ static FitsStore *FsetToStore( AstFitsChan *this, AstFrameSet *fset, int naxis,
 /* Now go round all the Frames again, looking for Frames which did not
    get a version letter assigned to it on the previous loop. Assign them
    letters now, selected them from the letters not already assigned
-   (lowest to highest). */
+   (lowest to highest). Do not do this if the AltAxes attribute
+   indicates that only Frames with suitable Ident values should be used to
+   create alternate axis descriptions. */
          s = 'A' - 1;
-         for( ifrm = 1; ifrm <= nfrm; ifrm++ ){
-            if( ifrm != icurr && ifrm != ibase && sid[ ifrm ] != 1 ) {
-               if( sid[ ifrm ] == 0 ){
-                  while( frms[ (int) ++s ] != 0 );
-                  if( s <= 'Z' ) {
-                     sid[ ifrm ] = s;
-                     frms[ (int) s ] = ifrm;
+         if( altaxes != ALTAXES_IDENT ){
+            for( ifrm = 1; ifrm <= nfrm; ifrm++ ){
+               if( ifrm != icurr && ifrm != ibase && sid[ ifrm ] != 1 ) {
+                  if( sid[ ifrm ] == 0 ){
+                     while( frms[ (int) ++s ] != 0 );
+                     if( s <= 'Z' ) {
+                        sid[ ifrm ] = s;
+                        frms[ (int) s ] = ifrm;
+                     }
                   }
                }
             }
@@ -16346,6 +16393,24 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
          result = getattrib_buff;
       }
 
+/* AltAxes. */
+/* -------- */
+   } else if ( !strcmp( attrib, "altaxes" ) ) {
+      ival = astGetAltAxes( this );
+      if ( astOK ) {
+         if( ival == ALTAXES_NONE ){
+            result = ALTAXES_NONE_STRING;
+         } else if( ival == ALTAXES_IDENT ){
+            result = ALTAXES_IDENT_STRING;
+         } else if( ival == ALTAXES_ALL ){
+            result = ALTAXES_ALL_STRING;
+         } else if( astOK ) {
+            astError( AST__INTER, "astGet(%s): Illegal AltAxes value %d "
+                      "encountered (internal AST programming error).", status,
+                      astGetClass( this ), ival );
+         }
+      }
+
 /* Ncard. */
 /* ------ */
    } else if ( !strcmp( attrib, "ncard" ) ) {
@@ -17818,6 +17883,10 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->TestCard = TestCard;
    vtab->SetCard = SetCard;
    vtab->GetCard = GetCard;
+   vtab->ClearAltAxes = ClearAltAxes;
+   vtab->TestAltAxes = TestAltAxes;
+   vtab->SetAltAxes = SetAltAxes;
+   vtab->GetAltAxes = GetAltAxes;
    vtab->ClearFitsDigits = ClearFitsDigits;
    vtab->TestFitsDigits = TestFitsDigits;
    vtab->SetFitsDigits = SetFitsDigits;
@@ -18354,7 +18423,8 @@ static int IRAFFromStore( AstFitsChan *this, FitsStore *store,
 }
 
 static int IsMapLinear( AstMapping *smap, const double lbnd_in[],
-                        const double ubnd_in[], int coord_out, int *status ) {
+                        const double ubnd_in[], int coord_out,
+                        int *coord_in, int *status ) {
 /*
 *  Name:
 *     IsMapLinear
@@ -18369,7 +18439,8 @@ static int IsMapLinear( AstMapping *smap, const double lbnd_in[],
 *  Synopsis:
 *     #include "fitschan.h"
 *     int IsMapLinear( AstMapping *smap, const double lbnd_in[],
-*                      const double ubnd_in[], int coord_out, int *status )
+*                      const double ubnd_in[], int coord_out,
+*                      int *coord_in, int *status )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -18403,6 +18474,10 @@ static int IsMapLinear( AstMapping *smap, const double lbnd_in[],
 *        of the input box in each input dimension.
 *     coord_out
 *        The zero-based index of the Mapping output which is to be checked.
+*     coord_in
+*        Returned holding the zero-based index of the Mapping input that
+*        feeds output "coord_out". Returned as -1 if the output does not
+*        correspond to a single input. May be NULL.
 *     status
 *        Pointer to the inherited status variable.
 
@@ -18450,6 +18525,7 @@ static int IsMapLinear( AstMapping *smap, const double lbnd_in[],
 
 /* Initialise */
    ret = 0;
+   if( coord_in ) *coord_in = -1;
 
 /* Check inherited status */
    if( !astOK ) return ret;
@@ -18460,16 +18536,20 @@ static int IsMapLinear( AstMapping *smap, const double lbnd_in[],
    ins = astMapSplit( smap, 1, &coord_out, &map );
    astInvert( smap );
 
-/* If successful, check that the output is fed by only one input. */
+/* If successful, check that the supplied output is fed by only one input.
+   At the moment "map" goes form wcs to pixel, so we check its Nout
+   attribute. If required, return the index of the input that feeds the
+   requested output. */
    if( ins ) {
-      if( astGetNin( map ) == 1 ) {
+      if( astGetNout( map ) == 1 ) {
+         if( coord_in ) *coord_in = ins[ 0 ];
 
-/* If so, invert the map so that it goes from pixel to wcs, and then
-   modify the supplied arguments so that they refer to the single required
-   axis. */
+/* If so, invert the map so that it goes from pixel to wcs. Here on we
+   use "map" in place of the supplied Mapping "smap", so modify the other
+   supplied arguments so that they refer to the single output of "map". */
          astInvert( map );
-         lbnd_in += coord_out;
-         ubnd_in += coord_out;
+         lbnd_in += ins[ 0 ];
+         ubnd_in += ins[ 0 ];
          coord_out = 0;
 
 /* If the output was fed by more than one input, annul the split mapping
@@ -19809,7 +19889,7 @@ static AstMapping *LogAxis( AstMapping *map, int iax, int nwcs, double *lbnd_p,
    tmap2 = astAnnul( tmap2 );
 
 /* See if this Mapping is linear. */
-   if( IsMapLinear( tmap0, lbnd_p, ubnd_p, iax, status ) ) {
+   if( IsMapLinear( tmap0, lbnd_p, ubnd_p, iax, NULL, status ) ) {
 
 /* Create the Mapping which defines the IWC axis. This is the Mapping from
    WCS to IWCS - "W = Sr.log( S/Sr )". Other axes are left unchanged by the
@@ -22827,13 +22907,16 @@ static AstMapping *NonLinSpecWcs( AstFitsChan *this, char *algcode,
          pc = algcode[ 3 ];
          astError( AST__INTER, "%s: Function NonLinSpecWcs does not yet "
                    "support spectral axes of type %s (internal AST "
-                   "programming error).", status, method, astGetC( specfrm, "System" ) );
+                   "programming error).", status, method,
+                   astGetC( specfrm, "System" ) );
       }
       if( algcode[ 3 ] != pc ) {
-         sprintf( buf, "The spectral CTYPE value %s%s is not legal - "
-                 "using %s%.3s%c instead.", astGetC( specfrm, "System" ),
-                 algcode,  astGetC( specfrm, "System" ), algcode, pc );
-         Warn( this, "badctype", buf, method, class, status );
+         const char *text = astGetC( specfrm, "System" );
+         if( text ) {
+            sprintf( buf, "The spectral CTYPE value %s%s is not legal - using"
+                     " %s%.3s%c instead.", text, algcode, text, algcode, pc );
+            Warn( this, "badctype", buf, method, class, status );
+         }
       }
    }
 
@@ -23041,11 +23124,11 @@ static double *OrthVector( int n, int m, double **in, int *status ){
    they are in order of decreasing ciolumn magnitude (i.e. colperm[0] will
    be left holding the index of the column with the largest magnitude). A
    simple bubble sort is used. */
-      ii = 1;
+      ii = n;
       done = 0;
       while( !done ) {
          done = 1;
-         for( i = ii; i < n; i++ ) {
+         for( i = 1; i < ii; i++ ) {
             ih = colperm[ i ];
             il = colperm[ i - 1 ];
             if( colmag[ ih ] > colmag[ il ] ) {
@@ -23054,7 +23137,7 @@ static double *OrthVector( int n, int m, double **in, int *status ){
                done = 0;
             }
          }
-         ii++;
+         ii--;
       }
 
 /* The first M elements in "colperm" now hold the indices of the
@@ -23432,7 +23515,7 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
 
 /* See if the axis is linear. If so, create a ShiftMap which subtracts off
    the CRVAL value. */
-            if( !force_tab && IsMapLinear( map, lbnd_p, ubnd_p, iax, status ) ) {
+            if( !force_tab && IsMapLinear( map, lbnd_p, ubnd_p, iax, NULL, status ) ) {
                crval = -crval;
                tmap0 = (AstMapping *) astShiftMap( 1, &crval, "", status );
                axmap = AddUnitMaps( tmap0, iax, nwcs, status );
@@ -26281,6 +26364,23 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
                    "requested for a %s.", status, class, setting + ival, class );
       }
 
+/* AltAxes. */
+/* -------- */
+   } else if ( nc = 0,
+        ( 1 == astSscanf( setting, "altaxes= %d %n", &ival, &nc ) )
+        && ( nc >= len ) ) {
+      nc = ChrLen( setting + ival, status );
+      if( !Ustrncmp( setting + ival, ALTAXES_NONE_STRING, nc, status ) ){
+         astSetAltAxes( this, ALTAXES_NONE );
+      } else if( !Ustrncmp( setting + ival, ALTAXES_IDENT_STRING, nc, status ) ){
+         astSetAltAxes( this, ALTAXES_IDENT );
+      } else if( !Ustrncmp( setting + ival, ALTAXES_ALL_STRING, nc, status ) ){
+         astSetAltAxes( this, ALTAXES_ALL );
+      } else {
+         astError( AST__BADAT, "astSet(%s): Illegal value '%s' supplied for "
+                   "attribute AltAxes.", status, class, setting + ival );
+      }
+
 /* FitsDigits. */
 /* ----------- */
    } else if ( nc = 0,
@@ -28763,25 +28863,31 @@ static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
          if( isoff > 0 ) {
             skyref = astGetC( skyfrm, "SkyRef" );
 
-            sprintf( attr, "Symbol(%d)", axlon + 1 );
-            sprintf( com, "%s offset from %s",astGetC( skyfrm, attr )+1, skyref );
-            SetItemC( &(store->ctype_com), axlon, 0, s, com, status );
+            sprintf( attr, "Symbol(%d)", lonax + 1 );
+            const char *text = astGetC( skyfrm, attr );
+            if( skyref && text ) {
+               sprintf( com, "%s offset from %s", text + 1, skyref );
+               SetItemC( &(store->ctype_com), axlon, 0, s, com, status );
+            }
 
-            sprintf( attr, "Symbol(%d)", axlat + 1 );
-            sprintf( com, "%s offset from %s",astGetC( skyfrm, attr )+1, skyref );
-            SetItemC( &(store->ctype_com), axlat, 0, s, com, status );
+            sprintf( attr, "Symbol(%d)", latax + 1 );
+            text = astGetC( skyfrm, attr );
+            if( skyref && text ) {
+               sprintf( com, "%s offset from %s", text + 1, skyref );
+               SetItemC( &(store->ctype_com), axlat, 0, s, com, status );
+            }
 
 /* If the description is for absolute coords store the SkyFrame attribute
    values in AST-specific keywords. */
          } else {
-            sprintf( attr, "SkyRef(%d)", axlon + 1 );
+            sprintf( attr, "SkyRef(%d)", lonax + 1 );
             skyref_lon = astGetD( skyfrm, attr );
-            sprintf( attr, "SkyRef(%d)", axlat + 1 );
+            sprintf( attr, "SkyRef(%d)", latax + 1 );
             skyref_lat = astGetD( skyfrm, attr );
 
-            sprintf( attr, "SkyRefP(%d)", axlon + 1 );
+            sprintf( attr, "SkyRefP(%d)", lonax + 1 );
             skyrefp_lon = astGetD( skyfrm, attr );
-            sprintf( attr, "SkyRefP(%d)", axlat + 1 );
+            sprintf( attr, "SkyRefP(%d)", latax + 1 );
             skyrefp_lat = astGetD( skyfrm, attr );
 
             skyrefis = (isoff < -2) ? "IGNORED" :
@@ -29069,6 +29175,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
    int j;                  /* Loop count */
    int npix;               /* Number of pixel axes */
    int nwcs;               /* Number of WCS axes */
+   int pax;                /* Pixel axis corresponding to iax */
    int paxis;              /* Axis index within primary Frame */
    int sourcevrf;          /* Rest Frame in which SourceVel is accesed */
 
@@ -29161,7 +29268,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
             crval = crvals ? crvals[ iax ] : AST__BAD;
             tmap1 = astGetMapping( tfs, AST__BASE, AST__CURRENT );
             tfs = astAnnul( tfs );
-            if( !IsMapLinear( tmap1, &lbnd_s, &ubnd_s, 0, status ) ) {
+            if( !IsMapLinear( tmap1, &lbnd_s, &ubnd_s, 0, &pax, status ) ) {
                astClear( fs, unit_attr );
                (void) astAnnul( map );
                map = astGetMapping( fs, AST__BASE, AST__CURRENT );
@@ -29181,7 +29288,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
    if the size of the spectral axis was given, or the lower bound (i.e.
    pixel 1) if the size of the spectral axis was not given. */
             if( crval == AST__BAD ) {
-               if( dim[ iax ] != AST__BAD ) {
+               if( pax >= 0 && dim[ pax ] != AST__BAD ) {
                   crval = 0.5*( lbnd_s + ubnd_s );
                } else {
                   crval = lbnd_s;
@@ -29200,7 +29307,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
    using -TAB regardless of whether some other algorithm could be used. */
             ctype[ 0 ] = 0;
             if( !astGetForceTab( this ) ) {
-               if( IsMapLinear( map, lbnd_p, ubnd_p, iax, status ) ) {
+               if( IsMapLinear( map, lbnd_p, ubnd_p, iax, NULL, status ) ) {
 
 /* The CTYPE value is just the spectral system. */
                   strcpy( ctype, orig_system );
@@ -29239,7 +29346,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
 /* Now we check to see if the current X system is linearly related to
    pixel coordinates. */
                      tmap3 = astGetMapping( fs, AST__BASE, AST__CURRENT );
-                     if( IsMapLinear( tmap3, lbnd_p, ubnd_p, iax, status ) ) {
+                     if( IsMapLinear( tmap3, lbnd_p, ubnd_p, iax, NULL, status ) ) {
 
 /* CTYPE: First 4 characters specify the "S" system. */
                         strcpy( ctype, orig_system );
@@ -29358,7 +29465,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
                   tmap1 = astSimplify( tmap2 );
                   tmap2 = astAnnul( tmap2 );
 
-/* Analyse this Mapping to see if the iax'th output is created diretcly by a
+/* Analyse this Mapping to see if the iax'th output is created directly by a
    GrismMap (i.e. the output of theGrismMap must not subsequently be
    modified by some other Mapping). If so, ExtractGrismMap returns a pointer
    to the GrismMap as its function value, and also returns "tmap2" as a copy
@@ -29367,7 +29474,7 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
                   if( gmap ) {
 
 /* The Mapping without the GrismMap must be linear on the spectral axis. */
-                     if( IsMapLinear( tmap2, lbnd_p, ubnd_p, iax, status ) ) {
+                     if( IsMapLinear( tmap2, lbnd_p, ubnd_p, iax, NULL, status ) ) {
 
 /* Get the reference wavelength (in "m") stored in the GrismMap. */
                         crval = astGetGrismWaveR( gmap );
@@ -32887,6 +32994,11 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
 /* -------------- */
    } else if ( !strcmp( attrib, "fitsaxisorder" ) ) {
       result = astTestFitsAxisOrder( this );
+
+/* AltAxes. */
+/* -------- */
+   } else if ( !strcmp( attrib, "altaxes" ) ) {
+      result = astTestAltAxes( this );
 
 /* FitsDigits. */
 /* ----------- */
@@ -39235,6 +39347,10 @@ static int Write( AstChannel *this_channel, AstObject *object, int *status ) {
    marked as "new". */
    mark_new = 0;
 
+/* Ensure all output is flushed to any associated output file specified
+   by the SinkFile attribute. */
+   astWriteFlush( this );
+
 /* If no object was written, re-instate the original current card. */
    if( !ret ) astSetCard( this, card0 );
 
@@ -41708,6 +41824,63 @@ astMAKE_GET(FitsChan,FitsDigits,int,AST__DBL_DIG,this->fitsdigits)
 astMAKE_SET(FitsChan,FitsDigits,int,fitsdigits,value)
 astMAKE_TEST(FitsChan,FitsDigits,( this->fitsdigits != AST__DBL_DIG ))
 
+/* AltAxes. */
+/* ======== */
+
+/*
+*att++
+*  Name:
+*     AltAxes
+
+*  Purpose:
+*     Controls generation of FITS-WCS alternate axis descriptions
+
+*  Type:
+*     Public attribute.
+
+*  Synopsis:
+*     String.
+
+*  Description:
+*     This attribute controls the generation of FITS-WCS alternate axis
+*     keywords by the
+c     astWrite
+f     AST_WRITE
+*     method. It determines which of the Frames in the FrameSet supplied
+c     to astWrite
+f     to AST_WRITE
+*     are used to create a set of alternate axis descriptions. It may be
+*     set to one of the following values (case insensitive):
+*
+*     - "ALL": A set of alternate axes will be created for each Frame in
+*     the supplied FrameSet, excluding the Base and Current Frames. This
+*     is the default.
+*
+*     - "NONE": No alternate axes will be created for any of the Frames in
+*     the supplied FrameSet.
+*
+*     - "IDENT": Alternate axes will be created for a Frame only if
+*     its Ident attribute is set to a single upper case alphabetical
+*     character (A-Z).
+
+*  Notes:
+*     - This attribute is used only if the Encoding attribute of the
+*     FitsChan is set to (or defaults to) "FITS-WCS" or "FITS-PC".
+*     - The Current Frame in the FrameSet is always used to create the
+*     primary axis descriptions in the output FITS header.
+*     - The Base Frame in the FrameSet is never used to create a set of
+*     alternate axis descriptions.
+
+*  Applicability:
+*     FitsChan
+*        All FitsChans have this attribute.
+*att--
+*/
+astMAKE_CLEAR(FitsChan,AltAxes,altaxes,INT_MAX)
+astMAKE_GET(FitsChan,AltAxes,int,INT_MAX,this->altaxes)
+astMAKE_SET(FitsChan,AltAxes,int,altaxes,value)
+astMAKE_TEST(FitsChan,AltAxes,( this->altaxes != INT_MAX ))
+
 /* CardComm */
 /* ======== */
 
@@ -42306,6 +42479,12 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
    set = TestFitsDigits( this, status );
    ival = set ? GetFitsDigits( this, status ) : astGetFitsDigits( this );
    astWriteInt( channel, "FitsDg", set, 1, ival, "No. of digits for floating point values" );
+
+/* AltAXes. */
+/* -------- */
+   set = TestAltAxes( this, status );
+   ival = set ? GetAltAxes( this, status ) : astGetAltAxes( this );
+   astWriteString( channel, "AltAx", set, 1, xaltax[ival], "Creation of alternate axes" );
 
 /* DefB1950 */
 /* -------- */
@@ -43207,6 +43386,7 @@ AstFitsChan *astInitFitsChan_( void *mem, size_t size, int init,
       new->iwc = -1;
       new->clean = -1;
       new->fitsdigits = AST__DBL_DIG;
+      new->altaxes = INT_MAX;
       new->fitsaxisorder = NULL;
       new->encoding = UNKNOWN_ENCODING;
       new->warnings = NULL;
@@ -43400,6 +43580,18 @@ AstFitsChan *astLoadFitsChan_( void *mem, size_t size,
 /* FitsAxisOrder. */
 /* -------------- */
       new->fitsaxisorder = astReadString( channel, "faxord", NULL );
+
+/* AltAxes. */
+/* -------- */
+      text = astReadString( channel, "altax", NULL );
+      if( text ) {
+         new->altaxes = FindString( 3, xaltax, text, "the FitsChan component 'AltAx'",
+                                    "astRead", astGetClass( channel ), status );
+      } else {
+         new->altaxes = INT_MAX;
+      }
+      if ( TestAltAxes( new, status ) ) SetAltAxes( new, new->altaxes, status );
+      text = astFree( text );
 
 /* FitsDigits. */
 /* ----------- */

@@ -585,7 +585,7 @@ CMINPACK_FILES = \
 bin_SCRIPTS = ast_link
 dist_bin_SCRIPTS = ast_link_adam
 noinst_SCRIPTS = ast_cpp
-dist_noinst_SCRIPTS = makeh
+dist_noinst_SCRIPTS = $(srcdir)/makeh
 # Scripts are not distributed by default (since they might be derived objects)
 # Add these to the distribution below.  In fact, it would be useful
 # and straightforward  to make ast_link{,_adam} derived, since they
@@ -596,18 +596,33 @@ dist_noinst_SCRIPTS = makeh
 # Headers required by library users.  Both of the following lines
 # indicate headers which are installed.
 cincludedir = $(includedir)/star
+if !NOFORTRAN
 cinclude_HEADERS = GRF_PAR src/grf.h src/grf3d.h
+else
+cinclude_HEADERS = src/grf.h src/grf3d.h
+endif
+
 # Following are generated, so should not be distributed.
-nodist_cinclude_HEADERS = ast.h AST_PAR
+if !NOFORTRAN
 include_MESSAGES = AST_ERR ast_err.h
+nodist_cinclude_HEADERS = ast.h AST_PAR
+else
+include_MESSAGES = ast_err.h
+nodist_cinclude_HEADERS = ast.h
+endif
 
 # Also install headers in main include directory for the benefit of
 # legacy code that does '#include "ast.h"' instead of '#include
 # "star/ast.h"'. Note, currently _MESSAGES files must be installed in
 # the main include directory.
 if TOPINCLUDE
+if !NOFORTRAN
 include_HEADERS = GRF_PAR src/grf.h src/grf3d.h
 nodist_include_HEADERS = ast.h AST_PAR
+else
+include_HEADERS = src/grf.h src/grf3d.h
+nodist_include_HEADERS = ast.h
+endif
 endif
 
 if EXTERNAL_PAL
@@ -616,8 +631,15 @@ else
 PAL_LIB = libast_pal.la
 endif
 
+if EXTERNAL_CMINPACK
+CMINPACK_LIB =
+else
+CMINPACK_LIB = libast_cminpack.la
+endif
+
 lib_LTLIBRARIES = \
     $(PAL_LIB) \
+    $(CMINPACK_LIB) \
     libast.la \
     libast_err.la \
     libast_ems.la \
@@ -667,6 +689,7 @@ libast_grf_5_6_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 libast_pgplot_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 libast_pgplot3d_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 libast_pal_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
+libast_cminpack_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 endif
 
 #  The module containing the main AST classes
@@ -676,7 +699,6 @@ libast_la_SOURCES = \
     $(GRP_C_INCLUDE_FILES) \
     $(F_C_INCLUDE_FILES) \
     $(GRP_F_INCLUDE_FILES) \
-    $(CMINPACK_FILES) \
     $(WCSLIB_FILES) \
     ast_err.h
 libast_la_LDFLAGS = -version-info @version_info@
@@ -684,18 +706,32 @@ libast_la_LDFLAGS = -version-info @version_info@
 # Ensure libast links against libraries containing functions used within
 # libast. If AST is configured --with-external-pal, then the internal
 # libast_pal library will be empty, and we link to an external PAL
-# library instead.
+# library instead. Do the same for cminpack
 if EXTERNAL_PAL
-libast_la_LIBADD =  $(libdir)/libpal.la
+if EXTERNAL_CMINPACK
+libast_la_LIBADD =  $(libdir)/libpal.la -lcminpack
 else
-libast_la_LIBADD = libast_pal.la
+libast_la_LIBADD = $(libdir)/libpal.la libast_cminpack.la
 endif
+else
+if EXTERNAL_CMINPACK
+libast_la_LIBADD =  libast_pal.la -lcminpack
+else
+libast_la_LIBADD = libast_pal.la libast_cminpack.la
+endif
+endif
+
+
 
 # AST_PAR is really part of GRP_F_INCLUDE_FILES, but it must not be
 # distributed, so list it separately.
+if !NOFORTRAN
 nodist_libast_la_SOURCES = \
     ast.h \
     AST_PAR
+else
+nodist_libast_la_SOURCES = ast.h
+endif
 
 #  The default error reporting module.
 libast_err_la_SOURCES = src/err_null.c
@@ -741,10 +777,18 @@ libast_pgplot3d_la_LDFLAGS = -version-info @version_info@
 libast_pal_la_SOURCES = $(PAL_FILES)
 libast_pal_la_LDFLAGS = -version-info @version_info@
 
+#  Cminpack
+libast_cminpack_la_SOURCES = $(CMINPACK_FILES)
+libast_cminpack_la_LDFLAGS = -version-info @version_info@
+
 # The following files are built by the targets in this makefile.
 MAINTAINERCLEANFILES = src/version.h builddocs addversion \
 	ast.h $(DOCUMENTATION_PRODUCTS)
+if !NOFORTRAN
 CLEANFILES = AST_PAR ast.h
+else
+CLEANFILES = ast.h
+endif
 
 # Special cases start here
 
@@ -753,27 +797,29 @@ CLEANFILES = AST_PAR ast.h
 # also changing the "E" exponent character to a "D").  The astbad.c
 # and ast_par.source must be distributed (the generation of the
 # AST__BAD value must be done on the build host) but not installed.
-noinst_PROGRAMS = astbad
+if !NOFORTRAN
+noinst_PROGRAMS = astbad$(EXEEXT)
 astbad_SOURCES = src/astbad.c src/pointset.h
-AST_PAR: ast_par.source astbad
-	sed -e 's/<AST__BAD>/'`./astbad AST__BAD | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NAN>/'`./astbad AST__NAN | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NANR>/'`./astbad AST__NANF | tr 'E' 'D'`'/' \
-	    ast_par.source >$@
+AST_PAR: $(srcdir)/ast_par.source astbad$(EXEEXT)
+	sed -e 's/<AST__BAD>/'`./astbad$(EXEEXT) AST__BAD | tr 'E' 'D'`'/' \
+	    -e 's/<AST__NAN>/'`./astbad$(EXEEXT) AST__NAN | tr 'E' 'D'`'/' \
+	    -e 's/<AST__NANR>/'`./astbad$(EXEEXT) AST__NANF | tr 'E' 'D'`'/' \
+	    $(srcdir)/ast_par.source >$@
+endif
 
 # ast_link is generated from ast_link.in; ast_link_adam does not
 # need configuration, and so is not mentioned in AC_CONFIG_FILES within
 # configure.ac, and so is not distributed automatically.
 #
 # makeh is required in order to build ast.h after distribution (see below).
-EXTRA_DIST = ast_par.source sun210_figures sun211_figures pal erfa cminpack
+EXTRA_DIST = $(srcdir)/ast_par.source sun210_figures sun211_figures pal erfa cminpack
 
 # ast.h depends on the error-facility files.  ast.h _could_ be made
 # before distribution, but since it's generated from other distributed
 # files, it's more robust to distribute makeh and make ast.h on the
 # build host.
-ast.h: $(AST_H_FILES) ast_err.h makeh config.h
-	@PERL@ ./makeh -s $(srcdir) $(AST_H_FILES) >$@
+ast.h: $(AST_H_FILES) ast_err.h $(srcdir)/makeh config.h
+	@PERL@ $(srcdir)/makeh -s $(srcdir) $(AST_H_FILES) >$@
 
 # AST_ERR and ast_err.h are `generated source files', and so must be
 # generated before any other compilations are done.  Note that these
@@ -788,7 +834,11 @@ ast.h: $(AST_H_FILES) ast_err.h makeh config.h
 #
 # version.h is included by object.h, and thus indirectly by most modules.
 # It's most straightforward to build it at the beginning.
+if !NOFORTRAN
 BUILT_SOURCES = AST_ERR ast_err.h src/version.h
+else
+BUILT_SOURCES = ast_err.h src/version.h
+endif
 
 #  Form a second link to the main object library (static and shared). This
 #  is used when a second pass through the library is needed during linking
@@ -852,7 +902,7 @@ test: install
 
 #ast_test_LDADD = `ast_link`
 # Expand ast_link to avoid libast_pass2, which causes problems for Solaris
-ast_test_LDADD = @LIBPAL@ libast.la libast_pal.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
+ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_pal.la libast_cminpack.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
 
 #  Need to include latex support files in the distribution tar ball so
 #  that the docs can be built from the tex source files. Requires environment

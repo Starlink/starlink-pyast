@@ -11,14 +11,14 @@
 \stardocsource      {sun\stardocnumber}
 
 % Variable part - replace [xxx] as appropriate.
-\stardocnumber      {211.29}
+\stardocnumber      {211.30}
 \stardocauthors     {R.F. Warren-Smith \& D.S. Berry}
-\stardocdate        {12th Jun 2020}
+\stardocdate        {28th Oct 2021}
 \stardoctitle     {AST\linebreak%
                                 A Library for Handling\linebreak%
                                 World Coordinate Systems\linebreak%
                                 in Astronomy}
-\stardoccopyright   {Copyright (C) 2020 East Asian Observatory}
+\stardoccopyright   {Copyright (C) 2021 East Asian Observatory}
 \stardocversion     {V9.2}
 \stardocmanual      {Programmer's Guide\\(C Version)}
 \startitlepic{
@@ -18429,6 +18429,12 @@ Object             - Base class for all AST Objects
          original to new coordinate system is non-linear, the shape within
          the new coordinate system may be distorted, and so may not match
          that implied by the name of the Region subclass (\htmlref{Circle}{Circle}, \htmlref{Box}{Box}, etc).
+
+         \sstitem
+          If the Region defines an area within a \htmlref{SkyFrame}{SkyFrame} that traverses
+         zero longitude, the returned positions will be normalised to avoid
+         jumps of 2.PI radians in longitude (i.e. it will include longitude
+         values less than zero or greater than 2.PI).
       }
    }
 }
@@ -20674,8 +20680,8 @@ Object             - Base class for all AST Objects
       \sstsubsection{
          start
       }{
-         The input coordinate value which corresponds to the first lookup
-         table entry.
+         The input coordinate value which corresponds to the centre of the
+         first lookup table entry.
       }
       \sstsubsection{
          inc
@@ -21136,6 +21142,9 @@ Object             - Base class for all AST Objects
           I: int
 
          \sstitem
+          K: int64\_t
+
+         \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
 
          \sstitem
@@ -21205,7 +21214,8 @@ Object             - Base class for all AST Objects
          The address of an integer in which to put the
          number of elements stored in the
          \texttt{"} value\texttt{"}  array.
-         Any unused elements of the array are left unchanged.
+         Any unused elements of the array are left unchanged. Zero is
+         returned if the required KeyMap entry has an undefined value.
       }
       \sstsubsection{
          value
@@ -21273,6 +21283,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           I: int
+
+         \sstitem
+          K: int64\_t
 
          \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
@@ -21475,6 +21488,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           I: int
+
+         \sstitem
+          K: int64\_t
 
          \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
@@ -21796,6 +21812,9 @@ Object             - Base class for all AST Objects
           I: int
 
          \sstitem
+          K: int64\_t
+
+         \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
 
          \sstitem
@@ -21898,6 +21917,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           I: int
+
+         \sstitem
+          K: int64\_t
 
          \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
@@ -22023,6 +22045,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           I: int
+
+         \sstitem
+          K: int64\_t
 
          \sstitem
           C: \texttt{"} const\texttt{"}  pointer to null terminated character string
@@ -22383,6 +22408,8 @@ Object             - Base class for all AST Objects
       }{
          One of AST\_\_INTTYPE (for integer), AST\_\_SINTTYPE (for
          short int),
+         AST\_\_KINTTYPE (for
+         int64\_t),
          AST\_\_BYTETYPE (for unsigned bytes
          \sstitemlist{
 
@@ -23936,7 +23963,7 @@ Object             - Base class for all AST Objects
 \sstroutine{
    astNorm
 }{
-   Normalise a set of Frame coordinates
+   Normalise a set of Frame coordinates representing one point
 }{
    \sstdescription{
       This function normalises a set of \htmlref{Frame}{Frame} coordinate values which
@@ -24068,6 +24095,132 @@ Object             - Base class for all AST Objects
       parameter at the end of the parameter list descirbed above. This
       parameter is a pointer to the integer inherited status
       variable: \texttt{"} int $*$status\texttt{"} .
+   }
+}
+\sstroutine{
+   astNormPoints
+}{
+   Normalise a collection of points
+}{
+   \sstdescription{
+      This function
+      normalises the axis values representing a collection of points within
+      a \htmlref{Frame}{Frame}. The normalisation can be done in two ways - 1) to put the
+      axis values into the range expected for display to human readers or 2)
+      to put the axis values into which ever range avoids discontinuities
+      within the collection of positions. Using method 1) is the same as
+      using function \htmlref{astNorm}{astNorm}
+      on each point in the collection. Using method 2) is useful when
+      handling collections of points that may span some discontinuity in
+      the coordinate system.
+   }
+   \sstsynopsis{
+      void astNormPoints( AstFrame $*$this, int npoint, int ncoord\_in,
+                          int indim, const double $*$in, int contig,
+                          int ncoord\_out, int outdim, double $*$out )
+   }
+   \sstparameters{
+      \sstsubsection{
+         this
+      }{
+         Pointer to the Frame.
+      }
+      \sstsubsection{
+         npoint
+      }{
+         The number of points to be normalised.
+      }
+      \sstsubsection{
+         ncoord\_in
+      }{
+         The number of coordinates being supplied for each input point.
+         This should be the same as the number of axes in the Frame.
+      }
+      \sstsubsection{
+         indim
+      }{
+         The number of elements along the second dimension of the \texttt{"} in\texttt{"}
+         array (which contains the input coordinates). This value is
+         required so that the coordinate values can be correctly
+         located if they do not entirely fill this array. The value
+         given should not be less than \texttt{"} npoint\texttt{"} .
+      }
+      \sstsubsection{
+         in
+      }{
+         The address of the first element in a 2-dimensional array of
+         shape \texttt{"} [ncoord\_in][indim]\texttt{"} ,
+         containing the coordinates of the input (unnormalised)
+         points. These should be stored such that the value of
+         coordinate number \texttt{"} coord\texttt{"}  for input point number \texttt{"} point\texttt{"}  is
+         found in element \texttt{"} in[coord][point]\texttt{"} .
+      }
+      \sstsubsection{
+         contig
+      }{
+         Indicates the way in which the normalised axis values are to be
+         calculated.
+         A non-zero value
+         causes the values to be normalised in such a way as to reduce
+         the effects of any discontinuities in the coordinate system. For
+         instance, points in a \htmlref{SkyFrame}{SkyFrame} that span longitude zero will be
+         normalized into a longitude range of -pi to $+$pi (otherwise they
+         will be normalized into a range of 0 to 2.pi).
+         A zero value causes each point to be normalised independently using
+         astNorm.
+      }
+      \sstsubsection{
+         ncoord\_out
+      }{
+         The number of coordinates being supplied for each output point.
+         This should be the same as the number of axes in the Frame.
+      }
+      \sstsubsection{
+         outdim
+      }{
+         The number of elements along the second dimension of the \texttt{"} out\texttt{"}
+         array (which will contain the output coordinates). This value
+         is required so that the coordinate values can be correctly
+         located if they will not entirely fill this array. The value
+         given should not be less than \texttt{"} npoint\texttt{"} .
+      }
+      \sstsubsection{
+         out
+      }{
+         The address of the first element in a 2-dimensional array of
+         shape \texttt{"} [ncoord\_out][outdim]\texttt{"} , into
+         which the coordinates of the output (normalised) points will
+         be written. These will be stored such that the value of
+         coordinate number \texttt{"} coord\texttt{"}  for output point number \texttt{"} point\texttt{"}
+         will be found in element \texttt{"} out[coord][point]\texttt{"} .
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          For some classes of Frame, whose coordinate values are not
+         constrained, this function will never modify the values
+         supplied. However, for Frames whose axes represent cyclic
+         quantities (such as angles or positions on the sky), coordinates
+         will typically be wrapped into an appropriate standard range,
+         such as zero to 2$*$pi or -pi to $+$pi (depending on the normalisation
+         method used).
+      }
+   }
+   \sstdiytopic{
+      Handling of Huge Pixel Arrays
+   }{
+      If the number of points to be normalised exceeds the largest value that
+      can be represented by a 4-byte integer, then the alternative \texttt{"} 8-byte\texttt{"}
+      interface for this function should be used. This alternative interface
+      uses 8 byte integer arguments (instead of 4-byte). Specifically, the
+      arguments
+      \texttt{"} npoint\texttt{"} , \texttt{"} indim\texttt{"}  and \texttt{"} outdim\texttt{"}  are changed from type \texttt{"} int\texttt{"}  to type
+      \texttt{"} int64\_t\texttt{"}  (defined in header file stdint.h).
+      The function name is changed by appending the digit \texttt{"} 8\texttt{"}  to the
+      name. Thus,
+      astNormPoints becomes astNormPoints8
    }
 }
 \sstroutine{
@@ -36680,6 +36833,64 @@ Object             - Base class for all AST Objects
    }
 }
 \sstroutine{
+   AltAxes
+}{
+   Controls generation of FITS-WCS alternate axis descriptions
+}{
+   \sstdescription{
+      This attribute controls the generation of FITS-WCS alternate axis
+      keywords by the
+      \htmlref{astWrite}{astWrite}
+      method. It determines which of the Frames in the \htmlref{FrameSet}{FrameSet} supplied
+      to astWrite
+      are used to create a set of alternate axis descriptions. It may be
+      set to one of the following values (case insensitive):
+
+      \sstitemlist{
+
+         \sstitem
+          \texttt{"} ALL\texttt{"} : A set of alternate axes will be created for each \htmlref{Frame}{Frame} in
+         the supplied FrameSet, excluding the \htmlref{Base}{Base} and \htmlref{Current}{Current} Frames. This
+         is the default.
+
+         \sstitem
+          \texttt{"} NONE\texttt{"} : No alternate axes will be created for any of the Frames in
+         the supplied FrameSet.
+
+         \sstitem
+          \texttt{"} IDENT\texttt{"} : Alternate axes will be created for a Frame only if
+         its \htmlref{Ident}{Ident} attribute is set to a single upper case alphabetical
+         character (A-Z).
+      }
+   }
+   \sstattributetype{
+      String.
+   }
+   \sstapplicability{
+      \sstsubsection{
+         \htmlref{FitsChan}{FitsChan}
+      }{
+         All FitsChans have this attribute.
+      }
+   }
+   \sstnotes{
+      \sstitemlist{
+
+         \sstitem
+          This attribute is used only if the \htmlref{Encoding}{Encoding} attribute of the
+         FitsChan is set to (or defaults to) \texttt{"} FITS-WCS\texttt{"}  or \texttt{"} FITS-PC\texttt{"} .
+
+         \sstitem
+          The Current Frame in the FrameSet is always used to create the
+         primary axis descriptions in the output FITS header.
+
+         \sstitem
+          The Base Frame in the FrameSet is never used to create a set of
+         alternate axis descriptions.
+      }
+   }
+}
+\sstroutine{
    AsTime(axis)
 }{
    Format celestal coordinates as times?
@@ -47356,6 +47567,9 @@ Object             - Base class for all AST Objects
           \htmlref{AllWarnings}{AllWarnings}: A list of the available conditions
 
          \sstitem
+          \htmlref{AltAxes}{AltAxes}: Controls generation of FITS-WCS alternate axis descriptions
+
+         \sstitem
           \htmlref{Card}{Card}: Index of current FITS card in a FitsChan
 
          \sstitem
@@ -47769,7 +47983,10 @@ Object             - Base class for all AST Objects
           \htmlref{astMatchAxes}{astMatchAxes}: Find any corresponding axes in two Frames
 
          \sstitem
-          \htmlref{astNorm}{astNorm}: Normalise a set of Frame coordinates
+          \htmlref{astNorm}{astNorm}: Normalise a set of Frame coordinates representing one point
+
+         \sstitem
+          \htmlref{astNormPoints}{astNormPoints}: Normalise a collection of points
 
          \sstitem
           \htmlref{astOffset}{astOffset}: Calculate an offset along a geodesic curve
@@ -47791,6 +48008,9 @@ Object             - Base class for all AST Objects
 
          \sstitem
           \htmlref{astUnformat}{astUnformat}: Read a formatted coordinate value for a Frame axis
+
+         \sstitem
+          AST\_NORMPOINTS: Normalise a collection of points
       }
    }
 }
@@ -49490,10 +49710,13 @@ Object             - Base class for all AST Objects
       are connected together by geodesic curves within the encapsulated Frame.
       For instance, if the encapsulated Frame is a simple Frame then the
       geodesics will be straight lines, but if the Frame is a \htmlref{SkyFrame}{SkyFrame} then
-      the geodesics will be great circles. Note, the vertices must be
-      supplied in an order such that the inside of the polygon is to the
-      left of the boundary as the vertices are traversed. Supplying them
-      in the reverse order will effectively negate the polygon.
+      the geodesics will be great circles. Note, for a basic Frame the
+      vertices must be supplied in an order such that the inside of the
+      polygon is to the left of the boundary as the vertices are traversed,
+      assuming the Frame axes are displayed in the usual right-handed
+      coordinate convention - X axis (axis 1) points to the right and the
+      Y axis (axis 2) points upwards. Supplying them in the reverse order
+      will effectively negate the polygon.
 
       Within a SkyFrame, neighbouring vertices are always joined using the
       shortest path. Thus if an edge of 180 degrees or more in length is
@@ -51594,6 +51817,17 @@ in a non-standard location.} is on your PATH.
       the user should then ensure that external copies of the PAL and
       ERFA libraries are available (ERFA functions are used within PAL).
    }
+   \sstdiytopic{
+      CMINPACK
+   }{
+      The AST distribution includes a bundled copy of the CMINPACK
+      library. This will be used for various minimisation processes
+      unless the \texttt{"} --with-external\_cminpack\texttt{"}  option was used when AST
+      was configured. If \texttt{"} --with-external\_cminpack\texttt{"}  is used, this script
+      will include \texttt{"} -lcminpack\texttt{"}  in the returned list of linking options,
+      and the user should then ensure that an external copy of the
+      CMINPACK library is available.
+   }
 }
 \sstroutine{
    ast\_link\_adam
@@ -52833,7 +53067,7 @@ values for this variable are:
       invocation.
    }
    \sstsynopsis{
-      void $*$astGrow( void $*$ptr, int n, size\_t size )
+      void $*$astGrow( void $*$ptr, size\_t n, size\_t size )
    }
    \sstparameters{
       \sstsubsection{
@@ -56938,11 +57172,9 @@ method will now merge WinMaps with neighbouring diagonal MatrixMaps.
 
 \end{enumerate}
 
-\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
-Introduced in V9.2.0}
-The following describes the most significant changes which have
-occurred in the AST library between versions V9.1.3 and V9.2.0 (the
-current version):
+\subsection{Changes Introduced in V9.2.0}
+The following describes the most significant changes which
+occurred in the AST library between versions V9.1.3 and V9.2.0:
 
 \begin{enumerate}
 
@@ -56950,6 +57182,66 @@ current version):
 objects to be read and written using YAML. Currently, the ASDF format
 developed by STSci (\url{https://asdf-standard.readthedocs.io}) is the only
 supported encoding.
+
+\end{enumerate}
+
+\subsection{Changes Introduced in V9.2.4}
+The following describes the most significant changes which
+occurred in the AST library between versions V9.2.0 and V9.2.4:
+
+\begin{enumerate}
+
+\item A bug has been fixed that could prevent the \htmlref{astWrite}{astWrite} method of the
+\htmlref{FitsChan}{FitsChan} class producing FITS-WCS headers describing alternate axes for
+some of the Frames in the supplied \htmlref{FrameSet}{FrameSet}.  Consequently, the headers
+produced by astWrite may now include alternate axis descriptions that
+were not present previously. These can be supressed using the new \htmlref{AltAxes}{AltAxes}
+attribute.
+\item The FitsChan class has a new attribute, AltAxes, which controls the
+creation of FITS-WCS alternate axis descriptions by the astWrite method.
+\item - The \htmlref{KeyMap}{KeyMap} class now supports 64 bit integer
+(int64\_t)
+entries, represented by the new data type code ``K''.
+\item Two simplification bugs introduced at V9.2.0 have been fixed.
+\item The \htmlref{YamlChan}{YamlChan} class now supports AST ``native'' encoding.
+\end{enumerate}
+
+
+\subsection{\xlabel{changes}\xlabel{list_of_most_recent_changes}Changes
+Introduced in V9.2.5}
+The following describes the most significant changes which have
+occurred in the AST library between versions V9.2.4 and V9.2.5 (the
+current version):
+
+\begin{enumerate}
+
+\item A new method called \htmlref{astNormPoints}{astNormPoints} has been added to the \htmlref{Frame}{Frame}
+class. This is similar to the existing \htmlref{astNorm}{astNorm} method in that it can be
+used to normalise axis values, but can be used on a vector of points rather
+than just a single point. In addition, it has an option to choose a
+normalisation that avoids discontinuities in the Frame's coordinate
+system. The most common usage will be to modify vectors of sky position
+in such a way as to avoid sudden jumps of 360 degrees in longitude within
+groups of points that span the longitude origin.
+
+- The mesh of points returned by \htmlref{astGetRegionMesh}{astGetRegionMesh} and \htmlref{astShowMesh}{astShowMesh} are now
+normalised to avoid discontinuities in celestial longitude. This uses the
+new astNormPoints methid described in the previous item.
+
+\item A bug has been fixed in the \htmlref{KeyMap}{KeyMap} class that caused astMapGet1<X>
+functions to return a vector length of 1 for KeyMap entries with an
+undefined value. A vector length of zero is now returned in such cases.
+
+\item The way in which the astRebinSeq functions use the ``wlim'' argument
+has been modified in order to improve the performance when the input
+variances include aberrant ultra-low values. The change should result in
+fewer output pixels being set bad in such cases. This change only affects
+cases where the AST\_\_GENVAR flag is not set.
+
+\item An option ``--with-external-cminpack'' had been added to the configure
+script. It omits the internal cminpack routines from the built library, and
+instead links with an external cminpack library.
+
 
 \end{enumerate}
 

@@ -163,6 +163,9 @@
 *     17-MAR-2017 (DSB):
 *        Remove unnecessary checks that supplied size_t  argument values
 *        are not less than zero - size_t is unsigned and so is never negative.
+*     5-OCT-2020 (DSB):
+*        Fix bug in astChrCase - the text was always converted to upper case 
+*        regardless of the value of argument "upper".
 */
 
 /* Configuration results. */
@@ -1449,7 +1452,11 @@ void astChrCase_( const char *in, char *out, int upper, int blen, int *status ) 
 /* The simple case of over-writing the supplied string. */
    if( ! in ) {
       pout = out - 1;
-      while( *(++pout) ) *pout = toupper( (int) *pout );
+      if( upper ) {
+         while( *(++pout) ) *pout = toupper( (int) *pout );
+      } else {
+         while( *(++pout) ) *pout = tolower( (int) *pout );
+      }
 
 /* If a separate output buffer has been supplied... */
    } else {
@@ -1461,8 +1468,14 @@ void astChrCase_( const char *in, char *out, int upper, int blen, int *status ) 
 /* Copy the string character by character, converting the case in the
    process. Start counting from 1, not 0, in order to ensure that we are
    left with room for a terminating null. */
-      for( i = 1; i < blen && *pin; i++ ) {
-         *(pout++) = toupper( (int) *(pin++) );
+      if( upper) {
+         for( i = 1; i < blen && *pin; i++ ) {
+            *(pout++) = toupper( (int) *(pin++) );
+         }
+      } else {
+         for( i = 1; i < blen && *pin; i++ ) {
+            *(pout++) = tolower( (int) *(pin++) );
+         }
       }
 
 /* Terminate the returned string. */
@@ -2659,7 +2672,7 @@ void *astFreeDouble_( void *ptr, int *status ) {
    return NULL;
 }
 
-void *astGrow_( void *ptr, int n, size_t size, int *status ) {
+void *astGrow_( void *ptr, size_t n, size_t size, int *status ) {
 /*
 *++
 *  Name:
@@ -2673,7 +2686,7 @@ void *astGrow_( void *ptr, int n, size_t size, int *status ) {
 
 *  Synopsis:
 *     #include "memory.h"
-*     void *astGrow( void *ptr, int n, size_t size )
+*     void *astGrow( void *ptr, size_t n, size_t size )
 
 *  Description:
 *     This function allocates memory in which to store an array of
@@ -2728,7 +2741,7 @@ void *astGrow_( void *ptr, int n, size_t size, int *status ) {
    new = ptr;
 
 /* Calculate the total size of memory needed. */
-   size *= (size_t) n;
+   size *= n;
 
 /* If no memory has yet been allocated, allocate exactly the amount
    required. */

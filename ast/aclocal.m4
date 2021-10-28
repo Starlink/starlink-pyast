@@ -1068,7 +1068,7 @@ _LT_EOF
 	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
 	10.[[012]]*)
 	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
-	10.*)
+	10.*|11.*)
 	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
       esac
     ;;
@@ -1210,7 +1210,7 @@ fi
 # Invoke $ECHO with all args, space-separated.
 func_echo_all ()
 {
-    $ECHO "$*" 
+    $ECHO "$*"
 }
 
 case "$ECHO" in
@@ -8916,12 +8916,19 @@ test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 #  As of gcc 10, gfortran reports an error rather than a warning if
 #  multiple calls to the same subroutine have different argument types.
 #  This break most uses of %VAL in starlink code, which is always assumed
-#  by the coimpiler to have a type of INTEGER*8.
+#  by the coimpiler to have a type of INTEGER*8. So test  if
+#  "-fallow-argument-mismatch" works (skip this test if we are configuring
+#  without fortran).
+use_fortran=no
+AC_ARG_WITH([fortran],
+            [ --without-fortran   Build package without Fortran support],
+            [test "$withval" = no || use_fortran=yes],
+            [use_fortran=yes])
 
-#  Test if "-fallow-argument-mismatch" works.
-AC_REQUIRE([AC_PROG_FC])dnl
-AC_LANG_PUSH([Fortran])
-AC_LANG_CONFTEST([AC_LANG_SOURCE([
+if test "$use_fortran" = yes; then
+   AC_REQUIRE([AC_PROG_FC])
+   AC_LANG_PUSH([Fortran])
+   AC_LANG_CONFTEST([AC_LANG_SOURCE([
       PROGRAM conftest
       CALL BB( 1.0 )
       END
@@ -8929,14 +8936,16 @@ AC_LANG_CONFTEST([AC_LANG_SOURCE([
       SUBROUTINE BB( DIN )
       DOUBLE PRECISION DIN
       END
-])])
-if $FC -c $FCFLAGS -fallow-argument-mismatch -o conftest conftest.f 2>&5
-then
-   STAR_FCFLAGS="$STAR_FCFLAGS -fallow-argument-mismatch"
-   STAR_FFLAGS="$STAR_FFLAGS -fallow-argument-mismatch"
+   ])])
+   if $FC -c $FCFLAGS -fallow-argument-mismatch -o conftest conftest.f 2>&5
+   then
+      STAR_FCFLAGS="$STAR_FCFLAGS -fallow-argument-mismatch"
+      STAR_FFLAGS="$STAR_FFLAGS -fallow-argument-mismatch"
+   fi
+   AC_LANG_POP([Fortran])
+   rm -f conftest.f
 fi
-AC_LANG_POP([Fortran])
-rm -f conftest.f
+
 ])# STAR_DEFAULTS
 
 
@@ -11560,3 +11569,4 @@ AC_SUBST([am__tar])
 AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
+m4_include([acinclude.m4])

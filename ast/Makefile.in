@@ -93,19 +93,20 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = astbad$(EXEEXT)
 TESTS = ast_test$(EXEEXT)
 check_PROGRAMS = ast_test$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
 	$(am__configure_deps) $(dist_bin_SCRIPTS) \
-	$(dist_noinst_SCRIPTS) $(include_MESSAGES) \
-	$(dist_pkgdata_DATA) $(dist_starnews_DATA) $(cinclude_HEADERS) \
-	$(am__include_HEADERS_DIST) $(am__DIST_COMMON)
+	$(dist_noinst_SCRIPTS) $(am__include_MESSAGES_DIST) \
+	$(dist_pkgdata_DATA) $(dist_starnews_DATA) \
+	$(am__cinclude_HEADERS_DIST) $(am__include_HEADERS_DIST) \
+	$(am__DIST_COMMON)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
@@ -147,8 +148,14 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)" \
 	"$(DESTDIR)$(cincludedir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-@EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES = libast_pal.la
-@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES =  \
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@	libast_pal.la \
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@	libast_cminpack.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la \
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@	libast_cminpack.la
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES =  \
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@	libast_pal.la
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la
 am__libast_la_SOURCES_DIST = src/yamlchan.c src/axis.c src/box.c \
 	src/channel.c src/chebymap.c src/circle.c src/cmpframe.c \
 	src/cmpmap.c src/cmpregion.c src/dsbspecframe.c src/dssmap.c \
@@ -210,9 +217,6 @@ am__libast_la_SOURCES_DIST = src/yamlchan.c src/axis.c src/box.c \
 	src/xmlchan.h pal2ast.h erfa2ast.h src/ems.h src/err.h \
 	src/Ers.h src/f77.h src/grf.h src/grf3d.h src/pg3d.h \
 	src/loader.h wcslib/wcsmath.h src/c2f77.h GRF_PAR AST_ERR \
-	cminpack/cminpack.h cminpack/cminpackP.h cminpack/lmder1.c \
-	cminpack/lmder.c cminpack/dpmpar.c cminpack/enorm.c \
-	cminpack/qrfac.c cminpack/lmpar.c cminpack/qrsolv.c \
 	wcslib/proj.c wcslib/tpn.c wcslib/wcstrig.c
 am__dirstamp = $(am__leading_dot)dirstamp
 am__objects_1 = src/libast_la-yamlchan.lo src/libast_la-axis.lo \
@@ -320,15 +324,11 @@ am__objects_1 = src/libast_la-yamlchan.lo src/libast_la-axis.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fzoommap.lo
 am__objects_3 =
 am__objects_4 = $(am__objects_3)
-am__objects_5 = cminpack/libast_la-lmder1.lo \
-	cminpack/libast_la-lmder.lo cminpack/libast_la-dpmpar.lo \
-	cminpack/libast_la-enorm.lo cminpack/libast_la-qrfac.lo \
-	cminpack/libast_la-lmpar.lo cminpack/libast_la-qrsolv.lo
-am__objects_6 = wcslib/libast_la-proj.lo wcslib/libast_la-tpn.lo \
+am__objects_5 = wcslib/libast_la-proj.lo wcslib/libast_la-tpn.lo \
 	wcslib/libast_la-wcstrig.lo
 am_libast_la_OBJECTS = $(am__objects_1) $(am__objects_2) \
 	$(am__objects_4) $(am__objects_3) $(am__objects_3) \
-	$(am__objects_5) $(am__objects_6)
+	$(am__objects_5)
 nodist_libast_la_OBJECTS =
 libast_la_OBJECTS = $(am_libast_la_OBJECTS) \
 	$(nodist_libast_la_OBJECTS)
@@ -340,6 +340,22 @@ libast_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libast_la_CFLAGS) \
 	$(CFLAGS) $(STAR_LDFLAGS) $(libast_la_LDFLAGS) $(LDFLAGS) -o \
 	$@
+libast_cminpack_la_LIBADD =
+am__objects_6 = cminpack/libast_cminpack_la-lmder1.lo \
+	cminpack/libast_cminpack_la-lmder.lo \
+	cminpack/libast_cminpack_la-dpmpar.lo \
+	cminpack/libast_cminpack_la-enorm.lo \
+	cminpack/libast_cminpack_la-qrfac.lo \
+	cminpack/libast_cminpack_la-lmpar.lo \
+	cminpack/libast_cminpack_la-qrsolv.lo
+am_libast_cminpack_la_OBJECTS = $(am__objects_6)
+libast_cminpack_la_OBJECTS = $(am_libast_cminpack_la_OBJECTS)
+libast_cminpack_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(libast_cminpack_la_CFLAGS) $(CFLAGS) $(STAR_LDFLAGS) \
+	$(libast_cminpack_la_LDFLAGS) $(LDFLAGS) -o $@
+@EXTERNAL_CMINPACK_FALSE@am_libast_cminpack_la_rpath = -rpath \
+@EXTERNAL_CMINPACK_FALSE@	$(libdir)
 libast_drama_la_LIBADD =
 am_libast_drama_la_OBJECTS = src/libast_drama_la-err_drama.lo
 libast_drama_la_OBJECTS = $(am_libast_drama_la_OBJECTS)
@@ -422,10 +438,11 @@ libast_pgplot3d_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 PROGRAMS = $(noinst_PROGRAMS)
 am_ast_test_OBJECTS = ast_test.$(OBJEXT)
 ast_test_OBJECTS = $(am_ast_test_OBJECTS)
-ast_test_DEPENDENCIES = libast.la libast_pal.la libast_grf_3.2.la \
-	libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la \
-	libast_err.la
-am_astbad_OBJECTS = src/astbad.$(OBJEXT)
+ast_test_DEPENDENCIES = libast.la libast_pal.la libast_cminpack.la \
+	libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la \
+	libast_grf3d.la libast_err.la
+am__astbad_SOURCES_DIST = src/astbad.c src/pointset.h
+@NOFORTRAN_FALSE@am_astbad_OBJECTS = src/astbad.$(OBJEXT)
 astbad_OBJECTS = $(am_astbad_OBJECTS)
 astbad_LDADD = $(LDADD)
 SCRIPTS = $(bin_SCRIPTS) $(dist_bin_SCRIPTS) $(dist_noinst_SCRIPTS) \
@@ -466,30 +483,33 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libast_la_SOURCES) $(nodist_libast_la_SOURCES) \
-	$(libast_drama_la_SOURCES) $(libast_ems_la_SOURCES) \
-	$(libast_err_la_SOURCES) $(libast_grf3d_la_SOURCES) \
-	$(libast_grf_2_0_la_SOURCES) $(libast_grf_3_2_la_SOURCES) \
-	$(libast_grf_5_6_la_SOURCES) $(libast_pal_la_SOURCES) \
-	$(libast_pgplot_la_SOURCES) $(libast_pgplot3d_la_SOURCES) \
-	$(ast_test_SOURCES) $(astbad_SOURCES)
-DIST_SOURCES = $(am__libast_la_SOURCES_DIST) \
-	$(libast_drama_la_SOURCES) $(libast_ems_la_SOURCES) \
-	$(libast_err_la_SOURCES) $(libast_grf3d_la_SOURCES) \
-	$(libast_grf_2_0_la_SOURCES) $(libast_grf_3_2_la_SOURCES) \
-	$(libast_grf_5_6_la_SOURCES) $(libast_pal_la_SOURCES) \
-	$(am__libast_pgplot_la_SOURCES_DIST) \
-	$(am__libast_pgplot3d_la_SOURCES_DIST) $(ast_test_SOURCES) \
+	$(libast_cminpack_la_SOURCES) $(libast_drama_la_SOURCES) \
+	$(libast_ems_la_SOURCES) $(libast_err_la_SOURCES) \
+	$(libast_grf3d_la_SOURCES) $(libast_grf_2_0_la_SOURCES) \
+	$(libast_grf_3_2_la_SOURCES) $(libast_grf_5_6_la_SOURCES) \
+	$(libast_pal_la_SOURCES) $(libast_pgplot_la_SOURCES) \
+	$(libast_pgplot3d_la_SOURCES) $(ast_test_SOURCES) \
 	$(astbad_SOURCES)
+DIST_SOURCES = $(am__libast_la_SOURCES_DIST) \
+	$(libast_cminpack_la_SOURCES) $(libast_drama_la_SOURCES) \
+	$(libast_ems_la_SOURCES) $(libast_err_la_SOURCES) \
+	$(libast_grf3d_la_SOURCES) $(libast_grf_2_0_la_SOURCES) \
+	$(libast_grf_3_2_la_SOURCES) $(libast_grf_5_6_la_SOURCES) \
+	$(libast_pal_la_SOURCES) $(am__libast_pgplot_la_SOURCES_DIST) \
+	$(am__libast_pgplot3d_la_SOURCES_DIST) $(ast_test_SOURCES) \
+	$(am__astbad_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+am__include_MESSAGES_DIST = AST_ERR ast_err.h
 MESSAGES = $(include_MESSAGES)
 INSTALL_MESSAGE = $(INSTALL_DATA)
 stardocsDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(dist_pkgdata_DATA) $(dist_starnews_DATA) $(stardocs_DATA) \
 	$(starfacs_DATA)
+am__cinclude_HEADERS_DIST = GRF_PAR src/grf.h src/grf3d.h
 am__include_HEADERS_DIST = GRF_PAR src/grf.h src/grf3d.h
 HEADERS = $(cinclude_HEADERS) $(include_HEADERS) \
 	$(nodist_cinclude_HEADERS) $(nodist_include_HEADERS)
@@ -759,6 +779,7 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+EXTERNAL_CMINPACK = @EXTERNAL_CMINPACK@
 EXTERNAL_PAL = @EXTERNAL_PAL@
 FC = @FC@
 FCFLAGS = @FCFLAGS@
@@ -775,6 +796,7 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LATEX2DVI = @LATEX2DVI@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBCMINPACK = @LIBCMINPACK@
 LIBOBJS = @LIBOBJS@
 LIBPAL = @LIBPAL@
 LIBS = @LIBS@
@@ -1467,7 +1489,7 @@ CMINPACK_FILES = \
 bin_SCRIPTS = ast_link
 dist_bin_SCRIPTS = ast_link_adam
 noinst_SCRIPTS = ast_cpp
-dist_noinst_SCRIPTS = makeh
+dist_noinst_SCRIPTS = $(srcdir)/makeh
 # Scripts are not distributed by default (since they might be derived objects)
 # Add these to the distribution below.  In fact, it would be useful
 # and straightforward  to make ast_link{,_adam} derived, since they
@@ -1478,21 +1500,30 @@ dist_noinst_SCRIPTS = makeh
 # Headers required by library users.  Both of the following lines
 # indicate headers which are installed.
 cincludedir = $(includedir)/star
-cinclude_HEADERS = GRF_PAR src/grf.h src/grf3d.h
+@NOFORTRAN_FALSE@cinclude_HEADERS = GRF_PAR src/grf.h src/grf3d.h
+@NOFORTRAN_TRUE@cinclude_HEADERS = src/grf.h src/grf3d.h
+
 # Following are generated, so should not be distributed.
-nodist_cinclude_HEADERS = ast.h AST_PAR
-include_MESSAGES = AST_ERR ast_err.h
+@NOFORTRAN_FALSE@include_MESSAGES = AST_ERR ast_err.h
+@NOFORTRAN_TRUE@include_MESSAGES = ast_err.h
+@NOFORTRAN_FALSE@nodist_cinclude_HEADERS = ast.h AST_PAR
+@NOFORTRAN_TRUE@nodist_cinclude_HEADERS = ast.h
 
 # Also install headers in main include directory for the benefit of
 # legacy code that does '#include "ast.h"' instead of '#include
 # "star/ast.h"'. Note, currently _MESSAGES files must be installed in
 # the main include directory.
-@TOPINCLUDE_TRUE@include_HEADERS = GRF_PAR src/grf.h src/grf3d.h
-@TOPINCLUDE_TRUE@nodist_include_HEADERS = ast.h AST_PAR
+@NOFORTRAN_FALSE@@TOPINCLUDE_TRUE@include_HEADERS = GRF_PAR src/grf.h src/grf3d.h
+@NOFORTRAN_TRUE@@TOPINCLUDE_TRUE@include_HEADERS = src/grf.h src/grf3d.h
+@NOFORTRAN_FALSE@@TOPINCLUDE_TRUE@nodist_include_HEADERS = ast.h AST_PAR
+@NOFORTRAN_TRUE@@TOPINCLUDE_TRUE@nodist_include_HEADERS = ast.h
 @EXTERNAL_PAL_FALSE@PAL_LIB = libast_pal.la
 @EXTERNAL_PAL_TRUE@PAL_LIB = 
+@EXTERNAL_CMINPACK_FALSE@CMINPACK_LIB = libast_cminpack.la
+@EXTERNAL_CMINPACK_TRUE@CMINPACK_LIB = 
 lib_LTLIBRARIES = \
     $(PAL_LIB) \
+    $(CMINPACK_LIB) \
     libast.la \
     libast_err.la \
     libast_ems.la \
@@ -1529,6 +1560,7 @@ dist_pkgdata_DATA = COPYING COPYING.LESSER COPYING.LIB
 @NOPIC_FALSE@libast_pgplot_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 @NOPIC_FALSE@libast_pgplot3d_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 @NOPIC_FALSE@libast_pal_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
+@NOPIC_FALSE@libast_cminpack_la_CFLAGS = $(AM_CFLAGS) -prefer-pic
 
 #  The module containing the main AST classes
 libast_la_SOURCES = \
@@ -1537,25 +1569,27 @@ libast_la_SOURCES = \
     $(GRP_C_INCLUDE_FILES) \
     $(F_C_INCLUDE_FILES) \
     $(GRP_F_INCLUDE_FILES) \
-    $(CMINPACK_FILES) \
     $(WCSLIB_FILES) \
     ast_err.h
 
 libast_la_LDFLAGS = -version-info @version_info@
-@EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la libast_cminpack.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = $(libdir)/libpal.la libast_cminpack.la
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la -lcminpack
 
 # Ensure libast links against libraries containing functions used within
 # libast. If AST is configured --with-external-pal, then the internal
 # libast_pal library will be empty, and we link to an external PAL
-# library instead.
-@EXTERNAL_PAL_TRUE@libast_la_LIBADD = $(libdir)/libpal.la
+# library instead. Do the same for cminpack
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = $(libdir)/libpal.la -lcminpack
 
 # AST_PAR is really part of GRP_F_INCLUDE_FILES, but it must not be
 # distributed, so list it separately.
-nodist_libast_la_SOURCES = \
-    ast.h \
-    AST_PAR
+@NOFORTRAN_FALSE@nodist_libast_la_SOURCES = \
+@NOFORTRAN_FALSE@    ast.h \
+@NOFORTRAN_FALSE@    AST_PAR
 
+@NOFORTRAN_TRUE@nodist_libast_la_SOURCES = ast.h
 
 #  The default error reporting module.
 libast_err_la_SOURCES = src/err_null.c
@@ -1601,19 +1635,33 @@ libast_pgplot3d_la_LDFLAGS = -version-info @version_info@
 libast_pal_la_SOURCES = $(PAL_FILES)
 libast_pal_la_LDFLAGS = -version-info @version_info@
 
+#  Cminpack
+libast_cminpack_la_SOURCES = $(CMINPACK_FILES)
+libast_cminpack_la_LDFLAGS = -version-info @version_info@
+
 # The following files are built by the targets in this makefile.
 MAINTAINERCLEANFILES = src/version.h builddocs addversion \
 	ast.h $(DOCUMENTATION_PRODUCTS)
 
-CLEANFILES = AST_PAR ast.h
-astbad_SOURCES = src/astbad.c src/pointset.h
+@NOFORTRAN_FALSE@CLEANFILES = AST_PAR ast.h
+@NOFORTRAN_TRUE@CLEANFILES = ast.h
+
+# Special cases start here
+
+# The AST_PAR include file is produced by compiling the astbad.c
+# program and editing its output into the ast_par.source file (while
+# also changing the "E" exponent character to a "D").  The astbad.c
+# and ast_par.source must be distributed (the generation of the
+# AST__BAD value must be done on the build host) but not installed.
+@NOFORTRAN_FALSE@noinst_PROGRAMS = astbad$(EXEEXT)
+@NOFORTRAN_FALSE@astbad_SOURCES = src/astbad.c src/pointset.h
 
 # ast_link is generated from ast_link.in; ast_link_adam does not
 # need configuration, and so is not mentioned in AC_CONFIG_FILES within
 # configure.ac, and so is not distributed automatically.
 #
 # makeh is required in order to build ast.h after distribution (see below).
-EXTRA_DIST = ast_par.source sun210_figures sun211_figures pal erfa cminpack
+EXTRA_DIST = $(srcdir)/ast_par.source sun210_figures sun211_figures pal erfa cminpack
 
 # AST_ERR and ast_err.h are `generated source files', and so must be
 # generated before any other compilations are done.  Note that these
@@ -1628,7 +1676,8 @@ EXTRA_DIST = ast_par.source sun210_figures sun211_figures pal erfa cminpack
 #
 # version.h is included by object.h, and thus indirectly by most modules.
 # It's most straightforward to build it at the beginning.
-BUILT_SOURCES = AST_ERR ast_err.h src/version.h
+@NOFORTRAN_FALSE@BUILT_SOURCES = AST_ERR ast_err.h src/version.h
+@NOFORTRAN_TRUE@BUILT_SOURCES = ast_err.h src/version.h
 
 # Make pre-distribution files.  These are files which are required for
 # building the distribution, but are not themselves distributed.
@@ -1646,7 +1695,7 @@ ast_test_SOURCES = ast_test.c
 
 #ast_test_LDADD = `ast_link`
 # Expand ast_link to avoid libast_pass2, which causes problems for Solaris
-ast_test_LDADD = @LIBPAL@ libast.la libast_pal.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
+ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_pal.la libast_cminpack.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
 starfacs_DATA = fac_1521_err
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -2051,26 +2100,6 @@ src/libast_la-fxmlchan.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-fzoommap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-cminpack/$(am__dirstamp):
-	@$(MKDIR_P) cminpack
-	@: > cminpack/$(am__dirstamp)
-cminpack/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) cminpack/$(DEPDIR)
-	@: > cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-lmder1.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-lmder.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-dpmpar.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-enorm.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-qrfac.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-lmpar.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
-cminpack/libast_la-qrsolv.lo: cminpack/$(am__dirstamp) \
-	cminpack/$(DEPDIR)/$(am__dirstamp)
 wcslib/$(am__dirstamp):
 	@$(MKDIR_P) wcslib
 	@: > wcslib/$(am__dirstamp)
@@ -2085,6 +2114,28 @@ wcslib/libast_la-wcstrig.lo: wcslib/$(am__dirstamp) \
 	wcslib/$(DEPDIR)/$(am__dirstamp)
 libast.la: $(libast_la_OBJECTS) $(libast_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libast_la_LINK) -rpath $(libdir) $(libast_la_LDFLAGS) $(libast_la_OBJECTS) $(libast_la_LIBADD)  $(LIBS)
+cminpack/$(am__dirstamp):
+	@$(MKDIR_P) cminpack
+	@: > cminpack/$(am__dirstamp)
+cminpack/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) cminpack/$(DEPDIR)
+	@: > cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-lmder1.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-lmder.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-dpmpar.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-enorm.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-qrfac.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-lmpar.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+cminpack/libast_cminpack_la-qrsolv.lo: cminpack/$(am__dirstamp) \
+	cminpack/$(DEPDIR)/$(am__dirstamp)
+libast_cminpack.la: $(libast_cminpack_la_OBJECTS) $(libast_cminpack_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libast_cminpack_la_LINK) $(am_libast_cminpack_la_rpath) $(libast_cminpack_la_LDFLAGS) $(libast_cminpack_la_OBJECTS) $(libast_cminpack_la_LIBADD)  $(LIBS)
 src/libast_drama_la-err_drama.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 libast_drama.la: $(libast_drama_la_OBJECTS) $(libast_drama_la_DEPENDENCIES) 
@@ -2246,13 +2297,13 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ast_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libast_pal_la-palwrap.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-dpmpar.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-enorm.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-lmder.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-lmder1.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-lmpar.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-qrfac.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_la-qrsolv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-dpmpar.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-enorm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-lmder.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-lmder1.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-lmpar.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-qrfac.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cminpack/$(DEPDIR)/libast_cminpack_la-qrsolv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/astbad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_drama_la-err_drama.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_ems_la-err_ems.Plo@am__quote@
@@ -3413,55 +3464,6 @@ src/libast_la-fzoommap.lo: src/fzoommap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-fzoommap.lo `test -f 'src/fzoommap.c' || echo '$(srcdir)/'`src/fzoommap.c
 
-cminpack/libast_la-lmder1.lo: cminpack/lmder1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-lmder1.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-lmder1.Tpo -c -o cminpack/libast_la-lmder1.lo `test -f 'cminpack/lmder1.c' || echo '$(srcdir)/'`cminpack/lmder1.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-lmder1.Tpo cminpack/$(DEPDIR)/libast_la-lmder1.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmder1.c' object='cminpack/libast_la-lmder1.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-lmder1.lo `test -f 'cminpack/lmder1.c' || echo '$(srcdir)/'`cminpack/lmder1.c
-
-cminpack/libast_la-lmder.lo: cminpack/lmder.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-lmder.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-lmder.Tpo -c -o cminpack/libast_la-lmder.lo `test -f 'cminpack/lmder.c' || echo '$(srcdir)/'`cminpack/lmder.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-lmder.Tpo cminpack/$(DEPDIR)/libast_la-lmder.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmder.c' object='cminpack/libast_la-lmder.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-lmder.lo `test -f 'cminpack/lmder.c' || echo '$(srcdir)/'`cminpack/lmder.c
-
-cminpack/libast_la-dpmpar.lo: cminpack/dpmpar.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-dpmpar.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-dpmpar.Tpo -c -o cminpack/libast_la-dpmpar.lo `test -f 'cminpack/dpmpar.c' || echo '$(srcdir)/'`cminpack/dpmpar.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-dpmpar.Tpo cminpack/$(DEPDIR)/libast_la-dpmpar.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/dpmpar.c' object='cminpack/libast_la-dpmpar.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-dpmpar.lo `test -f 'cminpack/dpmpar.c' || echo '$(srcdir)/'`cminpack/dpmpar.c
-
-cminpack/libast_la-enorm.lo: cminpack/enorm.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-enorm.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-enorm.Tpo -c -o cminpack/libast_la-enorm.lo `test -f 'cminpack/enorm.c' || echo '$(srcdir)/'`cminpack/enorm.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-enorm.Tpo cminpack/$(DEPDIR)/libast_la-enorm.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/enorm.c' object='cminpack/libast_la-enorm.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-enorm.lo `test -f 'cminpack/enorm.c' || echo '$(srcdir)/'`cminpack/enorm.c
-
-cminpack/libast_la-qrfac.lo: cminpack/qrfac.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-qrfac.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-qrfac.Tpo -c -o cminpack/libast_la-qrfac.lo `test -f 'cminpack/qrfac.c' || echo '$(srcdir)/'`cminpack/qrfac.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-qrfac.Tpo cminpack/$(DEPDIR)/libast_la-qrfac.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/qrfac.c' object='cminpack/libast_la-qrfac.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-qrfac.lo `test -f 'cminpack/qrfac.c' || echo '$(srcdir)/'`cminpack/qrfac.c
-
-cminpack/libast_la-lmpar.lo: cminpack/lmpar.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-lmpar.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-lmpar.Tpo -c -o cminpack/libast_la-lmpar.lo `test -f 'cminpack/lmpar.c' || echo '$(srcdir)/'`cminpack/lmpar.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-lmpar.Tpo cminpack/$(DEPDIR)/libast_la-lmpar.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmpar.c' object='cminpack/libast_la-lmpar.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-lmpar.lo `test -f 'cminpack/lmpar.c' || echo '$(srcdir)/'`cminpack/lmpar.c
-
-cminpack/libast_la-qrsolv.lo: cminpack/qrsolv.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_la-qrsolv.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_la-qrsolv.Tpo -c -o cminpack/libast_la-qrsolv.lo `test -f 'cminpack/qrsolv.c' || echo '$(srcdir)/'`cminpack/qrsolv.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_la-qrsolv.Tpo cminpack/$(DEPDIR)/libast_la-qrsolv.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/qrsolv.c' object='cminpack/libast_la-qrsolv.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_la-qrsolv.lo `test -f 'cminpack/qrsolv.c' || echo '$(srcdir)/'`cminpack/qrsolv.c
-
 wcslib/libast_la-proj.lo: wcslib/proj.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT wcslib/libast_la-proj.lo -MD -MP -MF wcslib/$(DEPDIR)/libast_la-proj.Tpo -c -o wcslib/libast_la-proj.lo `test -f 'wcslib/proj.c' || echo '$(srcdir)/'`wcslib/proj.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) wcslib/$(DEPDIR)/libast_la-proj.Tpo wcslib/$(DEPDIR)/libast_la-proj.Plo
@@ -3482,6 +3484,55 @@ wcslib/libast_la-wcstrig.lo: wcslib/wcstrig.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wcslib/wcstrig.c' object='wcslib/libast_la-wcstrig.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o wcslib/libast_la-wcstrig.lo `test -f 'wcslib/wcstrig.c' || echo '$(srcdir)/'`wcslib/wcstrig.c
+
+cminpack/libast_cminpack_la-lmder1.lo: cminpack/lmder1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-lmder1.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-lmder1.Tpo -c -o cminpack/libast_cminpack_la-lmder1.lo `test -f 'cminpack/lmder1.c' || echo '$(srcdir)/'`cminpack/lmder1.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-lmder1.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-lmder1.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmder1.c' object='cminpack/libast_cminpack_la-lmder1.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-lmder1.lo `test -f 'cminpack/lmder1.c' || echo '$(srcdir)/'`cminpack/lmder1.c
+
+cminpack/libast_cminpack_la-lmder.lo: cminpack/lmder.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-lmder.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-lmder.Tpo -c -o cminpack/libast_cminpack_la-lmder.lo `test -f 'cminpack/lmder.c' || echo '$(srcdir)/'`cminpack/lmder.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-lmder.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-lmder.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmder.c' object='cminpack/libast_cminpack_la-lmder.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-lmder.lo `test -f 'cminpack/lmder.c' || echo '$(srcdir)/'`cminpack/lmder.c
+
+cminpack/libast_cminpack_la-dpmpar.lo: cminpack/dpmpar.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-dpmpar.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-dpmpar.Tpo -c -o cminpack/libast_cminpack_la-dpmpar.lo `test -f 'cminpack/dpmpar.c' || echo '$(srcdir)/'`cminpack/dpmpar.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-dpmpar.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-dpmpar.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/dpmpar.c' object='cminpack/libast_cminpack_la-dpmpar.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-dpmpar.lo `test -f 'cminpack/dpmpar.c' || echo '$(srcdir)/'`cminpack/dpmpar.c
+
+cminpack/libast_cminpack_la-enorm.lo: cminpack/enorm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-enorm.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-enorm.Tpo -c -o cminpack/libast_cminpack_la-enorm.lo `test -f 'cminpack/enorm.c' || echo '$(srcdir)/'`cminpack/enorm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-enorm.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-enorm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/enorm.c' object='cminpack/libast_cminpack_la-enorm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-enorm.lo `test -f 'cminpack/enorm.c' || echo '$(srcdir)/'`cminpack/enorm.c
+
+cminpack/libast_cminpack_la-qrfac.lo: cminpack/qrfac.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-qrfac.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-qrfac.Tpo -c -o cminpack/libast_cminpack_la-qrfac.lo `test -f 'cminpack/qrfac.c' || echo '$(srcdir)/'`cminpack/qrfac.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-qrfac.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-qrfac.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/qrfac.c' object='cminpack/libast_cminpack_la-qrfac.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-qrfac.lo `test -f 'cminpack/qrfac.c' || echo '$(srcdir)/'`cminpack/qrfac.c
+
+cminpack/libast_cminpack_la-lmpar.lo: cminpack/lmpar.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-lmpar.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-lmpar.Tpo -c -o cminpack/libast_cminpack_la-lmpar.lo `test -f 'cminpack/lmpar.c' || echo '$(srcdir)/'`cminpack/lmpar.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-lmpar.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-lmpar.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/lmpar.c' object='cminpack/libast_cminpack_la-lmpar.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-lmpar.lo `test -f 'cminpack/lmpar.c' || echo '$(srcdir)/'`cminpack/lmpar.c
+
+cminpack/libast_cminpack_la-qrsolv.lo: cminpack/qrsolv.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -MT cminpack/libast_cminpack_la-qrsolv.lo -MD -MP -MF cminpack/$(DEPDIR)/libast_cminpack_la-qrsolv.Tpo -c -o cminpack/libast_cminpack_la-qrsolv.lo `test -f 'cminpack/qrsolv.c' || echo '$(srcdir)/'`cminpack/qrsolv.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) cminpack/$(DEPDIR)/libast_cminpack_la-qrsolv.Tpo cminpack/$(DEPDIR)/libast_cminpack_la-qrsolv.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cminpack/qrsolv.c' object='cminpack/libast_cminpack_la-qrsolv.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_cminpack_la_CFLAGS) $(CFLAGS) -c -o cminpack/libast_cminpack_la-qrsolv.lo `test -f 'cminpack/qrsolv.c' || echo '$(srcdir)/'`cminpack/qrsolv.c
 
 src/libast_drama_la-err_drama.lo: src/err_drama.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_drama_la_CFLAGS) $(CFLAGS) -MT src/libast_drama_la-err_drama.lo -MD -MP -MF src/$(DEPDIR)/libast_drama_la-err_drama.Tpo -c -o src/libast_drama_la-err_drama.lo `test -f 'src/err_drama.c' || echo '$(srcdir)/'`src/err_drama.c
@@ -4474,18 +4525,18 @@ uninstall-am: uninstall-binSCRIPTS uninstall-cincludeHEADERS \
 
 .PRECIOUS: Makefile
 
-AST_PAR: ast_par.source astbad
-	sed -e 's/<AST__BAD>/'`./astbad AST__BAD | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NAN>/'`./astbad AST__NAN | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NANR>/'`./astbad AST__NANF | tr 'E' 'D'`'/' \
-	    ast_par.source >$@
+@NOFORTRAN_FALSE@AST_PAR: $(srcdir)/ast_par.source astbad$(EXEEXT)
+@NOFORTRAN_FALSE@	sed -e 's/<AST__BAD>/'`./astbad$(EXEEXT) AST__BAD | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	    -e 's/<AST__NAN>/'`./astbad$(EXEEXT) AST__NAN | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	    -e 's/<AST__NANR>/'`./astbad$(EXEEXT) AST__NANF | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	    $(srcdir)/ast_par.source >$@
 
 # ast.h depends on the error-facility files.  ast.h _could_ be made
 # before distribution, but since it's generated from other distributed
 # files, it's more robust to distribute makeh and make ast.h on the
 # build host.
-ast.h: $(AST_H_FILES) ast_err.h makeh config.h
-	@PERL@ ./makeh -s $(srcdir) $(AST_H_FILES) >$@
+ast.h: $(AST_H_FILES) ast_err.h $(srcdir)/makeh config.h
+	@PERL@ $(srcdir)/makeh -s $(srcdir) $(AST_H_FILES) >$@
 
 #  Form a second link to the main object library (static and shared). This
 #  is used when a second pass through the library is needed during linking
