@@ -1,4 +1,4 @@
-#define PYAST_VERSION "3.15.3"
+#define PYAST_VERSION "3.15.4"
 
 #include <Python.h>
 #include <string.h>
@@ -3584,6 +3584,7 @@ static PyObject *Frame_format( Frame *self, PyObject *args );
 static PyObject *Frame_intersect( Frame *self, PyObject *args );
 static PyObject *Frame_matchaxes( Frame *self, PyObject *args );
 static PyObject *Frame_norm( Frame *self, PyObject *args );
+static PyObject *Frame_normpoints( Frame *self, PyObject *args );
 static PyObject *Frame_offset( Frame *self, PyObject *args );
 static PyObject *Frame_offset2( Frame *self, PyObject *args );
 static PyObject *Frame_permaxes( Frame *self, PyObject *args );
@@ -3605,6 +3606,7 @@ static PyMethodDef Frame_methods[] = {
   {"intersect", (PyCFunction)Frame_intersect, METH_VARARGS, "Find the point of intersection between two geodesic curves"},
   {"matchaxes", (PyCFunction)Frame_matchaxes, METH_VARARGS, "Find any corresponding axes in two Frames"},
   {"norm", (PyCFunction)Frame_norm, METH_VARARGS, "Normalise a set of Frame coordinates"},
+  {"normpoints", (PyCFunction)Frame_normpoints, METH_VARARGS, "Normalise a set of points"},
   {"offset", (PyCFunction)Frame_offset, METH_VARARGS, "Calculate an offset along a geodesic curve"},
   {"offset2", (PyCFunction)Frame_offset2, METH_VARARGS, "Calculate an offset along a geodesic curve in a 2D Frame"},
   {"permaxes", (PyCFunction)Frame_permaxes, METH_VARARGS, "Permute the axis order in a Frame"},
@@ -4180,6 +4182,82 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
          }
       }
    }
+   TIDY;
+   return result;
+}
+
+#undef NAME
+#define NAME CLASS ".normpoints"
+static PyObject *Frame_normpoints( Frame *self, PyObject *args ) {
+
+/* args: out:in,contig=True,out=None */
+/* Note: The "in" argument should be a 2-dimensional array with shape
+         (nin,npoint), where "nin" is the number of axes in the Frame,
+         and "npoint" is the number of positions to normalise. */
+/* Note: If the Frame has only a single axes then a 1-dimensional
+         array may be supplied for "in" with length (npoint). */
+/* Note: If the "out" argument is supplied, it should be an existing 1-
+         or 2-dimensional numpy array with a shape of (npoint) (if
+	 1-dimensional) or (naxes,npoint) (if 2-dimensional), where "naxes"
+	 is the number of axes in the Frame and "npoint" is the
+	 number of positions being normalised. A 1-dimensional array may
+	 be supplied only if "naxes" is 1. If "out" is supplied, the
+         normalised values are stored in the supplied array. If not supplied,
+         a new array with suitable shape is created to store the normalised
+	 positions. In either case, the value returned by the method is a
+	 new reference to the array storing the normalised values. */
+
+   PyArrayObject *in = NULL;
+   PyArrayObject *out = NULL;
+   PyObject *result = NULL;
+   PyObject *in_object = NULL;
+   PyObject *out_object = NULL;
+   int contig=1;
+   int npoint;
+   int naxes;
+   npy_intp pdims[2];
+   int dims[ 2 ];
+   int ndim;
+
+   if( PyErr_Occurred() ) return NULL;
+
+   if( PyArg_ParseTuple( args, "O|iO:" NAME, &in_object, &contig,
+                         &out_object ) && astOK ) {
+
+      naxes = astGetI( THIS, "Naxes" );
+
+      dims[ 0 ] = naxes;
+      dims[ 1 ] = 0;
+      in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
+
+      if( in ) {
+         dims[ 0 ] = naxes;
+         if( out_object ) {
+            out = GetArray( out_object, PyArray_DOUBLE, 0, 2, dims, "out", NAME );
+         } else {
+            if( in->nd == 1 ){
+               ndim = 1;
+               pdims[ 0 ] = dims[ 1 ];
+            } else {
+               ndim = 2;
+               pdims[ 0 ] = dims[ 0 ];
+               pdims[ 1 ] = dims[ 1 ];
+            }
+            out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims,
+                                                       PyArray_DOUBLE );
+         }
+      }
+
+      if( out ) {
+         npoint = dims[ 1 ];
+         astNormPoints( THIS, npoint, naxes, npoint, (const double *) in->data,
+                        contig, naxes, npoint, (double *) out->data );
+         if( astOK ) result = (PyObject *) out;
+      }
+
+      Py_XDECREF( in );
+   }
+
    TIDY;
    return result;
 }

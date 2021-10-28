@@ -310,6 +310,25 @@ class TestAst(unittest.TestCase):
         self.assertEqual(ncoords[0][2], coords[0][2])
         self.assertEqual(ncoords[1][0], coords[1][0])
 
+
+    def test_FrameNormPoints(self):
+        sky = starlink.Ast.SkyFrame()
+        sky.permaxes([2, 1])
+
+        pin = numpy.array([[ 6.1, 6.1, 0.04, 0.04], [ 0.2, -0.2, -0.2, 0.2]])
+        pout = sky.normpoints(pin)
+
+        self.assertAlmostEqual(pout[0][0], pin[0][0]-2*math.pi)
+        self.assertAlmostEqual(pout[0][1], pin[0][1]-2*math.pi)
+        self.assertAlmostEqual(pout[0][2], pin[0][2])
+        self.assertAlmostEqual(pout[0][3], pin[0][3])
+
+        self.assertAlmostEqual(pout[1][0], pin[1][0])
+        self.assertAlmostEqual(pout[1][1], pin[1][1])
+        self.assertAlmostEqual(pout[1][2], pin[1][2])
+        self.assertAlmostEqual(pout[1][3], pin[1][3])
+
+
     def test_FrameOffset(self):
         frame = starlink.Ast.Frame(2)
         point = frame.offset([0, 0], [4, 3], 10)
