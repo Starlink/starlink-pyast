@@ -21,7 +21,7 @@ distribution.
 """
 
 
-class grf_matplotlib(object):
+class grf_matplotlib:
     """
     When creating a grf_matplotlib, the supplied "axes" object should be an
     instance of the matplotlib Axes class (or a subclass).
@@ -188,7 +188,7 @@ class grf_matplotlib(object):
         if not self.renderer:
             raise AttributeError(
                 "No renderer available using matplotlib "
-                "backend {0} - use a different backend".format(matplotlib.get_backend())
+                f"backend {matplotlib.get_backend()} - use a different backend"
             )
 
         return self.renderer

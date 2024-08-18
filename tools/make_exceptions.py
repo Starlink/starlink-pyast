@@ -9,7 +9,6 @@ the folder containing the source distribution for the AST
 library.
 """
 
-from __future__ import print_function
 
 import os
 import os.path
@@ -72,7 +71,7 @@ static PyObject *AstError_err;
     # Note that AST__3DFSET is not currently supported because a
     # variable can not start with a number
     errcodes = []
-    for line in open(errfile, "r"):
+    for line in open(errfile):
         words = line.split()
         if words and words[0] == "enum" and words[2][:5] == "AST__" and words[2][5:6].isalpha():
             errcodes.append(words[2][5:])
@@ -84,7 +83,7 @@ static PyObject *AstError_err;
         exit(1)
 
     for code in errcodes:
-        print("static PyObject *{0}_err;".format(code), file=cfile)
+        print(f"static PyObject *{code}_err;", file=cfile)
 
     print(
         r"""
@@ -108,10 +107,10 @@ static int RegisterErrors( PyObject *m ){
 
     for code in errcodes:
         print(
-            '   if( !({0}_err = PyErr_NewException("Ast.{0}", AstError_err, NULL))) return 0;'.format(code),
+            f'   if( !({code}_err = PyErr_NewException("Ast.{code}", AstError_err, NULL))) return 0;',
             file=cfile,
         )
-        print('   PyDict_SetItemString( dict, "{0}", {0}_err );'.format(code), file=cfile)
+        print(f'   PyDict_SetItemString( dict, "{code}", {code}_err );', file=cfile)
         print(" ", file=cfile)
 
     print(
@@ -182,11 +181,11 @@ void astPutErr_( int status_value, const char *message ) {
     first = True
     for code in errcodes:
         if first:
-            print("   if( status_value == AST__{0} ) {{".format(code), file=cfile)
+            print(f"   if( status_value == AST__{code} ) {{", file=cfile)
             first = False
         else:
-            print("   }} else if( status_value == AST__{0} ) {{".format(code), file=cfile)
-        print("      PyErr_SetString( {0}_err, message );".format(code), file=cfile)
+            print(f"   }} else if( status_value == AST__{code} ) {{", file=cfile)
+        print(f"      PyErr_SetString( {code}_err, message );", file=cfile)
 
     print(
         """   } else {

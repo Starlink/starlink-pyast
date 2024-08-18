@@ -1,4 +1,3 @@
-from __future__ import print_function
 
 try:
     from astropy.io import fits as pyfits

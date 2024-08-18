@@ -1,14 +1,13 @@
-from __future__ import print_function
 
 import ctypes
 import os
 import re
 import sys
 import tarfile
-from setuptools import Distribution, Extension, setup
 from textwrap import dedent
 
 import numpy
+from setuptools import Distribution, Extension, setup
 
 from tools import make_attributes, make_exceptions
 

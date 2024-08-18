@@ -1959,7 +1959,7 @@ class TestAst(unittest.TestCase):
 if __name__ == "__main__":
     #    starlink.Ast.watchmemory(10914)
     # unittest.main()
-    print("Testing pyast version {}\n".format(starlink.Ast.__version__))
+    print(f"Testing pyast version {starlink.Ast.__version__}\n")
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAst)
     unittest.TextTestRunner(verbosity=2).run(suite)
     starlink.Ast.activememory("AST memory block still active")

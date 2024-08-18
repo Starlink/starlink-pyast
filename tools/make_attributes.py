@@ -12,7 +12,6 @@ the attribute values.
 setters that need to be included in th Python TypeObject for the class.
 """
 
-from __future__ import print_function
 
 import os
 import os.path
@@ -28,7 +27,7 @@ def make_attributes(dirname=None):
     if dirname is not None:
         file = os.path.join(dirname, file)
 
-    infile = open(file, "r")
+    infile = open(file)
 
     #  Read the input file.
     for line in infile:
