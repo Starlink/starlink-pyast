@@ -8,27 +8,11 @@
 #include "src/grf.h"
 
 /* Define macros for things that changed between Python V2.7 and V3.2 */
-#if PY_MAJOR_VERSION >= 3
 #define PYTYPEOBJECT_HEAD PyVarObject_HEAD_INIT(NULL,0)
 #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
 #define RETURN(value) return value
 #define STRING_CHECK(value) PyUnicode_Check(value)
 #define LONG_CHECK(value) PyLong_Check(value)
-#else
-#define PYTYPEOBJECT_HEAD PyObject_HEAD_INIT(NULL) 0,
-#define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
-#define RETURN(value) return
-#define STRING_CHECK(value) (PyString_Check(value)||PyUnicode_Check(value))
-#define LONG_CHECK(value) (PyInt_Check(value)||PyLong_Check(value))
-
-/* A pointer to the python module structure. This is needed to provide
-   support for Python V2.7, since in Python V2.7 module function do not
-   receive a pointer to the module object as their first argument (i.e. the
-   "self" argument for module functions is always NULL in V2.7). */
-static PyObject *pyast_module = NULL;
-
-#endif
-
 
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
@@ -63,46 +47,46 @@ const char *GetObjectType( PyObject *o );
 static const char * numpydtype2str ( int dtype ) {
   const char * retval;
   switch (dtype) {
-  case PyArray_DOUBLE:
+  case NPY_DOUBLE:
     retval = "double";
     break;
-  case PyArray_FLOAT:
+  case NPY_FLOAT:
     retval = "float";
     break;
-  case PyArray_INT:
+  case NPY_INT:
     retval = "int";
     break;
-  case PyArray_UINT:
+  case NPY_UINT:
     retval = "unsigned int";
     break;
-  case PyArray_BYTE:
+  case NPY_BYTE:
     retval = "byte";
     break;
-  case PyArray_UBYTE:
+  case NPY_UBYTE:
     retval = "unsigned byte";
     break;
-  case PyArray_SHORT:
+  case NPY_SHORT:
     retval = "short";
     break;
-  case PyArray_USHORT:
+  case NPY_USHORT:
     retval = "unsigned short";
     break;
-  case PyArray_LONG:
+  case NPY_LONG:
     retval = "long";
     break;
-  case PyArray_ULONG:
+  case NPY_ULONG:
     retval = "unsigned long";
     break;
-  case PyArray_LONGLONG:
+  case NPY_LONGLONG:
     retval = "long long";
     break;
-  case PyArray_ULONGLONG:
+  case NPY_ULONGLONG:
     retval = "unsigned long long";
     break;
-  case PyArray_CFLOAT:
+  case NPY_CFLOAT:
     retval = "complex float";
     break;
-  case PyArray_CDOUBLE:
+  case NPY_CDOUBLE:
     retval = "complex double";
     break;
   default:
@@ -761,7 +745,7 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
       ubnd = GetArray1D( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
          dims[ 0 ] = ( ncoord_in + 1 )*ncoord_out;
-         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( fit ) {
             islinear = astLinearApprox( THIS, (const double *)lbnd->data,
                                         (const double *)ubnd->data, tol,
@@ -814,8 +798,8 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
       ubnd_in = GetArray1D( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
       if( lbnd_in && ubnd_in ) {
          dims[ 0 ] = ncoord_in;
-         xl = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-         xu = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         xl = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+         xu = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( xl && xu ) {
             astMapBox( THIS, (const double *)lbnd_in->data,
                        (const double *)ubnd_in->data, forward, coord_out,
@@ -897,7 +881,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
 
          maplist_object = PyList_New( (Py_ssize_t) nmap );
          dims[ 0 ] = nmap;
-         invlist_out = PyArray_SimpleNew( 1, dims, PyArray_INT );
+         invlist_out = PyArray_SimpleNew( 1, dims, NPY_INT );
          if( astOK && maplist_object && invlist_out ) {
             pi = ((int *)invlist_out->data);
             for( i = 0; i < nmap; i++ ) {
@@ -938,11 +922,11 @@ static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "O:" NAME, &in_object ) && astOK ) {
       in = (PyArrayObject *) PyArray_ContiguousFromAny( in_object,
-                                                        PyArray_INT, 0, 100);
+                                                        NPY_INT, 0, 100);
       if( in ) {
          nin = PyArray_Size( (PyObject *) in );
          dims[ 0 ] = astGetI( THIS, "Nout" );
-         out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+         out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
          if( out ) {
 
             memset( out->data, 0, dims[ 0 ]*sizeof( int ) );
@@ -996,7 +980,7 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
       ubnd = GetArray1D( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
          dims[ 0 ] = 6*ncoord_out;
-         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( fit ) {
             isquad = astQuadApprox( THIS, (const double *)lbnd->data,
                                     (const double *)ubnd->data, nx, ny,
@@ -1116,14 +1100,14 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
       } else {
 
          type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 10 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ||
-                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
+         } else if( type == NPY_INT ||
+                    (type == NPY_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
@@ -1194,7 +1178,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
-            if( type == PyArray_DOUBLE ) {
+            if( type == NPY_DOUBLE ) {
                astRebinD( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const double *)in->data,
                           (in_var ? (const double *)in_var->data : NULL),
@@ -1204,7 +1188,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (double *)out->data,
                           (out_var ? (double *)out_var->data : NULL ) );
-            } else if( type == PyArray_FLOAT ) {
+            } else if( type == NPY_FLOAT ) {
                astRebinF( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const float *)in->data,
                           (in_var ? (const float *)in_var->data : NULL),
@@ -1326,14 +1310,14 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 10 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ||
-                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
+         } else if( type == NPY_INT ||
+                    (type == NPY_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
@@ -1363,7 +1347,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          }
 
 /* Report an error if the weights array is not double. */
-         if( ((PyArrayObject*) weights_object)->descr->type_num != PyArray_DOUBLE ) {
+         if( ((PyArrayObject*) weights_object)->descr->type_num != NPY_DOUBLE ) {
             PyErr_Format( PyExc_ValueError, "The 'weights' array supplied to "
                           NAME " is of type %s not not of type float64.",
                           numpydtype2str(((PyArrayObject*) weights_object)->descr->type_num));
@@ -1421,10 +1405,10 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          for( i = 0; i < ndim; i++ ) {
             wdims[ i + 1 ] = dims[ i ];
          }
-         weights = GetArray( weights_object, PyArray_DOUBLE, 1, ndim + 1,
+         weights = GetArray( weights_object, NPY_DOUBLE, 1, ndim + 1,
                              wdims, "weights", NAME );
       } else {
-         weights = GetArray( weights_object, PyArray_DOUBLE, 1, ndim,
+         weights = GetArray( weights_object, NPY_DOUBLE, 1, ndim,
                              dims, "weights", NAME );
       }
 
@@ -1432,7 +1416,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
           in && out && weights ) {
          nused = lnused;
 
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             astRebinSeqD( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
                        (const int *)ubnd_in->data, (const double *)in->data,
                        (in_var ? (const double *)in_var->data : NULL),
@@ -1444,7 +1428,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
                        (out_var ? (double *)out_var->data : NULL ),
                        (double *)weights->data, &nused );
 
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             astRebinSeqF( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
                        (const int *)ubnd_in->data, (const float *)in->data,
                        (in_var ? (const float *)in_var->data : NULL),
@@ -1572,31 +1556,31 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
       } else {
 
          type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 9 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 9 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 9 ] = 'i';
             pbadval = &badval_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 9 ] = 'l';
             pbadval = &badval_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 9 ] = 'h';
             pbadval = &badval_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 9 ] = 'b';
             pbadval = &badval_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 9 ] = 'I';
             pbadval = &badval_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 9 ] = 'H';
             pbadval = &badval_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 9 ] = 'B';
             pbadval = &badval_B;
          } else {
@@ -1664,7 +1648,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                                                                  pdims_out, type );
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
-            if( type == PyArray_DOUBLE ) {
+            if( type == NPY_DOUBLE ) {
                noutpix = astResampleD( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const double *)in->data,
                           (in_var ? (const double *)in_var->data : NULL),
@@ -1674,7 +1658,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (double *)out->data,
                           (out_var ? (double *)out_var->data : NULL ) );
-            } else if( type == PyArray_FLOAT ) {
+            } else if( type == NPY_FLOAT ) {
                noutpix = astResampleF( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const float *)in->data,
                           (in_var ? (const float *)in_var->data : NULL),
@@ -1684,7 +1668,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (float *)out->data,
                           (out_var ? (float *)out_var->data : NULL ) );
-            } else if( type == PyArray_LONG ) {
+            } else if( type == NPY_LONG ) {
                noutpix = astResampleL( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const long *)in->data,
                           (in_var ? (const long *)in_var->data : NULL),
@@ -1694,7 +1678,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (long *)out->data,
                           (out_var ? (long *)out_var->data : NULL ) );
-            } else if( type == PyArray_INT ) {
+            } else if( type == NPY_INT ) {
                noutpix = astResampleI( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const int *)in->data,
                           (in_var ? (const int *)in_var->data : NULL),
@@ -1704,7 +1688,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (int *)out->data,
                           (out_var ? (int *)out_var->data : NULL ) );
-            } else if( type == PyArray_SHORT ) {
+            } else if( type == NPY_SHORT ) {
                noutpix = astResampleS( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const short int *)in->data,
                           (in_var ? (const short int *)in_var->data : NULL),
@@ -1714,7 +1698,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (short int *)out->data,
                           (out_var ? (short int *)out_var->data : NULL ) );
-            } else if( type == PyArray_BYTE ) {
+            } else if( type == NPY_BYTE ) {
                noutpix = astResampleB( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const signed char *)in->data,
                           (in_var ? (const signed char *)in_var->data : NULL),
@@ -1724,7 +1708,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (signed char *)out->data,
                           (out_var ? (signed char *)out_var->data : NULL ) );
-            } else if( type == PyArray_UINT ) {
+            } else if( type == NPY_UINT ) {
                noutpix = astResampleUI( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const unsigned int *)in->data,
                           (in_var ? (const unsigned int *)in_var->data : NULL),
@@ -1734,7 +1718,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (unsigned int *)out->data,
                           (out_var ? (unsigned int *)out_var->data : NULL ) );
-            } else if( type == PyArray_USHORT ) {
+            } else if( type == NPY_USHORT ) {
                noutpix = astResampleUS( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const unsigned short int *)in->data,
                           (in_var ? (const unsigned short int *)in_var->data : NULL),
@@ -1744,7 +1728,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           (const int *)lbnd->data, (const int *)ubnd->data,
                           (unsigned short int *)out->data,
                           (out_var ? (unsigned short int *)out_var->data : NULL ) );
-            } else if( type == PyArray_UBYTE ) {
+            } else if( type == NPY_UBYTE ) {
                noutpix = astResampleUB( THIS, ncoord_in, (const int *)lbnd_in->data,
                           (const int *)ubnd_in->data, (const unsigned char *)in->data,
                           (in_var ? (const unsigned char *)in_var->data : NULL),
@@ -1888,7 +1872,7 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
          dims[ 0 ] = ncoord_out;
          dims[ 1 ] = outdim;
 
-         pout = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+         pout = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
          if( pout ) {
 
             astTranGrid( THIS, ncoord_in, (const int *)lbnd->data,
@@ -1967,12 +1951,12 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
 
       dims[ 0 ] = ncoord_in;
       dims[ 1 ] = 0;
-      in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
+      in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims, "in", NAME );
 
       if( in ) {
          dims[ 0 ] = ncoord_out;
          if( out_object ) {
-            out = GetArray( out_object, PyArray_DOUBLE, 0, 2, dims, "out", NAME );
+            out = GetArray( out_object, NPY_DOUBLE, 0, 2, dims, "out", NAME );
          } else {
             if( in->nd == 1 ){
                ndim = 1;
@@ -1983,7 +1967,7 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
                pdims[ 1 ] = dims[ 1 ];
             }
             out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims,
-                                                       PyArray_DOUBLE );
+                                                       NPY_DOUBLE );
          }
       }
 
@@ -2814,7 +2798,7 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
        have in "args" to make sure it is correct. Putting the code
        here and in AST seems silly though. */
     astargs = (PyArrayObject *) PyArray_ContiguousFromAny( astargs_object,
-                                                           PyArray_DOUBLE, 0, 100);
+                                                           NPY_DOUBLE, 0, 100);
     if (astargs) {
       astTimeAdd( THIS, cvt, astargs->dimensions[0], (const double *)astargs->data );
       if( astOK ) {
@@ -3145,12 +3129,12 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "OO|Os:" CLASS, &inperm_object,
                         &outperm_object, &constant_object, &options ) ) {
       inperm = (PyArrayObject *) PyArray_ContiguousFromAny( inperm_object,
-                                                            PyArray_INT, 0, 100);
+                                                            NPY_INT, 0, 100);
       outperm = (PyArrayObject *) PyArray_ContiguousFromAny( outperm_object,
-                                                             PyArray_INT, 0, 100);
+                                                             NPY_INT, 0, 100);
       if (constant_object) {
         constant = (PyArrayObject *) PyArray_ContiguousFromAny( constant_object,
-                                                                PyArray_DOUBLE, 0, 100);
+                                                                NPY_DOUBLE, 0, 100);
       }
       if (inperm && outperm) {
          AstPermMap * this = NULL;
@@ -3249,7 +3233,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &shift_object,
                         &options ) ) {
       shift = (PyArrayObject *) PyArray_ContiguousFromAny( shift_object,
-                                                            PyArray_DOUBLE, 0, 100);
+                                                            NPY_DOUBLE, 0, 100);
       if (shift) {
          AstShiftMap * this = NULL;
          this = astShiftMap( PyArray_Size( (PyObject*)shift),
@@ -3337,7 +3321,7 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
    // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &centre_object, &options ) ) {
       centre = (PyArrayObject *) PyArray_ContiguousFromAny( centre_object,
-                                                            PyArray_DOUBLE, 0, 100);
+                                                            NPY_DOUBLE, 0, 100);
       if( centre ) {
          AstUnitNormMap *this = NULL;
          this = astUnitNormMap( PyArray_Size( (PyObject*)centre ),
@@ -3427,7 +3411,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "O|dds:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
       lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
-                                                         PyArray_DOUBLE, 0, 100);
+                                                         NPY_DOUBLE, 0, 100);
       if (lut) {
          AstLutMap * this = NULL;
          this = astLutMap( PyArray_Size( (PyObject*)lut),
@@ -3522,13 +3506,13 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, &ina_object,
                         &inb_object, &outa_object, &outb_object, &options ) ) {
       ina = (PyArrayObject *) PyArray_ContiguousFromAny( ina_object,
-                                                         PyArray_DOUBLE, 0, 100);
+                                                         NPY_DOUBLE, 0, 100);
       inb = (PyArrayObject *) PyArray_ContiguousFromAny( inb_object,
-                                                         PyArray_DOUBLE, 0, 100);
+                                                         NPY_DOUBLE, 0, 100);
       outa = (PyArrayObject *) PyArray_ContiguousFromAny( outa_object,
-                                                         PyArray_DOUBLE, 0, 100);
+                                                         NPY_DOUBLE, 0, 100);
       outb = (PyArrayObject *) PyArray_ContiguousFromAny( outb_object,
-                                                         PyArray_DOUBLE, 0, 100);
+                                                         NPY_DOUBLE, 0, 100);
       if (ina && inb && outa && outb ) {
          AstWinMap * this = NULL;
          // Sanity check size
@@ -4007,7 +3991,7 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
     b1 = GetArray1D( b1_object, &naxes, "b1", NAME );
     b2 = GetArray1D( b2_object, &naxes, "b2", NAME );
     dims[0] = naxes;
-    out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (a1 && a2 && b1 && b2 && out ) {
       astIntersect( THIS, (const double *)a1->data,
                     (const double *)a2->data,
@@ -4042,7 +4026,7 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
    if( PyArg_ParseTuple( args, "O!:" NAME, &FrameType,
                          (PyObject **) &other ) && astOK ) {
      dims[0] = astGetI( THAT, "Naxes" );
-     axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+     axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
      if (axes) {
        astMatchAxes( THIS, THAT, (int *)axes->data );
        if( astOK ) result = Py_BuildValue("O", PyArray_Return(axes));
@@ -4095,7 +4079,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 /* Get a PyArrayObject from the PyObject, allowing any number of
    dimensions. */
       value = (PyArrayObject *) PyArray_ContiguousFromAny( value_object,
-                                                      PyArray_DOUBLE, 0, 100 );
+                                                      NPY_DOUBLE, 0, 100 );
       if( value ) {
 
 /* In all cases the length of the first dimensions should be "naxes". */
@@ -4112,7 +4096,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
    output array and then call astNorm to normalise it. */
          } else if( value->nd == 1 ) {
             dims[0] = naxes;
-            axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+            axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
             if ( value && axes ) {
               memcpy( axes->data, value->data, sizeof(double)*naxes);
               astNorm( THIS, (double *)axes->data );
@@ -4128,7 +4112,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
             dims[0] = naxes;
             dims[1] = npos;
-            axes = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+            axes = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
             if ( value && axes ) {
 
 
@@ -4228,12 +4212,12 @@ static PyObject *Frame_normpoints( Frame *self, PyObject *args ) {
 
       dims[ 0 ] = naxes;
       dims[ 1 ] = 0;
-      in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
+      in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims, "in", NAME );
 
       if( in ) {
          dims[ 0 ] = naxes;
          if( out_object ) {
-            out = GetArray( out_object, PyArray_DOUBLE, 0, 2, dims, "out", NAME );
+            out = GetArray( out_object, NPY_DOUBLE, 0, 2, dims, "out", NAME );
          } else {
             if( in->nd == 1 ){
                ndim = 1;
@@ -4244,7 +4228,7 @@ static PyObject *Frame_normpoints( Frame *self, PyObject *args ) {
                pdims[ 1 ] = dims[ 1 ];
             }
             out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims,
-                                                       PyArray_DOUBLE );
+                                                       NPY_DOUBLE );
          }
       }
 
@@ -4286,7 +4270,7 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
     dims[0] = naxes;
-    point3 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point3 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 && point3 ) {
       astOffset( THIS, (const double *)point1->data,
                  (const double *)point2->data, offset,
@@ -4324,7 +4308,7 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
                          &angle, &offset ) && astOK ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     dims[0] = naxes;
-    point2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 ) {
       double direction = astOffset2( THIS, (const double *)point1->data,
                                     angle, offset,
@@ -4384,7 +4368,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
   // We get naxes from the axes argument
   if ( PyArg_ParseTuple( args, "O:" NAME, &axes_object ) && astOK ) {
     axes = (PyArrayObject *) PyArray_ContiguousFromAny( axes_object,
-                                                        PyArray_INT, 0, 100);
+                                                        NPY_INT, 0, 100);
     if (axes) {
       AstMapping *map = NULL;
       AstFrame * frame = NULL;
@@ -4441,7 +4425,7 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
     point3 = GetArray1D( point3_object, &naxes, "point3", NAME );
     dims[0] = naxes;
-    point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 && point3 && point4) {
       double d1;
       double d2;
@@ -4565,7 +4549,7 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
 
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &matrix_object, &options ) ) {
       PyArrayObject *matrix = (PyArrayObject *) PyArray_ContiguousFromAny( matrix_object,
-                                                            PyArray_DOUBLE, 0, 100);
+                                                            NPY_DOUBLE, 0, 100);
       if( matrix ) {
 
          int ndim = matrix->nd;
@@ -4695,7 +4679,7 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
          fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               PyArray_DOUBLE,
+                                                               NPY_DOUBLE,
                                                                0, 100);
          if( fcoeff ) {
             if( fcoeff->nd != 2 ) {
@@ -4719,7 +4703,7 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
 
       if( icoeff_object && icoeff_object != Py_None ) {
          icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               PyArray_DOUBLE,
+                                                               NPY_DOUBLE,
                                                                0, 100);
          if( icoeff ) {
             if( icoeff->nd != 2 ) {
@@ -4913,7 +4897,7 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
          fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               PyArray_DOUBLE,
+                                                               NPY_DOUBLE,
                                                                0, 100);
          if( fcoeff ) {
             if( fcoeff->nd != 2 ) {
@@ -4939,7 +4923,7 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
 
       if( icoeff_object && icoeff_object != Py_None ) {
          icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               PyArray_DOUBLE,
+                                                               NPY_DOUBLE,
                                                                0, 100);
          if( icoeff ) {
             if( icoeff->nd != 2 ) {
@@ -6391,8 +6375,8 @@ static PyObject *Region_getregionbounds( Region *self ) {
 
   naxes = astGetI( THIS, "Naxes" );
   dims[0] = naxes;
-  lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( lbnd && ubnd ) {
      astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
      if( astOK ) result = Py_BuildValue("OO", PyArray_Return(lbnd),
@@ -6421,7 +6405,7 @@ static PyObject *Region_getregiondisc( Region *self ) {
 
   naxes = astGetI( THIS, "Naxes" );
   dims[0] = naxes;
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre ) {
      astGetRegionDisc( THIS, (double *)centre->data, &radius );
      if( astOK ) result = Py_BuildValue( "Od", PyArray_Return(centre),
@@ -6551,7 +6535,7 @@ static PyObject *Region_getregionpoints( Region *self, PyObject *args ) {
 /* Create the returned array. */
    dims[0] = naxes;
    dims[1] = npoint;
-   points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+   points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
 
 /* If successful, put the axis values at the required positions into the
    array. */
@@ -6600,7 +6584,7 @@ static PyObject *Region_getregionmesh( Region *self, PyObject *args ) {
 /* Create the returned array. */
       dims[0] = naxes;
       dims[1] = npoint;
-      points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+      points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
    }
 
 /* If successful, put the axis values at the required positions into the
@@ -6669,31 +6653,31 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 6 ] = 'd';
             pval = &val_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 6 ] = 'f';
             pval = &val_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 6 ] = 'i';
             pval = &val_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 6 ] = 'l';
             pval = &val_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 6 ] = 'h';
             pval = &val_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 6 ] = 'b';
             pval = &val_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 6 ] = 'I';
             pval = &val_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 6 ] = 'H';
             pval = &val_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 6 ] = 'B';
             pval = &val_B;
          } else {
@@ -6739,39 +6723,39 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
       in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
       if( lbnd && ubnd && in ){
 
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             nmasked = astMaskD( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (double *)in->data, val_d );
 
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             nmasked = astMaskF( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (float *)in->data, val_f );
 
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             nmasked = astMaskL( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (long *)in->data, val_l );
 
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             nmasked = astMaskI( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (int *)in->data, val_i );
 
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             nmasked = astMaskS( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (short int *)in->data, val_h );
 
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             nmasked = astMaskB( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (signed char *)in->data, val_b );
 
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             nmasked = astMaskUI( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (unsigned int *)in->data, val_I );
 
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             nmasked = astMaskUS( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (unsigned short int *)in->data, val_H );
 
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             nmasked = astMaskUB( THIS, THAT, inside, ndim, lbnd_vals,
                                 ubnd_vals, (unsigned char *)in->data, val_B );
 
@@ -7038,8 +7022,8 @@ static PyObject *Circle_circlepars( Circle *self, PyObject *args ) {
   if( PyErr_Occurred() ) return NULL;
 
   dims[0] = astGetI( THIS, "Naxes" );
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre && p1 ) {
     astCirclePars( THIS, (double *)centre->data, &radius, (double *)p1->data );
     if( astOK ) result = Py_BuildValue( "OdO", PyArray_Return(centre),
@@ -7228,11 +7212,11 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) data_object)->descr->type_num;
-         if( type == PyArray_INT ) {
+         if( type == NPY_INT ) {
             nbyte = sizeof(int);
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             nbyte = sizeof(long int);
-         } else if( type == PyArray_LONGLONG ) {
+         } else if( type == NPY_LONGLONG ) {
             nbyte = sizeof(long long int);
          } else {
             PyErr_SetString( PyExc_ValueError, "The 'data' array supplied "
@@ -7354,39 +7338,39 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 2 ] = 'd';
             pvalue = &value_d;
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 2 ] = 'f';
             pvalue = &value_f;
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 2 ] = 'i';
             pvalue = &value_i;
             pbadval = &badval_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 2 ] = 'l';
             pvalue = &value_l;
             pbadval = &badval_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 2 ] = 'h';
             pvalue = &value_h;
             pbadval = &badval_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 2 ] = 'b';
             pvalue = &value_b;
             pbadval = &badval_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 2 ] = 'I';
             pvalue = &value_I;
             pbadval = &badval_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 2 ] = 'H';
             pvalue = &value_H;
             pbadval = &badval_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 2 ] = 'B';
             pvalue = &value_B;
             pbadval = &badval_B;
@@ -7425,39 +7409,39 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
 
       array = GetArray( array_object, type, 1, 2, dims, "array", NAME );
       if( array ) {
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             astAddPixelMaskD( THIS, cmode, THAT, value_d, oper, flags,
                               badval_d, (const double *)array->data,
                               dims );
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             astAddPixelMaskF( THIS, cmode, THAT, value_f, oper, flags,
                               badval_f, (const float *)array->data,
                               dims );
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             astAddPixelMaskL( THIS, cmode, THAT, value_l, oper, flags,
                               badval_l, (const long int *)array->data,
                               dims );
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             astAddPixelMaskI( THIS, cmode, THAT, value_i, oper, flags,
                               badval_i, (const int *)array->data,
                               dims );
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             astAddPixelMaskS( THIS, cmode, THAT, value_h, oper, flags,
                               badval_h, (const short int *)array->data,
                               dims );
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             astAddPixelMaskB( THIS, cmode, THAT, value_b, oper, flags,
                               badval_b, (const signed char *)array->data,
                               dims );
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             astAddPixelMaskUI( THIS, cmode, THAT, value_I, oper, flags,
                               badval_I, (const unsigned int *)array->data,
                               dims );
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             astAddPixelMaskUS( THIS, cmode, THAT, value_H, oper, flags,
                               badval_H, (const unsigned short int *)array->data,
                               dims );
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             astAddPixelMaskUB( THIS, cmode, THAT, value_B, oper, flags,
                               badval_B, (const unsigned char *)array->data,
                               dims );
@@ -7548,7 +7532,7 @@ static PyObject *Moc_getmocdata( Moc *self, PyObject *args ) {
 /* Create a suitable numpy array in which to store the data values. */
    dims[ 0 ] = len;
    data = (PyArrayObject *) PyArray_SimpleNew( 1, dims,
-                             ( nbyte == 4 ) ? PyArray_INT : PyArray_LONGLONG );
+                             ( nbyte == 4 ) ? NPY_INT : NPY_LONGLONG );
    if( data ) {
       astGetMocData( THIS, dims[ 0 ]*nbyte, data->data );
       if( astOK ) result = Py_BuildValue( "O", data );
@@ -7723,7 +7707,7 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
                          &options ) ) {
       dims[ 0 ] = 2;
       dims[ 1 ] = 0;
-      points = GetArray( points_object, PyArray_DOUBLE, 0, 2, dims, "points",
+      points = GetArray( points_object, NPY_DOUBLE, 0, 2, dims, "points",
                          NAME );
       if( points ) {
          AstRegion *unc = NULL;
@@ -7855,7 +7839,7 @@ static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
       int ncoord = astGetI( THAT, "Naxes" );
       dims[ 0 ] = ncoord;
       dims[ 1 ] = 0;
-      points = GetArray( points_object, PyArray_DOUBLE, 0, 2, dims, "points",
+      points = GetArray( points_object, NPY_DOUBLE, 0, 2, dims, "points",
                          NAME );
       if( points ) {
          AstRegion *unc = NULL;
@@ -8000,9 +7984,9 @@ static PyObject *Ellipse_ellipsepars( Ellipse *self, PyObject *args ) {
   if( PyErr_Occurred() ) return NULL;
 
   dims[0] = astGetI( THIS, "Naxes" );
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre && p1 && p2 ) {
     astEllipsePars( THIS, (double *)centre->data, &a, &b, &angle,
                     (double *)p1->data, (double *)p2->data );
@@ -10496,19 +10480,19 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
          for( i = 0; i < array->nd; i++ ) {
             nval *= (array->dimensions)[ i ];
          }
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             astMapPut1D( THIS, key, nval, (const double *) array->data, NULL );
 
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             astMapPut1F( THIS, key, nval, (const float *) array->data, NULL );
 
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             astMapPut1I( THIS, key, nval, (const int *) array->data, NULL );
 
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             astMapPut1S( THIS, key, nval, (const short int *) array->data, NULL );
 
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             astMapPut1B( THIS, key, nval, (const unsigned char *) array->data, NULL );
 
          } else {
@@ -10870,13 +10854,13 @@ static PyObject *Plot_boundingbox( Plot *self, PyObject *args ) {
    if( astOK ) {
       npy_intp dims[1];
       dims[0] = 2;
-      PyArrayObject *lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( lbnd ) {
          double *v = (double *)lbnd->data;
          v[ 0 ] = flbnd[ 0 ];
          v[ 1 ] = flbnd[ 1 ];
       }
-      PyArrayObject *ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( ubnd ) {
          double *v = (double *)ubnd->data;
          v[ 0 ] = fubnd[ 0 ];
@@ -11060,7 +11044,7 @@ static PyObject *Plot_mark( Plot *self, PyObject *args ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
-      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 1, 2, dims,
+      PyArrayObject *in = GetArray( in_object, NPY_DOUBLE, 1, 2, dims,
                                     "in", NAME );
       if( in ) {
          astMark( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
@@ -11092,7 +11076,7 @@ static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
-      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims,
+      PyArrayObject *in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims,
                                     "in", NAME );
       if( in ) {
          astPolyCurve( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
@@ -11427,8 +11411,8 @@ static int Line_wrapper( AstObject *grfcon, int n, const float *x, const float *
 
    if( self && self->grf ) {
       dims[ 0 ] = n;
-      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( xo && yo ) {
 
          int i;
@@ -11460,8 +11444,8 @@ static int Mark_wrapper( AstObject *grfcon, int n, const float *x, const float *
 
    if( self && self->grf ) {
       dims[ 0 ] = n;
-      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( xo && yo ) {
 
          int i;
@@ -11827,7 +11811,7 @@ static PyObject *Table_columnshape( Table *self, PyObject *args ) {
       sprintf( buf, "ColumnNdim(%s)", column );
       ndim = astGetI( THIS, buf );
       dims[ 0 ] = ndim;
-      PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+      PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
       if( dims_array ) {
          astColumnShape( THIS, column, ndim, &ndim, (int *) dims_array->data );
          if( astOK ) {
@@ -12632,34 +12616,34 @@ static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 0 ] = 'd';
             pvalue = &value_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 0 ] = 'f';
             pvalue = &value_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 0 ] = 'i';
             pvalue = &value_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 0 ] = 'l';
             pvalue = &value_l;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 0 ] = 'I';
             pvalue = &value_I;
-         } else if( type == PyArray_ULONG ) {
+         } else if( type == NPY_ULONG ) {
             format[ 0 ] = 'L';
             pvalue = &value_L;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 0 ] = 'h';
             pvalue = &value_h;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 0 ] = 'H';
             pvalue = &value_H;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 0 ] = 'b';
             pvalue = &value_b;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 0 ] = 'B';
             pvalue = &value_B;
          } else {
@@ -12695,43 +12679,43 @@ static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
       if( array && lbnd && ubnd ) {
          AstPolygon *new = NULL;
 
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             new = astConvexD( value_d, oper, (const double *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             new = astConvexF( value_f, oper, (const float *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_LONG) {
+         } else if( type == NPY_LONG) {
             new = astConvexL( value_l, oper, (const long int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_INT) {
+         } else if( type == NPY_INT) {
             new = astConvexI( value_i, oper, (const int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_ULONG) {
+         } else if( type == NPY_ULONG) {
             new = astConvexUL( value_L, oper, (const unsigned long int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_UINT) {
+         } else if( type == NPY_UINT) {
             new = astConvexUI( value_I, oper, (const unsigned int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_SHORT) {
+         } else if( type == NPY_SHORT) {
             new = astConvexS( value_h, oper, (const short int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_USHORT) {
+         } else if( type == NPY_USHORT) {
             new = astConvexUS( value_H, oper, (const unsigned short int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_BYTE) {
+         } else if( type == NPY_BYTE) {
             new = astConvexB( value_b, oper, (const signed char *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
-         } else if( type == PyArray_UBYTE) {
+         } else if( type == NPY_UBYTE) {
             new = astConvexUB( value_B, oper, (const unsigned char *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                starpix );
@@ -12874,34 +12858,34 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
                           "an array object" );
       } else {
          type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             format[ 0 ] = 'd';
             pvalue = &value_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 0 ] = 'f';
             pvalue = &value_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 0 ] = 'i';
             pvalue = &value_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 0 ] = 'l';
             pvalue = &value_l;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 0 ] = 'I';
             pvalue = &value_I;
-         } else if( type == PyArray_ULONG ) {
+         } else if( type == NPY_ULONG ) {
             format[ 0 ] = 'L';
             pvalue = &value_L;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 0 ] = 'h';
             pvalue = &value_h;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 0 ] = 'H';
             pvalue = &value_H;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 0 ] = 'b';
             pvalue = &value_b;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 0 ] = 'B';
             pvalue = &value_B;
          } else {
@@ -12939,43 +12923,43 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
       if( array && lbnd && ubnd && inside ) {
          AstPolygon *new = NULL;
 
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             new = astOutlineD( value_d, oper, (const double *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             new = astOutlineF( value_f, oper, (const float *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_LONG) {
+         } else if( type == NPY_LONG) {
             new = astOutlineL( value_l, oper, (const long int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_INT) {
+         } else if( type == NPY_INT) {
             new = astOutlineI( value_i, oper, (const int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_ULONG) {
+         } else if( type == NPY_ULONG) {
             new = astOutlineUL( value_L, oper, (const unsigned long int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_UINT) {
+         } else if( type == NPY_UINT) {
             new = astOutlineUI( value_I, oper, (const unsigned int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_SHORT) {
+         } else if( type == NPY_SHORT) {
             new = astOutlineS( value_h, oper, (const short int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_USHORT) {
+         } else if( type == NPY_USHORT) {
             new = astOutlineUS( value_H, oper, (const unsigned short int *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_BYTE) {
+         } else if( type == NPY_BYTE) {
             new = astOutlineB( value_b, oper, (const signed char *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_UBYTE) {
+         } else if( type == NPY_UBYTE) {
             new = astOutlineUB( value_B, oper, (const unsigned char *)array->data,
                                (const int *)lbnd->data, (const int *)ubnd->data,
                                maxerr, maxvert, (const int *)inside->data, starpix );
@@ -14221,7 +14205,7 @@ static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
 *     precision values.
 
 */
-   return GetArray( object, PyArray_DOUBLE, 1, 1, dim, arg, fun );
+   return GetArray( object, NPY_DOUBLE, 1, 1, dim, arg, fun );
 }
 
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
@@ -14236,7 +14220,7 @@ static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
 *     values.
 
 */
-   return GetArray( object, PyArray_INT, 1, 1, dim, arg, fun );
+   return GetArray( object, NPY_INT, 1, 1, dim, arg, fun );
 }
 
 static char *DumpToString( AstObject *this, const char *options ){

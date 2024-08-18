@@ -1,4 +1,4 @@
-from distutils.version import LooseVersion
+from packaging.version import parse
 
 import starlink.Ast as Ast
 
@@ -116,7 +116,7 @@ class PyFITSAdapter:
         #  Save a flag indicating if the version of pyfits is 3.1.0 or later
         #  (some of the earlier API was deprecated at 3.1.0).
         if _using_pyfits:
-            self.pre_pyfits_3_1_0 = LooseVersion(pyfits.__version__) < LooseVersion("3.1.0")
+            self.pre_pyfits_3_1_0 = parse(pyfits.__version__) < parse("3.1.0")
 
     # -----------------------------------------------------------------
     def astsource(self):

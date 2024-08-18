@@ -5,13 +5,28 @@ import os
 import re
 import sys
 import tarfile
-from distutils import ccompiler
-from distutils.core import Extension, setup
+from setuptools import Distribution, Extension, setup
 from textwrap import dedent
 
 import numpy
 
 from tools import make_attributes, make_exceptions
+
+
+def get_compiler():
+    """Get the compiler.
+
+    distutils.ccompiler is no longer directly available.
+    """
+    build_ext = Distribution().get_command_obj("build_ext")
+    build_ext.finalize_options()
+    # register an extension to ensure a compiler is created
+    build_ext.extensions = [Extension("ignored", ["ignored.c"])]
+    # disable building fake extensions
+    build_ext.build_extensions = lambda: None
+    # run to populate self.compiler
+    build_ext.run()
+    return build_ext.compiler
 
 
 def get_version():
@@ -31,11 +46,8 @@ def check_libyaml():
     """check if the C module can be build by trying to compile a small
     program against the libyaml development library"""
 
-    import distutils.ccompiler
-    import distutils.sysconfig
     import shutil
     import tempfile
-    from distutils.errors import CompileError, LinkError
 
     libraries = ["yaml"]
 
@@ -59,9 +71,7 @@ def check_libyaml():
         fp.write(c_code)
 
     # and try to compile it
-    compiler = distutils.ccompiler.new_compiler()
-    assert isinstance(compiler, distutils.ccompiler.CCompiler)
-    distutils.sysconfig.customize_compiler(compiler)
+    compiler = get_compiler()
 
     try:
         compiler.link_executable(
@@ -69,11 +79,8 @@ def check_libyaml():
             bin_file_name,
             libraries=libraries,
         )
-    except CompileError:
-        print("libyaml compile error")
-        ret_val = False
-    except LinkError:
-        print("libyaml link error")
+    except Exception as e:
+        print(f"libyaml compilation error: {e}")
         ret_val = False
     else:
         ret_val = True
@@ -456,15 +463,12 @@ extra_link_args = []
 
 # Test the compiler
 define_macros = []
-compiler = ccompiler.new_compiler()
+compiler = get_compiler()
 if compiler.has_function("strtok_r"):
     define_macros.append(("HAVE_STRTOK_R", "1"))
 
 if compiler.has_function("strerror_r"):
     define_macros.append(("HAVE_STRERROR_R", "1"))
-
-if compiler.has_function("isfinite"):
-    define_macros.append(("HAVE_DECL_ISFINITE", "1"))
 
 if check_libyaml():
     define_macros.append(("YAML", "1"))
@@ -475,6 +479,9 @@ if check_libyaml():
 
 define_macros.append(("SIZEOF_LONG", ctypes.sizeof(ctypes.c_long)))
 define_macros.append(("SIZEOF_LONG_LONG", ctypes.sizeof(ctypes.c_longlong)))
+
+# isfinite is from C99 so we can now assume this exists.
+define_macros.append(("HAVE_DECL_ISFINITE", "1"))
 
 # Assume we have isnan() available and assume we have a working sscanf
 # configure would test for these but we no longer run configure
@@ -487,13 +494,8 @@ Ast = Extension("starlink.Ast", include_dirs=include_dirs, define_macros=define_
 # name clashes when loaded alongside libast itself (eg from pyndf)
 symbol_list = "public_symbols.txt"
 if sys.platform.startswith("darwin"):
-    symfile = open(symbol_list, "w")
-    if sys.version_info[0] > 2:
-        symname = "_PyInit_Ast"
-    else:
-        symname = "_initAst"
-    print(symname, file=symfile)
-    symfile.close()
+    with open(symbol_list, "w") as symfile:
+        print("_PyInit_Ast", file=symfile)
     extra_link_args.append("-exported_symbols_list")
     extra_link_args.append(symbol_list)
 
