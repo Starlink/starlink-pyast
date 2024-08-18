@@ -27,90 +27,90 @@ def make_attributes(dirname=None):
     if dirname is not None:
         file = os.path.join(dirname, file)
 
-    infile = open(file)
+    with open(file) as infile:
 
-    #  Read the input file.
-    for line in infile:
+        #  Read the input file.
+        for line in infile:
 
-        #  Ignore blank lines or comment lines
-        line = line.strip()
-        if len(line) == 0 or line.startswith("#"):
-            continue
+            #  Ignore blank lines or comment lines
+            line = line.strip()
+            if len(line) == 0 or line.startswith("#"):
+                continue
 
-        #  Split the line into comma-separated fields
-        (classname, attname, readonly, atype, desc, maxindex, minindex, items) = line.split(",")
+            #  Split the line into comma-separated fields
+            (classname, attname, readonly, atype, desc, maxindex, minindex, items) = line.split(",")
 
-        #  Convert strings to numerical values
-        minindex = int(minindex)
+            #  Convert strings to numerical values
+            minindex = int(minindex)
 
-        #  Initialise lists
-        att_decs = list()
-        att_descs = list()
+            #  Initialise lists
+            att_decs = list()
+            att_descs = list()
 
-        #  Convert the fields to more useful types.
-        items = items.split()
-        if maxindex == "MXDIM":
-            maxindex = mxdim
-        else:
-            maxindex = int(maxindex)
+            #  Convert the fields to more useful types.
+            items = items.split()
+            if maxindex == "MXDIM":
+                maxindex = mxdim
+            else:
+                maxindex = int(maxindex)
 
-        #  Loop over all indices for multi-valued attributes
-        for i in range(minindex, maxindex + 1):
+            #  Loop over all indices for multi-valued attributes
+            for i in range(minindex, maxindex + 1):
 
-            #  Loop over all keys for multi-valued attributes
-            for item in items:
+                #  Loop over all keys for multi-valued attributes
+                for item in items:
 
-                #  Construct the name of the attribute.
-                aname = attname
-                if item != "-":
-                    aname += "_" + item
+                    #  Construct the name of the attribute.
+                    aname = attname
+                    if item != "-":
+                        aname += "_" + item
 
-                else:
-                    aname += "_" + str(i)
+                    else:
+                        aname += "_" + str(i)
 
-                #  Form the C macro invocation that defines the attribute and append it
-                #  to the list.
-                mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + aname + ")"
-                att_decs.append(mac)
+                    #  Form the C macro invocation that defines the attribute and append it
+                    #  to the list.
+                    mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + aname + ")"
+                    att_decs.append(mac)
 
-                #  Form the attribute description to store in the Python TypeObject.
-                mac = "DEFATT(" + aname + ', "' + desc + '"),'
-                att_descs.append(mac)
+                    #  Form the attribute description to store in the Python TypeObject.
+                    mac = "DEFATT(" + aname + ', "' + desc + '"),'
+                    att_descs.append(mac)
 
-        #  Multi-valued attributes can also (usually) be used without any index
-        #  of key. So add an unqualified attribute to the lists.
-        mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + attname + ")"
-        att_decs.append(mac)
-        mac = "DEFATT(" + attname + ', "' + desc + '"),'
-        att_descs.append(mac)
+            #  Multi-valued attributes can also (usually) be used without any index
+            #  of key. So add an unqualified attribute to the lists.
+            mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + attname + ")"
+            att_decs.append(mac)
+            mac = "DEFATT(" + attname + ', "' + desc + '"),'
+            att_descs.append(mac)
 
-        #  Open the output def file
-        cfilename = attname + "_def.c"
-        if dirname is not None:
-            cfilename = os.path.join(dirname, cfilename)
-        cfile = open(cfilename, "w")
+            #  Open the output def file
+            cfilename = attname + "_def.c"
+            if dirname is not None:
+                cfilename = os.path.join(dirname, cfilename)
+            with open(cfilename, "w") as cfile:
 
-        # Write out a prologue for the C file
-        print(
-            r"""/*
+                # Write out a prologue for the C file
+                print(
+                    r"""/*
 *  Name:
 *     """
-            + attname
-            + "_def.c"
-            + r"""
+                    + attname
+                    + "_def.c"
+                    + r"""
 
 *  Purpose:
 *     Declare and define the Python accessor methods for the """
-            + attname
-            + r"""
+                    + attname
+                    + r"""
 *     attribute.
 
 *  Description:
 *     This file uses the macros defined in pyast.h to define and declare
 *     methods for accessing all the values within the multi-valued AST
 *     attribute """
-            + attname
-            + r""".
+                    + attname
+                    + r""".
 
 *  Notes:
 *     - This file is generated automatically by the "make_attributes.py"
@@ -119,40 +119,39 @@ def make_attributes(dirname=None):
 
 */
 """,
-            file=cfile,
-        )
+                    file=cfile,
+                )
 
-        #  Write out the attribute declarations, then close the file.
-        for att in att_decs:
-            print(att, file=cfile)
-        cfile.close()
+                #  Write out the attribute declarations, then close the file.
+                for att in att_decs:
+                    print(att, file=cfile)
 
-        #  Open the output desc file
-        cfilename = attname + "_desc.c"
-        if dirname is not None:
-            cfilename = os.path.join(dirname, cfilename)
-        cfile = open(cfilename, "w")
+            #  Open the output desc file
+            cfilename = attname + "_desc.c"
+            if dirname is not None:
+                cfilename = os.path.join(dirname, cfilename)
+            with open(cfilename, "w") as cfile:
 
-        # Write out a prologue for the C file
-        print(
-            r"""/*
+                # Write out a prologue for the C file
+                print(
+                    r"""/*
 *  Name:
 *     """
-            + attname
-            + "_desc.c"
-            + r"""
+                    + attname
+                    + "_desc.c"
+                    + r"""
 
 *  Purpose:
 *     Add entries to the array of Python attribute accessors describing
 *     the """
-            + attname
-            + r""" attribute.
+                    + attname
+                    + r""" attribute.
 
 *  Description:
 *     This file uses the macros defined in pyast.h to create a description
 *     of the multi-valued AST attribute """
-            + attname
-            + r""" for inclusion in
+                    + attname
+                    + r""" for inclusion in
 *     the array of attribute getters and setters store in the Python
 *     TypeObject for the class.
 
@@ -163,16 +162,12 @@ def make_attributes(dirname=None):
 
 */
 """,
-            file=cfile,
-        )
+                    file=cfile,
+                )
 
-        #  Write out the attribute dedriptions, then close the file.
-        for att in att_descs:
-            print("   " + att, file=cfile)
-        cfile.close()
-
-    #  Close the input file.
-    infile.close()
+                #  Write out the attribute dedriptions, then close the file.
+                for att in att_descs:
+                    print("   " + att, file=cfile)
 
 
 if __name__ == "__main__":
