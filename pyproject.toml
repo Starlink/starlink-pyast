@@ -1,0 +1,14 @@
+[build-system]
+requires = [
+    "numpy",
+    "setuptools",
+    "setuptools-scm>=8.0"
+]
+
+[tool.black]
+line-length = 110
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 110
