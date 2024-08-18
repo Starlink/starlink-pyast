@@ -4,16 +4,17 @@ try:
     from astropy.io import fits as pyfits
 except ImportError:
     import pyfits
-import starlink.Atl as Atl
-import starlink.Ast as Ast
+
 import matplotlib.pyplot
 
+import starlink.Ast as Ast
+import starlink.Atl as Atl
+
 #  Use pyfits to open a test files file
-ffile = pyfits.open('starlink/ast/test/cobe.fit')
+ffile = pyfits.open("starlink/ast/test/cobe.fit")
 
 #  Use matplotlib to plot an annotated grid of the WCS coords
-Atl.plotfitswcs(matplotlib.pyplot.figure(figsize=(8, 8)).add_subplot(111),
-                [0.1, 0.1, 0.9, 0.9], ffile)
+Atl.plotfitswcs(matplotlib.pyplot.figure(figsize=(8, 8)).add_subplot(111), [0.1, 0.1, 0.9, 0.9], ffile)
 matplotlib.pyplot.show()
 
 #  Create a FitsChan telling it to use the pyfits primary hdu as the

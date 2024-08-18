@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+
 import starlink.Ast
 import starlink.Grf
 
@@ -54,7 +55,7 @@ plot.text("Hello", [0, 75], [1, 1], "CC")
 
 #  Change the definition of font 0 within the grf module, and plot
 #  another string, still using font 0.
-grf.fonts[0] = {"family": 'monospace', "style": 'italic'}
+grf.fonts[0] = {"family": "monospace", "style": "italic"}
 plot.text("Hello", [0, 65], [-1, 1], "CC")
 
 #  Display everything.

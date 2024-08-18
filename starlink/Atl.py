@@ -1,11 +1,14 @@
-import starlink.Ast as Ast
 from distutils.version import LooseVersion
+
+import starlink.Ast as Ast
 
 try:
     import astropy.io.fits as pyfits
+
     _using_pyfits = False
 except ImportError:
     import pyfits
+
     _using_pyfits = True
 
 """
@@ -89,34 +92,33 @@ class PyFITSAdapter:
            >>>    print("Failed to convert FrameSet to FITS header")
         """
 
-#  If the supplied object behaves like a sequence, use element zero (the
-#  primary HDU). Otherwise use the supplied object.
+        #  If the supplied object behaves like a sequence, use element zero (the
+        #  primary HDU). Otherwise use the supplied object.
         try:
             self.hdu = hdu[0]
         except TypeError:
             self.hdu = hdu
 
-#  Initialise the index within the pyfits header of the next card to read or write.
+        #  Initialise the index within the pyfits header of the next card to read or write.
         self.index = 0
 
-#  The PyFits header may contatenate CONTINUE cards into a single card
-#  "image". The source function defined below will split such long images up
-#  into two or more sub-cards. These are managed using the following values.
+        #  The PyFits header may contatenate CONTINUE cards into a single card
+        #  "image". The source function defined below will split such long images up
+        #  into two or more sub-cards. These are managed using the following values.
         self.subcards = None
         self.nextsub = 0
         self.nsub = 0
 
-#  Record whether the PyFITS header should be emptied before writing to
-#  it for the first time
+        #  Record whether the PyFITS header should be emptied before writing to
+        #  it for the first time
         self.clear = clear
 
-#  Save a flag indicating if the version of pyfits is 3.1.0 or later
-#  (some of the earlier API was deprecated at 3.1.0).
+        #  Save a flag indicating if the version of pyfits is 3.1.0 or later
+        #  (some of the earlier API was deprecated at 3.1.0).
         if _using_pyfits:
-            self.pre_pyfits_3_1_0 = (LooseVersion(pyfits.__version__) <
-                                     LooseVersion("3.1.0"))
+            self.pre_pyfits_3_1_0 = LooseVersion(pyfits.__version__) < LooseVersion("3.1.0")
 
-# -----------------------------------------------------------------
+    # -----------------------------------------------------------------
     def astsource(self):
         """
         This method is called by the FitsChan to obtain a single 80-character
@@ -126,10 +128,10 @@ class PyFITSAdapter:
         """
 
         if self.subcards is not None:
-            result = self.subcards[ self.nextsub ]
+            result = self.subcards[self.nextsub]
             self.nextsub += 1
             if self.nextsub == self.nsub:
-               self.subcards = None
+                self.subcards = None
 
         elif self.index < len(self.hdu.header.cards):
             cards = self.hdu.header.cards[self.index].image
@@ -137,12 +139,12 @@ class PyFITSAdapter:
 
             ln = len(cards)
             if ln <= 80:
-               result = cards
+                result = cards
             else:
-               self.subcards = [ cards[i:i+80] for i in range(0,len(cards),80)]
-               self.nsub = len( self.subcards )
-               result = self.subcards[ 0 ]
-               self.nextsub = 1
+                self.subcards = [cards[i : i + 80] for i in range(0, len(cards), 80)]
+                self.nsub = len(self.subcards)
+                result = self.subcards[0]
+                self.nextsub = 1
 
         else:
             result = None
@@ -150,7 +152,7 @@ class PyFITSAdapter:
 
         return result
 
-# -----------------------------------------------------------------
+    # -----------------------------------------------------------------
     def astsink(self, card):
         """
         This method is called by the FitsChan to store a single 80-character
@@ -167,7 +169,7 @@ class PyFITSAdapter:
 
         card = pyfits.Card.fromstring(card)
 
-#  Pre pyfits 3.1.0
+        #  Pre pyfits 3.1.0
         if _using_pyfits and self.pre_pyfits_3_1_0:
             if card.key == "" or card.keyword == "BLANK":
                 self.hdu.header.add_blank()
@@ -178,56 +180,56 @@ class PyFITSAdapter:
             else:
                 self.hdu.header.update(card.key, card.value, card.comment)
 
-#  Astropy, pyfits 3.1.0 and later.
+        #  Astropy, pyfits 3.1.0 and later.
         else:
 
-#  Doesn't seem to be any way to store a CONTINUE card, so all that is
-#  left is to truncated them by ignoring the continuations :-(
-           if card.keyword != "CONTINUE":
-              if isinstance( card.value, str ) and card.value.endswith('&'):
-                 value = card.value[:-1]
-              else:
-                 value = card.value
-              self.hdu.header.append((card.keyword,value,card.comment),end=True)
-              self.index += 1
+            #  Doesn't seem to be any way to store a CONTINUE card, so all that is
+            #  left is to truncated them by ignoring the continuations :-(
+            if card.keyword != "CONTINUE":
+                if isinstance(card.value, str) and card.value.endswith("&"):
+                    value = card.value[:-1]
+                else:
+                    value = card.value
+                self.hdu.header.append((card.keyword, value, card.comment), end=True)
+                self.index += 1
 
 
 # ======================================================================
 def readfitswcs(hdu, Iwc=False):
     r"""Reads an AST FrameSet from a FITS header.
 
-       The header from the specified FITS HDU is read, and an AST FrameSet
-       describing the WCS information in the header is returned. None is
-       returned instead of a FrameSet if WCS information cannot be read
-       from the header. A string identifying the scheme used to describe
-       WCS information in the header (the encoding) is also returned.
+    The header from the specified FITS HDU is read, and an AST FrameSet
+    describing the WCS information in the header is returned. None is
+    returned instead of a FrameSet if WCS information cannot be read
+    from the header. A string identifying the scheme used to describe
+    WCS information in the header (the encoding) is also returned.
 
-       (frameset,encoding) = starlink.Atl.readfitswcs( hdu )
+    (frameset,encoding) = starlink.Atl.readfitswcs( hdu )
 
-       Parameters:
-          hdu: An element of the hdulist associated with a FITS file
-             opened using pyfits.open(). If the entire hdulist is supplied,
-             rather than an element of the hdulist, then the primary HDU
-             (element zero) will be used.
-          frameset: A reference to the FrameSet describing the pixel and
-             world coordinate systems read from the FITS header, or "None"
-             if no WCS could be read.
-          encoding: Indicates how the WCS information was encoded in the
-             header. For possible values, see the documentation for the
-             "Encoding" attribute in SUN/211.
+    Parameters:
+       hdu: An element of the hdulist associated with a FITS file
+          opened using pyfits.open(). If the entire hdulist is supplied,
+          rather than an element of the hdulist, then the primary HDU
+          (element zero) will be used.
+       frameset: A reference to the FrameSet describing the pixel and
+          world coordinate systems read from the FITS header, or "None"
+          if no WCS could be read.
+       encoding: Indicates how the WCS information was encoded in the
+          header. For possible values, see the documentation for the
+          "Encoding" attribute in SUN/211.
 
-          Iwc: Include the Intermediate World Coordinate system in the
-             returned FrameSet, to allow the addition of e.g. a distorted
-             Cartesian frame between the image frame and sky.
+       Iwc: Include the Intermediate World Coordinate system in the
+          returned FrameSet, to allow the addition of e.g. a distorted
+          Cartesian frame between the image frame and sky.
 
-       Example:
-          >>> import pyfits
-          >>> import starlink.Atl as Atl
-          >>>
-          >>> hdulist = pyfits.open( 'test.fit' )
-          >>> (frameset,encoding) = Atl.readfitswcs( hdulist[ 3 ] )
-          >>> if frameset == None:
-          >>>    print( "Cannot read WCS from test.fit" )
+    Example:
+       >>> import pyfits
+       >>> import starlink.Atl as Atl
+       >>>
+       >>> hdulist = pyfits.open( 'test.fit' )
+       >>> (frameset,encoding) = Atl.readfitswcs( hdulist[ 3 ] )
+       >>> if frameset == None:
+       >>>    print( "Cannot read WCS from test.fit" )
 
     """
 
@@ -247,36 +249,36 @@ def readfitswcs(hdu, Iwc=False):
 def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
     r"""Write an AST FrameSet to a FITS file.
 
-       The WCS information described by the supplied FrameSet is converted
-       into a set of FITS header cards which are stored in the supplied
-       HDU (all cards in the header are first removed).
+    The WCS information described by the supplied FrameSet is converted
+    into a set of FITS header cards which are stored in the supplied
+    HDU (all cards in the header are first removed).
 
-       nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
+    nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
 
-       Parameters:
-          frameset: A reference to the FrameSet to be written out to the
-             FITS header.
-          hdu: An element of the PyFITS hdulist associated with a FITS file.
-             The header cards generated from the FrameSet are stored in the
-             header associated with this HDU. All cards are first removed
-             from the header. If an entire hdulist is supplied, rather than
-             an element of the hdulist, then the primary HDU (element zero)
-             will be used.
-          encoding: Indicates how the WCS information is to be encoded in the
-             header. For possible values, see the documentation for the
-             "Encoding" attribute in SUN/211.
-          nobj:
-             Returned equal to 1 if the FrameSet was converted successfully
-             to FITS headers using the requested encoding, and zero
-             otherwise.
-       Example:
-          >>> import starlink.Atl as Atl
-          >>>
-          >>> (frameset,encoding) = Atl.readfitswcs( hdu1 )
-          >>> if Atl.writefitswcs( frameset, hdu2, encoding="FITS-AIPS" ) == 0:
-          >>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
+    Parameters:
+       frameset: A reference to the FrameSet to be written out to the
+          FITS header.
+       hdu: An element of the PyFITS hdulist associated with a FITS file.
+          The header cards generated from the FrameSet are stored in the
+          header associated with this HDU. All cards are first removed
+          from the header. If an entire hdulist is supplied, rather than
+          an element of the hdulist, then the primary HDU (element zero)
+          will be used.
+       encoding: Indicates how the WCS information is to be encoded in the
+          header. For possible values, see the documentation for the
+          "Encoding" attribute in SUN/211.
+       nobj:
+          Returned equal to 1 if the FrameSet was converted successfully
+          to FITS headers using the requested encoding, and zero
+          otherwise.
+    Example:
+       >>> import starlink.Atl as Atl
+       >>>
+       >>> (frameset,encoding) = Atl.readfitswcs( hdu1 )
+       >>> if Atl.writefitswcs( frameset, hdu2, encoding="FITS-AIPS" ) == 0:
+       >>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
 
-     """
+    """
 
     fitschan = Ast.FitsChan(None, PyFITSAdapter(hdu))
     fitschan.Encoding = encoding
@@ -287,42 +289,42 @@ def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
 def plotframeset(axes, gbox, bbox, frameset, options=""):
     r"""Plot an annotated coordinate grid in a matplotlib axes area.
 
-       plot = starlink.Atl.plotframeset( axes, gbox, bbox, frameset,
-                                         options="" )
+    plot = starlink.Atl.plotframeset( axes, gbox, bbox, frameset,
+                                      options="" )
 
-       Parameters:
-          axes: A matplotlib "Axes" object. The annotated axes normally
-             produced by matplotlib will be removed, and axes will
-             instead be drawn by the AST Plot class.
-          gbox: A list of four values giving the bounds of the new
-             annotated axes within the matplotlib Axes object. The supplied
-             values should be in the order (xleft,ybottom,xright,ytop) and
-             should be given in the matplotlib "axes" coordinate system.
-          bbox: A list of four values giving the bounds of the new
-             annotated axes within the coordinate system represented by the
-             base Frame of the supplied FrameSet. The supplied values should
-             be in the order (xleft,ybottom,xright,ytop).
-          frameset: An AST FrameSet such as returned by the Atl.readfitswcs
-             function. Its base Frame should be 2-dimensional.
-          options: An optional string holding a comma-separated list of Plot
-             attribute settings. These control the appearance of the
-             annotated axes.
-          plot: A reference to the Ast.Plot that was used to draw the axes.
+    Parameters:
+       axes: A matplotlib "Axes" object. The annotated axes normally
+          produced by matplotlib will be removed, and axes will
+          instead be drawn by the AST Plot class.
+       gbox: A list of four values giving the bounds of the new
+          annotated axes within the matplotlib Axes object. The supplied
+          values should be in the order (xleft,ybottom,xright,ytop) and
+          should be given in the matplotlib "axes" coordinate system.
+       bbox: A list of four values giving the bounds of the new
+          annotated axes within the coordinate system represented by the
+          base Frame of the supplied FrameSet. The supplied values should
+          be in the order (xleft,ybottom,xright,ytop).
+       frameset: An AST FrameSet such as returned by the Atl.readfitswcs
+          function. Its base Frame should be 2-dimensional.
+       options: An optional string holding a comma-separated list of Plot
+          attribute settings. These control the appearance of the
+          annotated axes.
+       plot: A reference to the Ast.Plot that was used to draw the axes.
 
-       Example:
-          >>> import pyfits
-          >>> import starlink.Atl as Atl
-          >>> import matplotlib.pyplot
-          >>>
-          >>> hdulist = pyfits.open( 'test.fit' )
-          >>> (frameset,encoding) = starlink.Atl.readfitswcs( hdulist[0] )
-          >>> if frameset != None:
-          >>>    naxis1 = hdulist[0].header['NAXIS1']
-          >>>    naxis2 = hdulist[0].header['NAXIS2']
-          >>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
-          >>>                      [ 0.1, 0.1, 0.9, 0.9 ],
-          >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
-          >>>    matplotlib.pyplot.show()
+    Example:
+       >>> import pyfits
+       >>> import starlink.Atl as Atl
+       >>> import matplotlib.pyplot
+       >>>
+       >>> hdulist = pyfits.open( 'test.fit' )
+       >>> (frameset,encoding) = starlink.Atl.readfitswcs( hdulist[0] )
+       >>> if frameset != None:
+       >>>    naxis1 = hdulist[0].header['NAXIS1']
+       >>>    naxis2 = hdulist[0].header['NAXIS2']
+       >>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
+       >>>                      [ 0.1, 0.1, 0.9, 0.9 ],
+       >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
+       >>>    matplotlib.pyplot.show()
     """
 
     import starlink.Grf as Grf
@@ -338,36 +340,36 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
 # ======================================================================
 def plotfitswcs(axes, gbox, hdu, options=""):
     r"""Read WCS from a PyFITS HDU and plot an annotated coordinate grid
-       in a matplotlib axes area. The grid covers the entire image.
+    in a matplotlib axes area. The grid covers the entire image.
 
-       plot = starlink.Atl.plotfitswcs( axes, gbox, hdu, options="" )
+    plot = starlink.Atl.plotfitswcs( axes, gbox, hdu, options="" )
 
-       Parameters:
-          axes: A matplotlib "Axes" object. The annotated axes normally
-             produced by matplotlib will be removed, and axes will
-             instead be drawn by the AST Plot class.
-          gbox: A list of four values giving the bounds of the new
-             annotated axes within the matplotlib Axes object. The supplied
-             values should be in the order (xleft,ybottom,xright,ytop) and
-             should be given in the matplotlib "axes" coordinate system.
-          hdu: An element of the hdulist associated with a FITS file
-             opened using pyfits.open(). If the entire hdulist is supplied,
-             rather than an element of the hdulist, then the primary HDU
-             (element zero) will be used.
-          options: An optional string holding a comma-separated list
-             of Ast.Plot attribute settings. These control the appearance
-             of the annotated axes.
-          plot: A reference to the Ast.Plot that was used to draw the axes.
+    Parameters:
+       axes: A matplotlib "Axes" object. The annotated axes normally
+          produced by matplotlib will be removed, and axes will
+          instead be drawn by the AST Plot class.
+       gbox: A list of four values giving the bounds of the new
+          annotated axes within the matplotlib Axes object. The supplied
+          values should be in the order (xleft,ybottom,xright,ytop) and
+          should be given in the matplotlib "axes" coordinate system.
+       hdu: An element of the hdulist associated with a FITS file
+          opened using pyfits.open(). If the entire hdulist is supplied,
+          rather than an element of the hdulist, then the primary HDU
+          (element zero) will be used.
+       options: An optional string holding a comma-separated list
+          of Ast.Plot attribute settings. These control the appearance
+          of the annotated axes.
+       plot: A reference to the Ast.Plot that was used to draw the axes.
 
-       Example:
-          >>> import pyfits
-          >>> import starlink.Atl as Atl
-          >>> import matplotlib.pyplot
-          >>>
-          >>> hdulist = pyfits.open( 'test.fit' )
-          >>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
-          >>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
-          >>> matplotlib.pyplot.show()
+    Example:
+       >>> import pyfits
+       >>> import starlink.Atl as Atl
+       >>> import matplotlib.pyplot
+       >>>
+       >>> hdulist = pyfits.open( 'test.fit' )
+       >>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
+       >>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
+       >>> matplotlib.pyplot.show()
     """
 
     try:
@@ -376,7 +378,6 @@ def plotfitswcs(axes, gbox, hdu, options=""):
         myhdu = hdu
 
     (frameset, encoding) = readfitswcs(myhdu)
-    naxis1 = myhdu.header['NAXIS1']
-    naxis2 = myhdu.header['NAXIS2']
-    return plotframeset(axes, gbox, [0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5],
-                        frameset, options)
+    naxis1 = myhdu.header["NAXIS1"]
+    naxis2 = myhdu.header["NAXIS2"]
+    return plotframeset(axes, gbox, [0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5], frameset, options)

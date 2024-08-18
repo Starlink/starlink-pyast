@@ -17,14 +17,14 @@ import os.path
 
 def make_exceptions(dirname=None):
 
-    if 'AST_SOURCE' not in os.environ:
+    if "AST_SOURCE" not in os.environ:
         print("Please set AST_SOURCE environment variable to point to the AST source code directory")
         exit(1)
 
     # ensure that we have the error codes file
-    errfile = os.path.join(os.environ['AST_SOURCE'], "ast_err.h")
+    errfile = os.path.join(os.environ["AST_SOURCE"], "ast_err.h")
     if not os.path.exists(errfile):
-        print("Could not find the ast_err.h file in directory " + os.environ['AST_SOURCE'])
+        print("Could not find the ast_err.h file in directory " + os.environ["AST_SOURCE"])
         exit(1)
 
     # Open an output C file
@@ -35,7 +35,8 @@ def make_exceptions(dirname=None):
     cfile = open(cfilename, "w")
 
     # Need a C header
-    print(r"""/*
+    print(
+        r"""/*
 *  Name:
 *     exceptions.c
 
@@ -63,7 +64,9 @@ static int RegisterErrors( PyObject *m );
 static PyObject *AstError_err;
 
 /* For each AST error code, declare a static variable to hold an instance
-   of the corresponding Python Exception. */""", file=cfile)
+   of the corresponding Python Exception. */""",
+        file=cfile,
+    )
 
     # Now read the ast_err.h file and create extract all the error codes
     # Note that AST__3DFSET is not currently supported because a
@@ -83,7 +86,8 @@ static PyObject *AstError_err;
     for code in errcodes:
         print("static PyObject *{0}_err;".format(code), file=cfile)
 
-    print(r"""
+    print(
+        r"""
 /* Defines a function that creates a Python Exception object
    for each AST error code, and uses them to initialises the
    above static variables. It reurns 1 if successful, and zero
@@ -98,15 +102,20 @@ static int RegisterErrors( PyObject *m ){
    if( !( AstError_err = PyErr_NewException("Ast.AstError", NULL, NULL))) return 0;
    PyDict_SetItemString( dict, "AstError", AstError_err );
 
-/* Now create an instance of each derived AST exception class. */""", file=cfile)
+/* Now create an instance of each derived AST exception class. */""",
+        file=cfile,
+    )
 
     for code in errcodes:
-        print('   if( !({0}_err = PyErr_NewException("Ast.{0}", AstError_err, NULL))) return 0;'.format(code),
-              file=cfile)
+        print(
+            '   if( !({0}_err = PyErr_NewException("Ast.{0}", AstError_err, NULL))) return 0;'.format(code),
+            file=cfile,
+        )
         print('   PyDict_SetItemString( dict, "{0}", {0}_err );'.format(code), file=cfile)
         print(" ", file=cfile)
 
-    print(r"""   return 1;
+    print(
+        r"""   return 1;
 }
 
 
@@ -166,7 +175,9 @@ void astPutErr_( int status_value, const char *message ) {
       return;
    }
 
-/* If no exception has already occurred, raise an appropriate AST exception now. */""", file=cfile)
+/* If no exception has already occurred, raise an appropriate AST exception now. */""",
+        file=cfile,
+    )
 
     first = True
     for code in errcodes:
@@ -177,14 +188,17 @@ void astPutErr_( int status_value, const char *message ) {
             print("   }} else if( status_value == AST__{0} ) {{".format(code), file=cfile)
         print("      PyErr_SetString( {0}_err, message );".format(code), file=cfile)
 
-    print("""   } else {
+    print(
+        """   } else {
       PyErr_SetString( AstError_err, message );
    }
 
 /* restore the original AST status value. */
    astSetStatus( lstat );
 }
-""", file=cfile)
+""",
+        file=cfile,
+    )
     cfile.close()
 
 

@@ -3,9 +3,11 @@
 from __future__ import print_function
 
 import sys
+
+import matplotlib.pyplot as plt
+
 import starlink.Ast as Ast
 import starlink.Grf as Grf
-import matplotlib.pyplot as plt
 
 #  Check the header name was supplied on the command line
 if len(sys.argv) < 2:
@@ -22,7 +24,7 @@ try:
     fin2 = open(sys.argv[1] + ".fattr")
     fits_atts = fin2.read()
     fin2.close()
-except (IOError):
+except IOError:
     fits_atts = ""
 
 #  Attempt to open an associated file holding attributes that control the
@@ -32,7 +34,7 @@ try:
     fin2 = open(sys.argv[1] + ".attr")
     plot_atts = fin2.read()
     fin2.close()
-except (IOError):
+except IOError:
     plot_atts = ""
 
 #  Attempt to open an associated file holding the pixel bounds of the
@@ -41,7 +43,7 @@ try:
     fin2 = open(sys.argv[1] + ".box")
     box = [float(v) for v in fin2.read().strip().split()]
     fin2.close()
-except (IOError):
+except IOError:
     box = None
 
 #  Read the header lines into a list, and store this list in a new

@@ -19,4 +19,5 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from pkgutil import extend_path
+
 __path__ = extend_path(__path__, __name__)
