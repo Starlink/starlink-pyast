@@ -7,7 +7,10 @@ import tarfile
 from textwrap import dedent
 
 import numpy
-from setuptools import Distribution, Extension, setup
+from setuptools import Extension, setup
+from setuptools._distutils.ccompiler import new_compiler
+from setuptools._distutils.sysconfig import customize_compiler
+from setuptools.command.build_ext import build_ext
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 
@@ -61,17 +64,20 @@ make_exceptions = _load_build_tool("make_exceptions", _tools_dir)
 def get_compiler():
     """Get the compiler.
 
-    distutils.ccompiler is no longer directly available.
+    Use the compiler APIs provided by setuptools' distutils shim.
     """
-    build_ext = Distribution().get_command_obj("build_ext")
-    build_ext.finalize_options()
-    # register an extension to ensure a compiler is created
-    build_ext.extensions = [Extension("ignored", ["ignored.c"])]
-    # disable building fake extensions
-    build_ext.build_extensions = lambda: None
-    # run to populate self.compiler
-    build_ext.run()
-    return build_ext.compiler
+    compiler = new_compiler()
+    customize_compiler(compiler)
+    return compiler
+
+
+class BuildExt(build_ext):
+    """Use all available CPUs unless an explicit parallel value is supplied."""
+
+    def finalize_options(self):
+        super().finalize_options()
+        if self.parallel is None:
+            self.parallel = os.cpu_count() or 1
 
 
 def get_version():
@@ -549,6 +555,7 @@ if len(extra_link_args) > 0:
     Ast.extra_link_args = extra_link_args
 
 setup(
+    cmdclass={"build_ext": BuildExt},
     ext_modules=[Ast],
     py_modules=["starlink.Grf", "starlink.Atl"],
 )
