@@ -33,6 +33,7 @@ static const char *AttNorm( const char *att, char *buff );
 static void Sinka( const char *text );
 static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
+static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr );
 
 /* Macros used in this file */
 #define PYAST_MODULE
@@ -93,6 +94,28 @@ static const char * numpydtype2str ( int dtype ) {
     retval = "Unknown";
   }
   return retval;
+}
+
+/* Return 1 if the object has the named attribute, 0 if it does not,
+   and -1 on error. Use the modern API for newer Python releases while
+   retaining compatibility with Python 3.11 and 3.12. */
+static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr ) {
+/* Python 3.13+ (0x030D0000): use the direct has-attr-with-error API. */
+#if PY_VERSION_HEX >= 0x030D0000
+   return PyObject_HasAttrStringWithError( o, attr );
+/* Python 3.11-3.12: emulate has-attr-with-error semantics. */
+#else
+   PyObject *tmp = PyObject_GetAttrString( o, attr );
+   if( tmp ) {
+      Py_DECREF( tmp );
+      return 1;
+   } else if( PyErr_ExceptionMatches( PyExc_AttributeError ) ) {
+      PyErr_Clear();
+      return 0;
+   } else {
+      return -1;
+   }
+#endif
 }
 
 /* Object */
@@ -8659,10 +8682,14 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    use srcseq_wrapper as the wrapper, which reads a single item from the
    sequence on each invocation. Otherwise, we use a NULL wrapper. */
    if( source ) {
-      if( PyObject_HasAttrStringWithError( source, "astsource" ) ) {
+      int has_astsource = PyAst_HasAttrStringWithError( source, "astsource" );
+      if( has_astsource > 0 ) {
          *source_wrap = source_wrapper;
          self->source = source;
          Py_INCREF( source );
+
+      } else if( has_astsource < 0 ) {
+         result = -1;
 
       } else if( STRING_CHECK( source ) ) {
          result = -1;
@@ -8685,10 +8712,13 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 
 /* Do the same for the sink object (except the sink cannot be a sequence). */
    if( sink ) {
-      if( PyObject_HasAttrStringWithError( sink, "astsink" ) ) {
+      int has_astsink = PyAst_HasAttrStringWithError( sink, "astsink" );
+      if( has_astsink > 0 ) {
          *sink_wrap = sink_wrapper;
          self->sink = sink;
          Py_INCREF( sink );
+      } else if( has_astsink < 0 ) {
+         result = -1;
       } else if( sink != Py_None ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
@@ -11182,7 +11212,8 @@ static int ColourToInt( Plot *self, const char *colour ){
    int ret = -1;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrStringWithError(self->grf, "ColToInt") ){
+      int has_coltoint = PyAst_HasAttrStringWithError( self->grf, "ColToInt" );
+      if( has_coltoint > 0 ){
          PyObject *result = PyObject_CallMethod( self->grf, "ColToInt", "s", colour );
 
          if( result ) {
@@ -11193,7 +11224,7 @@ static int ColourToInt( Plot *self, const char *colour ){
                           "an integer - no such colour is known.", colour );
          }
 
-      } else if( sscanf( colour, "%d", &ret ) != 1 ) {
+      } else if( has_coltoint == 0 && sscanf( colour, "%d", &ret ) != 1 ) {
          PyErr_SetString( PyExc_TypeError, "Cannot convert a colour name to "
                           "a colour index since the supplied Grf object "
                           "has no ColToInt method." );
@@ -11223,7 +11254,8 @@ static const char *IntToColour( Plot *self, int colour ){
    buf[0] = 0;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrStringWithError(self->grf, "IntToCol") ){
+      int has_inttocol = PyAst_HasAttrStringWithError( self->grf, "IntToCol" );
+      if( has_inttocol > 0 ){
          PyObject *result = PyObject_CallMethod( self->grf, "IntToCol", "i", colour );
 
          if( result && result != Py_None && STRING_CHECK( result ) ) {
@@ -11298,8 +11330,12 @@ static int setGrf( Plot *self, PyObject *value ){
       Py_XINCREF(self->grf);
 
       for( ifun = 0; ifun < NFUN; ifun++ ) {
-         if( PyObject_HasAttrStringWithError( value, fname[ ifun ] ) ) {
+         int has_fun = PyAst_HasAttrStringWithError( value, fname[ ifun ] );
+         if( has_fun > 0 ) {
             astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
+         } else if( has_fun < 0 ) {
+            result = -1;
+            break;
          } else {
             PyErr_Format( PyExc_TypeError, "The supplied grf object does "
                           "not implement the '%s' method.", fname[ ifun ] );
@@ -12387,10 +12423,15 @@ static PyObject *FitsChan_tablesource( FitsChan  *self, PyObject *args ) {
 
       if( tabsource && tabsource != Py_None ) {
 
-         if( PyObject_HasAttrStringWithError( tabsource, "asttablesource" ) ) {
+         int has_tabsource = PyAst_HasAttrStringWithError( tabsource,
+                                                           "asttablesource" );
+         if( has_tabsource > 0 ) {
             astTableSource( THIS, tabsource_wrapper );
             self->tabsource = tabsource;
             Py_INCREF( tabsource );
+
+         } else if( has_tabsource < 0 ) {
+            /* Attribute lookup error already set. */
 
          } else {
             PyErr_SetString( PyExc_TypeError, "The supplied 'tabsource' "
