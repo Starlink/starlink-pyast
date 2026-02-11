@@ -12,3 +12,45 @@ target-version = ["py311"]
 [tool.isort]
 profile = "black"
 line_length = 110
+known_first_party = ["starlink"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+exclude = [
+    "__init__.py",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "N802",
+    "N803",
+    "N806",
+    "N812",
+    "N815",
+    "N816",
+    "N999",
+]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "N",  # pep8-naming
+    "W",  # pycodestyle
+    "UP",  # pyupgrade
+    "C4",
+    "I",  # isort
+    "RUF022",  # __all__ sorting
+]
+extend-select = [
+    "RUF100", # Warn about unused noqa
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lsst"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 79
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 79
