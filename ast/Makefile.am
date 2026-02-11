@@ -57,6 +57,7 @@ GRP_C_ROUTINES = \
     src/specframe.c \
     src/specmap.c \
     src/sphmap.c \
+    src/splinemap.c \
     src/stc.c \
     src/stccatalogentrylocation.c \
     src/stcobsdatalocation.c \
@@ -131,6 +132,7 @@ F_C_ROUTINES = \
     src/fspecframe.c \
     src/fspecmap.c \
     src/fsphmap.c \
+    src/fsplinemap.c \
     src/fstc.c \
     src/fstccatalogentrylocation.c \
     src/fstcobsdatalocation.c \
@@ -176,6 +178,7 @@ AST_H_FILES = \
           src/dssmap.h \
           src/grismmap.h \
           src/intramap.h \
+          src/splinemap.h \
           src/lutmap.h \
           src/mathmap.h \
           src/matrixmap.h \
@@ -709,9 +712,9 @@ libast_la_LDFLAGS = -version-info @version_info@
 # library instead. Do the same for cminpack
 if EXTERNAL_PAL
 if EXTERNAL_CMINPACK
-libast_la_LIBADD =  $(libdir)/libpal.la -lcminpack
+libast_la_LIBADD =  -lpal -lcminpack
 else
-libast_la_LIBADD = $(libdir)/libpal.la libast_cminpack.la
+libast_la_LIBADD = -lpal libast_cminpack.la
 endif
 else
 if EXTERNAL_CMINPACK
@@ -801,9 +804,12 @@ if !NOFORTRAN
 noinst_PROGRAMS = astbad$(EXEEXT)
 astbad_SOURCES = src/astbad.c src/pointset.h
 AST_PAR: $(srcdir)/ast_par.source astbad$(EXEEXT)
-	sed -e 's/<AST__BAD>/'`./astbad$(EXEEXT) AST__BAD | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NAN>/'`./astbad$(EXEEXT) AST__NAN | tr 'E' 'D'`'/' \
-	    -e 's/<AST__NANR>/'`./astbad$(EXEEXT) AST__NANF | tr 'E' 'D'`'/' \
+	ASTBAD=`./astbad$(EXEEXT) AST__BAD` && \
+	ASTNAN=`./astbad$(EXEEXT) AST__NAN` && \
+	ASTNANF=`./astbad$(EXEEXT) AST__NANF` && \
+	sed -e 's/<AST__BAD>/'`echo $$ASTBAD | tr 'E' 'D'`'/' \
+	    -e 's/<AST__NAN>/'`echo $$ASTNAN | tr 'E' 'D'`'/' \
+	    -e 's/<AST__NANR>/'`echo $$ASTNANF | tr 'E' 'D'`'/' \
 	    $(srcdir)/ast_par.source >$@
 endif
 
@@ -898,11 +904,11 @@ check_PROGRAMS = ast_test
 ast_test_SOURCES = ast_test.c
 
 test: install
-	cd ast_tester && STARLINK=@STARLINK@ PGPLOT_DIR=@STARLINK@/bin ./ast_tester -nd
+	cd ast_tester && STARLINK=@STARLINK@ PGPLOT_DIR=@STARLINK@/bin FFLAGS="@STAR_FFLAGS_TEST@" ./ast_tester -nd
 
 #ast_test_LDADD = `ast_link`
 # Expand ast_link to avoid libast_pass2, which causes problems for Solaris
-ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_pal.la libast_cminpack.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
+ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
 
 #  Need to include latex support files in the distribution tar ball so
 #  that the docs can be built from the tex source files. Requires environment

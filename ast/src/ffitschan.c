@@ -167,8 +167,8 @@ static void SinkWrap( void (* sink)( const char * ), const char *line,
    subroutine and then invoke it. Transfer the AST error status to and
    from the subroutine's error status argument. */
    STATUS = astStatus;
-   ( ( void (*)() ) sink )( CHARACTER_ARG(CARD), INTEGER_ARG(&STATUS)
-                            TRAIL_ARG(CARD) );
+   ( ( void (*)( F77_CHARACTER_TYPE *, F77_INTEGER_TYPE *, F77_TRAIL_TYPE ) ) sink )(
+      CHARACTER_ARG(CARD), INTEGER_ARG(&STATUS) TRAIL_ARG(CARD) );
    astSetStatus( STATUS );
 }
 
@@ -234,9 +234,8 @@ static char *SourceWrap( const char *(* source)( void ), int *status ) {
    function and then invoke it. Transfer the AST error status to and
    from the subroutine's error status argument. */
    STATUS = astStatus;
-   retval = ( *(F77_INTEGER_TYPE (*)()) source )( CHARACTER_ARG(CARD),
-                                                  INTEGER_ARG(&STATUS)
-                                                  TRAIL_ARG(CARD) );
+   retval = ( *(F77_INTEGER_TYPE (*)( F77_CHARACTER_TYPE *, F77_INTEGER_TYPE *, F77_TRAIL_TYPE )) source )(
+      CHARACTER_ARG(CARD), INTEGER_ARG(&STATUS) TRAIL_ARG(CARD) );
    astSetStatus( STATUS );
 
 /* If a card was returned, make a dynamic copy of it. */
@@ -339,7 +338,8 @@ static void TabSourceWrap( void (*tabsource)( void  ),
    read the table, and store it in the FitsChan. */
    if( astOK ) {
       LSTAT = 0;
-      ( ( void (*)() ) tabsource )(
+      ( ( void (*)( F77_INTEGER_TYPE *, F77_CHARACTER_TYPE *, F77_INTEGER_TYPE *,
+                    F77_INTEGER_TYPE *, F77_INTEGER_TYPE *, F77_TRAIL_TYPE ) ) tabsource )(
            INTEGER_ARG(&THIS_ID), CHARACTER_ARG(EXTNAME), INTEGER_ARG(&EXTVER),
            INTEGER_ARG(&EXTLEVEL), INTEGER_ARG(&LSTAT) TRAIL_ARG(EXTNAME) );
    }
@@ -623,6 +623,33 @@ F77_SUBROUTINE(ast_setfitsi)( INTEGER(THIS),
    )
 }
 
+F77_SUBROUTINE(ast_setfitsk)( INTEGER(THIS),
+                              CHARACTER(NAME),
+                              INTEGER8(VALUE),
+                              CHARACTER(COMMENT),
+                              LOGICAL(OVERWRITE),
+                              INTEGER(STATUS)
+                              TRAIL(NAME)
+                              TRAIL(COMMENT) ) {
+   GENPTR_INTEGER(THIS)
+   GENPTR_CHARACTER(NAME)
+   GENPTR_INTEGER8(VALUE)
+   GENPTR_CHARACTER(COMMENT)
+   GENPTR_LOGICAL(OVERWRITE)
+   int overwrite;
+   char *name, *comment;
+
+   astAt( "AST_SETFITSK", NULL, 0 );
+   astWatchSTATUS(
+      name = astString( NAME, NAME_length );
+      comment = astString( COMMENT, COMMENT_length );
+      overwrite = F77_ISTRUE( *OVERWRITE );
+      astSetFitsK( astI2P( *THIS ), name, *VALUE, comment, overwrite );
+      (void) astFree( (void *) name );
+      (void) astFree( (void *) comment );
+   )
+}
+
 
 F77_SUBROUTINE(ast_setfitscf)( INTEGER(THIS),
                                CHARACTER(NAME),
@@ -799,6 +826,7 @@ F77_LOGICAL_FUNCTION(ast_getfits##f)( INTEGER(THIS), \
 
 MAKE_AST_GETFITS(f,F,DOUBLE,F,double)
 MAKE_AST_GETFITS(i,I,INTEGER,I,int)
+MAKE_AST_GETFITS(k,K,INTEGER8,K,int64_t)
 MAKE_AST_GETFITS(l,L,LOGICAL,L,int)
 #undef MAKE_AST_GETFITS
 

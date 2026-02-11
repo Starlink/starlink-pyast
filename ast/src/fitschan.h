@@ -34,6 +34,8 @@
 *           Integer dentifier for a FITS comment keyword.
 *        AST__INT
 *           Integer dentifier for the integer FITS data type.
+*        AST__KINT
+*           Integer dentifier for the 64 bit integer FITS data type.
 *        AST__FLOAT
 *           Integer dentifier for the floating point FITS data type.
 *        AST__STRING
@@ -146,6 +148,7 @@
 #define AST__LOGICAL       6
 #define AST__CONTINUE      7
 #define AST__UNDEF         8
+#define AST__KINT          9
 
 #if defined(astCLASS)            /* Protected */
 
@@ -177,6 +180,7 @@ typedef struct AstFitsChan {
    int defb1950;    /* Use FK4 B1950 as defaults? */
    int tabok;       /* Support -TAB algorithm? */
    int forcetab;    /* Force use of -TAB algorithm? */
+   int ignorebadalt;/* Ignore unreadable alterate axis descriptions? */
    int cdmatrix;    /* Use a CD matrix in FITS-WCS Encoding? */
    int polytan;     /* Use distorted TAN convention? */
    int sipok;       /* Use SIP distortion convention? */
@@ -187,6 +191,7 @@ typedef struct AstFitsChan {
    int clean;       /* Remove used cards even if an error occurs? */
    int altaxes;     /* Controls creation of FITS-WCS alternate axes */
    int fitsdigits;  /* No. of decmial places in formatted floating point keyword values */
+   int fitsrounding;  /* No. of decmial places guarded against rounding in formatted floating point keyword values */
    char *fitsaxisorder; /* Pointer to a string defining WCS axis order */
    char *warnings;  /* Pointer to a string containing warning conditions */
    void *card;      /* Pointer to next FitsCard to be read */
@@ -239,6 +244,7 @@ typedef struct AstFitsChanVtab {
    int (* GetFitsCN)( AstFitsChan *, const char *, char **, int * );
    int (* GetFitsF)( AstFitsChan *, const char *, double *, int * );
    int (* GetFitsI)( AstFitsChan *, const char *, int *, int * );
+   int (* GetFitsK)( AstFitsChan *, const char *, int64_t *, int * );
    int (* GetFitsL)( AstFitsChan *, const char *, int *, int * );
    int (* GetFitsS)( AstFitsChan *, const char *, char **, int * );
    int (* KeyFields)( AstFitsChan *, const char *, int, int *, int *, int * );
@@ -263,6 +269,7 @@ typedef struct AstFitsChanVtab {
    void (* SetFitsCom)( AstFitsChan *, const char *, const char *, int, int * );
    void (* SetFitsF)( AstFitsChan *, const char *, double, const char *, int, int * );
    void (* SetFitsI)( AstFitsChan *, const char *, int, const char *, int, int * );
+   void (* SetFitsK)( AstFitsChan *, const char *, int64_t, const char *, int, int * );
    void (* SetFitsL)( AstFitsChan *, const char *, int, const char *, int, int * );
    void (* SetFitsS)( AstFitsChan *, const char *, const char *, const char *, int, int * );
    void (* SetFitsU)( AstFitsChan *, const char *, const char *, int, int * );
@@ -276,6 +283,11 @@ typedef struct AstFitsChanVtab {
    int (* TestFitsDigits)( AstFitsChan *, int * );
    void (* SetFitsDigits)( AstFitsChan *, int, int * );
    void (* ClearFitsDigits)( AstFitsChan *, int * );
+
+   int (* GetFitsRounding)( AstFitsChan *, int * );
+   int (* TestFitsRounding)( AstFitsChan *, int * );
+   void (* SetFitsRounding)( AstFitsChan *, int, int * );
+   void (* ClearFitsRounding)( AstFitsChan *, int * );
 
    int (* GetAltAxes)( AstFitsChan *, int * );
    int (* TestAltAxes)( AstFitsChan *, int * );
@@ -301,6 +313,11 @@ typedef struct AstFitsChanVtab {
    int (* TestForceTab)( AstFitsChan *, int * );
    void (* SetForceTab)( AstFitsChan *, int, int * );
    void (* ClearForceTab)( AstFitsChan *, int * );
+
+   int (* GetIgnoreBadAlt)( AstFitsChan *, int * );
+   int (* TestIgnoreBadAlt)( AstFitsChan *, int * );
+   void (* SetIgnoreBadAlt)( AstFitsChan *, int, int * );
+   void (* ClearIgnoreBadAlt)( AstFitsChan *, int * );
 
    int (* GetCarLin)( AstFitsChan *, int * );
    int (* TestCarLin)( AstFitsChan *, int * );
@@ -467,6 +484,7 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    int  astGetFitsCN_( AstFitsChan *, const char *, char **, int * );
    int  astGetFitsF_( AstFitsChan *, const char *, double *, int * );
    int  astGetFitsI_( AstFitsChan *, const char *, int *, int * );
+   int  astGetFitsK_( AstFitsChan *, const char *, int64_t *, int * );
    int  astGetFitsL_( AstFitsChan *, const char *, int *, int * );
    int  astGetFitsS_( AstFitsChan *, const char *, char **, int * );
    int  astTestFits_( AstFitsChan *, const char *, int *, int * );
@@ -488,6 +506,7 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    void astSetFitsCN_( AstFitsChan *, const char *, const char *, const char *, int, int * );
    void astSetFitsF_( AstFitsChan *, const char *, double, const char *, int, int * );
    void astSetFitsI_( AstFitsChan *, const char *, int, const char *, int, int * );
+   void astSetFitsK_( AstFitsChan *, const char *, int64_t, const char *, int, int * );
    void astSetFitsL_( AstFitsChan *, const char *, int, const char *, int, int * );
    void astSetFitsS_( AstFitsChan *, const char *, const char *, const char *, int, int * );
    void astSetFitsU_( AstFitsChan *, const char *, const char *, int, int * );
@@ -536,6 +555,11 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    void astSetForceTab_( AstFitsChan *, int, int * );
    void astClearForceTab_( AstFitsChan *, int * );
 
+   int astGetIgnoreBadAlt_( AstFitsChan *, int * );
+   int astTestIgnoreBadAlt_( AstFitsChan *, int * );
+   void astSetIgnoreBadAlt_( AstFitsChan *, int, int * );
+   void astClearIgnoreBadAlt_( AstFitsChan *, int * );
+
    int astGetCDMatrix_( AstFitsChan *, int * );
    int astTestCDMatrix_( AstFitsChan *, int * );
    void astSetCDMatrix_( AstFitsChan *, int, int * );
@@ -580,6 +604,11 @@ void astInitFitsChanGlobals_( AstFitsChanGlobals * );
    int astTestFitsDigits_( AstFitsChan *, int * );
    void astSetFitsDigits_( AstFitsChan *, int, int * );
    void astClearFitsDigits_( AstFitsChan *, int * );
+
+   int astGetFitsRounding_( AstFitsChan *, int * );
+   int astTestFitsRounding_( AstFitsChan *, int * );
+   void astSetFitsRounding_( AstFitsChan *, int, int * );
+   void astClearFitsRounding_( AstFitsChan *, int * );
 
    int astGetAltAxes_( AstFitsChan *, int * );
    int astTestAltAxes_( AstFitsChan *, int * );
@@ -706,6 +735,9 @@ astINVOKE(V,astFindFits_(astCheckFitsChan(this),name,card,inc,STATUS_PTR))
 #define astSetFitsI(this,name,value,comment,overwrite) \
 astINVOKE(V,astSetFitsI_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
 
+#define astSetFitsK(this,name,value,comment,overwrite) \
+astINVOKE(V,astSetFitsK_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
+
 #define astSetFitsF(this,name,value,comment,overwrite) \
 astINVOKE(V,astSetFitsF_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
 
@@ -741,6 +773,9 @@ astINVOKE(V,astGetFitsF_(astCheckFitsChan(this),name,value,STATUS_PTR))
 
 #define astGetFitsI(this,name,value) \
 astINVOKE(V,astGetFitsI_(astCheckFitsChan(this),name,value,STATUS_PTR))
+
+#define astGetFitsK(this,name,value) \
+astINVOKE(V,astGetFitsK_(astCheckFitsChan(this),name,value,STATUS_PTR))
 
 #define astGetFitsL(this,name,value) \
 astINVOKE(V,astGetFitsL_(astCheckFitsChan(this),name,value,STATUS_PTR))
@@ -828,6 +863,15 @@ astINVOKE(V,astSetForceTab_(astCheckFitsChan(this),frctab,STATUS_PTR))
 #define astTestForceTab(this) \
 astINVOKE(V,astTestForceTab_(astCheckFitsChan(this),STATUS_PTR))
 
+#define astClearIgnoreBadAlt(this) \
+astINVOKE(V,astClearIgnoreBadAlt_(astCheckFitsChan(this),STATUS_PTR))
+#define astGetIgnoreBadAlt(this) \
+astINVOKE(V,astGetIgnoreBadAlt_(astCheckFitsChan(this),STATUS_PTR))
+#define astSetIgnoreBadAlt(this,ignorebadalt) \
+astINVOKE(V,astSetIgnoreBadAlt_(astCheckFitsChan(this),ignorebadalt,STATUS_PTR))
+#define astTestIgnoreBadAlt(this) \
+astINVOKE(V,astTestIgnoreBadAlt_(astCheckFitsChan(this),STATUS_PTR))
+
 #define astClearCDMatrix(this) \
 astINVOKE(V,astClearCDMatrix_(astCheckFitsChan(this),STATUS_PTR))
 #define astGetCDMatrix(this) \
@@ -899,6 +943,15 @@ astINVOKE(V,astGetFitsDigits_(astCheckFitsChan(this),STATUS_PTR))
 astINVOKE(V,astSetFitsDigits_(astCheckFitsChan(this),fitsdigits,STATUS_PTR))
 #define astTestFitsDigits(this) \
 astINVOKE(V,astTestFitsDigits_(astCheckFitsChan(this),STATUS_PTR))
+
+#define astClearFitsRounding(this) \
+astINVOKE(V,astClearFitsRounding_(astCheckFitsChan(this),STATUS_PTR))
+#define astGetFitsRounding(this) \
+astINVOKE(V,astGetFitsRounding_(astCheckFitsChan(this),STATUS_PTR))
+#define astSetFitsRounding(this,fitsrounding) \
+astINVOKE(V,astSetFitsRounding_(astCheckFitsChan(this),fitsrounding,STATUS_PTR))
+#define astTestFitsRounding(this) \
+astINVOKE(V,astTestFitsRounding_(astCheckFitsChan(this),STATUS_PTR))
 
 #define astClearAltAxes(this) \
 astINVOKE(V,astClearAltAxes_(astCheckFitsChan(this),STATUS_PTR))

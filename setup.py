@@ -228,6 +228,7 @@ ast_c = (
     "xphmap.c",
     "zoommap.c",
     "specmap.c",
+    "splinemap.c",
     "slamap.c",
     "chebymap.c",
     "unitnormmap.c",
