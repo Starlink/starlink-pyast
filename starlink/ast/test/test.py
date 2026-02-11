@@ -1,5 +1,6 @@
 import copy
 import filecmp
+import gc
 import math
 import os
 import os.path
@@ -174,10 +175,16 @@ class TestAst(unittest.TestCase):
             starlink.Ast.Object()
 
     def test_ZoomMap(self):
+        # Since other tests can run before this tests run and may not have
+        # triggered garbage collection, it is possible for the reference
+        # count for ZoomMap to be greater than 0. Force the garbage collector
+        # to run to ensure that the test starts with a known state.
+        gc.collect()
         zoommap = starlink.Ast.ZoomMap(1, 1.2)
         self.assertEqual(zoommap.Class, "ZoomMap")
         self.assertIsInstance(zoommap, starlink.Ast.ZoomMap)
-        self.assertEqual(zoommap.Nobject, 1)
+        start_n = 0
+        self.assertEqual(zoommap.Nobject, start_n + 1)
         with self.assertRaises(AttributeError):
             zoommap.fred = 1.0
         with self.assertRaises(TypeError):
@@ -199,7 +206,7 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
         self.assertAlmostEqual(float(zoommap.get("Zoom")), -1.3)
         zm = copy.deepcopy(zoommap)
-        self.assertEqual(zoommap.Nobject, 2)
+        self.assertEqual(zoommap.Nobject, start_n + 2)
         self.assertIsInstance(zm, starlink.Ast.ZoomMap)
         self.assertAlmostEqual(zm.Zoom, -1.3)
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
@@ -207,7 +214,7 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(zm.Zoom, 3.0)
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm2 = zoommap.copy()
-        self.assertEqual(zoommap.Nobject, 3)
+        self.assertEqual(zoommap.Nobject, start_n + 3)
         self.assertIsInstance(zm2, starlink.Ast.ZoomMap)
         self.assertAlmostEqual(zm2.Zoom, -1.3)
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
@@ -215,11 +222,11 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(zm2.Zoom, 3.0)
         self.assertAlmostEqual(zoommap.Zoom, -1.3)
         zm2 = None
-        self.assertEqual(zoommap.Nobject, 2)
+        self.assertEqual(zoommap.Nobject, start_n + 2)
         self.assertTrue(zoommap.same(zoommap))
         self.assertFalse(zoommap.same(zm))
         del zm
-        self.assertEqual(zoommap.Nobject, 1)
+        self.assertEqual(zoommap.Nobject, start_n + 1)
         self.assertTrue(zoommap.hasattribute("ID"))
         self.assertFalse(zoommap.hasattribute("FID"))
         self.assertTrue(zoommap.isaobject())
