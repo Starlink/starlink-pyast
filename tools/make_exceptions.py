@@ -9,13 +9,11 @@ the folder containing the source distribution for the AST
 library.
 """
 
-
 import os
 import os.path
 
 
 def make_exceptions(dirname=None):
-
     if "AST_SOURCE" not in os.environ:
         print("Please set AST_SOURCE environment variable to point to the AST source code directory")
         exit(1)

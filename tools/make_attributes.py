@@ -12,13 +12,11 @@ the attribute values.
 setters that need to be included in th Python TypeObject for the class.
 """
 
-
 import os
 import os.path
 
 
 def make_attributes(dirname=None):
-
     #  The hard-wired maximum number of dimensions supported by pyast.
     mxdim = 40
 
@@ -28,10 +26,8 @@ def make_attributes(dirname=None):
         file = os.path.join(dirname, file)
 
     with open(file) as infile:
-
         #  Read the input file.
         for line in infile:
-
             #  Ignore blank lines or comment lines
             line = line.strip()
             if len(line) == 0 or line.startswith("#"):
@@ -56,10 +52,8 @@ def make_attributes(dirname=None):
 
             #  Loop over all indices for multi-valued attributes
             for i in range(minindex, maxindex + 1):
-
                 #  Loop over all keys for multi-valued attributes
                 for item in items:
-
                     #  Construct the name of the attribute.
                     aname = attname
                     if item != "-":
@@ -89,7 +83,6 @@ def make_attributes(dirname=None):
             if dirname is not None:
                 cfilename = os.path.join(dirname, cfilename)
             with open(cfilename, "w") as cfile:
-
                 # Write out a prologue for the C file
                 print(
                     r"""/*
@@ -131,7 +124,6 @@ def make_attributes(dirname=None):
             if dirname is not None:
                 cfilename = os.path.join(dirname, cfilename)
             with open(cfilename, "w") as cfile:
-
                 # Write out a prologue for the C file
                 print(
                     r"""/*

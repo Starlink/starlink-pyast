@@ -74,8 +74,8 @@ class PyFITSAdapter:
            >>> import starlink.Ast as Ast
            >>> import starlink.Atl as Atl
            >>>
-           >>> hdulist = pyfits.open('test.fit')
-           >>> fc = Ast.FitsChan( Atl.PyFITSAdapter( hdulist['DATA'] ) )
+           >>> hdulist = pyfits.open("test.fit")
+           >>> fc = Ast.FitsChan(Atl.PyFITSAdapter(hdulist["DATA"]))
            >>> framset = fc.read()
 
            - To write a FrameSet to the primary HDU in FITS file 'old.fit',
@@ -86,8 +86,8 @@ class PyFITSAdapter:
            >>> import starlink.Ast as Ast
            >>> import starlink.Atl as Atl
            >>>
-           >>> hdulist = pyfits.open('old.fit')
-           >>> fc = Ast.FitsChan( None, Atl.PyFITSAdapter( hdulist ) )
+           >>> hdulist = pyfits.open("old.fit")
+           >>> fc = Ast.FitsChan(None, Atl.PyFITSAdapter(hdulist))
            >>> if fc.write( framset ) == 0:
            >>>    print("Failed to convert FrameSet to FITS header")
         """
@@ -182,7 +182,6 @@ class PyFITSAdapter:
 
         #  Astropy, pyfits 3.1.0 and later.
         else:
-
             #  Doesn't seem to be any way to store a CONTINUE card, so all that is
             #  left is to truncated them by ignoring the continuations :-(
             if card.keyword != "CONTINUE":
@@ -226,8 +225,8 @@ def readfitswcs(hdu, Iwc=False):
        >>> import pyfits
        >>> import starlink.Atl as Atl
        >>>
-       >>> hdulist = pyfits.open( 'test.fit' )
-       >>> (frameset,encoding) = Atl.readfitswcs( hdulist[ 3 ] )
+       >>> hdulist = pyfits.open("test.fit")
+       >>> (frameset, encoding) = Atl.readfitswcs(hdulist[3])
        >>> if frameset == None:
        >>>    print( "Cannot read WCS from test.fit" )
 
@@ -274,7 +273,7 @@ def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
     Example:
        >>> import starlink.Atl as Atl
        >>>
-       >>> (frameset,encoding) = Atl.readfitswcs( hdu1 )
+       >>> (frameset, encoding) = Atl.readfitswcs(hdu1)
        >>> if Atl.writefitswcs( frameset, hdu2, encoding="FITS-AIPS" ) == 0:
        >>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
 
@@ -316,8 +315,8 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
        >>> import starlink.Atl as Atl
        >>> import matplotlib.pyplot
        >>>
-       >>> hdulist = pyfits.open( 'test.fit' )
-       >>> (frameset,encoding) = starlink.Atl.readfitswcs( hdulist[0] )
+       >>> hdulist = pyfits.open("test.fit")
+       >>> (frameset, encoding) = starlink.Atl.readfitswcs(hdulist[0])
        >>> if frameset != None:
        >>>    naxis1 = hdulist[0].header['NAXIS1']
        >>>    naxis2 = hdulist[0].header['NAXIS2']
@@ -366,7 +365,7 @@ def plotfitswcs(axes, gbox, hdu, options=""):
        >>> import starlink.Atl as Atl
        >>> import matplotlib.pyplot
        >>>
-       >>> hdulist = pyfits.open( 'test.fit' )
+       >>> hdulist = pyfits.open("test.fit")
        >>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
        >>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
        >>> matplotlib.pyplot.show()

@@ -16,7 +16,6 @@ import starlink.Ast
 
 
 class TextStream:
-
     def __init__(self):
         self.reset()
 
@@ -55,7 +54,6 @@ class DummyStream:
 
 
 class DummyGrf:
-
     def __init__(self):
         self.Reset()
 
@@ -156,7 +154,6 @@ class DummyGrf:
 
 
 class TestAst(unittest.TestCase):
-
     def test_Static(self):
         self.assertEqual(starlink.Ast.tunec("HRDel"), "%-%^50+%s70+h%+")
         starlink.Ast.tunec("HRDel", "fred")
@@ -1266,7 +1263,6 @@ class TestAst(unittest.TestCase):
         os.remove("fred2.asdf")
 
     def test_KeyMap(self):
-
         with self.assertRaises(starlink.Ast.BADAT):
             km = starlink.Ast.KeyMap("ReportLevel=3")
 
@@ -1565,7 +1561,6 @@ class TestAst(unittest.TestCase):
         self.assertAlmostEqual(min(mygrf.liney), 0.3)
 
     def test_MatrixMap(self):
-
         with self.assertRaises(ValueError):
             mm = starlink.Ast.MatrixMap([[[1.0]]])
 

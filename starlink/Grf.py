@@ -171,7 +171,6 @@ class grf_matplotlib:
     #  matplotlib backend_bases.py print_figure() method.
 
     def find_renderer(self, fig):
-
         if not self.renderer:
             if hasattr(fig, "canvas"):
                 if hasattr(fig.canvas, "get_renderer"):
@@ -195,13 +194,11 @@ class grf_matplotlib:
 
     # ------------------------------------------------------------------------
     def Attr(self, attr, value, prim):
-
         #  Save the old AST attribute value.
         oldval = self.__attrs[prim][attr]
 
         #  Nothing more to do if the new value is AST__BAD
         if value != Ast.BAD:
-
             #  Save the old AST attribute value, and record the new value (if not .
             oldval = self.__attrs[prim][attr]
             self.__attrs[prim][attr] = value
@@ -219,7 +216,6 @@ class grf_matplotlib:
             #  Width applies to lines, marks and texts
             elif attr == Ast.grfWIDTH:
                 if prim == Ast.grfLINE:
-
                     #  Get bounds of plot in user coords
                     xl, xr = self.axes.get_xlim()
                     yb, yt = self.axes.get_ylim()
@@ -463,7 +459,6 @@ class grf_matplotlib:
         #  Check it is in the range of the list of known colours (otherwise we
         #  reyturn None).
         if colour >= 0 and colour < len(self.colours):
-
             #  Get the corresponding colour name (a html hex string).
             result = self.colours[colour]["color"].upper()
 

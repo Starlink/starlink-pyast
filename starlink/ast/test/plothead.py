@@ -15,7 +15,6 @@ if len(sys.argv) < 2:
 
 #  Attempt to open the header file
 with open(sys.argv[1] + ".head") as fin1:
-
     #  Attempt to open an associated file holding attributes that control how
     #  the FITS headers are interpreted. If succesful, read the whole file into
     #  a single string.
