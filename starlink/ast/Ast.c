@@ -8659,7 +8659,7 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    use srcseq_wrapper as the wrapper, which reads a single item from the
    sequence on each invocation. Otherwise, we use a NULL wrapper. */
    if( source ) {
-      if( PyObject_HasAttrString( source, "astsource" ) ) {
+      if( PyObject_HasAttrStringWithError( source, "astsource" ) ) {
          *source_wrap = source_wrapper;
          self->source = source;
          Py_INCREF( source );
@@ -8685,7 +8685,7 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 
 /* Do the same for the sink object (except the sink cannot be a sequence). */
    if( sink ) {
-      if( PyObject_HasAttrString( sink, "astsink" ) ) {
+      if( PyObject_HasAttrStringWithError( sink, "astsink" ) ) {
          *sink_wrap = sink_wrapper;
          self->sink = sink;
          Py_INCREF( sink );
@@ -11182,7 +11182,7 @@ static int ColourToInt( Plot *self, const char *colour ){
    int ret = -1;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrString(self->grf, "ColToInt") ){
+      if( PyObject_HasAttrStringWithError(self->grf, "ColToInt") ){
          PyObject *result = PyObject_CallMethod( self->grf, "ColToInt", "s", colour );
 
          if( result ) {
@@ -11223,7 +11223,7 @@ static const char *IntToColour( Plot *self, int colour ){
    buf[0] = 0;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrString(self->grf, "IntToCol") ){
+      if( PyObject_HasAttrStringWithError(self->grf, "IntToCol") ){
          PyObject *result = PyObject_CallMethod( self->grf, "IntToCol", "i", colour );
 
          if( result && result != Py_None && STRING_CHECK( result ) ) {
@@ -11298,7 +11298,7 @@ static int setGrf( Plot *self, PyObject *value ){
       Py_XINCREF(self->grf);
 
       for( ifun = 0; ifun < NFUN; ifun++ ) {
-         if( PyObject_HasAttrString( value, fname[ ifun ] ) ) {
+         if( PyObject_HasAttrStringWithError( value, fname[ ifun ] ) ) {
             astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
          } else {
             PyErr_Format( PyExc_TypeError, "The supplied grf object does "
@@ -12387,7 +12387,7 @@ static PyObject *FitsChan_tablesource( FitsChan  *self, PyObject *args ) {
 
       if( tabsource && tabsource != Py_None ) {
 
-         if( PyObject_HasAttrString( tabsource, "asttablesource" ) ) {
+         if( PyObject_HasAttrStringWithError( tabsource, "asttablesource" ) ) {
             astTableSource( THIS, tabsource_wrapper );
             self->tabsource = tabsource;
             Py_INCREF( tabsource );
