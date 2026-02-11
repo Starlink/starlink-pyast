@@ -1,4 +1,4 @@
-#define PYAST_VERSION "3.15.4"
+#include "pyast_version.h"
 
 #include <Python.h>
 #include <string.h>

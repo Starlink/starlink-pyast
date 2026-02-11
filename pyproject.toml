@@ -4,6 +4,50 @@ requires = [
     "setuptools",
     "setuptools-scm>=8.0"
 ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starlink-pyast"
+requires-python = ">=3.11.0"
+description = "A Python wrapper for the Starlink AST library"
+license = "LGPL-3.0-or-later"
+readme = "README"
+authors = [
+    {name="David S. Berry", email="d.berry@eaobservatory.org"},
+    {name="Tim Jenness", email="tjenness@lsst.org"}
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: C",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Astronomy"
+]
+dependencies = [
+    "numpy"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+atl = ["astropy"]
+grf = ["matplotlib"]
+
+[project.urls]
+"Homepage" = "https://www.starlink.ac.uk/ast"
+"Source" = "https://github.com/Starlink/starlink-pyast"
+
+[tool.setuptools_scm]
+version_file = "starlink/ast/pyast_version.h"
+version_file_template = '#define PYAST_VERSION "{version}"'
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+starlink = ["include/star/pyast.h"]
 
 [tool.black]
 line-length = 110

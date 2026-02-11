@@ -1,4 +1,5 @@
 import ctypes
+import importlib.util
 import os
 import re
 import sys
@@ -8,7 +9,53 @@ from textwrap import dedent
 import numpy
 from setuptools import Distribution, Extension, setup
 
-from tools import make_attributes, make_exceptions
+cwd = os.path.abspath(os.path.dirname(__file__))
+
+
+def _find_tools_dir():
+    # When running the build from setuptools in a sandbox we can not
+    # directly import the helper code. Instead we need to find it relative
+    # to the setup.py file.
+    candidates = (
+        cwd,
+        os.getcwd(),
+    )
+    for base in candidates:
+        tools_dir = os.path.join(base, "tools")
+        if os.path.isfile(os.path.join(tools_dir, "make_attributes.py")):
+            return tools_dir
+    for base in candidates:
+        current = os.path.abspath(base)
+        while True:
+            tools_dir = os.path.join(current, "tools")
+            if os.path.isfile(os.path.join(tools_dir, "make_attributes.py")):
+                return tools_dir
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+    raise RuntimeError(
+        "Unable to locate build support modules in tools/. "
+        "Expected tools/make_attributes.py and tools/make_exceptions.py."
+    )
+
+
+def _load_build_tool(module_name, tools_dir):
+    # In the setuptools sandbox we cannot directly import from the tools
+    # directly and so instead have to use the importlib APIs to load the
+    # file directly.
+    module_file = os.path.join(tools_dir, f"{module_name}.py")
+    spec = importlib.util.spec_from_file_location(module_name, module_file)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load build support module: {module_file}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_tools_dir = _find_tools_dir()
+make_attributes = _load_build_tool("make_attributes", _tools_dir)
+make_exceptions = _load_build_tool("make_exceptions", _tools_dir)
 
 
 def get_compiler():
@@ -502,25 +549,8 @@ if len(extra_link_args) > 0:
     Ast.extra_link_args = extra_link_args
 
 setup(
-    name="starlink-pyast",
-    version=get_version(),
-    description="A Python wrapper for the Starlink AST library",
-    url="http://www.starlink.ac.uk/ast",
-    author="David Berry",
-    author_email="d.berry@eaobservatory.org",
-    packages=["starlink"],
-    package_data={"starlink": [os.path.join("include", "star", "pyast.h")]},
     ext_modules=[Ast],
     py_modules=["starlink.Grf", "starlink.Atl"],
-    classifiers=[
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-        "Programming Language :: Python",
-        "Programming Language :: C",
-        "Topic :: Scientific/Engineering :: Astronomy",
-    ],
-    setup_requires=["numpy"],
-    install_requires=["numpy"],
 )
 
 if os.path.exists(symbol_list):
