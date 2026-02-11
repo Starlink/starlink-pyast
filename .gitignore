@@ -11,3 +11,6 @@ starlink/ast/pyast_version.h
 *.egg-info/
 *.dist-info/
 sun211.htx/
+src/starlink/ast/*_def.c
+src/starlink/ast/*_desc.c
+src/starlink/ast/pyast_version.h

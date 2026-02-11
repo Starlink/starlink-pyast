@@ -58,4 +58,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest -r a -v starlink/ast/test/test.py
+          pytest -r a -v src/starlink/ast/test/test.py

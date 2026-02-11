@@ -40,11 +40,11 @@ grf = ["matplotlib"]
 "Source" = "https://github.com/Starlink/starlink-pyast"
 
 [tool.setuptools_scm]
-version_file = "starlink/ast/pyast_version.h"
+version_file = "src/starlink/ast/pyast_version.h"
 version_file_template = '#define PYAST_VERSION "{version}"'
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 [tool.setuptools.package-data]
 starlink = ["include/star/pyast.h"]

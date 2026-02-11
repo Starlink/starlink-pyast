@@ -4,12 +4,11 @@ include ast/wcslib/*.h
 include ast/pal/*
 include ast/erfa/*
 include ast/cminpack/*
-include starlink/ast/*.desc
+include src/starlink/ast/*.desc
 include ast/sun211.htx_tar
 recursive-include tools *.py
-recursive-include starlink/ast/test *.attr
-recursive-include starlink/ast/test *.box
-recursive-include starlink/ast/test *.head
-recursive-include starlink/ast/test *.fit
-recursive-include starlink/ast/test *.py
-
+recursive-include src/starlink/ast/test *.attr
+recursive-include src/starlink/ast/test *.box
+recursive-include src/starlink/ast/test *.head
+recursive-include src/starlink/ast/test *.fit
+recursive-include src/starlink/ast/test *.py

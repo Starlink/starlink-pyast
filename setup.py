@@ -143,16 +143,16 @@ def check_libyaml():
 include_dirs = []
 
 include_dirs.append(numpy.get_include())
-include_dirs.append(os.path.join(".", "starlink", "include"))
+include_dirs.append(os.path.join(".", "src", "starlink", "include"))
 include_dirs.append(os.path.join(".", "ast"))
 include_dirs.append(os.path.join(".", "ast", "src"))
 
 #  Create the support files needed for the build. These find the AST
 #  source code using the environment variable AST_SOURCE, so set AST_SOURCE
 #  to point to the AST source code directory distributed with PyAST.
-os.environ["AST_SOURCE"] = os.path.join(os.getcwd(), "ast")
-make_exceptions.make_exceptions(os.path.join("starlink", "ast"))
-make_attributes.make_attributes(os.path.join("starlink", "ast"))
+os.environ["AST_SOURCE"] = os.path.join(cwd, "ast")
+make_exceptions.make_exceptions(os.path.join("src", "starlink", "ast"))
+make_attributes.make_attributes(os.path.join("src", "starlink", "ast"))
 
 #  Extract the AST documentation
 if not os.path.exists("sun211.htx"):
@@ -494,7 +494,7 @@ ast_c_extra = (
 
 #  Initialise the list of sources files needed to build the starlink.Ast
 #  module.
-sources = [os.path.join("starlink", "ast", "Ast.c")]
+sources = [os.path.join("src", "starlink", "ast", "Ast.c")]
 
 #  Append all the .c and .h files needed to build the AST library locally.
 for cfile in ast_c:
