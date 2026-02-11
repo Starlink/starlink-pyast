@@ -1,0 +1,61 @@
+name: build_and_test
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need to clone everything for the git tags.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "setup.cfg"
+          allow-prereleases: true
+
+      - name: Update pip/wheel infrastructure
+        shell: bash -l {0}
+        run: |
+          pip install --upgrade pip uv
+          uv pip install --system wheel
+
+      - name: Install cryptography package for moto
+        run: |
+          uv pip install --system cryptography
+
+      - name: Install Ubuntu dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libyaml-dev
+
+      - name: Install pytest packages
+        run: |
+          uv pip install --system pytest
+
+      - name: List installed packages
+        run: |
+          pip list -v
+
+      - name: Build and install
+        run: |
+          uv pip install --system -v -e .
+
+      - name: Run tests
+        run: |
+          pytest -r a -v starlink/ast/test/test.py
