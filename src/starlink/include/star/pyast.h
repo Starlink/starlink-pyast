@@ -33,7 +33,7 @@ extern "C" {
 
 #define MXDIM 20
 #define MXATTR_LEN 50
-#define ATTNORM(attrib) AttNorm(attrib,att_buf)
+#define ATTNORM(attrib) AttNorm(attrib, att_buf, sizeof(att_buf))
 
 /*
 *  Name:

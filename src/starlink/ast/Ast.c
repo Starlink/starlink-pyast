@@ -22,7 +22,7 @@ static PyObject *PyAst_FromString( const char *string );
 static char *DumpToString( AstObject *object, const char *options );
 static char *GetString( void *mem, PyObject *value );
 static char *PyAst_ToString( PyObject *self );
-static const char *AttNorm( const char *att, char *buff );
+static const char *AttNorm( const char *att, char *buff, size_t buff_len );
 static void Sinka( const char *text );
 static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
@@ -14458,7 +14458,7 @@ static void Sinka( const char *text ){
    }
 }
 
-static const char *AttNorm( const char *att, char *buff ){
+static const char *AttNorm( const char *att, char *buff, size_t buff_len ){
 /*
 *  Name:
 *     AttNorm
@@ -14469,10 +14469,10 @@ static const char *AttNorm( const char *att, char *buff ){
 
 */
    const char *result = att;
-   if( att && buff ) {
+   if( att && buff && buff_len > 0 ) {
       const char *us = strchr( att, '_' );
       if( us ) {
-         sprintf( buff, "%.*s(%s)", (int)( us - att ), att, us + 1 );
+         snprintf( buff, buff_len, "%.*s(%s)", (int)( us - att ), att, us + 1 );
          result = buff;
       }
    }
