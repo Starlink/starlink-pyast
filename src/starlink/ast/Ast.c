@@ -127,8 +127,8 @@ static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr ) {
  *
  * Returns:
  *   1 on success (including when no "options" key is supplied),
- *   0 on error (invalid type or UTF-8 conversion failure). On error a Python
- *   exception is set.
+ *   0 on error (invalid type, non-ASCII input, or UTF-8 conversion failure).
+ *   On error a Python exception is set.
  */
 static int GetOptionsFromKwds( PyObject *kwds, const char **options ) {
    PyObject *opt;
@@ -145,6 +145,11 @@ static int GetOptionsFromKwds( PyObject *kwds, const char **options ) {
 
    if( !PyUnicode_Check( opt ) ) {
       PyErr_SetString( PyExc_TypeError, "options must be a string or None" );
+      return 0;
+   }
+
+   if( !PyUnicode_IS_ASCII( opt ) ) {
+      PyErr_SetString( PyExc_TypeError, "options must contain only ASCII characters" );
       return 0;
    }
 

@@ -262,6 +262,9 @@ class TestAst(unittest.TestCase):
         with self.assertRaises(TypeError):
             starlink.Ast.ZoomMap(1, 1.0, options=2.5)
 
+        with self.assertRaises(TypeError):
+            starlink.Ast.ZoomMap(1, 1.0, options="Zoom=δεν")
+
     def test_FrameSimple(self):
         frame = starlink.Ast.Frame(2, "label(1)=a b,label(2)=c d")
         self.assertIsInstance(frame, starlink.Ast.Frame)
