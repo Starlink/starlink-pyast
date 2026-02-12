@@ -1267,7 +1267,10 @@ class TestAst(unittest.TestCase):
         frameset.addframe(starlink.Ast.BASE, zoommap, f2)
 
         ch.SinkFile = "fred.asdf"
-        n = ch.write(frameset)
+        try:
+            n = ch.write(frameset)
+        except starlink.Ast.NOYAML:
+            raise self.skipTest("No YAML support available") from None
         self.assertEqual(n, 1)
         ch.SourceFile = "fred.asdf"
         with self.assertRaises(starlink.Ast.RDERR):
