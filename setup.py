@@ -570,6 +570,10 @@ define_macros.append(("HAVE_DECL_ISFINITE", "1"))
 # configure would test for these but we no longer run configure
 define_macros.append(("HAVE_DECL_ISNAN", "1"))
 
+# Modern compilers are going to have INT64_T
+define_macros.append(("HAVE_INT64_T", "1"))
+define_macros.append(("HAVE_UINT64_T", "1"))
+
 #  Create the description of the starlink.Ast module.
 Ast = Extension("starlink.Ast", include_dirs=include_dirs, define_macros=define_macros, sources=sources)
 
