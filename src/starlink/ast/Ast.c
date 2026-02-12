@@ -13293,14 +13293,6 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 /* Check no error has occurred already. */
    if( PyErr_Occurred() ) return result;
 
-#if PY_MAJOR_VERSION < 3
-
-/* In Python V2.7, the "self" argument is always NULL, so use a global copy
-   of the module pointer stored when the module was initialised. */
-   self = pyast_module;
-
-#endif
-
 /* Get a string holding the full path to the pyast sharable library. */
    str = PyObject_GetAttrString( self, "__file__" );
    buff = GetString( NULL, str );
@@ -13346,7 +13338,6 @@ static PyMethodDef PyAst_methods[] = {
 };
 
 /* Describe the properties of the module. */
-#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef astmodule = {
    PyModuleDef_HEAD_INIT,
    "Ast",
@@ -13355,7 +13346,6 @@ static struct PyModuleDef astmodule = {
    PyAst_methods,
    NULL, NULL, NULL, NULL
 };
-#endif
 
 /* Tell the python interpreter about this module. This includes telling
    the interpreter about each of the types defined by this module. */
@@ -13378,11 +13368,7 @@ MOD_INIT(Ast) {
       RETURN( NULL );
    }
 
-#if PY_MAJOR_VERSION >= 3
    m = PyModule_Create(&astmodule);
-#else
-   m = Py_InitModule3( "Ast", PyAst_methods, "AST Python interface." );
-#endif
 
    if( m == NULL ) RETURN( NULL );
 
@@ -13940,17 +13926,6 @@ MOD_INIT(Ast) {
 
 
 
-#if PY_MAJOR_VERSION < 3
-
-/* Save a pointer to the module so that module functions can get at it
-   (in Python 2.7 module functions always receive NULL for the first argument
-   - "self"). */
-   pyast_module = m;
-   Py_INCREF(m);
-
-#endif
-
-
    RETURN( m );
 }
 
@@ -14078,14 +14053,6 @@ static char *GetString( void *mem, PyObject *value ) {
             result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
             Py_DECREF(bytes);
          }
-
-#if PY_MAJOR_VERSION < 3
-      } else if( PyString_Check( value ) ) {
-         const char *bytestr =  PyString_AsString(value);
-         if( bytestr ) {
-            result = astStore( mem, bytestr, strlen( bytestr ) + 1 );
-         }
-#endif
 
       } else {
          result = astFree( mem );
@@ -14580,11 +14547,6 @@ char *FormatObject( PyObject *o ){
          Py_DECREF(bytes);
       }
 
-#if PY_MAJOR_VERSION < 3
-   } else if( PyString_Check( repr ) ) {
-      text =  PyString_AsString(repr);
-      if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
-#endif
    }
 
    Py_DECREF(repr);
