@@ -11725,7 +11725,7 @@ static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh ){
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' method"
                           " returns a tuple of length %d, should be 2.",
@@ -11758,7 +11758,7 @@ static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta ){
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' method"
                           " returns a tuple of length %d, should be 2.",
@@ -11811,7 +11811,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 8 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' method"
                           " returns a tuple of length %d, should be 8.",
@@ -13991,10 +13991,10 @@ static char *PyAst_ToString( PyObject *self ) {
 /* Report an error if supplied PyObject is not an AST Object */
    if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
       char mess[255];
-      if( self->ob_type && self->ob_type->tp_name ) {
+      if( Py_TYPE(self)->tp_name ) {
          sprintf( mess, "PyAst_ToString: Expected an AST Object but a %.*s "
                   "was supplied.", (int)( sizeof(mess) - 60 ),
-                  self->ob_type->tp_name );
+                  Py_TYPE(self)->tp_name );
       } else {
          sprintf( mess, "PyAst_ToString: Expected an AST Object." );
       }
@@ -14556,5 +14556,5 @@ const char *GetObjectType( PyObject *o ){
 *     Return a pointer to the type name of an object.
 
 */
-   return o->ob_type->tp_name;
+   return Py_TYPE(o)->tp_name;
 }
