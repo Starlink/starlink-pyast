@@ -34,6 +34,7 @@ static void Sinka( const char *text );
 static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
 static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr );
+static int GetOptionsFromKwds( PyObject *kwds, const char **options );
 
 /* Macros used in this file */
 #define PYAST_MODULE
@@ -116,6 +117,46 @@ static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr ) {
       return -1;
    }
 #endif
+}
+
+/*
+ * GetOptionsFromKwds
+ * ------------------
+ * Read the optional "options" keyword argument from a kwargs dictionary.
+ *
+ * Parameters:
+ *   kwds:
+ *     Keyword-argument dictionary passed to a constructor, or NULL when no
+ *     keyword arguments were supplied.
+ *   options:
+ *     Output pointer to the options string to use. Left unchanged if "options"
+ *     is not present in kwds. Set to " " if kwds["options"] is None.
+ *
+ * Returns:
+ *   1 on success (including when no "options" key is supplied),
+ *   0 on error (invalid type or UTF-8 conversion failure). On error a Python
+ *   exception is set.
+ */
+static int GetOptionsFromKwds( PyObject *kwds, const char **options ) {
+   PyObject *opt;
+
+   if( !kwds ) return 1;
+
+   opt = PyDict_GetItemString( kwds, "options" );
+   if( !opt ) return 1;
+
+   if( opt == Py_None ) {
+      *options = " ";
+      return 1;
+   }
+
+   if( !STRING_CHECK( opt ) ) {
+      PyErr_SetString( PyExc_TypeError, "options must be a string or None" );
+      return 0;
+   }
+
+   *options = PyUnicode_AsUTF8( opt );
+   return ( *options != NULL );
 }
 
 /* Object */
@@ -2082,6 +2123,7 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord,zoom,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    double zoom;
    int ncoord;
    int result = -1;
@@ -2175,6 +2217,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
    const char **fwd = NULL;
    const char **inv = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int i;
    int nfwd = 0;
    int nin;
@@ -2331,6 +2374,7 @@ static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -2429,6 +2473,7 @@ static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -2515,6 +2560,7 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
 /* args: :disco,pcdcen,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    double disco;
    PyArrayObject * pcdcen = NULL;
@@ -2619,6 +2665,7 @@ static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord=2,type=starlink.Ast.TAN,lonax=1,latax=2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    int ncoord = 2;
    int type = AST__TAN;
@@ -2701,6 +2748,7 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int ncoord;
    int result = -1;
 
@@ -2785,6 +2833,7 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
 /* args: :flags=0,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int result = -1;
 
@@ -2885,6 +2934,7 @@ static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds ){
 /* args: :kx,ky,nx,ny,tx,ty,cu,cv,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int kx;
    int ky;
    int nx;
@@ -3030,6 +3080,7 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map,ax1=1,ax2=1,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    int ax1 = 1;
    int ax2 = 1;
@@ -3110,6 +3161,7 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map1,map2,series=True,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    Mapping *another;
    int series = 1;
@@ -3190,6 +3242,7 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map1,map2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    Mapping *another;
    int result = -1;
@@ -3269,6 +3322,7 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
 /* args: :inperm,outperm,constant=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * inperm = NULL;
    PyArrayObject * outperm = NULL;
    PyArrayObject * constant = NULL;
@@ -3377,6 +3431,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
 /* args: :shift,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * shift = NULL;
    PyObject * shift_object = NULL;
 
@@ -3466,6 +3521,7 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 /* args: :centre,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject *centre = NULL;
    PyObject *centre_object = NULL;
 
@@ -3553,6 +3609,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
 /* args: :lut,start=0.0,inc=1.0,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * lut = NULL;
    PyObject * lut_object = NULL;
    double start = 0.0;
@@ -3644,6 +3701,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ina,inb,outa,outb,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * ina = NULL;
    PyArrayObject * inb = NULL;
    PyArrayObject * outa= NULL;
@@ -3865,6 +3923,7 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
 /* args: :naxes,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    int naxes;
 
@@ -4695,6 +4754,7 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
 	 resulting MatrixMap would have Nin=3 and Nout=2. */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyObject *matrix_object = NULL;
    AstMatrixMap *this = NULL;
 
@@ -4816,6 +4876,7 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
    PyObject *fcoeff_object = NULL;
    PyObject *icoeff_object = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    const double *coeff_f = NULL;
    const double *coeff_i = NULL;
    int i;
@@ -5030,6 +5091,7 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
    PyObject *ubnd_f_object = NULL;
    PyObject *ubnd_i_object = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    const double *coeff_i = NULL;
    const double *coeff_f = NULL;
    int i;
@@ -5221,6 +5283,7 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    int result = -1;
 
@@ -5329,6 +5392,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    FrameSet *other;
    int result = -1;
 
@@ -5574,6 +5638,7 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :frame1,frame2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    FrameSet *other;
    FrameSet *another;
    int result = -1;
@@ -5690,6 +5755,7 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -5827,6 +5893,7 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -5953,6 +6020,7 @@ static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds ){
 /* args: :nin,flags=0 */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int nin;
    int result = -1;
@@ -6031,6 +6099,7 @@ static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds ){
 /* args: :flags=0 */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int result = -1;
 
@@ -6124,6 +6193,7 @@ static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -6221,6 +6291,7 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -6324,6 +6395,7 @@ static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :specval=starlink.Ast.BAD,specfrm=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    double specval = AST__BAD;
    Object *other = NULL;
@@ -6403,6 +6475,7 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 /* args: :frame1,frame2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    Object *other;
    Object *another;
@@ -7025,6 +7098,7 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,point1,point2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -7126,6 +7200,7 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,centre,point,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -7300,6 +7375,7 @@ static int Moc_init( Moc *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -7848,6 +7924,7 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,points,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject *points = NULL;
@@ -7979,6 +8056,7 @@ static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,points,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject *points = NULL;
@@ -8081,6 +8159,7 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,centre,point1,point2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -8220,6 +8299,7 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,lbnd,ubnd,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject * ubnd = NULL;
@@ -8315,6 +8395,7 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int result = -1;
@@ -8398,6 +8479,7 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
 /* args: :region1,region2,oper=starlink.Ast.OR,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Region *other;
    Region *another;
    int result = -1;
@@ -8478,6 +8560,7 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
 /* args: :region1,region2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Region *other;
    Region *another;
    int result = -1;
@@ -8631,6 +8714,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void );
    void (* sink_wrap)( const char * );
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    Channel_def( (Object *) self );
@@ -9151,6 +9235,7 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void );
    void (* sink_wrap)( const char * );
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    FitsChan_def( (Object *) self );
@@ -9963,6 +10048,7 @@ static int MocChan_init( MocChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
@@ -10093,6 +10179,7 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
@@ -10241,6 +10328,7 @@ static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -10882,6 +10970,7 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
          written following the same pattern. */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *frame;
    PyObject *bbox_object = NULL;
    PyObject *gbox_object = NULL;
@@ -11872,6 +11961,7 @@ static int Table_init( Table *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -12331,6 +12421,7 @@ static int FitsTable_init( FitsTable *self, PyObject *args, PyObject *kwds ){
 
    PyObject *header = Py_None;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|O!s:" CLASS, &FitsChanType, &header, &options ) ) {
@@ -12690,6 +12781,7 @@ static int YamlChan_init( YamlChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 

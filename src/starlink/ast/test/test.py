@@ -246,6 +246,26 @@ class TestAst(unittest.TestCase):
         self.assertTrue(starlink.Ast.ZoomMap(1, 1.0).simplify().isaunitmap())
 
         zoommap.lock(1)
+        zoommap.unlock(1)
+
+        # Test options handling
+        zoommap = starlink.Ast.ZoomMap(1, 1.0)
+        self.assertEqual(zoommap.Zoom, 1.0)
+
+        zoommap = starlink.Ast.ZoomMap(1, 1.0, options=" ")
+        self.assertEqual(zoommap.Zoom, 1.0)
+
+        zoommap = starlink.Ast.ZoomMap(1, 1.0, options="Zoom=2.5")
+        self.assertEqual(zoommap.Zoom, 2.5)
+
+        zoommap = starlink.Ast.ZoomMap(1, 1.0, options=None)
+        self.assertEqual(zoommap.Zoom, 1.0)
+
+        with self.assertRaises(starlink.Ast.BADAT):
+            zoommap = starlink.Ast.ZoomMap(1, 1.0, options="Unrecognized=2.5")
+
+        with self.assertRaises(TypeError):
+            starlink.Ast.ZoomMap(1, 1.0, options=2.5)
 
     def test_FrameSimple(self):
         frame = starlink.Ast.Frame(2, "label(1)=a b,label(2)=c d")
