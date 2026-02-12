@@ -868,8 +868,8 @@ class TestAst(unittest.TestCase):
         data = np.full((10, 15), 7, dtype=int)
         map = starlink.Ast.UnitMap(2)
 
-        # lbnd/ubnd are given as (col,row) (F77 order). This may seem odd in python,
-        # but then the same is done when using AST from C.
+        # lbnd/ubnd are given as (col,row) (F77 order). This may seem odd in
+        # python, but then the same is done when using AST from C.
         nmasked = box.mask(map, True, [-3, 2], [11, 11], data, 0)
         self.assertEqual(nmasked, 18)
         self.assertEqual(data[0, 2], 7)
@@ -2013,9 +2013,7 @@ class TestAst(unittest.TestCase):
         spliney = RectBivariateSpline(xs, ys, fcy, s=0)
         ary = spliney.get_coeffs()
 
-        splineMap = starlink.Ast.SplineMap(
-            k, k, nx, ny, tx, ty, arx, ary
-        )
+        splineMap = starlink.Ast.SplineMap(k, k, nx, ny, tx, ty, arx, ary)
 
         # Test forward and inverse transforms and compare with scipy.
         xval = np.array([0.0, 12.5, 12.0, 1.0, 15.0, 1.0, 95.0, 149.5, 151.2, 77.77])
@@ -2026,12 +2024,7 @@ class TestAst(unittest.TestCase):
 
         outData = splineMap.tran(np.array([xval, yval]), True)
 
-        outOfBounds = (
-            (xval > xs.max())
-            | (xval < xs.min())
-            | (yval < ys.min())
-            | (yval > ys.max())
-        )
+        outOfBounds = (xval > xs.max()) | (xval < xs.min()) | (yval < ys.min()) | (yval > ys.max())
 
         npt.assert_equal(outData[:, outOfBounds], starlink.Ast.BAD)
         npt.assert_almost_equal(outData[0, ~outOfBounds], u[~outOfBounds])

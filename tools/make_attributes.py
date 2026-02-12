@@ -40,8 +40,8 @@ def make_attributes(dirname=None):
             minindex = int(minindex)
 
             #  Initialise lists
-            att_decs = list()
-            att_descs = list()
+            att_decs = []
+            att_descs = []
 
             #  Convert the fields to more useful types.
             items = items.split()
@@ -62,17 +62,18 @@ def make_attributes(dirname=None):
                     else:
                         aname += "_" + str(i)
 
-                    #  Form the C macro invocation that defines the attribute and append it
-                    #  to the list.
+                    #  Form the C macro invocation that defines the attribute
+                    #  and append it to the list.
                     mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + aname + ")"
                     att_decs.append(mac)
 
-                    #  Form the attribute description to store in the Python TypeObject.
+                    #  Form the attribute description to store in the Python
+                    #  TypeObject.
                     mac = "DEFATT(" + aname + ', "' + desc + '"),'
                     att_descs.append(mac)
 
-            #  Multi-valued attributes can also (usually) be used without any index
-            #  of key. So add an unqualified attribute to the lists.
+            #  Multi-valued attributes can also (usually) be used without any
+            #  index of key. So add an unqualified attribute to the lists.
             mac = "MAKE_GET" + readonly + atype + "(" + classname + "," + attname + ")"
             att_decs.append(mac)
             mac = "DEFATT(" + attname + ', "' + desc + '"),'

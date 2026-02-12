@@ -1,8 +1,6 @@
-from packaging.version import parse
+import astropy.io.fits as pyfits
 
 import starlink.Ast as Ast
-
-import astropy.io.fits as pyfits
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -85,19 +83,21 @@ class PyFITSAdapter:
            >>>    print("Failed to convert FrameSet to FITS header")
         """
 
-        #  If the supplied object behaves like a sequence, use element zero (the
-        #  primary HDU). Otherwise use the supplied object.
+        #  If the supplied object behaves like a sequence, use element zero
+        #  (the primary HDU). Otherwise use the supplied object.
         try:
             self.hdu = hdu[0]
         except TypeError:
             self.hdu = hdu
 
-        #  Initialise the index within the pyfits header of the next card to read or write.
+        #  Initialise the index within the pyfits header of the next card to
+        #  read or write.
         self.index = 0
 
         #  The PyFits header may contatenate CONTINUE cards into a single card
-        #  "image". The source function defined below will split such long images up
-        #  into two or more sub-cards. These are managed using the following values.
+        #  "image". The source function defined below will split such long
+        #  images up into two or more sub-cards. These are managed using the
+        #  following values.
         self.subcards = None
         self.nextsub = 0
         self.nsub = 0
@@ -297,7 +297,7 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
        >>>    naxis2 = hdulist[0].header['NAXIS2']
        >>>    Atl.plotframeset( matplotlib.pyplot.figure().add_subplot(111),
        >>>                      [ 0.1, 0.1, 0.9, 0.9 ],
-       >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset )
+       >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset)
        >>>    matplotlib.pyplot.show()
     """
 

@@ -21,7 +21,7 @@ distribution.
 """
 
 
-class grf_matplotlib:
+class grf_matplotlib:  # noqa: N801
     """
     When creating a grf_matplotlib, the supplied "axes" object should be an
     instance of the matplotlib Axes class (or a subclass).
@@ -36,8 +36,8 @@ class grf_matplotlib:
             #  Save the current axis scales.
             self.Scales()
 
-            #  Create a temporary text string and line from which we can determine
-            #  the default graphics properties.
+            #  Create a temporary text string and line from which we can
+            #  determine the default graphics properties.
             xl, xr = self.axes.get_xlim()
             yb, yt = self.axes.get_ylim()
             xc = 0.5 * (xl + xr)
@@ -62,8 +62,9 @@ class grf_matplotlib:
             #  character marker types.
             self.markers = ["s", ".", "+", "*", "o", "x", ",", "^", "v", "<", ">", "p", "h", "D"]
 
-            #  A list used to convert AST integer line style types into corresponding matplotlib
-            #  properties. Ensure the first line style is the default.
+            #  A list used to convert AST integer line style types into
+            #  corresponding matplotlib properties. Ensure the first line style
+            #  is the default.
             self.styles = [
                 {"linestyle": defstyle},
                 {"linestyle": "-"},
@@ -72,8 +73,8 @@ class grf_matplotlib:
                 {"linestyle": "-."},
             ]
 
-            #  A list used to convert AST integer font types into corresponding matplotlib
-            #  properties. Ensure the first font is the default.
+            #  A list used to convert AST integer font types into corresponding
+            #  matplotlib properties. Ensure the first font is the default.
             self.fonts = [
                 deffont,
                 {"family": "serif", "style": "normal"},
@@ -84,8 +85,8 @@ class grf_matplotlib:
                 {"family": "monospace", "style": "italic"},
             ]
 
-            #  A list used to convert AST integer colours into corresponding matplotlib
-            #  properties. Ensure the first colour is the default.
+            #  A list used to convert AST integer colours into corresponding
+            #  matplotlib properties. Ensure the first colour is the default.
             self.colours = [
                 {"color": defcol},
                 {"color": "#ff0000"},
@@ -134,8 +135,9 @@ class grf_matplotlib:
                 for prim in (Ast.grfTEXT, Ast.grfLINE, Ast.grfMARK):
                     self.Attr(attr, 1.0, prim)
 
-            #  Set new delimiters for graphical sky axis values, using appropriate escape
-            #  sequences to get he superscripts looking nice.
+            #  Set new delimiters for graphical sky axis values, using
+            #  appropriate escape sequences to get he superscripts looking
+            #  nice.
             Ast.tunec("hrdel", "%-%^85+%s70+h%>45+%+")
             Ast.tunec("mndel", "%-%^85+%s70+m%>45+%+")
             Ast.tunec("scdel", "%-%^85+%s70+s%>45+%+")
@@ -148,8 +150,8 @@ class grf_matplotlib:
             self._xcorr = 0.0
             self._ycorr = 0.0
 
-            #  Save the current character heights, and update the vertical offset
-            #  correction for text.
+            #  Save the current character heights, and update the vertical
+            #  offset correction for text.
             self.Qch()
 
         #  Report an error if the supplied object is not suitable
@@ -164,11 +166,12 @@ class grf_matplotlib:
             )
 
     # ------------------------------------------------------------------------
-    #  Some backends, such as TkAgg, have the get_renderer method, which #makes this
-    #  easy. Other backends do not have the get_renderer method, so we have a work
-    #  around to find the renderer.  Print the figure to a temporary file #object,
-    #  and then grab the renderer that was used. This trick is stolen from the
-    #  matplotlib backend_bases.py print_figure() method.
+    #  Some backends, such as TkAgg, have the get_renderer method, which #makes
+    #  this easy. Other backends do not have the get_renderer method, so we
+    #  have a work around to find the renderer.  Print the figure to a
+    #  temporary file #object, and then grab the renderer that was used. This
+    #  trick is stolen from the matplotlib backend_bases.py print_figure()
+    #  method.
 
     def find_renderer(self, fig):
         if not self.renderer:
@@ -199,12 +202,13 @@ class grf_matplotlib:
 
         #  Nothing more to do if the new value is AST__BAD
         if value != Ast.BAD:
-            #  Save the old AST attribute value, and record the new value (if not .
+            #  Save the old AST attribute value, and record the new value
+            #  (if not .
             oldval = self.__attrs[prim][attr]
             self.__attrs[prim][attr] = value
 
-            #  Now need to update the matplotlib properties to make them reflect the
-            #  new AST value.
+            #  Now need to update the matplotlib properties to make them
+            #  reflect the new AST value.
 
             #  Style only applied to lines
             if attr == Ast.grfSTYLE:
@@ -230,12 +234,13 @@ class grf_matplotlib:
                     xl, yb = tr.transform([xl, yb])
                     xr, yt = tr.transform([xr, yt])
 
-                    #  Find the length of the diagonal in inches, and convert to points.
+                    #  Find the length of the diagonal in inches, and convert
+                    #  to points.
                     diag = 72.0 * math.sqrt((xr - xl) ** 2 + (yt - yb) ** 2)
 
-                    #  Find the number of points corresponding to an AST line width of 1.0,
-                    #  ensure it is at least 1 point, and then scale it by the supplied AST
-                    #  line width.
+                    #  Find the number of points corresponding to an AST line
+                    #  width of 1.0, ensure it is at least 1 point, and then
+                    #  scale it by the supplied AST line width.
                     lw = max(0.0005 * diag, 1.0) * value
                     self.__props[prim].update({"linewidth": lw})
 
@@ -253,7 +258,8 @@ class grf_matplotlib:
                     lw = max(0.0005 * diag, 1.0) * value
                     self.__props[prim].update({"markeredgewidth": lw})
 
-                #  Cannot control exact line width of texts, use weight instead.
+                #  Cannot control exact line width of texts, use weight
+                #  instead.
                 elif prim == Ast.grfTEXT:
                     if value < 0.0:
                         wgt = 0.0
@@ -371,8 +377,8 @@ class grf_matplotlib:
             ha = "center"
         rot = math.atan2(-upx, upy) * Ast.DR2D
 
-        #  matplotlib always seems to plot each text string a little higher than
-        #  requested, sp correct the reference position by a small amount
+        #  matplotlib always seems to plot each text string a little higher
+        #  than requested, sp correct the reference position by a small amount
         #  determined empirically to produce visually better text positioning.
         uplen = math.sqrt(upx**2 + upy**2)
         if uplen > 0.0:
@@ -426,7 +432,8 @@ class grf_matplotlib:
                 rgb = matplotlib.colors.colorConverter.to_rgb(colour)
                 hex = matplotlib.colors.rgb2hex(rgb)
 
-                #  Check if this hex string is already in the list of known colours.
+                #  Check if this hex string is already in the list of known
+                #  colours.
                 index = -1
                 for item in self.colours:
                     index += 1
@@ -453,16 +460,17 @@ class grf_matplotlib:
     def IntToCol(self, colour):
         result = None
 
-        # Convert from 1-based AST values to zero based Grf values.
+        #  Convert from 1-based AST values to zero based Grf values.
         colour = int(colour) - 1
 
         #  Check it is in the range of the list of known colours (otherwise we
-        #  reyturn None).
+        #  return None).
         if colour >= 0 and colour < len(self.colours):
             #  Get the corresponding colour name (a html hex string).
             result = self.colours[colour]["color"].upper()
 
-            #  Replace the hex string with any corresponding standard colour name.
+            #  Replace the hex string with any corresponding standard colour
+            #  name.
             for name, hex in matplotlib.colors.cnames.items():
                 if hex == result:
                     result = name

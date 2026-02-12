@@ -1,13 +1,10 @@
 import astropy.io.fits as pyfits
-
 import matplotlib.pyplot
 
-from starlink import Atl
-from starlink import Ast
+from starlink import Ast, Atl
 
 #  Use pyfits to open a test files file
 with pyfits.open("src/starlink/ast/test/cobe.fit") as ffile:
-
     #  Use matplotlib to plot an annotated grid of the WCS coords
     Atl.plotfitswcs(matplotlib.pyplot.figure(figsize=(8, 8)).add_subplot(111), [0.1, 0.1, 0.9, 0.9], ffile)
     matplotlib.pyplot.show()
@@ -26,8 +23,8 @@ with pyfits.open("src/starlink/ast/test/cobe.fit") as ffile:
     #  the pyfits primary hdu as yet).
     fs = fc.read()
 
-    #  Tell the FitsChan to write out the remaining headers to its external data
-    #  sink.
+    #  Tell the FitsChan to write out the remaining headers to its external
+    #  data sink.
     fc.writefits()
 
     #  Display the headers now in the pyfits primary hdu.
