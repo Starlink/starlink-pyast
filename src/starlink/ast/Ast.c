@@ -13329,7 +13329,7 @@ PyMODINIT_FUNC PyInit_Ast(void) {
    RegisterErrors function is defined within file exceptions.c (generated
    automatically by the make_exceptions.py script on the basis of the ast_err.msg
    file). */
-   if( !RegisterErrors( m ) ) return NULL;
+   if( !RegisterErrors( m ) ) goto fail;
 
 /* Pointers to functions for use by other extension modules. */
    PyAst_API[PyAst_ToString_NUM] = (void *)PyAst_ToString;
@@ -13337,341 +13337,318 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 
 /* Create a Capsule containing the API pointer array's address */
    c_api_object = PyCapsule_New( (void *) PyAst_API, MODULE "._C_API", NULL );
-   if( c_api_object ) PyModule_AddObject( m, "_C_API", c_api_object );
+   if( !c_api_object ) goto fail;
+   if( PyModule_AddObjectRef( m, "_C_API", c_api_object ) < 0 ) {
+      Py_DECREF( c_api_object );
+      goto fail;
+   }
+   Py_DECREF( c_api_object );
 
 /* The types provided by this module. */
-   if( PyType_Ready(&ObjectType) < 0) return NULL;
-   Py_INCREF(&ObjectType);
-   PyModule_AddObject( m, "Object", (PyObject *)&ObjectType);
+   if( PyType_Ready(&ObjectType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Object", (PyObject *)&ObjectType ) < 0 ) goto fail;
 
    MappingType.tp_base = &ObjectType;
-   if( PyType_Ready(&MappingType) < 0) return NULL;
-   Py_INCREF(&MappingType);
-   PyModule_AddObject( m, "Mapping", (PyObject *)&MappingType);
+   if( PyType_Ready(&MappingType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Mapping", (PyObject *)&MappingType ) < 0 ) goto fail;
 
    ZoomMapType.tp_new = PyType_GenericNew;
    ZoomMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ZoomMapType) < 0) return NULL;
-   Py_INCREF(&ZoomMapType);
-   PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
+   if( PyType_Ready(&ZoomMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ZoomMap", (PyObject *)&ZoomMapType ) < 0 ) goto fail;
 
    MathMapType.tp_new = PyType_GenericNew;
    MathMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MathMapType) < 0) return NULL;
-   Py_INCREF(&MathMapType);
-   PyModule_AddObject( m, "MathMap", (PyObject *)&MathMapType);
+   if( PyType_Ready(&MathMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MathMap", (PyObject *)&MathMapType ) < 0 ) goto fail;
 
    SphMapType.tp_new = PyType_GenericNew;
    SphMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SphMapType) < 0) return NULL;
-   Py_INCREF(&SphMapType);
-   PyModule_AddObject( m, "SphMap", (PyObject *)&SphMapType);
+   if( PyType_Ready(&SphMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SphMap", (PyObject *)&SphMapType ) < 0 ) goto fail;
 
    GrismMapType.tp_new = PyType_GenericNew;
    GrismMapType.tp_base = &MappingType;
-   if( PyType_Ready(&GrismMapType) < 0) return NULL;
-   Py_INCREF(&GrismMapType);
-   PyModule_AddObject( m, "GrismMap", (PyObject *)&GrismMapType);
+   if( PyType_Ready(&GrismMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "GrismMap", (PyObject *)&GrismMapType ) < 0 ) goto fail;
 
    PcdMapType.tp_new = PyType_GenericNew;
    PcdMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PcdMapType) < 0) return NULL;
-   Py_INCREF(&PcdMapType);
-   PyModule_AddObject( m, "PcdMap", (PyObject *)&PcdMapType);
+   if( PyType_Ready(&PcdMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PcdMap", (PyObject *)&PcdMapType ) < 0 ) goto fail;
 
    WcsMapType.tp_new = PyType_GenericNew;
    WcsMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WcsMapType) < 0) return NULL;
-   Py_INCREF(&WcsMapType);
-   PyModule_AddObject( m, "WcsMap", (PyObject *)&WcsMapType);
+   if( PyType_Ready(&WcsMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "WcsMap", (PyObject *)&WcsMapType ) < 0 ) goto fail;
 
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
-   if( PyType_Ready(&UnitMapType) < 0) return NULL;
-   Py_INCREF(&UnitMapType);
-   PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
+   if( PyType_Ready(&UnitMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "UnitMap", (PyObject *)&UnitMapType ) < 0 ) goto fail;
 
    TimeMapType.tp_new = PyType_GenericNew;
    TimeMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TimeMapType) < 0) return NULL;
-   Py_INCREF(&TimeMapType);
-   PyModule_AddObject( m, "TimeMap", (PyObject *)&TimeMapType);
+   if( PyType_Ready(&TimeMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TimeMap", (PyObject *)&TimeMapType ) < 0 ) goto fail;
 
    SplineMapType.tp_new = PyType_GenericNew;
    SplineMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SplineMapType) < 0) return NULL;
-   Py_INCREF(&SplineMapType);
-   PyModule_AddObject( m, "SplineMap", (PyObject *)&SplineMapType);
+   if( PyType_Ready(&SplineMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SplineMap", (PyObject *)&SplineMapType ) < 0 ) goto fail;
 
    RateMapType.tp_new = PyType_GenericNew;
    RateMapType.tp_base = &MappingType;
-   if( PyType_Ready(&RateMapType) < 0) return NULL;
-   Py_INCREF(&RateMapType);
-   PyModule_AddObject( m, "RateMap", (PyObject *)&RateMapType);
+   if( PyType_Ready(&RateMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "RateMap", (PyObject *)&RateMapType ) < 0 ) goto fail;
 
    CmpMapType.tp_new = PyType_GenericNew;
    CmpMapType.tp_base = &MappingType;
-   if( PyType_Ready(&CmpMapType) < 0) return NULL;
-   Py_INCREF(&CmpMapType);
-   PyModule_AddObject( m, "CmpMap", (PyObject *)&CmpMapType);
+   if( PyType_Ready(&CmpMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpMap", (PyObject *)&CmpMapType ) < 0 ) goto fail;
 
    TranMapType.tp_new = PyType_GenericNew;
    TranMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TranMapType) < 0) return NULL;
-   Py_INCREF(&TranMapType);
-   PyModule_AddObject( m, "TranMap", (PyObject *)&TranMapType);
+   if( PyType_Ready(&TranMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TranMap", (PyObject *)&TranMapType ) < 0 ) goto fail;
 
    NormMapType.tp_new = PyType_GenericNew;
    NormMapType.tp_base = &MappingType;
-   if( PyType_Ready(&NormMapType) < 0) return NULL;
-   Py_INCREF(&NormMapType);
-   PyModule_AddObject( m, "NormMap", (PyObject *)&NormMapType);
+   if( PyType_Ready(&NormMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "NormMap", (PyObject *)&NormMapType ) < 0 ) goto fail;
 
    PermMapType.tp_new = PyType_GenericNew;
    PermMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PermMapType) < 0) return NULL;
-   Py_INCREF(&PermMapType);
-   PyModule_AddObject( m, "PermMap", (PyObject *)&PermMapType);
+   if( PyType_Ready(&PermMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PermMap", (PyObject *)&PermMapType ) < 0 ) goto fail;
 
    ShiftMapType.tp_new = PyType_GenericNew;
    ShiftMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ShiftMapType) < 0) return NULL;
-   Py_INCREF(&ShiftMapType);
-   PyModule_AddObject( m, "ShiftMap", (PyObject *)&ShiftMapType);
+   if( PyType_Ready(&ShiftMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ShiftMap", (PyObject *)&ShiftMapType ) < 0 ) goto fail;
 
    UnitNormMapType.tp_new = PyType_GenericNew;
    UnitNormMapType.tp_base = &MappingType;
-   if( PyType_Ready(&UnitNormMapType) < 0) return NULL;
-   Py_INCREF(&UnitNormMapType);
-   PyModule_AddObject( m, "UnitNormMap", (PyObject *)&UnitNormMapType);
+   if( PyType_Ready(&UnitNormMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "UnitNormMap", (PyObject *)&UnitNormMapType ) < 0 ) goto fail;
 
    LutMapType.tp_new = PyType_GenericNew;
    LutMapType.tp_base = &MappingType;
-   if( PyType_Ready(&LutMapType) < 0) return NULL;
-   Py_INCREF(&LutMapType);
-   PyModule_AddObject( m, "LutMap", (PyObject *)&LutMapType);
+   if( PyType_Ready(&LutMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "LutMap", (PyObject *)&LutMapType ) < 0 ) goto fail;
 
    WinMapType.tp_new = PyType_GenericNew;
    WinMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WinMapType) < 0) return NULL;
-   Py_INCREF(&WinMapType);
-   PyModule_AddObject( m, "WinMap", (PyObject *)&WinMapType);
+   if( PyType_Ready(&WinMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "WinMap", (PyObject *)&WinMapType ) < 0 ) goto fail;
 
    MatrixMapType.tp_new = PyType_GenericNew;
    MatrixMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MatrixMapType) < 0) return NULL;
-   Py_INCREF(&MatrixMapType);
-   PyModule_AddObject( m, "MatrixMap", (PyObject *)&MatrixMapType);
+   if( PyType_Ready(&MatrixMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MatrixMap", (PyObject *)&MatrixMapType ) < 0 ) goto fail;
 
    PolyMapType.tp_new = PyType_GenericNew;
    PolyMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PolyMapType) < 0) return NULL;
-   Py_INCREF(&PolyMapType);
-   PyModule_AddObject( m, "PolyMap", (PyObject *)&PolyMapType);
+   if( PyType_Ready(&PolyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PolyMap", (PyObject *)&PolyMapType ) < 0 ) goto fail;
 
    ChebyMapType.tp_new = PyType_GenericNew;
    ChebyMapType.tp_base = &PolyMapType;
-   if( PyType_Ready(&ChebyMapType) < 0) return NULL;
-   Py_INCREF(&ChebyMapType);
-   PyModule_AddObject( m, "ChebyMap", (PyObject *)&ChebyMapType);
+   if( PyType_Ready(&ChebyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ChebyMap", (PyObject *)&ChebyMapType ) < 0 ) goto fail;
 
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
-   if( PyType_Ready(&FrameType) < 0) return NULL;
-   Py_INCREF(&FrameType);
-   PyModule_AddObject( m, "Frame", (PyObject *)&FrameType);
+   if( PyType_Ready(&FrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Frame", (PyObject *)&FrameType ) < 0 ) goto fail;
 
    FrameSetType.tp_new = PyType_GenericNew;
    FrameSetType.tp_base = &FrameType;
-   if( PyType_Ready(&FrameSetType) < 0) return NULL;
-   Py_INCREF(&FrameSetType);
-   PyModule_AddObject( m, "FrameSet", (PyObject *)&FrameSetType);
+   if( PyType_Ready(&FrameSetType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FrameSet", (PyObject *)&FrameSetType ) < 0 ) goto fail;
 
    PlotType.tp_new = PyType_GenericNew;
    PlotType.tp_base = &FrameSetType;
-   if( PyType_Ready(&PlotType) < 0) return NULL;
-   Py_INCREF(&PlotType);
-   PyModule_AddObject( m, "Plot", (PyObject *)&PlotType);
+   if( PyType_Ready(&PlotType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Plot", (PyObject *)&PlotType ) < 0 ) goto fail;
 
    CmpFrameType.tp_new = PyType_GenericNew;
    CmpFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&CmpFrameType) < 0) return NULL;
-   Py_INCREF(&CmpFrameType);
-   PyModule_AddObject( m, "CmpFrame", (PyObject *)&CmpFrameType);
+   if( PyType_Ready(&CmpFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpFrame", (PyObject *)&CmpFrameType ) < 0 ) goto fail;
 
    SpecFrameType.tp_new = PyType_GenericNew;
    SpecFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SpecFrameType) < 0) return NULL;
-   Py_INCREF(&SpecFrameType);
-   PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
+   if( PyType_Ready(&SpecFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecFrame", (PyObject *)&SpecFrameType ) < 0 ) goto fail;
 
    SlaMapType.tp_new = PyType_GenericNew;
    SlaMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SlaMapType) < 0) return NULL;
-   Py_INCREF(&SlaMapType);
-   PyModule_AddObject( m, "SlaMap", (PyObject *)&SlaMapType);
+   if( PyType_Ready(&SlaMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SlaMap", (PyObject *)&SlaMapType ) < 0 ) goto fail;
 
    SpecMapType.tp_new = PyType_GenericNew;
    SpecMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SpecMapType) < 0) return NULL;
-   Py_INCREF(&SpecMapType);
-   PyModule_AddObject( m, "SpecMap", (PyObject *)&SpecMapType);
+   if( PyType_Ready(&SpecMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecMap", (PyObject *)&SpecMapType ) < 0 ) goto fail;
 
    DSBSpecFrameType.tp_new = PyType_GenericNew;
    DSBSpecFrameType.tp_base = &SpecFrameType;
-   if( PyType_Ready(&DSBSpecFrameType) < 0) return NULL;
-   Py_INCREF(&DSBSpecFrameType);
-   PyModule_AddObject( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType);
+   if( PyType_Ready(&DSBSpecFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType ) < 0 ) goto fail;
 
    SkyFrameType.tp_new = PyType_GenericNew;
    SkyFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SkyFrameType) < 0) return NULL;
-   Py_INCREF(&SkyFrameType);
-   PyModule_AddObject( m, "SkyFrame", (PyObject *)&SkyFrameType);
+   if( PyType_Ready(&SkyFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SkyFrame", (PyObject *)&SkyFrameType ) < 0 ) goto fail;
 
    TimeFrameType.tp_new = PyType_GenericNew;
    TimeFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&TimeFrameType) < 0) return NULL;
-   Py_INCREF(&TimeFrameType);
-   PyModule_AddObject( m, "TimeFrame", (PyObject *)&TimeFrameType);
+   if( PyType_Ready(&TimeFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TimeFrame", (PyObject *)&TimeFrameType ) < 0 ) goto fail;
 
    FluxFrameType.tp_new = PyType_GenericNew;
    FluxFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&FluxFrameType) < 0) return NULL;
-   Py_INCREF(&FluxFrameType);
-   PyModule_AddObject( m, "FluxFrame", (PyObject *)&FluxFrameType);
+   if( PyType_Ready(&FluxFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FluxFrame", (PyObject *)&FluxFrameType ) < 0 ) goto fail;
 
    SpecFluxFrameType.tp_new = PyType_GenericNew;
    SpecFluxFrameType.tp_base = &CmpFrameType;
-   if( PyType_Ready(&SpecFluxFrameType) < 0) return NULL;
-   Py_INCREF(&SpecFluxFrameType);
-   PyModule_AddObject( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType);
+   if( PyType_Ready(&SpecFluxFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType ) < 0 ) goto fail;
 
    RegionType.tp_new = PyType_GenericNew;
    RegionType.tp_base = &FrameType;
-   if( PyType_Ready(&RegionType) < 0) return NULL;
-   Py_INCREF(&RegionType);
-   PyModule_AddObject( m, "Region", (PyObject *)&RegionType);
+   if( PyType_Ready(&RegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Region", (PyObject *)&RegionType ) < 0 ) goto fail;
 
    BoxType.tp_new = PyType_GenericNew;
    BoxType.tp_base = &RegionType;
-   if( PyType_Ready(&BoxType) < 0) return NULL;
-   Py_INCREF(&BoxType);
-   PyModule_AddObject( m, "Box", (PyObject *)&BoxType);
+   if( PyType_Ready(&BoxType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Box", (PyObject *)&BoxType ) < 0 ) goto fail;
 
    CircleType.tp_new = PyType_GenericNew;
    CircleType.tp_base = &RegionType;
-   if( PyType_Ready(&CircleType) < 0) return NULL;
-   Py_INCREF(&CircleType);
-   PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
+   if( PyType_Ready(&CircleType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Circle", (PyObject *)&CircleType ) < 0 ) goto fail;
 
    PointListType.tp_new = PyType_GenericNew;
    PointListType.tp_base = &RegionType;
-   if( PyType_Ready(&PointListType) < 0) return NULL;
-   Py_INCREF(&PointListType);
-   PyModule_AddObject( m, "PointList", (PyObject *)&PointListType);
+   if( PyType_Ready(&PointListType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PointList", (PyObject *)&PointListType ) < 0 ) goto fail;
 
    PolygonType.tp_new = PyType_GenericNew;
    PolygonType.tp_base = &RegionType;
-   if( PyType_Ready(&PolygonType) < 0) return NULL;
-   Py_INCREF(&PolygonType);
-   PyModule_AddObject( m, "Polygon", (PyObject *)&PolygonType);
+   if( PyType_Ready(&PolygonType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Polygon", (PyObject *)&PolygonType ) < 0 ) goto fail;
 
    EllipseType.tp_new = PyType_GenericNew;
    EllipseType.tp_base = &RegionType;
-   if( PyType_Ready(&EllipseType) < 0) return NULL;
-   Py_INCREF(&EllipseType);
-   PyModule_AddObject( m, "Ellipse", (PyObject *)&EllipseType);
+   if( PyType_Ready(&EllipseType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Ellipse", (PyObject *)&EllipseType ) < 0 ) goto fail;
 
    IntervalType.tp_new = PyType_GenericNew;
    IntervalType.tp_base = &RegionType;
-   if( PyType_Ready(&IntervalType) < 0) return NULL;
-   Py_INCREF(&IntervalType);
-   PyModule_AddObject( m, "Interval", (PyObject *)&IntervalType);
+   if( PyType_Ready(&IntervalType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Interval", (PyObject *)&IntervalType ) < 0 ) goto fail;
 
    MocType.tp_new = PyType_GenericNew;
    MocType.tp_base = &RegionType;
-   if( PyType_Ready(&MocType) < 0) return NULL;
-   Py_INCREF(&MocType);
-   PyModule_AddObject( m, "Moc", (PyObject *)&MocType);
+   if( PyType_Ready(&MocType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Moc", (PyObject *)&MocType ) < 0 ) goto fail;
 
    NullRegionType.tp_new = PyType_GenericNew;
    NullRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&NullRegionType) < 0) return NULL;
-   Py_INCREF(&NullRegionType);
-   PyModule_AddObject( m, "NullRegion", (PyObject *)&NullRegionType);
+   if( PyType_Ready(&NullRegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "NullRegion", (PyObject *)&NullRegionType ) < 0 ) goto fail;
 
    CmpRegionType.tp_new = PyType_GenericNew;
    CmpRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&CmpRegionType) < 0) return NULL;
-   Py_INCREF(&CmpRegionType);
-   PyModule_AddObject( m, "CmpRegion", (PyObject *)&CmpRegionType);
+   if( PyType_Ready(&CmpRegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpRegion", (PyObject *)&CmpRegionType ) < 0 ) goto fail;
 
    PrismType.tp_new = PyType_GenericNew;
    PrismType.tp_base = &RegionType;
-   if( PyType_Ready(&PrismType) < 0) return NULL;
-   Py_INCREF(&PrismType);
-   PyModule_AddObject( m, "Prism", (PyObject *)&PrismType);
+   if( PyType_Ready(&PrismType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Prism", (PyObject *)&PrismType ) < 0 ) goto fail;
 
    ChannelType.tp_new = PyType_GenericNew;
    ChannelType.tp_base = &ObjectType;
-   if( PyType_Ready(&ChannelType) < 0) return NULL;
-   Py_INCREF(&ChannelType);
-   PyModule_AddObject( m, "Channel", (PyObject *)&ChannelType);
+   if( PyType_Ready(&ChannelType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Channel", (PyObject *)&ChannelType ) < 0 ) goto fail;
 
    FitsChanType.tp_new = PyType_GenericNew;
    FitsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&FitsChanType) < 0) return NULL;
-   Py_INCREF(&FitsChanType);
-   PyModule_AddObject( m, "FitsChan", (PyObject *)&FitsChanType);
+   if( PyType_Ready(&FitsChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FitsChan", (PyObject *)&FitsChanType ) < 0 ) goto fail;
 
    StcsChanType.tp_new = PyType_GenericNew;
    StcsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&StcsChanType) < 0) return NULL;
-   Py_INCREF(&StcsChanType);
-   PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
+   if( PyType_Ready(&StcsChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "StcsChan", (PyObject *)&StcsChanType ) < 0 ) goto fail;
 
    YamlChanType.tp_new = PyType_GenericNew;
    YamlChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&YamlChanType) < 0) return NULL;
-   Py_INCREF(&YamlChanType);
-   PyModule_AddObject( m, "YamlChan", (PyObject *)&YamlChanType);
+   if( PyType_Ready(&YamlChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "YamlChan", (PyObject *)&YamlChanType ) < 0 ) goto fail;
 
    MocChanType.tp_new = PyType_GenericNew;
    MocChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&MocChanType) < 0) return NULL;
-   Py_INCREF(&MocChanType);
-   PyModule_AddObject( m, "MocChan", (PyObject *)&MocChanType);
+   if( PyType_Ready(&MocChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MocChan", (PyObject *)&MocChanType ) < 0 ) goto fail;
 
    KeyMapType.tp_new = PyType_GenericNew;
    KeyMapType.tp_base = &ObjectType;
-   if( PyType_Ready(&KeyMapType) < 0) return NULL;
-   Py_INCREF(&KeyMapType);
-   PyModule_AddObject( m, "KeyMap", (PyObject *)&KeyMapType);
+   if( PyType_Ready(&KeyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "KeyMap", (PyObject *)&KeyMapType ) < 0 ) goto fail;
 
    TableType.tp_new = PyType_GenericNew;
    TableType.tp_base = &KeyMapType;
-   if( PyType_Ready(&TableType) < 0) return NULL;
-   Py_INCREF(&TableType);
-   PyModule_AddObject( m, "Table", (PyObject *)&TableType);
+   if( PyType_Ready(&TableType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Table", (PyObject *)&TableType ) < 0 ) goto fail;
 
    FitsTableType.tp_new = PyType_GenericNew;
    FitsTableType.tp_base = &TableType;
-   if( PyType_Ready(&FitsTableType) < 0) return NULL;
-   Py_INCREF(&FitsTableType);
-   PyModule_AddObject( m, "FitsTable", (PyObject *)&FitsTableType);
+   if( PyType_Ready(&FitsTableType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FitsTable", (PyObject *)&FitsTableType ) < 0 ) goto fail;
 
 /* The constants provided by this module. */
-   PyModule_AddObject( m, "__version__", PyUnicode_FromString(PYAST_VERSION) );
+   {
+      PyObject *version = PyUnicode_FromString( PYAST_VERSION );
+      if( !version ) goto fail;
+      if( PyModule_AddObjectRef( m, "__version__", version ) < 0 ) {
+         Py_DECREF( version );
+         goto fail;
+      }
+      Py_DECREF( version );
+   }
 
 #define ICONST(Name) \
-   PyModule_AddIntConstant( m, #Name, AST__##Name )
+   do { \
+      if( PyModule_AddIntConstant( m, #Name, AST__##Name ) < 0 ) goto fail; \
+   } while(0)
 
 #define DCONST(Name) \
-   PyModule_AddObject( m, #Name, PyFloat_FromDouble(AST__##Name) )
+   do { \
+      PyObject *tmp = PyFloat_FromDouble( AST__##Name ); \
+      if( !tmp ) goto fail; \
+      if( PyModule_AddObjectRef( m, #Name, tmp ) < 0 ) { \
+         Py_DECREF( tmp ); \
+         goto fail; \
+      } \
+      Py_DECREF( tmp ); \
+   } while(0)
 
 #define CCONST(Name) \
-   PyModule_AddObject( m, #Name, PyUnicode_FromString(AST__##Name) )
+   do { \
+      PyObject *tmp = PyUnicode_FromString( AST__##Name ); \
+      if( !tmp ) goto fail; \
+      if( PyModule_AddObjectRef( m, #Name, tmp ) < 0 ) { \
+         Py_DECREF( tmp ); \
+         goto fail; \
+      } \
+      Py_DECREF( tmp ); \
+   } while(0)
 
 
    CCONST(XMLNS);
@@ -13839,7 +13816,9 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 #undef DCONST
 
 #define ICONST(Name) \
-   PyModule_AddIntConstant( m, "grf" #Name, GRF__##Name )
+   do { \
+      if( PyModule_AddIntConstant( m, "grf" #Name, GRF__##Name ) < 0 ) goto fail; \
+   } while(0)
 
    ICONST(STYLE);
    ICONST(WIDTH);
@@ -13880,6 +13859,10 @@ PyMODINIT_FUNC PyInit_Ast(void) {
 
 
    return m;
+
+fail:
+   Py_XDECREF( m );
+   return NULL;
 }
 
 
