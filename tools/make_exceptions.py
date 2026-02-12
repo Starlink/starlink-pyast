@@ -1,28 +1,26 @@
 #!python3
-
-"""
-Generates the file exceptions.c which encapsulates Python/AST
+"""Generates the file exceptions.c which encapsulates Python/AST
 exception handling.
 
 The environment variable AST_SOURCE should be set to point to
 the folder containing the source distribution for the AST
 library.
 """
-
 import os
 import os.path
+import sys
 
 
 def make_exceptions(dirname=None):
     if "AST_SOURCE" not in os.environ:
         print("Please set AST_SOURCE environment variable to point to the AST source code directory")
-        exit(1)
+        sys.exit(1)
 
     # ensure that we have the error codes file
     errfile = os.path.join(os.environ["AST_SOURCE"], "ast_err.h")
     if not os.path.exists(errfile):
         print("Could not find the ast_err.h file in directory " + os.environ["AST_SOURCE"])
-        exit(1)
+        sys.exit(1)
 
     # Open an output C file
     cfilename = "exceptions.c"
@@ -77,7 +75,7 @@ static PyObject *AstError_err;
         if not errcodes:
             print(f"Could not find any error codes in {errfile}. Aborting")
             os.unlink(cfilename)
-            exit(1)
+            sys.exit(1)
 
         for code in errcodes:
             print(f"static PyObject *{code}_err;", file=cfile)

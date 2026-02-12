@@ -1,17 +1,15 @@
 #!python3
-
-"""
-This script reads the file "attributes.desc", which contains descriptions
+"""Reads the file "attributes.desc", which contains descriptions
 of all multi-valued AST attributes, and creates a pair of files for each
-attribute. For attribute "<attr>", the two files are:
+attribute.
 
-<attr>_def.c: Contains the prototypes and definitions of methods to access
-the attribute values.
+For attribute "<attr>", the two files are:
 
-<attr>_desc.c: Contains the description of the attribute getters and
-setters that need to be included in th Python TypeObject for the class.
+* <attr>_def.c: Contains the prototypes and definitions of methods to access
+  the attribute values.
+* <attr>_desc.c: Contains the description of the attribute getters and
+  setters that need to be included in th Python TypeObject for the class.
 """
-
 import os
 import os.path
 
@@ -45,10 +43,7 @@ def make_attributes(dirname=None):
 
             #  Convert the fields to more useful types.
             items = items.split()
-            if maxindex == "MXDIM":
-                maxindex = mxdim
-            else:
-                maxindex = int(maxindex)
+            maxindex = mxdim if maxindex == "MXDIM" else int(maxindex)
 
             #  Loop over all indices for multi-valued attributes
             for i in range(minindex, maxindex + 1):
