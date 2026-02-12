@@ -8,6 +8,7 @@ import sys
 import unittest
 
 import numpy
+import numpy.testing as npt
 
 import starlink.Ast
 
@@ -1956,6 +1957,95 @@ class TestAst(unittest.TestCase):
             yv = 1.5 - 2.5 * xi * (2 * yi * yi - 1)
             self.assertAlmostEqual(xv, xo)
             self.assertAlmostEqual(yv, yo)
+
+    def test_SplineMap(self) -> None:
+        """Ensure that SplineMap is functioning correctly."""
+        nx = 150  # Parameters matching the test in astshim.
+        ny = 100
+        k = 4
+        a = 4.0
+        b = 0.2
+        c = 3.0
+        xs = numpy.linspace(1, nx, nx)
+        ys = numpy.linspace(1, ny, ny)
+
+        fcx = numpy.zeros((nx, ny))
+        fcy = numpy.zeros((nx, ny))
+        for j in range(ny):
+            y = ys[j]
+            for i in range(nx):
+                x = xs[i]
+                fcx[i][j] = x + a * numpy.sin(b * x) * numpy.cos(b * y)
+                fcy[i][j] = y + c * numpy.cos(b * x) * numpy.sin(b * y)
+
+        try:
+            from scipy.interpolate import RectBivariateSpline
+        except ImportError:
+            raise self.skipTest("Scipy required for SplineMap test") from None
+
+        splinex = RectBivariateSpline(xs, ys, fcx, s=0)
+        (tx, ty) = splinex.get_knots()
+        arx = splinex.get_coeffs()
+
+        spliney = RectBivariateSpline(xs, ys, fcy, s=0)
+        ary = spliney.get_coeffs()
+
+        splineMap = starlink.Ast.SplineMap(
+            k, k, nx, ny, tx, ty, arx, ary
+        )
+
+        # Test forward and inverse transforms and compare with scipy.
+        xval = numpy.array([0.0, 12.5, 12.0, 1.0, 15.0, 1.0, 95.0, 149.5, 151.2, 77.77])
+        yval = numpy.array([-1.0, 8.8, 8.0, 1.0, 15.0, 76.0, 100.0, 99.8, 82.3, 54.3])
+
+        u = splinex.ev(xval, yval)
+        v = spliney.ev(xval, yval)
+
+        outData = splineMap.tran(numpy.array([xval, yval]), True)
+
+        outOfBounds = (
+            (xval > xs.max())
+            | (xval < xs.min())
+            | (yval < ys.min())
+            | (yval > ys.max())
+        )
+
+        npt.assert_equal(outData[:, outOfBounds], starlink.Ast.BAD)
+        npt.assert_almost_equal(outData[0, ~outOfBounds], u[~outOfBounds])
+        npt.assert_almost_equal(outData[1, ~outOfBounds], v[~outOfBounds])
+
+        reverseTrip = splineMap.tran(outData[:, ~outOfBounds].copy(), False)
+
+        npt.assert_almost_equal(reverseTrip[0], xval[~outOfBounds])
+        npt.assert_almost_equal(reverseTrip[1], yval[~outOfBounds])
+
+        # Check that SplineMap attributes can be accessed and return expected
+        # values.
+        self.assertEqual(splineMap.InvTol, 1e-6)
+        self.assertEqual(splineMap.InvNiter, 6)
+        self.assertEqual(splineMap.OutUnit, False)
+
+        # Check that they can be overridden after the fact.
+        splineMap.InvNiter = 3
+        self.assertEqual(splineMap.InvNiter, 3)
+
+        # Initialize SplineMap with other attributes and check they are set
+        # correctly.
+        options = "InvNiter=5,InvTol=1e-7,OutUnit=1"
+        splineMap = starlink.Ast.SplineMap(
+            k,
+            k,
+            nx,
+            ny,
+            tx,
+            ty,
+            arx,
+            ary,
+            options=options,
+        )
+        self.assertEqual(splineMap.InvTol, 1e-7)
+        self.assertEqual(splineMap.InvNiter, 5)
+        self.assertEqual(splineMap.OutUnit, 1)
 
 
 if __name__ == "__main__":
