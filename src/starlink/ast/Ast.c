@@ -995,7 +995,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
 
          maplist_object = PyList_New( (Py_ssize_t) nmap );
          dims[ 0 ] = nmap;
-         invlist_out = PyArray_SimpleNew( 1, dims, NPY_INT );
+         invlist_out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
          if( astOK && maplist_object && invlist_out ) {
             pi = ((int *)PyArray_DATA(invlist_out));
             for( i = 0; i < nmap; i++ ) {
@@ -3758,7 +3758,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
       if (ina && inb && outa && outb ) {
          AstWinMap * this = NULL;
          // Sanity check size
-         size_t ncoord = PyArray_Size( (PyObject*)ina );
+         npy_intp ncoord = PyArray_Size( (PyObject*)ina );
          if ( ncoord == PyArray_Size( (PyObject*)inb ) &&
               ncoord == PyArray_Size( (PyObject*)outa) &&
               ncoord == PyArray_Size( (PyObject*)outb) ) {
@@ -8738,7 +8738,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
          astPutChannelData( (AstChannel *) this, (Channel *) self );
 
 /* Store self as the Python proxy for the AST Channel. */
-         result = SetProxy( this, self );
+         result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
    }

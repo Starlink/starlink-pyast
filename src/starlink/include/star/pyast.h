@@ -148,6 +148,7 @@ static PyObject *isa_##class( Object *self ){ \
 static PyObject *get##attrib( class *self, void *closure ); \
 static PyObject *get##attrib( class *self, void *closure ){ \
    char att_buf[ MXATTR_LEN ]; \
+   (void)att_buf; \
    PyObject *result = (getval); \
    TIDY; \
    Py_INCREF( result ); \
