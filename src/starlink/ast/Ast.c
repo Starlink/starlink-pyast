@@ -196,6 +196,7 @@ MAKE_ISA(SpecFluxFrame)
 MAKE_ISA(SpecFrame)
 MAKE_ISA(SpecMap)
 MAKE_ISA(SphMap)
+MAKE_ISA(SplineMap)
 MAKE_ISA(StcsChan)
 MAKE_ISA(Table)
 MAKE_ISA(TimeFrame)
@@ -252,6 +253,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(SpecFrame,specframe),
    DEF_ISA(SpecMap,specmap),
    DEF_ISA(SphMap,sphmap),
+   DEF_ISA(SplineMap,splinemap),
    DEF_ISA(StcsChan,stcschan),
    DEF_ISA(Table,table),
    DEF_ISA(TimeFrame,timeframe),
@@ -2794,6 +2796,134 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
+   }
+
+   TIDY;
+   return result;
+}
+
+/* SplineMap */
+/* ========= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SplineMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} SplineMap;
+
+/* Prototypes for class functions */
+static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETI(SplineMap,InvNiter)
+MAKE_GETSETL(SplineMap,OutUnit)
+MAKE_GETSETD(SplineMap,InvTol)
+MAKE_GETROI(SplineMap,SplineKx)
+MAKE_GETROI(SplineMap,SplineKy)
+MAKE_GETROI(SplineMap,SplineNx)
+MAKE_GETROI(SplineMap,SplineNy)
+static PyGetSetDef SplineMap_getseters[] = {
+   DEFATT(InvNiter,"Maximum number of iterations for iterative inverse"),
+   DEFATT(OutUnit,"Out-of-bounds inputs return unit offset values?"),
+   DEFATT(InvTol,"Target relative error for iterative inverse"),
+   DEFATT(SplineKx,"Spline order in input X direction"),
+   DEFATT(SplineKy,"Spline order in input Y direction"),
+   DEFATT(SplineNx,"Number of spline coefficients in input X direction"),
+   DEFATT(SplineNy,"Number of spline coefficients in input Y direction"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SplineMapType = {
+   PYTYPEOBJECT_HEAD
+   CLASS,                     /* tp_name */
+   sizeof(SplineMap),         /* tp_basicsize */
+   0,                         /* tp_itemsize */
+   0,                         /* tp_dealloc */
+   0,                         /* tp_print */
+   0,                         /* tp_getattr */
+   0,                         /* tp_setattr */
+   0,                         /* tp_reserved */
+   0,                         /* tp_repr */
+   0,                         /* tp_as_number */
+   0,                         /* tp_as_sequence */
+   0,                         /* tp_as_mapping */
+   0,                         /* tp_hash  */
+   0,                         /* tp_call */
+   0,                         /* tp_str */
+   0,                         /* tp_getattro */
+   0,                         /* tp_setattro */
+   0,                         /* tp_as_buffer */
+   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
+   "AST SplineMap",           /* tp_doc */
+   0,		              /* tp_traverse */
+   0,		              /* tp_clear */
+   0,		              /* tp_richcompare */
+   0,		              /* tp_weaklistoffset */
+   0,		              /* tp_iter */
+   0,		              /* tp_iternext */
+   0,                         /* tp_methods */
+   0,                         /* tp_members */
+   SplineMap_getseters,       /* tp_getset */
+   0,                         /* tp_base */
+   0,                         /* tp_dict */
+   0,                         /* tp_descr_get */
+   0,                         /* tp_descr_set */
+   0,                         /* tp_dictoffset */
+   (initproc)SplineMap_init,  /* tp_init */
+   0,                         /* tp_alloc */
+   0,                         /* tp_new */
+};
+
+
+/* Define the class methods */
+static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :kx,ky,nx,ny,tx,ty,cu,cv,options=None */
+
+   const char *options = " ";
+   int kx;
+   int ky;
+   int nx;
+   int ny;
+   PyArrayObject *tx = NULL;
+   PyArrayObject *ty = NULL;
+   PyArrayObject *cu = NULL;
+   PyArrayObject *cv = NULL;
+   PyObject *tx_object = NULL;
+   PyObject *ty_object = NULL;
+   PyObject *cu_object = NULL;
+   PyObject *cv_object = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "iiiiOOOO|s:" CLASS, &kx, &ky, &nx, &ny,
+                        &tx_object, &ty_object, &cu_object, &cv_object,
+                        &options ) ) {
+      tx = (PyArrayObject *) PyArray_ContiguousFromAny( tx_object,
+                                                        NPY_DOUBLE, 0, 100 );
+      ty = (PyArrayObject *) PyArray_ContiguousFromAny( ty_object,
+                                                        NPY_DOUBLE, 0, 100 );
+      cu = (PyArrayObject *) PyArray_ContiguousFromAny( cu_object,
+                                                        NPY_DOUBLE, 0, 100 );
+      cv = (PyArrayObject *) PyArray_ContiguousFromAny( cv_object,
+                                                        NPY_DOUBLE, 0, 100 );
+      if( tx && ty && cu && cv ) {
+         AstSplineMap *this = astSplineMap( kx, ky, nx, ny,
+                                            (const double *) tx->data,
+                                            (const double *) ty->data,
+                                            (const double *) cu->data,
+                                            (const double *) cv->data,
+                                            "%s", options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( tx );
+      Py_XDECREF( ty );
+      Py_XDECREF( cu );
+      Py_XDECREF( cv );
    }
 
    TIDY;
@@ -13236,6 +13366,12 @@ MOD_INIT(Ast) {
    Py_INCREF(&TimeMapType);
    PyModule_AddObject( m, "TimeMap", (PyObject *)&TimeMapType);
 
+   SplineMapType.tp_new = PyType_GenericNew;
+   SplineMapType.tp_base = &MappingType;
+   if( PyType_Ready(&SplineMapType) < 0) RETURN( NULL );
+   Py_INCREF(&SplineMapType);
+   PyModule_AddObject( m, "SplineMap", (PyObject *)&SplineMapType);
+
    RateMapType.tp_new = PyType_GenericNew;
    RateMapType.tp_base = &MappingType;
    if( PyType_Ready(&RateMapType) < 0) RETURN( NULL );
@@ -13980,6 +14116,8 @@ static PyTypeObject *GetType( AstObject *this,
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "TimeMap" ) ) {
         result = (PyTypeObject *) &TimeMapType;
+      } else if( !strcmp( class, "SplineMap" ) ) {
+        result = (PyTypeObject *) &SplineMapType;
       } else if( !strcmp( class, "SphMap" ) ) {
         result = (PyTypeObject *) &SphMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
