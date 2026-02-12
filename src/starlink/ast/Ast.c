@@ -919,7 +919,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
                   mymaplist[ i ] = (AstMapping *) AST( o );
                } else {
                   char buf[200];
-                  sprintf( buf, "Element %d of the 'maplist' argument of the "
+                  snprintf( buf, sizeof(buf), "Element %d of the 'maplist' argument of the "
                            "Ast.Mapping.mapmerge() method is a %s (must be "
                            "an AST Mapping).", i, GetObjectType( o ) );
                   PyErr_SetString( PyExc_TypeError, buf );
@@ -1184,7 +1184,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
          ndim = PyArray_NDIM((PyArrayObject*) in_object);
          pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -1397,7 +1397,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          ubnd_in = GetArray1I( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
          ndim = ncoord_in;
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -1446,7 +1446,7 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 
       ndim = ncoord_out;
       if( ndim > MXDIM ) {
-         sprintf( buf, "The 'out' array supplied to " NAME " has too "
+         snprintf( buf, sizeof(buf), "The 'out' array supplied to " NAME " has too "
                   "many (%d) dimensions (must be no more than %d).",
                   ndim, MXDIM );
          PyErr_SetString( PyExc_ValueError, buf );
@@ -1655,7 +1655,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
          ndim = PyArray_NDIM((PyArrayObject*) in_object);
          pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -4279,7 +4279,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* In all cases the length of the first dimensions should be "naxes". */
          if( PyArray_DIMS(value)[ 0 ] != naxes ) {
-            sprintf( buf, "The 'value' array supplied to %s has a length "
+            snprintf( buf, sizeof(buf), "The 'value' array supplied to %s has a length "
                      "of %d for dimension 1 (one-based) - should be %d.",
                      NAME, (int) PyArray_DIMS(value)[ 0 ], naxes );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -4352,7 +4352,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* Input array must have 1 or 2 axes. */
          } else {
-            sprintf( buf, "The 'value' array supplied to %s has %d "
+            snprintf( buf, sizeof(buf), "The 'value' array supplied to %s has %d "
                      "dimensions - should be 1 or 2.", NAME, (int)
                      PyArray_NDIM(value) );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -6869,7 +6869,7 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
          ndim = PyArray_NDIM((PyArrayObject*) in_object);
          pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -7408,7 +7408,7 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
 
          ndim = PyArray_NDIM((PyArrayObject*) data_object);
          if( ndim != 1 ) {
-            sprintf( buf, "The 'data' array supplied to " NAME " has bad "
+            snprintf( buf, sizeof(buf), "The 'data' array supplied to " NAME " has bad "
                      "number (%d) of dimensions (must be one-dimensional).",
                      ndim );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -7569,7 +7569,7 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
          ndim = PyArray_NDIM((PyArrayObject*) array_object);
          pdims = PyArray_DIMS((PyArrayObject*) array_object);
          if( ndim != 2 ) {
-            sprintf( buf, "The 'array' array supplied to " NAME " has bad "
+            snprintf( buf, sizeof(buf), "The 'array' array supplied to " NAME " has bad "
                      "number (%d) of dimensions (must be 2-dimensional).",
                      ndim );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -9400,7 +9400,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
          result = Py_BuildValue( "s", card );
       } else {
         char buff[ 200 ];
-        sprintf( buff, "FITS card at index %d not found in FitsChan.", val - 1 );
+        snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
         PyErr_SetString( PyExc_KeyError, buff );
       }
 
@@ -9472,7 +9472,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 
          } else {
             char buff[ 200 ];
-            sprintf( buff, "FITS keyword %s not found in FitsChan.", keyw );
+            snprintf( buff, sizeof(buff), "FITS keyword %s not found in FitsChan.", keyw );
             PyErr_SetString( PyExc_KeyError, buff );
          }
 
@@ -9565,7 +9565,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
             int val = (int) lval;
             if( (long int) val != lval ) {
                char buff[ 200 ];
-               sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
+               snprintf( buff, sizeof(buff), "Cannot assign value %ld to FITS keyword %s - "
                         "integer overflow.", lval, keyw );
                PyErr_SetString( PyExc_OverflowError, buff );
             }  else {
@@ -10519,7 +10519,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 /* UNDEF values cannot be handled. */
          } else {
             char buff[ 200 ];
-            sprintf( buff, "The value of AST KeyMap entry %s is undefined.",
+            snprintf( buff, sizeof(buff), "The value of AST KeyMap entry %s is undefined.",
                      key );
             PyErr_SetString( PyExc_TypeError, buff );
          }
@@ -10550,7 +10550,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 
    } else {
       char buff[ 200 ];
-      sprintf( buff, "Key %s not found in AST KeyMap.", key );
+      snprintf( buff, sizeof(buff), "Key %s not found in AST KeyMap.", key );
       PyErr_SetString( PyExc_KeyError, buff );
    }
 
@@ -10627,7 +10627,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
                   buf[ ival ] = (int) lval;
                   if( (long int) buf[ ival ] != lval ) {
                      char buff[ 200 ];
-                     sprintf( buff, "Cannot assign value %ld to AST KeyMap entry %s - "
+                     snprintf( buff, sizeof(buff), "Cannot assign value %ld to AST KeyMap entry %s - "
                               "integer overflow.", lval, key );
                      PyErr_SetString( PyExc_OverflowError, buff );
                      break;
@@ -12017,7 +12017,7 @@ static PyObject *Table_columnshape( Table *self, PyObject *args ) {
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       int ndim;
       char buf[100];
-      sprintf( buf, "ColumnNdim(%s)", column );
+      snprintf( buf, sizeof(buf), "ColumnNdim(%s)", column );
       ndim = astGetI( THIS, buf );
       dims[ 0 ] = ndim;
       PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
@@ -12195,7 +12195,7 @@ static PyObject *Table_columnlenc( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnLenC(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnLenC(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12218,7 +12218,7 @@ static PyObject *Table_columnlength( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnLength(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnLength(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12241,7 +12241,7 @@ static PyObject *Table_columnndim( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnNdim(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnNdim(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12264,7 +12264,7 @@ static PyObject *Table_columntype( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnType(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnType(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12286,7 +12286,7 @@ static PyObject *Table_columnunit( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnUnit(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnUnit(%s)", column );
       const char *value = astGetC( THIS, buff );
       if( astOK ) result = Py_BuildValue( "s", value );
    }
@@ -13914,7 +13914,7 @@ static PyObject *PyAst_FromString( const char *string ) {
 /* Report an error if unsuccesfull. */
    if( !this && !PyErr_Occurred() ) {
       char mess[255];
-      sprintf( mess, "PyAst_FromString: Could not create an AST Object "
+      snprintf( mess, sizeof(mess), "PyAst_FromString: Could not create an AST Object "
                "from supplied string (%.40s).", string );
       PyErr_SetString( PyExc_ValueError, mess );
       return NULL;
@@ -13952,11 +13952,11 @@ static char *PyAst_ToString( PyObject *self ) {
    if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
       char mess[255];
       if( Py_TYPE(self)->tp_name ) {
-         sprintf( mess, "PyAst_ToString: Expected an AST Object but a %.*s "
+         snprintf( mess, sizeof(mess), "PyAst_ToString: Expected an AST Object but a %.*s "
                   "was supplied.", (int)( sizeof(mess) - 60 ),
                   Py_TYPE(self)->tp_name );
       } else {
-         sprintf( mess, "PyAst_ToString: Expected an AST Object." );
+         snprintf( mess, sizeof(mess), "PyAst_ToString: Expected an AST Object." );
       }
       PyErr_SetString( PyExc_TypeError, mess );
       return NULL;
@@ -14237,7 +14237,7 @@ static PyTypeObject *GetType( AstObject *this,
          result = (PyTypeObject *) &FitsTableType;
       } else {
          char buff[ 200 ];
-         sprintf( buff, "Python AST function GetType does not yet "
+         snprintf( buff, sizeof(buff), "Python AST function GetType does not yet "
                   "support to the %s class", class );
          PyErr_SetString( INTER_err, buff );
       }
@@ -14290,7 +14290,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( i = 0; i < ndim && !error; i++ ) {
                if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
                            "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
@@ -14301,7 +14301,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( ; i < PyArray_NDIM(result) && !error; i++ ) {
                if( PyArray_DIMS(result)[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has too many "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has too many "
                           "significant %s, but no more than %d %s allowed.",
                           arg, fun, (ndim==1?"dimension":"dimensions"),
                           ndim, (ndim==1?"is":"are") );
@@ -14314,7 +14314,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
          } else if( PyArray_NDIM(result) == ndim ) {
             for( i = 0; i < ndim && !error; i++ ) {
                if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
                            "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
@@ -14330,7 +14330,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( i = 0; i < PyArray_NDIM(result) && !error; i++ ) {
                if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
                            "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
@@ -14341,7 +14341,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( ; i < ndim && !error; i++ ) {
                if( dims[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has %d "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has %d "
                           "%s, but %d %s required.", arg, fun, PyArray_NDIM(result),
                           (ndim==1?"dimension":"dimensions"), ndim,
                           (ndim==1?"is":"are") );
@@ -14357,7 +14357,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( i = 0; i < ndim - PyArray_NDIM(result) && !error; i++ ) {
                if( dims[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has %d "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has %d "
                           "%s, but %d %s required.", arg, fun, PyArray_NDIM(result),
                           (ndim==1?"dimension":"dimensions"), ndim,
                           (ndim==1?"is":"are") );
@@ -14368,7 +14368,7 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
             for( j = 0; i < ndim && !error; i++,j++ ) {
                if( dims[ i ] > 0 && PyArray_DIMS(result)[ j ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
                            "be %d.", arg, fun, (int) PyArray_DIMS(result)[ j ],
                            j+1, dims[ i ] );
