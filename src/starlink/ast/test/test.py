@@ -87,12 +87,9 @@ class DummyGrf:
     def Cap(self, cap, value):
         if cap == starlink.Ast.grfSCALES:
             return 1
-        elif cap == starlink.Ast.grfMJUST:
+        if cap == starlink.Ast.grfMJUST or cap == starlink.Ast.grfESC:
             return 0
-        elif cap == starlink.Ast.grfESC:
-            return 0
-        else:
-            return 0
+        return 0
 
     def EBuf(self):
         return 0
@@ -130,25 +127,23 @@ class DummyGrf:
     def IntToCol(self, col):
         if col == 0:
             return "red"
-        elif col == 1:
+        if col == 1:
             return "blue"
-        elif col == 2:
+        if col == 2:
             return "green"
-        else:
-            return None
+        return None
 
     def ColToInt(self, col):
         if col == "red":
             return 0
-        elif col == "blue":
+        if col == "blue":
             return 1
-        elif col == "green":
+        if col == "green":
             return 2
-        else:
-            try:
-                return int(col)
-            except ValueError:
-                return None
+        try:
+            return int(col)
+        except ValueError:
+            return None
 
 
 #  Tester
@@ -468,7 +463,7 @@ class TestAst(unittest.TestCase):
         zoommap = starlink.Ast.ZoomMap(2, 2.0)
         pout = zoommap.trangrid([1, 0], [3, 2], 0.001, 100, True)
         answer = np.array(
-            [[2.0, 4.0, 6.0, 2.0, 4.0, 6.0, 2.0, 4.0, 6.0], [0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0]]
+            [[2.0, 4.0, 6.0, 2.0, 4.0, 6.0, 2.0, 4.0, 6.0], [0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0]],
         )
         d = (answer - pout) ** 2
         self.assertEqual(d.sum(), 0.0)
@@ -505,7 +500,7 @@ class TestAst(unittest.TestCase):
                 ],
                 [4.0, 5.0, 6.0],
                 [7.0, 8.0, 9.0],
-            ]
+            ],
         )
         zoommap = starlink.Ast.ZoomMap(2, 1.0)
         out, outv = zoommap.rebin(
@@ -531,7 +526,7 @@ class TestAst(unittest.TestCase):
                 [2.0, 3.0, starlink.Ast.BAD, starlink.Ast.BAD],
                 [5.0, 6.0, starlink.Ast.BAD, starlink.Ast.BAD],
                 [8.0, 9.0, starlink.Ast.BAD, starlink.Ast.BAD],
-            ]
+            ],
         )
         d = (answer - out) ** 2
         self.assertEqual(d.sum(), 0.0)
@@ -602,7 +597,7 @@ class TestAst(unittest.TestCase):
                 ],
                 [4.0, 5.0, 6.0],
                 [7.0, 8.0, 9.0],
-            ]
+            ],
         )
 
         zoommap = starlink.Ast.ZoomMap(2, 1.0)
@@ -624,7 +619,7 @@ class TestAst(unittest.TestCase):
         )
 
         answer = np.array(
-            [[2.0, 3.0, starlink.Ast.BAD], [5.0, 6.0, starlink.Ast.BAD], [8.0, 9.0, starlink.Ast.BAD]]
+            [[2.0, 3.0, starlink.Ast.BAD], [5.0, 6.0, starlink.Ast.BAD], [8.0, 9.0, starlink.Ast.BAD]],
         )
         d = (answer - out) ** 2
         self.assertEqual(d.sum(), 0.0)
@@ -827,7 +822,8 @@ class TestAst(unittest.TestCase):
 
     def test_SpecFluxFrame(self):
         sfframe = starlink.Ast.SpecFluxFrame(
-            starlink.Ast.SpecFrame(), starlink.Ast.FluxFrame(57, starlink.Ast.SpecFrame())
+            starlink.Ast.SpecFrame(),
+            starlink.Ast.FluxFrame(57, starlink.Ast.SpecFrame()),
         )
         self.assertIsInstance(sfframe, starlink.Ast.Frame)
         self.assertIsInstance(sfframe, starlink.Ast.CmpFrame)
@@ -1066,7 +1062,8 @@ class TestAst(unittest.TestCase):
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
         self.assertEqual(
-            card, "CRVAL1  =                    0                                                  "
+            card,
+            "CRVAL1  =                    0                                                  ",
         )
         fc.delfits()
         self.assertEqual(fc.Ncard, 9)
@@ -1074,7 +1071,8 @@ class TestAst(unittest.TestCase):
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
         self.assertEqual(
-            card, "CRVAL2  =                    0                                                  "
+            card,
+            "CRVAL2  =                    0                                                  ",
         )
         fc.putfits("CRVAL1  = 0", False)
         self.assertEqual(fc.Ncard, 10)
@@ -1082,7 +1080,8 @@ class TestAst(unittest.TestCase):
         there, card = fc.findfits("%f", False)
         self.assertTrue(there)
         self.assertEqual(
-            card, "CRVAL2  =                    0                                                  "
+            card,
+            "CRVAL2  =                    0                                                  ",
         )
 
         for cards in zip(fc, mycards, strict=True):
@@ -1184,7 +1183,8 @@ class TestAst(unittest.TestCase):
 
         self.assertEqual(len(fc), 10)
         self.assertEqual(
-            fc[2], "CTYPE1  = 'RA--TAN '                                                            "
+            fc[2],
+            "CTYPE1  = 'RA--TAN '                                                            ",
         )
         obj = fc.read()
         self.assertIsInstance(obj, starlink.Ast.FrameSet)
@@ -1213,7 +1213,8 @@ class TestAst(unittest.TestCase):
 
         fc[100] = "CTYPE1  = 'RA--TAN '                                                            "
         self.assertEqual(
-            fc[2], "CTYPE1  = 'RA--TAN '                                                            "
+            fc[2],
+            "CTYPE1  = 'RA--TAN '                                                            ",
         )
         self.assertEqual(fc.Ncard, 3)
         self.assertEqual(fc.Nkey, 3)
@@ -1221,7 +1222,8 @@ class TestAst(unittest.TestCase):
 
         fc[0] = "NEWKEY  = 123.456"
         self.assertEqual(
-            fc[0], "NEWKEY  =              123.456                                                  "
+            fc[0],
+            "NEWKEY  =              123.456                                                  ",
         )
         self.assertEqual(fc.Ncard, 3)
         self.assertEqual(fc.Nkey, 3)
@@ -1716,7 +1718,7 @@ class TestAst(unittest.TestCase):
                     [0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 0.0],
                     [0.0, 0.5, 1.0, 1.5, 2.0, 1.333333333333, 0.666666666667],
                 ],
-            )
+            ),
         )
         polygon.clear("MeshSize")
         self.assertEqual(polygon.MeshSize, 200)

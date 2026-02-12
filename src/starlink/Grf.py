@@ -22,8 +22,7 @@ distribution.
 
 
 class grf_matplotlib:  # noqa: N801
-    """
-    When creating a grf_matplotlib, the supplied "axes" object should be an
+    """When creating a grf_matplotlib, the supplied "axes" object should be an
     instance of the matplotlib Axes class (or a subclass).
     """
 
@@ -162,7 +161,7 @@ class grf_matplotlib:  # noqa: N801
                 c = m + "." + c
             raise TypeError(
                 "The supplied axes object is a " + c + ", it should "
-                "an instance of matplotlib.axes.Axes or a subclass"
+                "an instance of matplotlib.axes.Axes or a subclass",
             )
 
     # ------------------------------------------------------------------------
@@ -190,7 +189,7 @@ class grf_matplotlib:  # noqa: N801
         if not self.renderer:
             raise AttributeError(
                 "No renderer available using matplotlib "
-                f"backend {matplotlib.get_backend()} - use a different backend"
+                f"backend {matplotlib.get_backend()} - use a different backend",
             )
 
         return self.renderer
@@ -299,14 +298,11 @@ class grf_matplotlib:  # noqa: N801
 
     # ------------------------------------------------------------------------
     def Cap(self, cap, value):
-        if cap == Ast.grfSCALES:
+        if cap == Ast.grfSCALES or cap == Ast.grfMJUST:
             return 1
-        elif cap == Ast.grfMJUST:
-            return 1
-        elif cap == Ast.grfESC:
+        if cap == Ast.grfESC:
             return 0
-        else:
-            return 0
+        return 0
 
     # ------------------------------------------------------------------------
     def EBuf(self):

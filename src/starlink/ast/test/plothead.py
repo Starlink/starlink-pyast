@@ -5,8 +5,7 @@ import sys
 
 import matplotlib.pyplot as plt
 
-import starlink.Ast as Ast
-import starlink.Grf as Grf
+from starlink import Ast, Grf
 
 #  Check the header name was supplied on the command line
 if len(sys.argv) < 2:

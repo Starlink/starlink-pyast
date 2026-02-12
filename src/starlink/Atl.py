@@ -1,6 +1,6 @@
 import astropy.io.fits as pyfits
 
-import starlink.Ast as Ast
+from starlink import Ast
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -12,9 +12,7 @@ matplotlib libraries to be installed.
 
 
 class PyFITSAdapter:
-    """
-
-    Adapter to allow PyAST FitsChan objects to read and write headers to
+    """Adapter to allow PyAST FitsChan objects to read and write headers to
     and from a PyFITS HDU.
 
     This class allows a PyFITS HDU to be used as the source or sink object
@@ -42,10 +40,10 @@ class PyFITSAdapter:
     """
 
     def __init__(self, hdu, clear=True):
-        """
-        Construct a PyFITSAdapter for a specified PyFITS HDU.
+        """Construct a PyFITSAdapter for a specified PyFITS HDU.
 
-        Parameters:
+        Parameters
+        ----------
            hdu: An element of the hdulist associated with a FITS file
               opened using pyfits.open(). If the entire hdulist is supplied,
               rather than an element of the hdulist, then the primary HDU
@@ -58,7 +56,8 @@ class PyFITSAdapter:
               the PyFITS heasder are retained, with the FitsChan keywords
               over-writing any existing values for the same keywords.
 
-        Examples:
+        Examples
+        --------
            - To read WCS from the 'DATA' extension in FITS file 'test.fit':
 
            >>> import pyfits
@@ -81,8 +80,8 @@ class PyFITSAdapter:
            >>> fc = Ast.FitsChan(None, Atl.PyFITSAdapter(hdulist))
            >>> if fc.write( framset ) == 0:
            >>>    print("Failed to convert FrameSet to FITS header")
-        """
 
+        """
         #  If the supplied object behaves like a sequence, use element zero
         #  (the primary HDU). Otherwise use the supplied object.
         try:
@@ -94,7 +93,7 @@ class PyFITSAdapter:
         #  read or write.
         self.index = 0
 
-        #  The PyFits header may contatenate CONTINUE cards into a single card
+        #  The PyFits header may concatenate CONTINUE cards into a single card
         #  "image". The source function defined below will split such long
         #  images up into two or more sub-cards. These are managed using the
         #  following values.
@@ -108,13 +107,13 @@ class PyFITSAdapter:
 
     # -----------------------------------------------------------------
     def astsource(self):
-        """
-        This method is called by the FitsChan to obtain a single 80-character
-        FITS header card. It iterates over all the cards in the PyFITS
-        header, returning each one in turn. It then returns "None" to
-        indicate that there are no more header cards to read.
-        """
+        """This method is called by the FitsChan to obtain a single
+        80-character FITS header card.
 
+        It iterates over all the cards in the PyFITS header, returning each one
+        in turn. It then returns "None" to indicate that there are no more
+        header cards to read.
+        """
         if self.subcards is not None:
             result = self.subcards[self.nextsub]
             self.nextsub += 1
@@ -142,15 +141,13 @@ class PyFITSAdapter:
 
     # -----------------------------------------------------------------
     def astsink(self, card):
-        """
-        This method is called by the FitsChan to store a single 80-character
+        """This method is called by the FitsChan to store a single 80-character
         FITS header card. On the first invocation all cards will be deleted
         form the header if the "clear" property is true. Otherwise, if the
         header already contains a card for the keyword, the existing card
         is replaced with the new card. Otherwise, the new card is stored at
         the end of the header.
         """
-
         if self.index == 0 and self.clear:
             self.hdu.header = pyfits.Header()
             self.hdu.header.clear()
@@ -180,7 +177,8 @@ def readfitswcs(hdu, Iwc=False):
 
     (frameset,encoding) = starlink.Atl.readfitswcs( hdu )
 
-    Parameters:
+    Parameters
+    ----------
        hdu: An element of the hdulist associated with a FITS file
           opened using pyfits.open(). If the entire hdulist is supplied,
           rather than an element of the hdulist, then the primary HDU
@@ -206,7 +204,6 @@ def readfitswcs(hdu, Iwc=False):
        >>>    print( "Cannot read WCS from test.fit" )
 
     """
-
     try:
         myhdu = hdu[0]
     except TypeError:
@@ -229,7 +226,8 @@ def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
 
     nobj = starlink.Atl.writefitswcs( frameset, hdu, encoding="FITS-WCS" )
 
-    Parameters:
+    Parameters
+    ----------
        frameset: A reference to the FrameSet to be written out to the
           FITS header.
        hdu: An element of the PyFITS hdulist associated with a FITS file.
@@ -253,7 +251,6 @@ def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
        >>>    print( "Cannot convert WCS to FITS-AIPS encoding" )
 
     """
-
     fitschan = Ast.FitsChan(None, PyFITSAdapter(hdu))
     fitschan.Encoding = encoding
     return fitschan.write(frameset)
@@ -266,7 +263,8 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
     plot = starlink.Atl.plotframeset( axes, gbox, bbox, frameset,
                                       options="" )
 
-    Parameters:
+    Parameters
+    ----------
        axes: A matplotlib "Axes" object. The annotated axes normally
           produced by matplotlib will be removed, and axes will
           instead be drawn by the AST Plot class.
@@ -299,9 +297,9 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
        >>>                      [ 0.1, 0.1, 0.9, 0.9 ],
        >>>                      [ 0.5, 0.5, naxis1+0.5, naxis2+0.5 ], frameset)
        >>>    matplotlib.pyplot.show()
-    """
 
-    import starlink.Grf as Grf
+    """
+    from starlink import Grf
 
     axes.xaxis.set_visible(False)
     axes.yaxis.set_visible(False)
@@ -318,7 +316,8 @@ def plotfitswcs(axes, gbox, hdu, options=""):
 
     plot = starlink.Atl.plotfitswcs( axes, gbox, hdu, options="" )
 
-    Parameters:
+    Parameters
+    ----------
        axes: A matplotlib "Axes" object. The annotated axes normally
           produced by matplotlib will be removed, and axes will
           instead be drawn by the AST Plot class.
@@ -344,8 +343,8 @@ def plotfitswcs(axes, gbox, hdu, options=""):
        >>> Atl.plotfitswcs( matplotlib.pyplot.figure().add_subplot(111),
        >>>                  [ 0.1, 0.1, 0.9, 0.9 ], hdulist )
        >>> matplotlib.pyplot.show()
-    """
 
+    """
     try:
         myhdu = hdu[0]
     except TypeError:
