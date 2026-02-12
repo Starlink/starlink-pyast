@@ -2,7 +2,6 @@ import ctypes
 import concurrent.futures
 import importlib.util
 import os
-import re
 import sys
 import tarfile
 from textwrap import dedent
@@ -123,19 +122,6 @@ class BuildExt(build_ext):
         finally:
             compiler.compile = original_compile
             self.parallel = saved_parallel
-
-
-def get_version():
-    result = None
-    with open("starlink/ast/Ast.c") as f:
-        for line in f:
-            mt = re.search(r'#define\s+PYAST_VERSION\s+"(\S+)"', line)
-            if mt:
-                result = mt.group(1)
-                break
-    if result is None:
-        raise RuntimeError("Cannot read pyast version number from starlink/ast/Ast.c")
-    return result
 
 
 def check_libyaml():
