@@ -83,6 +83,7 @@ select = [
     "UP",  # pyupgrade
     "C4",
     "I",  # isort
+    "B",  # bugbear
     "RUF022",  # __all__ sorting
 ]
 extend-select = [

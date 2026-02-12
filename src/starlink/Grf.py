@@ -360,7 +360,9 @@ class grf_matplotlib:  # noqa: N801
         return (self.__alpha, self.__beta)
 
     # ------------------------------------------------------------------------
-    def Text(self, text, x, y, just, upx, upy, boxprops={}):
+    def Text(self, text, x, y, just, upx, upy, boxprops=None):
+        if boxprops is None:
+            boxprops = {}
         if just[0] == "T":
             va = "top"
         elif just[0] == "B":

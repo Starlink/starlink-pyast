@@ -1085,7 +1085,7 @@ class TestAst(unittest.TestCase):
             card, "CRVAL2  =                    0                                                  "
         )
 
-        for cards in zip(fc, mycards):
+        for cards in zip(fc, mycards, strict=True):
             self.assertEqual(cards[0], cards[1])
 
         obj = fc.read()
@@ -1634,7 +1634,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(pm.Nout, 2)
         pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
         pout = pm.tran(pin, True)
-        for xi, yi, xo, yo in zip(pin[0], pin[1], pout[0], pout[1]):
+        for xi, yi, xo, yo in zip(pin[0], pin[1], pout[0], pout[1], strict=True):
             xn = 1.2 * xi * xi - 0.5 * yi * xi
             yn = yi
             self.assertAlmostEqual(xn, xo)
@@ -1644,7 +1644,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(pm.Nin, 2)
         self.assertEqual(pm.Nout, 2)
         pout = pm.tran(pin, False)
-        for xi, yi, xo, yo in zip(pin[0], pin[1], pout[0], pout[1]):
+        for xi, yi, xo, yo in zip(pin[0], pin[1], pout[0], pout[1], strict=True):
             xn = 1.2 * xi * xi - 0.5 * yi * xi
             yn = yi
             self.assertAlmostEqual(xn, xo)
@@ -1660,7 +1660,7 @@ class TestAst(unittest.TestCase):
         pout = pm.tran(pin, True)
         pnew = pm.tran(pout, False)
 
-        for xi, yi, xn, yn in zip(pin[0], pin[1], pnew[0], pnew[1]):
+        for xi, yi, xn, yn in zip(pin[0], pin[1], pnew[0], pnew[1], strict=True):
             self.assertAlmostEqual(xn, xi)
             self.assertAlmostEqual(yn, yi)
 
@@ -1670,7 +1670,7 @@ class TestAst(unittest.TestCase):
         new = pm.polytran(False, 1.0e-8, 0.01, 2, [-1.0, -1.0], [1.0, 1.0])
         pout = new.tran(pin, True)
         pnew = new.tran(pout, False)
-        for xi, yi, xn, yn in zip(pin[0], pin[1], pnew[0], pnew[1]):
+        for xi, yi, xn, yn in zip(pin[0], pin[1], pnew[0], pnew[1], strict=True):
             self.assertAlmostEqual(xn, xi)
             self.assertAlmostEqual(yn, yi)
 
@@ -1689,12 +1689,12 @@ class TestAst(unittest.TestCase):
 
         pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
         pout = mathmap.tran(pin, True)
-        for x, y, r in zip(pin[0], pin[1], pout[0]):
+        for x, y, r in zip(pin[0], pin[1], pout[0], strict=True):
             rn = math.sqrt(x * x + y * y)
             self.assertAlmostEqual(rn, r)
 
         pin2 = mathmap.tran(pout, False)
-        for r, x, y in zip(pout[0], pin2[0], pin2[1]):
+        for r, x, y in zip(pout[0], pin2[0], pin2[1], strict=True):
             self.assertAlmostEqual(x, r)
             self.assertAlmostEqual(y, r)
 
@@ -1973,7 +1973,7 @@ class TestAst(unittest.TestCase):
 
         pin = np.array([[0.0, 2.0, 6.0, 10.0], [2.0, 5.0, 8.0, 0.0]])
         pout = pm.tran(pin, True)
-        for xin, yin, xo, yo in zip(pin[0], pin[1], pout[0], pout[1]):
+        for xin, yin, xo, yo in zip(pin[0], pin[1], pout[0], pout[1], strict=True):
             xi = 2.0 * (xin - lbnd[0]) / (ubnd[0] - lbnd[0]) - 1.0
             yi = 2.0 * (yin - lbnd[1]) / (ubnd[1] - lbnd[1]) - 1.0
             xv = 1 - 2 * xi * (2 * yi * yi - 1) + yi
