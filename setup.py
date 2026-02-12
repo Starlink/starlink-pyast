@@ -1,4 +1,5 @@
 import ctypes
+import concurrent.futures
 import importlib.util
 import os
 import re
@@ -72,12 +73,56 @@ def get_compiler():
 
 
 class BuildExt(build_ext):
-    """Use all available CPUs unless an explicit parallel value is supplied."""
+    """Use all CPUs by default and parallelize C source compilation."""
 
     def finalize_options(self):
         super().finalize_options()
         if self.parallel is None:
             self.parallel = os.cpu_count() or 1
+
+    def build_extensions(self):
+        jobs = self.parallel or 1
+        compiler = self.compiler
+
+        # build_ext.parallel only parallelizes across extensions; this project
+        # has one large extension, so compile source files in parallel instead.
+        if jobs <= 1 or not all(hasattr(compiler, name) for name in ("_setup_compile", "_get_cc_args", "_compile")):
+            return super().build_extensions()
+
+        original_compile = compiler.compile
+
+        def parallel_compile(
+            sources,
+            output_dir=None,
+            macros=None,
+            include_dirs=None,
+            debug=0,
+            extra_preargs=None,
+            extra_postargs=None,
+            depends=None,
+        ):
+            macros, objects, extra_postargs, pp_opts, build = compiler._setup_compile(
+                output_dir, macros, include_dirs, sources, depends, extra_postargs
+            )
+            cc_args = compiler._get_cc_args(pp_opts, debug, extra_preargs)
+
+            def _compile_one(obj):
+                src, ext = build[obj]
+                compiler._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(jobs, len(objects) or 1)) as executor:
+                list(executor.map(_compile_one, objects))
+
+            return objects
+
+        compiler.compile = parallel_compile
+        saved_parallel = self.parallel
+        self.parallel = None
+        try:
+            super().build_extensions()
+        finally:
+            compiler.compile = original_compile
+            self.parallel = saved_parallel
 
 
 def get_version():
