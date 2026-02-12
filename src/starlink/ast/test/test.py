@@ -7,7 +7,7 @@ import os.path
 import sys
 import unittest
 
-import numpy
+import numpy as np
 import numpy.testing as npt
 
 import starlink.Ast
@@ -344,7 +344,7 @@ class TestAst(unittest.TestCase):
         sky = starlink.Ast.SkyFrame()
         sky.permaxes([2, 1])
 
-        pin = numpy.array([[6.1, 6.1, 0.04, 0.04], [0.2, -0.2, -0.2, 0.2]])
+        pin = np.array([[6.1, 6.1, 0.04, 0.04], [0.2, -0.2, -0.2, 0.2]])
         pout = sky.normpoints(pin)
 
         self.assertAlmostEqual(pout[0][0], pin[0][0] - 2 * math.pi)
@@ -449,32 +449,32 @@ class TestAst(unittest.TestCase):
         self.assertTrue(zoommap.TranForward)
         self.assertTrue(zoommap.TranInverse)
 
-        xin = numpy.linspace(-1, 1, 10)
+        xin = np.linspace(-1, 1, 10)
         xout = zoommap.tran(xin)
         d = (1.2 * xin - xout) ** 2
         self.assertEqual(d.sum(), 0.0)
 
         xa = [0.0, 1.0, 2.0, -1.0, -2.0, -3.0, 1.0, 2.0, 4.0, 5.0]
         zoommap.tran(xa, True, xout)
-        d = (1.2 * numpy.array(xa) - xout) ** 2
+        d = (1.2 * np.array(xa) - xout) ** 2
         self.assertEqual(d.sum(), 0.0)
 
         zoommap = starlink.Ast.ZoomMap(3, 2.0)
-        pin = numpy.array([[1.0, 2.0, 3], [0.0, 1.0, 2], [2.0, 3.0, 4]])
+        pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2], [2.0, 3.0, 4]])
         pout = zoommap.tran(pin, False)
         d = (0.5 * pin - pout) ** 2
         self.assertEqual(d.sum(), 0.0)
 
         zoommap = starlink.Ast.ZoomMap(2, 2.0)
         pout = zoommap.trangrid([1, 0], [3, 2], 0.001, 100, True)
-        answer = numpy.array(
+        answer = np.array(
             [[2.0, 4.0, 6.0, 2.0, 4.0, 6.0, 2.0, 4.0, 6.0], [0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 4.0, 4.0, 4.0]]
         )
         d = (answer - pout) ** 2
         self.assertEqual(d.sum(), 0.0)
 
         islin, fit = zoommap.linearapprox([1, 0], [3, 2], 0.001)
-        answer = numpy.array([0.0, 0.0, 2.0, 0.0, 0.0, 2.0])
+        answer = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 2.0])
         d = (answer - fit) ** 2
         self.assertEqual(d.sum(), 0.0)
         self.assertTrue(islin)
@@ -489,14 +489,14 @@ class TestAst(unittest.TestCase):
 
         self.assertTrue(isquad)
         self.assertEqual(rms, 0.0)
-        answer = numpy.array([0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
+        answer = np.array([0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
         d = (answer - fit) ** 2
         self.assertEqual(d.sum(), 0.0)
 
         self.assertEqual(zoommap.rate([1, 1], 2, 2), 2.0)
         self.assertEqual(zoommap.rate([1, 1], 1, 2), 0.0)
 
-        data_in = numpy.array(
+        data_in = np.array(
             [
                 [
                     1.0,
@@ -526,7 +526,7 @@ class TestAst(unittest.TestCase):
             [3, 2],
         )
 
-        answer = numpy.array(
+        answer = np.array(
             [
                 [2.0, 3.0, starlink.Ast.BAD, starlink.Ast.BAD],
                 [5.0, 6.0, starlink.Ast.BAD, starlink.Ast.BAD],
@@ -537,9 +537,9 @@ class TestAst(unittest.TestCase):
         self.assertEqual(d.sum(), 0.0)
         self.assertIsNone(outv)
 
-        data_in = numpy.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=numpy.intc)
-        data_out = numpy.empty((3, 2), dtype=numpy.intc)  # 3 rows 2 cols
-        weights = numpy.zeros((3, 2), dtype=numpy.double)  # 3 rows 2 cols
+        data_in = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.intc)
+        data_out = np.empty((3, 2), dtype=np.intc)  # 3 rows 2 cols
+        weights = np.zeros((3, 2), dtype=np.double)  # 3 rows 2 cols
 
         #  The bounds supplied to AST here are in the form [col num, row num]
         flags = starlink.Ast.USEBAD | starlink.Ast.REBININIT
@@ -588,12 +588,12 @@ class TestAst(unittest.TestCase):
             nused,
         )
 
-        answer = numpy.array([[-999, -999], [6.0, -999], [9.0, -999]])
+        answer = np.array([[-999, -999], [6.0, -999], [9.0, -999]])
         d = (answer - data_out) ** 2
         self.assertEqual(d.sum(), 0.0)
         self.assertEqual(nused, 4)
 
-        data_in = numpy.array(
+        data_in = np.array(
             [
                 [
                     1.0,
@@ -623,7 +623,7 @@ class TestAst(unittest.TestCase):
             [4, 2],
         )
 
-        answer = numpy.array(
+        answer = np.array(
             [[2.0, 3.0, starlink.Ast.BAD], [5.0, 6.0, starlink.Ast.BAD], [8.0, 9.0, starlink.Ast.BAD]]
         )
         d = (answer - out) ** 2
@@ -865,7 +865,7 @@ class TestAst(unittest.TestCase):
 
     def test_mask(self):
         box = starlink.Ast.Box(starlink.Ast.Frame(2), 1, [-0.5, -0.5], [5.5, 4.5])
-        data = numpy.full((10, 15), 7, dtype=int)
+        data = np.full((10, 15), 7, dtype=int)
         map = starlink.Ast.UnitMap(2)
 
         # lbnd/ubnd are given as (col,row) (F77 order). This may seem odd in python,
@@ -1498,7 +1498,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(mygrf.ntext, 10)
 
         mygrf.Reset()
-        pin = numpy.array([[0.5, 1.0, 0.0], [0.5, 1.0, 0.5]])
+        pin = np.array([[0.5, 1.0, 0.0], [0.5, 1.0, 0.5]])
         plot.polycurve(pin)
         self.assertEqual(mygrf.nline, 29)
 
@@ -1597,7 +1597,7 @@ class TestAst(unittest.TestCase):
         self.assertTrue(mm.isamatrixmap())
         self.assertEqual(mm.Nin, 2)
         self.assertEqual(mm.Nout, 2)
-        pin = numpy.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
+        pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
         pout = mm.tran(pin, False)
         self.assertAlmostEqual(pout[0][0], -1.0)
         self.assertAlmostEqual(pout[0][1], -2.0)
@@ -1632,7 +1632,7 @@ class TestAst(unittest.TestCase):
         self.assertTrue(pm.isapolymap())
         self.assertEqual(pm.Nin, 2)
         self.assertEqual(pm.Nout, 2)
-        pin = numpy.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
+        pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
         pout = pm.tran(pin, True)
         for xi, yi, xo, yo in zip(pin[0], pin[1], pout[0], pout[1]):
             xn = 1.2 * xi * xi - 0.5 * yi * xi
@@ -1687,7 +1687,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(mathmap.Nin, 2)
         self.assertEqual(mathmap.Nout, 1)
 
-        pin = numpy.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
+        pin = np.array([[1.0, 2.0, 3], [0.0, 1.0, 2]])
         pout = mathmap.tran(pin, True)
         for x, y, r in zip(pin[0], pin[1], pout[0]):
             rn = math.sqrt(x * x + y * y)
@@ -1704,13 +1704,13 @@ class TestAst(unittest.TestCase):
         self.assertIsInstance(polygon, starlink.Ast.Region)
         self.assertIsInstance(polygon, starlink.Ast.Frame)
         self.assertIsInstance(polygon.getregionframe(), starlink.Ast.Frame)
-        self.assertTrue(numpy.array_equal(polygon.getregionpoints(), [[0, 1, 0], [0, 1, 2]]))
+        self.assertTrue(np.array_equal(polygon.getregionpoints(), [[0, 1, 0], [0, 1, 2]]))
 
         self.assertEqual(polygon.MeshSize, 200)
         polygon.MeshSize = 5
         self.assertEqual(polygon.MeshSize, 5)
         self.assertTrue(
-            numpy.allclose(
+            np.allclose(
                 polygon.getregionmesh(),
                 [
                     [0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 0.0],
@@ -1726,9 +1726,9 @@ class TestAst(unittest.TestCase):
         testpolygon = starlink.Ast.Polygon(starlink.Ast.Frame(2), [[0, 1, 0], [1, 2, 3]])
         overlap = polygon.overlap(testpolygon)
         self.assertEqual(overlap, 4)
-        array = numpy.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]])
+        array = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]])
         new = starlink.Ast.outline(1, starlink.Ast.EQ, array, [-1, 2], [2, 5], 0.0, 4, [0, 3], True)
-        pin = numpy.array([[0.0, 0.0, 0], [1.9, 2.1, 4.5]])
+        pin = np.array([[0.0, 0.0, 0], [1.9, 2.1, 4.5]])
         pout = new.tran(pin, True)
         self.assertEqual(pout[0][0], starlink.Ast.BAD)
         self.assertEqual(pout[0][1], 0.0)
@@ -1742,7 +1742,7 @@ class TestAst(unittest.TestCase):
 
         new = starlink.Ast.convex(1, starlink.Ast.EQ, array, [-1, 2], [2, 5], True)
 
-        pin = numpy.array([[0.0, 0.0, 0.0, 0.0], [2.4, 2.6, 3.4, 3.7]])
+        pin = np.array([[0.0, 0.0, 0.0, 0.0], [2.4, 2.6, 3.4, 3.7]])
         pout = new.tran(pin, True)
         self.assertEqual(pout[0][0], starlink.Ast.BAD)
         self.assertEqual(pout[0][1], 0.0)
@@ -1782,7 +1782,7 @@ class TestAst(unittest.TestCase):
             table["Fred(2)"] = 123
         with self.assertRaises(starlink.Ast.BADTYP):
             table["Fred(2)"] = 123.0
-        table["Fred(2)"] = numpy.linspace(1, 10, 10)
+        table["Fred(2)"] = np.linspace(1, 10, 10)
         self.assertEqual(table.columnlength("Fred"), 10)
         self.assertEqual(table.columnndim("Fred"), 2)
         self.assertEqual(table.columnunit("Fred"), "")
@@ -1814,7 +1814,7 @@ class TestAst(unittest.TestCase):
         data = moc.getmocdata()
         self.assertEqual(len(data.shape), 1)
         self.assertEqual(data.shape[0], 385)
-        self.assertEqual(data.dtype, numpy.int64)
+        self.assertEqual(data.dtype, np.int64)
         moc2 = starlink.Ast.Moc("maxorder=18")
         moc2.addmocdata(data)
         self.assertEqual(moc.overlap(moc2), 5)
@@ -1848,7 +1848,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(fc["TFORM1"], "1J")
         self.assertEqual(fc["MOCORDER"], 8)
 
-        image = numpy.empty([100, 100], order="F")
+        image = np.empty([100, 100], order="F")
         for j in range(100):
             dy = j + 1 - 50.5
             dy2 = dy * dy
@@ -1971,7 +1971,7 @@ class TestAst(unittest.TestCase):
         self.assertEqual(pm.Nin, 2)
         self.assertEqual(pm.Nout, 2)
 
-        pin = numpy.array([[0.0, 2.0, 6.0, 10.0], [2.0, 5.0, 8.0, 0.0]])
+        pin = np.array([[0.0, 2.0, 6.0, 10.0], [2.0, 5.0, 8.0, 0.0]])
         pout = pm.tran(pin, True)
         for xin, yin, xo, yo in zip(pin[0], pin[1], pout[0], pout[1]):
             xi = 2.0 * (xin - lbnd[0]) / (ubnd[0] - lbnd[0]) - 1.0
@@ -1989,17 +1989,17 @@ class TestAst(unittest.TestCase):
         a = 4.0
         b = 0.2
         c = 3.0
-        xs = numpy.linspace(1, nx, nx)
-        ys = numpy.linspace(1, ny, ny)
+        xs = np.linspace(1, nx, nx)
+        ys = np.linspace(1, ny, ny)
 
-        fcx = numpy.zeros((nx, ny))
-        fcy = numpy.zeros((nx, ny))
+        fcx = np.zeros((nx, ny))
+        fcy = np.zeros((nx, ny))
         for j in range(ny):
             y = ys[j]
             for i in range(nx):
                 x = xs[i]
-                fcx[i][j] = x + a * numpy.sin(b * x) * numpy.cos(b * y)
-                fcy[i][j] = y + c * numpy.cos(b * x) * numpy.sin(b * y)
+                fcx[i][j] = x + a * np.sin(b * x) * np.cos(b * y)
+                fcy[i][j] = y + c * np.cos(b * x) * np.sin(b * y)
 
         try:
             from scipy.interpolate import RectBivariateSpline
@@ -2018,13 +2018,13 @@ class TestAst(unittest.TestCase):
         )
 
         # Test forward and inverse transforms and compare with scipy.
-        xval = numpy.array([0.0, 12.5, 12.0, 1.0, 15.0, 1.0, 95.0, 149.5, 151.2, 77.77])
-        yval = numpy.array([-1.0, 8.8, 8.0, 1.0, 15.0, 76.0, 100.0, 99.8, 82.3, 54.3])
+        xval = np.array([0.0, 12.5, 12.0, 1.0, 15.0, 1.0, 95.0, 149.5, 151.2, 77.77])
+        yval = np.array([-1.0, 8.8, 8.0, 1.0, 15.0, 76.0, 100.0, 99.8, 82.3, 54.3])
 
         u = splinex.ev(xval, yval)
         v = spliney.ev(xval, yval)
 
-        outData = splineMap.tran(numpy.array([xval, yval]), True)
+        outData = splineMap.tran(np.array([xval, yval]), True)
 
         outOfBounds = (
             (xval > xs.max())
