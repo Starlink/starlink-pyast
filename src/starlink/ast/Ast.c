@@ -979,16 +979,14 @@ static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args ) {
    PyObject *in_object = NULL;
    PyObject *result = NULL;
    PyArrayObject *out = NULL;
-   int nin;
+   int nin = 0;
    npy_intp dims[1];
 
    if( PyErr_Occurred() ) return NULL;
 
    if( PyArg_ParseTuple( args, "O:" NAME, &in_object ) && astOK ) {
-      in = (PyArrayObject *) PyArray_ContiguousFromAny( in_object,
-                                                        NPY_INT, 0, 100);
+      in = GetArray( in_object, NPY_INT, 1, 1, &nin, "in", NAME );
       if( in ) {
-         nin = PyArray_Size( (PyObject *) in );
          dims[ 0 ] = astGetI( THIS, "Nout" );
          out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
          if( out ) {
@@ -2950,14 +2948,10 @@ static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple(args, "iiiiOOOO|s:" CLASS, &kx, &ky, &nx, &ny,
                         &tx_object, &ty_object, &cu_object, &cv_object,
                         &options ) ) {
-      tx = (PyArrayObject *) PyArray_ContiguousFromAny( tx_object,
-                                                        NPY_DOUBLE, 0, 100 );
-      ty = (PyArrayObject *) PyArray_ContiguousFromAny( ty_object,
-                                                        NPY_DOUBLE, 0, 100 );
-      cu = (PyArrayObject *) PyArray_ContiguousFromAny( cu_object,
-                                                        NPY_DOUBLE, 0, 100 );
-      cv = (PyArrayObject *) PyArray_ContiguousFromAny( cv_object,
-                                                        NPY_DOUBLE, 0, 100 );
+      tx = GetArray( tx_object, NPY_DOUBLE, 1, -1, NULL, "tx", NAME );
+      ty = GetArray( ty_object, NPY_DOUBLE, 1, -1, NULL, "ty", NAME );
+      cu = GetArray( cu_object, NPY_DOUBLE, 1, -1, NULL, "cu", NAME );
+      cv = GetArray( cv_object, NPY_DOUBLE, 1, -1, NULL, "cv", NAME );
       if( tx && ty && cu && cv ) {
          AstSplineMap *this = astSplineMap( kx, ky, nx, ny,
                                             (const double *) PyArray_DATA(tx),
@@ -2998,8 +2992,7 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
     /* Ideally we would like to determine how many elements we
        have in "args" to make sure it is correct. Putting the code
        here and in AST seems silly though. */
-    astargs = (PyArrayObject *) PyArray_ContiguousFromAny( astargs_object,
-                                                           NPY_DOUBLE, 0, 100);
+    astargs = GetArray( astargs_object, NPY_DOUBLE, 1, -1, NULL, "args", NAME );
     if (astargs) {
       astTimeAdd( THIS, cvt, PyArray_DIMS(astargs)[0], (const double *)PyArray_DATA(astargs) );
       if( astOK ) {
@@ -3333,13 +3326,10 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "OO|Os:" CLASS, &inperm_object,
                         &outperm_object, &constant_object, &options ) ) {
-      inperm = (PyArrayObject *) PyArray_ContiguousFromAny( inperm_object,
-                                                            NPY_INT, 0, 100);
-      outperm = (PyArrayObject *) PyArray_ContiguousFromAny( outperm_object,
-                                                             NPY_INT, 0, 100);
+      inperm = GetArray( inperm_object, NPY_INT, 1, -1, NULL, "inperm", NAME );
+      outperm = GetArray( outperm_object, NPY_INT, 1, -1, NULL, "outperm", NAME );
       if (constant_object) {
-        constant = (PyArrayObject *) PyArray_ContiguousFromAny( constant_object,
-                                                                NPY_DOUBLE, 0, 100);
+        constant = GetArray( constant_object, NPY_DOUBLE, 1, -1, NULL, "constant", NAME );
       }
       if (inperm && outperm) {
          AstPermMap * this = NULL;
@@ -3438,8 +3428,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &shift_object,
                         &options ) ) {
-      shift = (PyArrayObject *) PyArray_ContiguousFromAny( shift_object,
-                                                            NPY_DOUBLE, 0, 100);
+      shift = GetArray( shift_object, NPY_DOUBLE, 1, -1, NULL, "shift", NAME );
       if (shift) {
          AstShiftMap * this = NULL;
          this = astShiftMap( PyArray_Size( (PyObject*)shift),
@@ -3527,8 +3516,7 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 
    // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &centre_object, &options ) ) {
-      centre = (PyArrayObject *) PyArray_ContiguousFromAny( centre_object,
-                                                            NPY_DOUBLE, 0, 100);
+      centre = GetArray( centre_object, NPY_DOUBLE, 1, -1, NULL, "centre", NAME );
       if( centre ) {
          AstUnitNormMap *this = NULL;
          this = astUnitNormMap( PyArray_Size( (PyObject*)centre ),
@@ -3618,8 +3606,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "O|dds:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
-      lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
-                                                         NPY_DOUBLE, 0, 100);
+      lut = GetArray( lut_object, NPY_DOUBLE, 1, -1, NULL, "lut", NAME );
       if (lut) {
          AstLutMap * this = NULL;
          this = astLutMap( PyArray_Size( (PyObject*)lut),
@@ -3714,14 +3701,10 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, &ina_object,
                         &inb_object, &outa_object, &outb_object, &options ) ) {
-      ina = (PyArrayObject *) PyArray_ContiguousFromAny( ina_object,
-                                                         NPY_DOUBLE, 0, 100);
-      inb = (PyArrayObject *) PyArray_ContiguousFromAny( inb_object,
-                                                         NPY_DOUBLE, 0, 100);
-      outa = (PyArrayObject *) PyArray_ContiguousFromAny( outa_object,
-                                                         NPY_DOUBLE, 0, 100);
-      outb = (PyArrayObject *) PyArray_ContiguousFromAny( outb_object,
-                                                         NPY_DOUBLE, 0, 100);
+      ina = GetArray( ina_object, NPY_DOUBLE, 1, -1, NULL, "ina", NAME );
+      inb = GetArray( inb_object, NPY_DOUBLE, 1, -1, NULL, "inb", NAME );
+      outa = GetArray( outa_object, NPY_DOUBLE, 1, -1, NULL, "outa", NAME );
+      outb = GetArray( outb_object, NPY_DOUBLE, 1, -1, NULL, "outb", NAME );
       if (ina && inb && outa && outb ) {
          AstWinMap * this = NULL;
          // Sanity check size
@@ -4278,6 +4261,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
    int npos;
    int vstride0;
    int vstride1;
+   int value_dims[2];
    npy_intp dims[2];
 
    if( PyErr_Occurred() ) return NULL;
@@ -4288,8 +4272,9 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* Get a PyArrayObject from the PyObject, allowing any number of
    dimensions. */
-      value = (PyArrayObject *) PyArray_ContiguousFromAny( value_object,
-                                                      NPY_DOUBLE, 0, 100 );
+      value_dims[ 0 ] = naxes;
+      value_dims[ 1 ] = -1;
+      value = GetArray( value_object, NPY_DOUBLE, 1, 2, value_dims, "value", NAME );
       if( value ) {
 
 /* In all cases the length of the first dimensions should be "naxes". */
@@ -4577,8 +4562,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
 
   // We get naxes from the axes argument
   if ( PyArg_ParseTuple( args, "O:" NAME, &axes_object ) && astOK ) {
-    axes = (PyArrayObject *) PyArray_ContiguousFromAny( axes_object,
-                                                        NPY_INT, 0, 100);
+    axes = GetArray( axes_object, NPY_INT, 1, -1, NULL, "axes", NAME );
     if (axes) {
       AstMapping *map = NULL;
       AstFrame * frame = NULL;
@@ -4759,8 +4743,7 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
    int result = -1;
 
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &matrix_object, &options ) ) {
-      PyArrayObject *matrix = (PyArrayObject *) PyArray_ContiguousFromAny( matrix_object,
-                                                            NPY_DOUBLE, 0, 100);
+      PyArrayObject *matrix = GetArray( matrix_object, NPY_DOUBLE, 1, -1, NULL, "matrix", NAME );
       if( matrix ) {
 
          int ndim = PyArray_NDIM(matrix);
@@ -4890,49 +4873,35 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
                          &options ) ) {
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
-         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               NPY_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         fcoeff = GetArray( fcoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "fcoeff", NAME );
          if( fcoeff ) {
-            if( PyArray_NDIM(fcoeff) != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", PyArray_NDIM(fcoeff) );
-            } else {
-               coeff_f = (const double *) PyArray_DATA(fcoeff);
-               ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
-               nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
-               nout1 = 0;
-               const double *p = coeff_f + 1;
-               for( i = 0; i < ncoeff_f; i++ ) {
-                  int iout = (int) ( *p + 0.5 );
-                  if( iout > nout1 ) nout1 = iout;
-                  p += nin1 + 2;
-               }
+            coeff_f = (const double *) PyArray_DATA(fcoeff);
+            ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
+            nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
+            nout1 = 0;
+            const double *p = coeff_f + 1;
+            for( i = 0; i < ncoeff_f; i++ ) {
+               int iout = (int) ( *p + 0.5 );
+               if( iout > nout1 ) nout1 = iout;
+               p += nin1 + 2;
             }
          }
       }
 
       if( icoeff_object && icoeff_object != Py_None ) {
-         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               NPY_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         icoeff = GetArray( icoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "icoeff", NAME );
          if( icoeff ) {
-            if( PyArray_NDIM(icoeff) != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", PyArray_NDIM(icoeff) );
-            } else {
-               coeff_i = (const double *) PyArray_DATA(icoeff);
-               ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
-               nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
-               nin2 = 0;
-               const double *p = coeff_i + 1;
-               for( i = 0; i < ncoeff_i; i++ ) {
-                  int iin = (int) ( *p + 0.5 );
-                  if( iin > nin2 ) nin2 = iin;
-                  p += nout2 + 2;
-               }
+            coeff_i = (const double *) PyArray_DATA(icoeff);
+            ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
+            nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
+            nin2 = 0;
+            const double *p = coeff_i + 1;
+            for( i = 0; i < ncoeff_i; i++ ) {
+               int iin = (int) ( *p + 0.5 );
+               if( iin > nin2 ) nin2 = iin;
+               p += nout2 + 2;
             }
          }
       }
@@ -5109,53 +5078,39 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
                          &lbnd_i_object, &ubnd_i_object, &options ) ) {
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
-         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               NPY_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         fcoeff = GetArray( fcoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "fcoeff", NAME );
          if( fcoeff ) {
-            if( PyArray_NDIM(fcoeff) != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", PyArray_NDIM(fcoeff) );
-            } else {
-               if( lbnd_f_object ) lbnd_f = GetArray1D( lbnd_f_object, &size, "lbnd_f", NAME );
-               if( ubnd_f_object ) ubnd_f = GetArray1D( ubnd_f_object, &size, "ubnd_f", NAME );
-               coeff_f = (const double *) PyArray_DATA(fcoeff);
-               ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
-               nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
-               nout1 = 0;
-               const double *p = coeff_f + 1;
-               for( i = 0; i < ncoeff_f; i++ ) {
-                  int iout = (int) ( *p + 0.5 );
-                  if( iout > nout1 ) nout1 = iout;
-                  p += nin1 + 2;
-               }
+            if( lbnd_f_object ) lbnd_f = GetArray1D( lbnd_f_object, &size, "lbnd_f", NAME );
+            if( ubnd_f_object ) ubnd_f = GetArray1D( ubnd_f_object, &size, "ubnd_f", NAME );
+            coeff_f = (const double *) PyArray_DATA(fcoeff);
+            ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
+            nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
+            nout1 = 0;
+            const double *p = coeff_f + 1;
+            for( i = 0; i < ncoeff_f; i++ ) {
+               int iout = (int) ( *p + 0.5 );
+               if( iout > nout1 ) nout1 = iout;
+               p += nin1 + 2;
             }
          }
       }
 
       if( icoeff_object && icoeff_object != Py_None ) {
-         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               NPY_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         icoeff = GetArray( icoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "icoeff", NAME );
          if( icoeff ) {
-            if( PyArray_NDIM(icoeff) != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", PyArray_NDIM(icoeff) );
-            } else {
-               if( lbnd_i_object ) lbnd_i = GetArray1D( lbnd_i_object, &size, "lbnd_f", NAME );
-               if( ubnd_i_object ) ubnd_i = GetArray1D( ubnd_i_object, &size, "ubnd_f", NAME );
-               coeff_i = (const double *) PyArray_DATA(icoeff);
-               ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
-               nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
-               nin2 = 0;
-               const double *p = coeff_i + 1;
-               for( i = 0; i < ncoeff_i; i++ ) {
-                  int iin = (int) ( *p + 0.5 );
-                  if( iin > nin2 ) nin2 = iin;
-                  p += nout2 + 2;
-               }
+            if( lbnd_i_object ) lbnd_i = GetArray1D( lbnd_i_object, &size, "lbnd_f", NAME );
+            if( ubnd_i_object ) ubnd_i = GetArray1D( ubnd_i_object, &size, "ubnd_f", NAME );
+            coeff_i = (const double *) PyArray_DATA(icoeff);
+            ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
+            nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
+            nin2 = 0;
+            const double *p = coeff_i + 1;
+            for( i = 0; i < ncoeff_i; i++ ) {
+               int iin = (int) ( *p + 0.5 );
+               if( iin > nin2 ) nin2 = iin;
+               p += nout2 + 2;
             }
          }
       }
@@ -7463,8 +7418,8 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
       }
 
       if( len > 0 && nbyte > 0 ) {
-         data = (PyArrayObject *) PyArray_ContiguousFromAny( data_object,
-                                                             type, 1, 1 );
+         int shape[ 1 ] = { len };
+         data = GetArray( data_object, type, 1, 1, shape, "data", NAME );
          if( data ) {
             astAddMocData( THIS, cmode, negate, maxorder, len, nbyte,
                            PyArray_DATA(data) );
@@ -14299,8 +14254,8 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 *     GetArray
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject has specified dimensions.
+*     Coerce a Python object into a C-contiguous NumPy array, with
+*     standardised shape validation and clearer error reporting.
 
 */
    char buf[400];
@@ -14312,14 +14267,21 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 /* Check a PyObject was supplied. */
    if( object ) {
 
-/* Get a PyArrayObject from the PyObject, using the specified data type,
-   but allowing any number of dimensions (so that we can produce a more
-   helpful error message). */
-      result = (PyArrayObject *) PyArray_ContiguousFromAny( object, type, 0,
-                                                            100 );
+/* Get a C-contiguous aligned NumPy array view/copy with the requested
+   dtype. */
+      result = (PyArrayObject *) PyArray_FromAny(
+                                    object,
+                                    PyArray_DescrFromType( type ),
+                                    0,
+                                    0,
+                                    NPY_ARRAY_CARRAY_RO,
+                                    NULL );
 
 /* Check the array was created succesfully. */
       if( result ) {
+
+/* If no dimensionality constraints are required, return immediately. */
+         if( ndim < 0 || !dims ) return result;
 
 /* If the ArrayObject has more axes than requested, check that the first
    ndim axes have the correct length, and that all the extra trailing
@@ -14436,9 +14398,7 @@ static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
 *     GetArray1D
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject is 1-D with double
-*     precision values.
+*     A convenience wrapper around GetArray for 1-D double arrays.
 
 */
    return GetArray( object, NPY_DOUBLE, 1, 1, dim, arg, fun );
@@ -14451,9 +14411,7 @@ static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
 *     GetArray1I
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject is 1-D with integer
-*     values.
+*     A convenience wrapper around GetArray for 1-D int arrays.
 
 */
    return GetArray( object, NPY_INT, 1, 1, dim, arg, fun );
