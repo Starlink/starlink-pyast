@@ -343,35 +343,35 @@ static PyGetSetDef Object_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject ObjectType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Object),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Object_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   Object_repr,               /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   Object_str,                /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Object",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Object_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   Object_getseters,          /* tp_getset */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Object),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Object_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = Object_repr,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = Object_str,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Object",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Object_methods,
+   .tp_members = 0,
+   .tp_getset = Object_getseters,
 };
 
 
@@ -703,35 +703,35 @@ static PyGetSetDef Mapping_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject MappingType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Mapping),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Mapping",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Mapping_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   Mapping_getseters,         /* tp_getset */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Mapping),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Mapping",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Mapping_methods,
+   .tp_members = 0,
+   .tp_getset = Mapping_getseters,
 };
 
 
@@ -2077,43 +2077,43 @@ static PyGetSetDef ZoomMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject ZoomMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ZoomMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ZoomMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   ZoomMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ZoomMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ZoomMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ZoomMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = ZoomMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ZoomMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2167,43 +2167,43 @@ static PyGetSetDef MathMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject MathMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MathMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MathMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   MathMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MathMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MathMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MathMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = MathMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MathMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2328,43 +2328,43 @@ static PyGetSetDef SphMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject SphMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SphMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SphMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   SphMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SphMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SphMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SphMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = SphMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SphMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2427,43 +2427,43 @@ static PyGetSetDef GrismMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject GrismMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(GrismMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST GrismMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   GrismMap_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)GrismMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(GrismMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST GrismMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = GrismMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)GrismMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2514,43 +2514,43 @@ static PyGetSetDef PcdMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject PcdMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PcdMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PcdMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   PcdMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PcdMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PcdMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PcdMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = PcdMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PcdMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2619,43 +2619,43 @@ static PyGetSetDef WcsMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject WcsMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(WcsMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WcsMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   WcsMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)WcsMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(WcsMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST WcsMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = WcsMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)WcsMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2702,43 +2702,43 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject UnitMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(UnitMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST UnitMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)UnitMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(UnitMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST UnitMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)UnitMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2787,43 +2787,43 @@ static PyMethodDef TimeMap_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject TimeMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TimeMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TimeMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   TimeMap_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TimeMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TimeMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TimeMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = TimeMap_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TimeMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2888,43 +2888,43 @@ static PyGetSetDef SplineMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject SplineMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SplineMap),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SplineMap",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   SplineMap_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SplineMap_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SplineMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SplineMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = SplineMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SplineMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3034,43 +3034,43 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject RateMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(RateMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST RateMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)RateMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(RateMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST RateMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)RateMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3115,43 +3115,43 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject CmpMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST CmpMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3196,43 +3196,43 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject TranMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TranMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TranMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TranMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TranMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TranMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TranMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3276,43 +3276,43 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject PermMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PermMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PermMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PermMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PermMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PermMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PermMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3385,43 +3385,43 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject ShiftMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ShiftMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ShiftMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ShiftMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ShiftMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ShiftMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ShiftMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3475,43 +3475,43 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 /* Define the class Python type structure */
 static PyTypeObject UnitNormMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(UnitNormMap),       /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST UnitNormMap",         /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)UnitNormMap_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(UnitNormMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST UnitNormMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)UnitNormMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3563,43 +3563,43 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject LutMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(LutMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST LutMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)LutMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(LutMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST LutMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)LutMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3655,43 +3655,43 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject WinMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(WinMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WinMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)WinMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(WinMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST WinMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)WinMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3877,43 +3877,43 @@ static PyGetSetDef Frame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject FrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Frame),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Frame",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Frame_methods,             /* tp_methods */
-   0,                         /* tp_members */
-   Frame_getseters,           /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Frame_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Frame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Frame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Frame_methods,
+   .tp_members = 0,
+   .tp_getset = Frame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Frame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -4698,43 +4698,43 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject MatrixMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MatrixMap),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MatrixMap",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MatrixMap_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MatrixMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MatrixMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MatrixMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -4826,43 +4826,43 @@ static PyGetSetDef PolyMap_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject PolyMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PolyMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PolyMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   PolyMap_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   PolyMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PolyMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PolyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PolyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = PolyMap_methods,
+   .tp_members = 0,
+   .tp_getset = PolyMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PolyMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5033,43 +5033,43 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject ChebyMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ChebyMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ChebyMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ChebyMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ChebyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ChebyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ChebyMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5237,43 +5237,43 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject NormMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(NormMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST NormMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)NormMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(NormMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST NormMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)NormMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5346,43 +5346,43 @@ static PyGetSetDef FrameSet_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject FrameSetType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FrameSet),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FrameSet",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   FrameSet_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   FrameSet_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FrameSet_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FrameSet),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FrameSet",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = FrameSet_methods,
+   .tp_members = 0,
+   .tp_getset = FrameSet_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FrameSet_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5592,43 +5592,43 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject CmpFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST CmpFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5709,43 +5709,43 @@ static PyGetSetDef SkyFrame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject SkyFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SkyFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SkyFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   SkyFrame_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   SkyFrame_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SkyFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SkyFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SkyFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = SkyFrame_methods,
+   .tp_members = 0,
+   .tp_getset = SkyFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SkyFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5847,43 +5847,43 @@ static PyGetSetDef SpecFrame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject SpecFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecFrame),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFrame",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   SpecFrame_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   SpecFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecFrame_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = SpecFrame_methods,
+   .tp_members = 0,
+   .tp_getset = SpecFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5974,43 +5974,43 @@ static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject SpecMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6053,43 +6053,43 @@ static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject SlaMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SlaMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SlaMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SlaMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SlaMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SlaMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SlaMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6147,43 +6147,43 @@ static PyGetSetDef DSBSpecFrame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject DSBSpecFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(DSBSpecFrame),      /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST DSBSpecFrame",        /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   DSBSpecFrame_getseters,    /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)DSBSpecFrame_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(DSBSpecFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST DSBSpecFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = DSBSpecFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)DSBSpecFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6245,43 +6245,43 @@ static PyGetSetDef TimeFrame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject TimeFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TimeFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TimeFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   TimeFrame_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   TimeFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TimeFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TimeFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TimeFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = TimeFrame_methods,
+   .tp_members = 0,
+   .tp_getset = TimeFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TimeFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6349,43 +6349,43 @@ static PyGetSetDef FluxFrame_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject FluxFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FluxFrame),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FluxFrame",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   FluxFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FluxFrame_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FluxFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FluxFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = FluxFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FluxFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6429,43 +6429,43 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 /* Define the class Python type structure */
 static PyTypeObject SpecFluxFrameType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecFluxFrame),     /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFluxFrame",       /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecFluxFrame_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecFluxFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecFluxFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecFluxFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6552,35 +6552,35 @@ static PyMethodDef Region_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject RegionType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Region),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Region",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Region_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   Region_getseters,          /* tp_getset */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Region),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Region_methods,
+   .tp_members = 0,
+   .tp_getset = Region_getseters,
 };
 
 
@@ -7052,43 +7052,43 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject BoxType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Box),               /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Box_init,        /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Box),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST box",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Box_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7154,43 +7154,43 @@ static PyMethodDef Circle_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject CircleType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Circle),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST circle",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Circle_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Circle_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Circle),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST circle",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Circle_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Circle_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7329,43 +7329,43 @@ static PyMethodDef Moc_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject MocType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Moc),               /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST moc",                 /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Moc_methods,               /* tp_methods */
-   0,                         /* tp_members */
-   Moc_getseters,             /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Moc_init,        /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Moc),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST moc",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Moc_methods,
+   .tp_members = 0,
+   .tp_getset = Moc_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Moc_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7878,43 +7878,43 @@ static PyMethodDef Polygon_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject PolygonType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Polygon),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST polygon",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Polygon_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Polygon_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Polygon),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST polygon",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Polygon_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Polygon_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8010,43 +8010,43 @@ static PyGetSetDef PointList_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject PointListType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PointList),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST polygon",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   PointList_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PointList_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PointList),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST polygon",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = PointList_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PointList_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8113,43 +8113,43 @@ static PyMethodDef Ellipse_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject EllipseType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Ellipse),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ellipse",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Ellipse_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Ellipse_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Ellipse),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ellipse",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Ellipse_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Ellipse_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8253,43 +8253,43 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject IntervalType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Interval),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST interval",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Interval_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Interval),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST interval",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Interval_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8349,43 +8349,43 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject NullRegionType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(NullRegion),        /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST null region",         /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)NullRegion_init, /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(NullRegion),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST null region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)NullRegion_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8433,43 +8433,43 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject CmpRegionType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpRegion),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST compound region",     /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpRegion_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpRegion),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST compound region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpRegion_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8514,43 +8514,43 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds );
 /* Define the class Python type structure */
 static PyTypeObject PrismType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Prism),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST prism",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Prism_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Prism),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST prism",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Prism_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8643,43 +8643,43 @@ static PyGetSetDef Channel_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject ChannelType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Channel),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Channel_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Channel",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Channel_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   Channel_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Channel_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Channel),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Channel_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Channel",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Channel_methods,
+   .tp_members = 0,
+   .tp_getset = Channel_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Channel_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -9168,43 +9168,43 @@ static PySequenceMethods FitsChanAsSequence = {
 /* Define the class Python type structure */
 static PyTypeObject FitsChanType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FitsChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)FitsChan_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   &FitsChanAsSequence,       /* tp_as_sequence */
-   &FitsChanAsMapping,        /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FitsChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   FitsChan_getiter,	      /* tp_iter */
-   FitsChan_next,	      /* tp_iternext */
-   FitsChan_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   FitsChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FitsChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FitsChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)FitsChan_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = &FitsChanAsSequence,
+   .tp_as_mapping = &FitsChanAsMapping,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FitsChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = FitsChan_getiter,
+   .tp_iternext = FitsChan_next,
+   .tp_methods = FitsChan_methods,
+   .tp_members = 0,
+   .tp_getset = FitsChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FitsChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 /* Define the class methods */
@@ -9988,43 +9988,43 @@ static PyGetSetDef MocChan_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject MocChanType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MocChan),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MocChan",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   MocChan_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MocChan_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MocChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MocChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = MocChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MocChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -10119,43 +10119,43 @@ static PyGetSetDef StcsChan_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject StcsChanType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(StcsChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST StcsChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   StcsChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)StcsChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(StcsChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST StcsChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = StcsChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)StcsChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -10284,41 +10284,41 @@ static PySequenceMethods KeyMapAsSequence = {
 /* Define the class Python type structure */
 static PyTypeObject KeyMapType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(KeyMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   &KeyMapAsSequence,         /* tp_as_sequence */
-   &KeyMapAsMapping,          /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST KeyMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   KeyMap_getiter,	      /* tp_iter */
-   KeyMap_next,	              /* tp_iternext */
-   KeyMap_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   KeyMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)KeyMap_init,     /* tp_init */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(KeyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = &KeyMapAsSequence,
+   .tp_as_mapping = &KeyMapAsMapping,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST KeyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = KeyMap_getiter,
+   .tp_iternext = KeyMap_next,
+   .tp_methods = KeyMap_methods,
+   .tp_members = 0,
+   .tp_getset = KeyMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)KeyMap_init,
 };
 
 
@@ -10913,43 +10913,43 @@ static PyGetSetDef Plot_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject PlotType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Plot),              /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Plot_dealloc,  /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Plot",                /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Plot_methods,              /* tp_methods */
-   0,                         /* tp_members */
-   Plot_getseters,            /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Plot_init,       /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Plot),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Plot_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Plot",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Plot_methods,
+   .tp_members = 0,
+   .tp_getset = Plot_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Plot_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 static void Plot_def( Object *self ){
@@ -11915,43 +11915,43 @@ static PyGetSetDef Table_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject TableType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Table),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Table",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Table_methods,             /* tp_methods */
-   0,                         /* tp_members */
-   Table_getseters,           /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Table_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Table),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Table",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Table_methods,
+   .tp_members = 0,
+   .tp_getset = Table_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Table_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -12374,43 +12374,43 @@ static PyMethodDef FitsTable_methods[] = {
 /* Define the class Python type structure */
 static PyTypeObject FitsTableType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FitsTable),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FitsTable",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   FitsTable_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FitsTable_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FitsTable),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FitsTable",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = FitsTable_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FitsTable_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -12721,43 +12721,43 @@ static PyGetSetDef YamlChan_getseters[] = {
 /* Define the class Python type structure */
 static PyTypeObject YamlChanType = {
    PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(YamlChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST YamlChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   YamlChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)YamlChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(YamlChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST YamlChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = YamlChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)YamlChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
