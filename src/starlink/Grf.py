@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.lines
 import matplotlib.pyplot
 
-import starlink.Ast as Ast
+from starlink import Ast
 
 """
 This module provides classes that provide primitive drawing facilities

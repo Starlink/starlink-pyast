@@ -2,14 +2,7 @@ from packaging.version import parse
 
 import starlink.Ast as Ast
 
-try:
-    import astropy.io.fits as pyfits
-
-    _using_pyfits = False
-except ImportError:
-    import pyfits
-
-    _using_pyfits = True
+import astropy.io.fits as pyfits
 
 """
 This module provides function and classes that wrap up sequences of PyAST
@@ -113,11 +106,6 @@ class PyFITSAdapter:
         #  it for the first time
         self.clear = clear
 
-        #  Save a flag indicating if the version of pyfits is 3.1.0 or later
-        #  (some of the earlier API was deprecated at 3.1.0).
-        if _using_pyfits:
-            self.pre_pyfits_3_1_0 = parse(pyfits.__version__) < parse("3.1.0")
-
     # -----------------------------------------------------------------
     def astsource(self):
         """
@@ -169,28 +157,15 @@ class PyFITSAdapter:
 
         card = pyfits.Card.fromstring(card)
 
-        #  Pre pyfits 3.1.0
-        if _using_pyfits and self.pre_pyfits_3_1_0:
-            if card.key == "" or card.keyword == "BLANK":
-                self.hdu.header.add_blank()
-            elif card.key == "COMMENT":
-                self.hdu.header.add_comment(card.value)
-            elif card.key == "HISTORY":
-                self.hdu.header.add_history(card.value)
+        #  Doesn't seem to be any way to store a CONTINUE card, so all that is
+        #  left is to truncated them by ignoring the continuations :-(
+        if card.keyword != "CONTINUE":
+            if isinstance(card.value, str) and card.value.endswith("&"):
+                value = card.value[:-1]
             else:
-                self.hdu.header.update(card.key, card.value, card.comment)
-
-        #  Astropy, pyfits 3.1.0 and later.
-        else:
-            #  Doesn't seem to be any way to store a CONTINUE card, so all that is
-            #  left is to truncated them by ignoring the continuations :-(
-            if card.keyword != "CONTINUE":
-                if isinstance(card.value, str) and card.value.endswith("&"):
-                    value = card.value[:-1]
-                else:
-                    value = card.value
-                self.hdu.header.append((card.keyword, value, card.comment), end=True)
-                self.index += 1
+                value = card.value
+            self.hdu.header.append((card.keyword, value, card.comment), end=True)
+            self.index += 1
 
 
 # ======================================================================
