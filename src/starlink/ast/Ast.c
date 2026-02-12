@@ -28,6 +28,8 @@ static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
 static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr );
 static int GetOptionsFromKwds( PyObject *kwds, const char **options );
+static int GetAsciiUtf8AndSize( PyObject *value, const char *arg,
+                                const char **text, Py_ssize_t *text_len );
 
 /* Macros used in this file */
 #define PYAST_MODULE
@@ -113,6 +115,52 @@ static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr ) {
 }
 
 /*
+ * GetAsciiUtf8AndSize
+ * -------------------
+ * Validate that `value` is an ASCII-only Python string, then return a
+ * borrowed UTF-8 pointer and length for its contents.
+ *
+ * Parameters:
+ *   value:
+ *     Python object expected to be a `str`.
+ *   arg:
+ *     Argument label used in error messages (defaults to "string" if NULL).
+ *   text:
+ *     Output pointer to the internal UTF-8 buffer.
+ *   text_len:
+ *     Output length in bytes of `text`.
+ *
+ * Returns:
+ *   1 on success, 0 on error (with a Python exception set). Errors include
+ *   non-string input, non-ASCII content, UTF-8 conversion failure, and
+ *   embedded NUL bytes.
+ */
+static int GetAsciiUtf8AndSize( PyObject *value, const char *arg,
+                                const char **text, Py_ssize_t *text_len ) {
+   const char *label = ( arg ? arg : "string" );
+
+   if( !PyUnicode_Check( value ) ) {
+      PyErr_Format( PyExc_TypeError, "%s must be a string", label );
+      return 0;
+   }
+
+   if( !PyUnicode_IS_ASCII( value ) ) {
+      PyErr_Format( PyExc_TypeError, "%s must contain only ASCII characters", label );
+      return 0;
+   }
+
+   *text = PyUnicode_AsUTF8AndSize( value, text_len );
+   if( !*text ) return 0;
+
+   if( memchr( *text, '\0', (size_t) *text_len ) ) {
+      PyErr_Format( PyExc_ValueError, "%s must not contain embedded NUL characters", label );
+      return 0;
+   }
+
+   return 1;
+}
+
+/*
  * GetOptionsFromKwds
  * ------------------
  * Read the optional "options" keyword argument from a kwargs dictionary.
@@ -148,13 +196,15 @@ static int GetOptionsFromKwds( PyObject *kwds, const char **options ) {
       return 0;
    }
 
-   if( !PyUnicode_IS_ASCII( opt ) ) {
-      PyErr_SetString( PyExc_TypeError, "options must contain only ASCII characters" );
-      return 0;
+   {
+      const char *text = NULL;
+      Py_ssize_t text_len = 0;
+      if( !GetAsciiUtf8AndSize( opt, "options", &text, &text_len ) ) {
+         return 0;
+      }
+      *options = text;
    }
-
-   *options = PyUnicode_AsUTF8( opt );
-   return ( *options != NULL );
+   return 1;
 }
 
 /* Object */
@@ -13980,16 +14030,12 @@ static char *GetString( void *mem, PyObject *value ) {
 */
    char *result = NULL;
    if( value && value != Py_None ) {
-
-
       if( PyUnicode_Check( value ) ) {
-         PyObject *bytes = PyUnicode_AsASCIIString(value);
-         if( bytes ) {
-            const char *bytestr =  PyBytes_AS_STRING(bytes);
-            result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
-            Py_DECREF(bytes);
+         const char *text = NULL;
+         Py_ssize_t text_len = 0;
+         if( GetAsciiUtf8AndSize( value, "string", &text, &text_len ) ) {
+            result = astStore( mem, text, (size_t) text_len + 1 );
          }
-
       } else {
          result = astFree( mem );
       }
@@ -14477,18 +14523,13 @@ char *FormatObject( PyObject *o ){
    const char *text = NULL;
    char *result = NULL;
    PyObject *repr = PyObject_Repr( o );
+   Py_ssize_t text_len = 0;
 
-   if( PyUnicode_Check( repr ) ) {
-      PyObject *bytes = PyUnicode_AsASCIIString(repr);
-      if( bytes ) {
-         text =  PyBytes_AS_STRING(bytes);
-         if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
-         Py_DECREF(bytes);
-      }
-
+   if( repr && GetAsciiUtf8AndSize( repr, "repr", &text, &text_len ) ) {
+      result = astStore( NULL, text, (size_t) text_len + 1 );
    }
 
-   Py_DECREF(repr);
+   Py_XDECREF(repr);
    return result;
 }
 
