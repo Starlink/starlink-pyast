@@ -625,7 +625,7 @@ MAKE_GET(class,attrib, \
          astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
       } \
       cval = astFree( cval ); \
-   } else if( LONG_CHECK(value) ) { \
+   } else if( PyLong_Check(value) ) { \
       icol = PyLong_AsLong( value ); \
       astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
    } else if( ! PyErr_Occurred() ) { \
