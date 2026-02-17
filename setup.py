@@ -2,6 +2,7 @@ import ctypes
 import concurrent.futures
 import importlib.util
 import os
+import shlex
 import sys
 import tarfile
 from textwrap import dedent
@@ -124,14 +125,59 @@ class BuildExt(build_ext):
             self.parallel = saved_parallel
 
 
-def check_libyaml():
+def check_libyaml() -> tuple[bool, list[str], list[str]]:
     """check if the C module can be build by trying to compile a small
-    program against the libyaml development library"""
+    program against the libyaml development library.
+
+    Returns
+    -------
+    found : `bool`
+        Whether libyaml was detected.
+    cflags : `list` [ `str` ]
+        Any CFLAGS needed for compiling with YAML.
+    ldflags : `list` [ `str1 ]
+        Any linker flags needed to compile with yaml.
+    """
 
     import shutil
     import tempfile
 
     libraries = ["yaml"]
+    cflags = []
+    ldflags = []
+    test_include_dirs = None
+    test_library_dirs = None
+
+    env_compile_flags = " ".join(
+        filter(None, (os.environ.get("CFLAGS"), os.environ.get("CPPFLAGS")))
+    )
+    env_link_flags = " ".join(
+        filter(None, (os.environ.get("LDFLAGS"), os.environ.get("LDSHARED")))
+    )
+
+    def _has_path_flag(flags, path):
+        tokens = shlex.split(flags) if flags else []
+        if f"-I{path}" in tokens or f"-L{path}" in tokens:
+            return True
+        for idx, token in enumerate(tokens):
+            if token in ("-I", "-L", "-Wl,-rpath", "-Wl,-rpath,") and idx + 1 < len(tokens) and tokens[idx + 1] == path:
+                return True
+            if token.startswith("-Wl,-rpath,") and token == f"-Wl,-rpath,{path}":
+                return True
+        return False
+
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        conda_include = os.path.join(conda_prefix, "include")
+        conda_lib = os.path.join(conda_prefix, "lib")
+        if os.path.isdir(conda_include):
+            test_include_dirs = [conda_include]
+            if not _has_path_flag(env_compile_flags, conda_include):
+                cflags.append(f"-I{conda_include}")
+        if os.path.isdir(conda_lib):
+            test_library_dirs = [conda_lib]
+            if not _has_path_flag(env_link_flags, conda_lib):
+                ldflags.append(f"-L{conda_lib}")
 
     # write a temporary .c file to compile
     c_code = dedent(
@@ -157,15 +203,16 @@ def check_libyaml():
 
     try:
         compiler.link_executable(
-            compiler.compile([file_name]),
+            compiler.compile([file_name], include_dirs=test_include_dirs),
             bin_file_name,
             libraries=libraries,
+            library_dirs=test_library_dirs,
         )
     except Exception as e:
         print(f"libyaml compilation error: {e}")
-        ret_val = False
+        ret_val = False, [], []
     else:
-        ret_val = True
+        ret_val = True, cflags, ldflags
 
     shutil.rmtree(tmp_dir)
     return ret_val
@@ -543,6 +590,7 @@ for cfile in ast_c_extra:
     sources.append(os.path.join("ast", "src", cfile))
 
 extra_link_args = []
+extra_compile_args = []
 
 # Test the compiler
 define_macros = []
@@ -553,8 +601,11 @@ if compiler.has_function("strtok_r"):
 if compiler.has_function("strerror_r"):
     define_macros.append(("HAVE_STRERROR_R", "1"))
 
-if check_libyaml():
+have_libyaml, yaml_cflags, yaml_ldflags = check_libyaml()
+if have_libyaml:
     define_macros.append(("YAML", "1"))
+    extra_compile_args.extend(yaml_cflags)
+    extra_link_args.extend(yaml_ldflags)
     extra_link_args.append("-lyaml")
 
 #  We need to tell AST what type a 64-bit int will have
@@ -589,6 +640,8 @@ if sys.platform.startswith("darwin"):
 
 if len(extra_link_args) > 0:
     Ast.extra_link_args = extra_link_args
+if len(extra_compile_args) > 0:
+    Ast.extra_compile_args = extra_compile_args
 
 setup(
     cmdclass={"build_ext": BuildExt},
