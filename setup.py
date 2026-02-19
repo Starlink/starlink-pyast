@@ -3,6 +3,7 @@ import concurrent.futures
 import importlib.util
 import os
 import shlex
+import subprocess
 import sys
 import tarfile
 from textwrap import dedent
@@ -70,6 +71,149 @@ def get_compiler():
     compiler = new_compiler()
     customize_compiler(compiler)
     return compiler
+
+
+def _env_var_enabled(name):
+    value = os.environ.get(name, "")
+    return value.lower() in ("1", "true", "yes", "on")
+
+
+def _has_path_flag(flags, path):
+    tokens = shlex.split(flags) if flags else []
+    for idx, token in enumerate(tokens):
+        if token in (f"-I{path}", f"-L{path}", f"-Wl,-rpath,{path}"):
+            return True
+        if token in ("-I", "-L", "-Wl,-rpath") and idx + 1 < len(tokens) and tokens[idx + 1] == path:
+            return True
+    return False
+
+
+def _find_header_dir(root, header_name, max_depth=8):
+    root = os.path.abspath(root)
+    for current, dirnames, filenames in os.walk(root):
+        rel_path = os.path.relpath(current, root)
+        depth = 0 if rel_path == "." else rel_path.count(os.sep) + 1
+        if depth > max_depth:
+            dirnames[:] = []
+            continue
+        if header_name in filenames:
+            return current
+    return None
+
+
+def _extract_include_dirs(cflags):
+    include_dirs = []
+    for flag in cflags:
+        if flag.startswith("-I") and len(flag) > 2:
+            include_dirs.append(flag[2:])
+    return include_dirs
+
+
+def check_libast() -> tuple[bool, list[str], list[str]]:
+    """Try to get AST link/compile flags from ast_link.
+
+    Returns
+    -------
+    found : `bool`
+        Whether libast was detected.
+    cflags : `list` [ `str` ]
+        Any CFLAGS needed for compiling with libast.
+    ldflags : `list` [ `str1 ]
+        Any linker flags needed to link with libast.
+    """
+
+    if not _env_var_enabled("PYAST_USE_LIBAST"):
+        return False, [], []
+
+    env_compile_flags = " ".join(filter(None, (os.environ.get("CFLAGS"), os.environ.get("CPPFLAGS"))))
+    env_link_flags = " ".join(filter(None, (os.environ.get("LDFLAGS"), os.environ.get("LDSHARED"))))
+
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    commands = []
+    if conda_prefix:
+        conda_ast_link = os.path.join(conda_prefix, "bin", "ast_link")
+        if os.path.isfile(conda_ast_link):
+            commands.append(f"{shlex.quote(conda_ast_link)} -myerr")
+    commands.append("ast_link -myerr")
+
+    for command in commands:
+        try:
+            result = subprocess.run(command, check=True, capture_output=True, text=True, shell=True)
+        except Exception:
+            continue
+
+        output = result.stdout.strip()
+        if not output:
+            continue
+
+        cflags = []
+        ldflags = []
+        tokens = shlex.split(output)
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token in ("-I", "-D", "-U") and i + 1 < len(tokens):
+                merged = f"{token}{tokens[i + 1]}"
+                if token == "-I":
+                    if not _has_path_flag(env_compile_flags, tokens[i + 1]):
+                        cflags.append(merged)
+                else:
+                    cflags.append(merged)
+                i += 2
+                continue
+            if token == "-L" and i + 1 < len(tokens):
+                if not _has_path_flag(env_link_flags, tokens[i + 1]):
+                    ldflags.append(f"-L{tokens[i + 1]}")
+                i += 2
+                continue
+            if token == "-Wl,-rpath" and i + 1 < len(tokens):
+                if not _has_path_flag(env_link_flags, tokens[i + 1]):
+                    ldflags.append(f"-Wl,-rpath,{tokens[i + 1]}")
+                i += 2
+                continue
+            if token.startswith("-I") and len(token) > 2:
+                include_path = token[2:]
+                if not _has_path_flag(env_compile_flags, include_path):
+                    cflags.append(token)
+            elif token.startswith("-L") and len(token) > 2:
+                lib_path = token[2:]
+                if not _has_path_flag(env_link_flags, lib_path):
+                    ldflags.append(token)
+            elif token.startswith("-Wl,-rpath,"):
+                rpath = token.split(",", 2)[2]
+                if not _has_path_flag(env_link_flags, rpath):
+                    ldflags.append(token)
+            elif token.startswith("-D") or token.startswith("-U"):
+                cflags.append(token)
+            else:
+                ldflags.append(token)
+            i += 1
+
+        if not any(flag == "-last" or flag.startswith("-last") for flag in ldflags):
+            continue
+
+        if conda_prefix:
+            cflags_include_dirs = _extract_include_dirs(cflags)
+            conda_include = os.path.join(conda_prefix, "include")
+            if os.path.isfile(os.path.join(conda_include, "ast.h")) and conda_include not in cflags_include_dirs:
+                if not _has_path_flag(env_compile_flags, conda_include):
+                    cflags.append(f"-I{conda_include}")
+                cflags_include_dirs.append(conda_include)
+
+            conda_build = os.path.join(conda_prefix, "build")
+            if os.path.isdir(conda_build):
+                for header in ("ast.h", "mapping.h"):
+                    if any(os.path.isfile(os.path.join(path, header)) for path in cflags_include_dirs):
+                        continue
+                    header_dir = _find_header_dir(conda_build, header)
+                    if header_dir:
+                        cflags.append(f"-I{header_dir}")
+                        cflags_include_dirs.append(header_dir)
+
+        return True, cflags, ldflags
+
+    print("PYAST_USE_LIBAST is set but AST libraries were not found; building AST from source.")
+    return False, [], []
 
 
 class BuildExt(build_ext):
@@ -155,17 +299,6 @@ def check_libyaml() -> tuple[bool, list[str], list[str]]:
         filter(None, (os.environ.get("LDFLAGS"), os.environ.get("LDSHARED")))
     )
 
-    def _has_path_flag(flags, path):
-        tokens = shlex.split(flags) if flags else []
-        if f"-I{path}" in tokens or f"-L{path}" in tokens:
-            return True
-        for idx, token in enumerate(tokens):
-            if token in ("-I", "-L", "-Wl,-rpath", "-Wl,-rpath,") and idx + 1 < len(tokens) and tokens[idx + 1] == path:
-                return True
-            if token.startswith("-Wl,-rpath,") and token == f"-Wl,-rpath,{path}":
-                return True
-        return False
-
     conda_prefix = os.environ.get("CONDA_PREFIX")
     if conda_prefix:
         conda_include = os.path.join(conda_prefix, "include")
@@ -222,8 +355,6 @@ include_dirs = []
 
 include_dirs.append(numpy.get_include())
 include_dirs.append(os.path.join(".", "src", "starlink", "include"))
-include_dirs.append(os.path.join(".", "ast"))
-include_dirs.append(os.path.join(".", "ast", "src"))
 
 #  Create the support files needed for the build. These find the AST
 #  source code using the environment variable AST_SOURCE, so set AST_SOURCE
@@ -574,23 +705,33 @@ ast_c_extra = (
 #  Initialise the list of sources files needed to build the starlink.Ast
 #  module.
 sources = [os.path.join("src", "starlink", "ast", "Ast.c")]
-
-#  Append all the .c and .h files needed to build the AST library locally.
-for cfile in ast_c:
-    sources.append(os.path.join("ast", "src", cfile))
-for cfile in ast_c2:
-    sources.append(os.path.join("ast", cfile))
-for cfile in ast_c3:
-    sources.append(os.path.join("ast", "wcslib", cfile))
-for cfile in cminpack_c:
-    sources.append(os.path.join(os.path.join("ast", "cminpack"), cfile))
-for cfile in erfa_c:
-    sources.append(os.path.join(os.path.join("ast", "erfa"), cfile))
-for cfile in ast_c_extra:
-    sources.append(os.path.join("ast", "src", cfile))
+use_libast, libast_cflags, libast_ldflags = check_libast()
 
 extra_link_args = []
 extra_compile_args = []
+
+if use_libast:
+    # Use the installed AST library and only compile PyAST support code.
+    # sources.append(os.path.join("ast", "pyast_extra.c"))
+    extra_compile_args.extend(libast_cflags)
+    extra_link_args.extend(libast_ldflags)
+else:
+    include_dirs.append(os.path.join(".", "ast"))
+    include_dirs.append(os.path.join(".", "ast", "src"))
+
+    #  Append all the .c and .h files needed to build the AST library locally.
+    for cfile in ast_c:
+        sources.append(os.path.join("ast", "src", cfile))
+    for cfile in ast_c2:
+        sources.append(os.path.join("ast", cfile))
+    for cfile in ast_c3:
+        sources.append(os.path.join("ast", "wcslib", cfile))
+    for cfile in cminpack_c:
+        sources.append(os.path.join(os.path.join("ast", "cminpack"), cfile))
+    for cfile in erfa_c:
+        sources.append(os.path.join(os.path.join("ast", "erfa"), cfile))
+    for cfile in ast_c_extra:
+        sources.append(os.path.join("ast", "src", cfile))
 
 # Test the compiler
 define_macros = []
@@ -601,12 +742,13 @@ if compiler.has_function("strtok_r"):
 if compiler.has_function("strerror_r"):
     define_macros.append(("HAVE_STRERROR_R", "1"))
 
-have_libyaml, yaml_cflags, yaml_ldflags = check_libyaml()
-if have_libyaml:
-    define_macros.append(("YAML", "1"))
-    extra_compile_args.extend(yaml_cflags)
-    extra_link_args.extend(yaml_ldflags)
-    extra_link_args.append("-lyaml")
+if not use_libast:
+    have_libyaml, yaml_cflags, yaml_ldflags = check_libyaml()
+    if have_libyaml:
+        define_macros.append(("YAML", "1"))
+        extra_compile_args.extend(yaml_cflags)
+        extra_link_args.extend(yaml_ldflags)
+        extra_link_args.append("-lyaml")
 
 #  We need to tell AST what type a 64-bit int will have
 #  Not really sure how to determine whether we have int64_t
