@@ -1,11 +1,11 @@
 #!/home/dsb/bin/python3
 
-from __future__ import print_function
 
 import sys
-import starlink.Ast as Ast
-import starlink.Grf as Grf
+
 import matplotlib.pyplot as plt
+
+from starlink import Ast, Grf
 
 #  Check the header name was supplied on the command line
 if len(sys.argv) < 2:
@@ -13,44 +13,37 @@ if len(sys.argv) < 2:
     sys.exit(2)
 
 #  Attempt to open the header file
-fin1 = open(sys.argv[1] + ".head")
+with open(sys.argv[1] + ".head") as fin1:
+    #  Attempt to open an associated file holding attributes that control how
+    #  the FITS headers are interpreted. If succesful, read the whole file into
+    #  a single string.
+    try:
+        with open(sys.argv[1] + ".fattr") as fin2:
+            fits_atts = fin2.read()
+    except OSError:
+        fits_atts = ""
 
-#  Attempt to open an associated file holding attributes that control how
-#  the FITS headers are interpreted. If succesful, read the whole file into
-#  a single string.
-try:
-    fin2 = open(sys.argv[1] + ".fattr")
-    fits_atts = fin2.read()
-    fin2.close()
-except (IOError):
-    fits_atts = ""
+    #  Attempt to open an associated file holding attributes that control the
+    #  appearance of the plot. If successful, read the whole file into a
+    #  single string.
+    try:
+        with open(sys.argv[1] + ".attr") as fin2:
+            plot_atts = fin2.read()
+    except OSError:
+        plot_atts = ""
 
-#  Attempt to open an associated file holding attributes that control the
-#  appearance of the plot. If successful, read the whole file into a
-#  single string.
-try:
-    fin2 = open(sys.argv[1] + ".attr")
-    plot_atts = fin2.read()
-    fin2.close()
-except (IOError):
-    plot_atts = ""
+    #  Attempt to open an associated file holding the pixel bounds of the
+    #  area of the FITS array to be plotted.
+    try:
+        with open(sys.argv[1] + ".box") as fin2:
+            box = [float(v) for v in fin2.read().strip().split()]
+    except OSError:
+        box = None
 
-#  Attempt to open an associated file holding the pixel bounds of the
-#  area of the FITS array to be plotted.
-try:
-    fin2 = open(sys.argv[1] + ".box")
-    box = [float(v) for v in fin2.read().strip().split()]
-    fin2.close()
-except (IOError):
-    box = None
-
-#  Read the header lines into a list, and store this list in a new
-#  Ast.FitsChan, using the requested attributes to modify the
-#  interpretation of the header.
-fc = Ast.FitsChan(fin1.readlines(), None, fits_atts)
-
-#  Close the header file.
-fin1.close()
+    #  Read the header lines into a list, and store this list in a new
+    #  Ast.FitsChan, using the requested attributes to modify the
+    #  interpretation of the header.
+    fc = Ast.FitsChan(fin1.readlines(), None, fits_atts)
 
 #  Create a FrameSet from the FITS headers in the FitsChan.
 fs = fc.read()

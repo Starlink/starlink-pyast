@@ -1,0 +1,101 @@
+[build-system]
+requires = [
+    "numpy",
+    "setuptools",
+    "setuptools-scm>=8.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starlink-pyast"
+requires-python = ">=3.11.0"
+description = "A Python wrapper for the Starlink AST library"
+license = "LGPL-3.0-or-later"
+readme = "README.md"
+authors = [
+    {name="David S. Berry", email="d.berry@eaobservatory.org"},
+    {name="Tim Jenness", email="tjenness@lsst.org"}
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: C",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Astronomy"
+]
+dependencies = [
+    "numpy"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+atl = ["astropy"]
+grf = ["matplotlib"]
+
+[project.urls]
+"Homepage" = "https://www.starlink.ac.uk/ast"
+"Source" = "https://github.com/Starlink/starlink-pyast"
+
+[tool.setuptools_scm]
+version_file = "src/starlink/ast/pyast_version.h"
+version_file_template = '#define PYAST_VERSION "{version}"'
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+starlink = ["include/star/pyast.h"]
+
+[tool.black]
+line-length = 110
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 110
+known_first_party = ["starlink"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+exclude = [
+    "__init__.py",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "N802",
+    "N803",
+    "N806",
+    "N812",
+    "N815",
+    "N816",
+    "N999",
+]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "N",  # pep8-naming
+    "W",  # pycodestyle
+    "UP",  # pyupgrade
+    "C4",
+    "I",  # isort
+    "B",  # bugbear
+    "RUF022",  # __all__ sorting
+]
+extend-select = [
+    "RUF100", # Warn about unused noqa
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lsst"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 79
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 79

@@ -151,11 +151,9 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 @EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES =  \
 @EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@	libast_pal.la \
 @EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@	libast_cminpack.la
-@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la \
-@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@	libast_cminpack.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = libast_cminpack.la
 @EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@libast_la_DEPENDENCIES =  \
 @EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@	libast_pal.la
-@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_TRUE@libast_la_DEPENDENCIES = $(libdir)/libpal.la
 am__libast_la_SOURCES_DIST = src/yamlchan.c src/axis.c src/box.c \
 	src/channel.c src/chebymap.c src/circle.c src/cmpframe.c \
 	src/cmpmap.c src/cmpregion.c src/dsbspecframe.c src/dssmap.c \
@@ -169,37 +167,38 @@ am__libast_la_SOURCES_DIST = src/yamlchan.c src/axis.c src/box.c \
 	src/pointset.c src/polygon.c src/polymap.c src/prism.c \
 	src/ratemap.c src/region.c src/selectormap.c src/shiftmap.c \
 	src/skyaxis.c src/skyframe.c src/slamap.c src/specfluxframe.c \
-	src/specframe.c src/specmap.c src/sphmap.c src/stc.c \
-	src/stccatalogentrylocation.c src/stcobsdatalocation.c \
-	src/stcresourceprofile.c src/stcschan.c \
-	src/stcsearchlocation.c src/switchmap.c src/table.c \
-	src/timeframe.c src/timemap.c src/tranmap.c src/unit.c \
-	src/unitmap.c src/unitnormmap.c src/wcsmap.c src/winmap.c \
-	src/xml.c src/xmlchan.c src/xphmap.c src/zoommap.c \
-	src/fyamlchan.c src/c2f77.c src/fbox.c src/fchannel.c \
-	src/fchebymap.c src/fcircle.c src/fcmpframe.c src/fcmpmap.c \
-	src/fcmpregion.c src/fdsbspecframe.c src/fdssmap.c \
-	src/fellipse.c src/ferror.c src/ffitschan.c src/ffitstable.c \
-	src/ffluxframe.c src/fframe.c src/fframeset.c src/fgrismmap.c \
-	src/finterval.c src/fintramap.c src/fkeymap.c src/flutmap.c \
-	src/fmapping.c src/fmathmap.c src/fmatrixmap.c src/fmoc.c \
-	src/fmocchan.c src/fnormmap.c src/fnullregion.c src/fobject.c \
-	src/fpcdmap.c src/fpermmap.c src/fplot.c src/fplot3d.c \
-	src/fpointlist.c src/fpolygon.c src/fpolymap.c src/fprism.c \
-	src/fratemap.c src/fregion.c src/fselectormap.c \
+	src/specframe.c src/specmap.c src/sphmap.c src/splinemap.c \
+	src/stc.c src/stccatalogentrylocation.c \
+	src/stcobsdatalocation.c src/stcresourceprofile.c \
+	src/stcschan.c src/stcsearchlocation.c src/switchmap.c \
+	src/table.c src/timeframe.c src/timemap.c src/tranmap.c \
+	src/unit.c src/unitmap.c src/unitnormmap.c src/wcsmap.c \
+	src/winmap.c src/xml.c src/xmlchan.c src/xphmap.c \
+	src/zoommap.c src/fyamlchan.c src/c2f77.c src/fbox.c \
+	src/fchannel.c src/fchebymap.c src/fcircle.c src/fcmpframe.c \
+	src/fcmpmap.c src/fcmpregion.c src/fdsbspecframe.c \
+	src/fdssmap.c src/fellipse.c src/ferror.c src/ffitschan.c \
+	src/ffitstable.c src/ffluxframe.c src/fframe.c src/fframeset.c \
+	src/fgrismmap.c src/finterval.c src/fintramap.c src/fkeymap.c \
+	src/flutmap.c src/fmapping.c src/fmathmap.c src/fmatrixmap.c \
+	src/fmoc.c src/fmocchan.c src/fnormmap.c src/fnullregion.c \
+	src/fobject.c src/fpcdmap.c src/fpermmap.c src/fplot.c \
+	src/fplot3d.c src/fpointlist.c src/fpolygon.c src/fpolymap.c \
+	src/fprism.c src/fratemap.c src/fregion.c src/fselectormap.c \
 	src/fshiftmap.c src/fskyframe.c src/fslamap.c \
 	src/fspecfluxframe.c src/fspecframe.c src/fspecmap.c \
-	src/fsphmap.c src/fstc.c src/fstccatalogentrylocation.c \
-	src/fstcobsdatalocation.c src/fstcresourceprofile.c \
-	src/fstcschan.c src/fstcsearchlocation.c src/fswitchmap.c \
-	src/ftable.c src/ftimeframe.c src/ftimemap.c src/ftranmap.c \
-	src/funitmap.c src/funitnormmap.c src/fwcsmap.c src/fwinmap.c \
-	src/fxmlchan.c src/fzoommap.c src/xml.h wcslib/wcstrig.h \
-	wcslib/proj.h src/memory.h src/error.h src/globals.h \
-	src/unit.h ast_err.h src/version.h src/object.h src/keymap.h \
-	src/table.h src/fitstable.h src/pointset.h src/axis.h \
-	src/skyaxis.h src/mapping.h src/cmpmap.h src/dssmap.h \
-	src/grismmap.h src/intramap.h src/lutmap.h src/mathmap.h \
+	src/fsphmap.c src/fsplinemap.c src/fstc.c \
+	src/fstccatalogentrylocation.c src/fstcobsdatalocation.c \
+	src/fstcresourceprofile.c src/fstcschan.c \
+	src/fstcsearchlocation.c src/fswitchmap.c src/ftable.c \
+	src/ftimeframe.c src/ftimemap.c src/ftranmap.c src/funitmap.c \
+	src/funitnormmap.c src/fwcsmap.c src/fwinmap.c src/fxmlchan.c \
+	src/fzoommap.c src/xml.h wcslib/wcstrig.h wcslib/proj.h \
+	src/memory.h src/error.h src/globals.h src/unit.h ast_err.h \
+	src/version.h src/object.h src/keymap.h src/table.h \
+	src/fitstable.h src/pointset.h src/axis.h src/skyaxis.h \
+	src/mapping.h src/cmpmap.h src/dssmap.h src/grismmap.h \
+	src/intramap.h src/splinemap.h src/lutmap.h src/mathmap.h \
 	src/matrixmap.h src/pcdmap.h src/permmap.h src/polymap.h \
 	src/chebymap.h src/ratemap.h src/normmap.h src/shiftmap.h \
 	src/slamap.h src/specmap.h src/sphmap.h src/timemap.h \
@@ -246,7 +245,8 @@ am__objects_1 = src/libast_la-yamlchan.lo src/libast_la-axis.lo \
 	src/libast_la-skyframe.lo src/libast_la-slamap.lo \
 	src/libast_la-specfluxframe.lo src/libast_la-specframe.lo \
 	src/libast_la-specmap.lo src/libast_la-sphmap.lo \
-	src/libast_la-stc.lo src/libast_la-stccatalogentrylocation.lo \
+	src/libast_la-splinemap.lo src/libast_la-stc.lo \
+	src/libast_la-stccatalogentrylocation.lo \
 	src/libast_la-stcobsdatalocation.lo \
 	src/libast_la-stcresourceprofile.lo src/libast_la-stcschan.lo \
 	src/libast_la-stcsearchlocation.lo src/libast_la-switchmap.lo \
@@ -305,6 +305,7 @@ am__objects_1 = src/libast_la-yamlchan.lo src/libast_la-axis.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fspecframe.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fspecmap.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fsphmap.lo \
+@NOFORTRAN_FALSE@	src/libast_la-fsplinemap.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fstc.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fstccatalogentrylocation.lo \
 @NOFORTRAN_FALSE@	src/libast_la-fstcobsdatalocation.lo \
@@ -438,9 +439,8 @@ libast_pgplot3d_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 PROGRAMS = $(noinst_PROGRAMS)
 am_ast_test_OBJECTS = ast_test.$(OBJEXT)
 ast_test_OBJECTS = $(am_ast_test_OBJECTS)
-ast_test_DEPENDENCIES = libast.la libast_pal.la libast_cminpack.la \
-	libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la \
-	libast_grf3d.la libast_err.la
+ast_test_DEPENDENCIES = libast.la libast_grf_3.2.la libast_grf_5.6.la \
+	libast_grf_2.0.la libast_grf3d.la libast_err.la
 am__astbad_SOURCES_DIST = src/astbad.c src/pointset.h
 @NOFORTRAN_FALSE@am_astbad_OBJECTS = src/astbad.$(OBJEXT)
 astbad_OBJECTS = $(am_astbad_OBJECTS)
@@ -843,6 +843,7 @@ STAR_DEPENDENCIES_CHILDREN = @STAR_DEPENDENCIES_CHILDREN@
 STAR_DOCUMENTATION = @STAR_DOCUMENTATION@
 STAR_FCFLAGS = @STAR_FCFLAGS@
 STAR_FFLAGS = @STAR_FFLAGS@
+STAR_FFLAGS_TEST = @STAR_FFLAGS_TEST@
 STAR_LATEX_DOCUMENTATION = @STAR_LATEX_DOCUMENTATION@
 STAR_LDFLAGS = @STAR_LDFLAGS@
 STAR_MANIFEST_DIR = @STAR_MANIFEST_DIR@
@@ -971,6 +972,7 @@ GRP_C_ROUTINES = \
     src/specframe.c \
     src/specmap.c \
     src/sphmap.c \
+    src/splinemap.c \
     src/stc.c \
     src/stccatalogentrylocation.c \
     src/stcobsdatalocation.c \
@@ -1044,6 +1046,7 @@ GRP_C_ROUTINES = \
 @NOFORTRAN_FALSE@    src/fspecframe.c \
 @NOFORTRAN_FALSE@    src/fspecmap.c \
 @NOFORTRAN_FALSE@    src/fsphmap.c \
+@NOFORTRAN_FALSE@    src/fsplinemap.c \
 @NOFORTRAN_FALSE@    src/fstc.c \
 @NOFORTRAN_FALSE@    src/fstccatalogentrylocation.c \
 @NOFORTRAN_FALSE@    src/fstcobsdatalocation.c \
@@ -1088,6 +1091,7 @@ AST_H_FILES = \
           src/dssmap.h \
           src/grismmap.h \
           src/intramap.h \
+          src/splinemap.h \
           src/lutmap.h \
           src/mathmap.h \
           src/matrixmap.h \
@@ -1574,14 +1578,14 @@ libast_la_SOURCES = \
 
 libast_la_LDFLAGS = -version-info @version_info@
 @EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la libast_cminpack.la
-@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = $(libdir)/libpal.la libast_cminpack.la
+@EXTERNAL_CMINPACK_FALSE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = -lpal libast_cminpack.la
 @EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_FALSE@libast_la_LIBADD = libast_pal.la -lcminpack
 
 # Ensure libast links against libraries containing functions used within
 # libast. If AST is configured --with-external-pal, then the internal
 # libast_pal library will be empty, and we link to an external PAL
 # library instead. Do the same for cminpack
-@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = $(libdir)/libpal.la -lcminpack
+@EXTERNAL_CMINPACK_TRUE@@EXTERNAL_PAL_TRUE@libast_la_LIBADD = -lpal -lcminpack
 
 # AST_PAR is really part of GRP_F_INCLUDE_FILES, but it must not be
 # distributed, so list it separately.
@@ -1695,7 +1699,7 @@ ast_test_SOURCES = ast_test.c
 
 #ast_test_LDADD = `ast_link`
 # Expand ast_link to avoid libast_pass2, which causes problems for Solaris
-ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_pal.la libast_cminpack.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
+ast_test_LDADD = @LIBPAL@ @LIBCMINPACK@ libast.la libast_grf_3.2.la libast_grf_5.6.la libast_grf_2.0.la libast_grf3d.la libast_err.la -lm
 starfacs_DATA = fac_1521_err
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -1928,6 +1932,8 @@ src/libast_la-specmap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-sphmap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/libast_la-splinemap.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-stc.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-stccatalogentrylocation.lo: src/$(am__dirstamp) \
@@ -2065,6 +2071,8 @@ src/libast_la-fspecframe.lo: src/$(am__dirstamp) \
 src/libast_la-fspecmap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-fsphmap.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/libast_la-fsplinemap.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libast_la-fstc.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -2377,6 +2385,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fspecframe.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fspecmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fsphmap.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fsplinemap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fstc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fstccatalogentrylocation.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-fstcobsdatalocation.Plo@am__quote@
@@ -2431,6 +2440,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-specframe.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-specmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-sphmap.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-splinemap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-stc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-stccatalogentrylocation.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libast_la-stcobsdatalocation.Plo@am__quote@
@@ -2861,6 +2871,13 @@ src/libast_la-sphmap.lo: src/sphmap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/sphmap.c' object='src/libast_la-sphmap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-sphmap.lo `test -f 'src/sphmap.c' || echo '$(srcdir)/'`src/sphmap.c
+
+src/libast_la-splinemap.lo: src/splinemap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-splinemap.lo -MD -MP -MF src/$(DEPDIR)/libast_la-splinemap.Tpo -c -o src/libast_la-splinemap.lo `test -f 'src/splinemap.c' || echo '$(srcdir)/'`src/splinemap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libast_la-splinemap.Tpo src/$(DEPDIR)/libast_la-splinemap.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/splinemap.c' object='src/libast_la-splinemap.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-splinemap.lo `test -f 'src/splinemap.c' || echo '$(srcdir)/'`src/splinemap.c
 
 src/libast_la-stc.lo: src/stc.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-stc.lo -MD -MP -MF src/$(DEPDIR)/libast_la-stc.Tpo -c -o src/libast_la-stc.lo `test -f 'src/stc.c' || echo '$(srcdir)/'`src/stc.c
@@ -3344,6 +3361,13 @@ src/libast_la-fsphmap.lo: src/fsphmap.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/fsphmap.c' object='src/libast_la-fsphmap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-fsphmap.lo `test -f 'src/fsphmap.c' || echo '$(srcdir)/'`src/fsphmap.c
+
+src/libast_la-fsplinemap.lo: src/fsplinemap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-fsplinemap.lo -MD -MP -MF src/$(DEPDIR)/libast_la-fsplinemap.Tpo -c -o src/libast_la-fsplinemap.lo `test -f 'src/fsplinemap.c' || echo '$(srcdir)/'`src/fsplinemap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libast_la-fsplinemap.Tpo src/$(DEPDIR)/libast_la-fsplinemap.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/fsplinemap.c' object='src/libast_la-fsplinemap.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -c -o src/libast_la-fsplinemap.lo `test -f 'src/fsplinemap.c' || echo '$(srcdir)/'`src/fsplinemap.c
 
 src/libast_la-fstc.lo: src/fstc.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(STAR_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(libast_la_CFLAGS) $(CFLAGS) -MT src/libast_la-fstc.lo -MD -MP -MF src/$(DEPDIR)/libast_la-fstc.Tpo -c -o src/libast_la-fstc.lo `test -f 'src/fstc.c' || echo '$(srcdir)/'`src/fstc.c
@@ -4526,9 +4550,12 @@ uninstall-am: uninstall-binSCRIPTS uninstall-cincludeHEADERS \
 .PRECIOUS: Makefile
 
 @NOFORTRAN_FALSE@AST_PAR: $(srcdir)/ast_par.source astbad$(EXEEXT)
-@NOFORTRAN_FALSE@	sed -e 's/<AST__BAD>/'`./astbad$(EXEEXT) AST__BAD | tr 'E' 'D'`'/' \
-@NOFORTRAN_FALSE@	    -e 's/<AST__NAN>/'`./astbad$(EXEEXT) AST__NAN | tr 'E' 'D'`'/' \
-@NOFORTRAN_FALSE@	    -e 's/<AST__NANR>/'`./astbad$(EXEEXT) AST__NANF | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	ASTBAD=`./astbad$(EXEEXT) AST__BAD` && \
+@NOFORTRAN_FALSE@	ASTNAN=`./astbad$(EXEEXT) AST__NAN` && \
+@NOFORTRAN_FALSE@	ASTNANF=`./astbad$(EXEEXT) AST__NANF` && \
+@NOFORTRAN_FALSE@	sed -e 's/<AST__BAD>/'`echo $$ASTBAD | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	    -e 's/<AST__NAN>/'`echo $$ASTNAN | tr 'E' 'D'`'/' \
+@NOFORTRAN_FALSE@	    -e 's/<AST__NANR>/'`echo $$ASTNANF | tr 'E' 'D'`'/' \
 @NOFORTRAN_FALSE@	    $(srcdir)/ast_par.source >$@
 
 # ast.h depends on the error-facility files.  ast.h _could_ be made
@@ -4578,7 +4605,7 @@ sun211_figures: sun210_figures
 	$(LN_S) sun210_figures sun211_figures
 
 test: install
-	cd ast_tester && STARLINK=@STARLINK@ PGPLOT_DIR=@STARLINK@/bin ./ast_tester -nd
+	cd ast_tester && STARLINK=@STARLINK@ PGPLOT_DIR=@STARLINK@/bin FFLAGS="@STAR_FFLAGS_TEST@" ./ast_tester -nd
 
 #  Need to include latex support files in the distribution tar ball so
 #  that the docs can be built from the tex source files. Requires environment

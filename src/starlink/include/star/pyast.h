@@ -33,7 +33,7 @@ extern "C" {
 
 #define MXDIM 20
 #define MXATTR_LEN 50
-#define ATTNORM(attrib) AttNorm(attrib,att_buf)
+#define ATTNORM(attrib) AttNorm(attrib, att_buf, sizeof(att_buf))
 
 /*
 *  Name:
@@ -148,6 +148,7 @@ static PyObject *isa_##class( Object *self ){ \
 static PyObject *get##attrib( class *self, void *closure ); \
 static PyObject *get##attrib( class *self, void *closure ){ \
    char att_buf[ MXATTR_LEN ]; \
+   (void)att_buf; \
    PyObject *result = (getval); \
    TIDY; \
    Py_INCREF( result ); \
@@ -625,7 +626,7 @@ MAKE_GET(class,attrib, \
          astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
       } \
       cval = astFree( cval ); \
-   } else if( LONG_CHECK(value) ) { \
+   } else if( PyLong_Check(value) ) { \
       icol = PyLong_AsLong( value ); \
       astSetI(  ((Object*)self)->ast_object, ATTNORM(#attrib), icol ); \
    } else if( ! PyErr_Occurred() ) { \

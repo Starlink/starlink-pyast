@@ -45,7 +45,7 @@
 *     {enter_new_authors_here}
 
 *  History:
-*     28-OCT-2021 (makeh):
+*     11-FEB-2026 (makeh):
 *        Original version, generated automatically from the internal header
 *        files by the "makeh" script.
 *     {enter_changes_here}
@@ -555,18 +555,20 @@ void astFandl_( const char *, size_t, size_t, size_t *, size_t *, int * );
 /* unit. */
 /* ===== */
 #define AST__VMAJOR 9
-#define AST__VMINOR 2
-#define AST__RELEASE 5
+#define AST__VMINOR 3
+#define AST__RELEASE 0
 
 #define AST_MAJOR_VERS 9
-#define AST_MINOR_VERS 2
-#define AST_RELEASE 5
+#define AST_MINOR_VERS 3
+#define AST_RELEASE 0
 
 #include <stdarg.h>
 #include <float.h>
 #include <stdio.h>
 #define STATUS_PTR astGetStatusPtr
 #define AST__THREADSAFE 1
+#define AST__F77API "F77API"
+
 #define AST__UNLOCKED 1
 #define AST__RUNNING 2
 #define AST__OTHER 3
@@ -1653,6 +1655,7 @@ int astHasParameter_( AstTable *, const char *, int * );
 #define AST__LOGICAL 6
 #define AST__CONTINUE 7
 #define AST__UNDEF 8
+#define AST__KINT 9
 #define AST_TABEXTNAME "WCS-TAB"
 struct AstFitsChan;
 typedef struct AstFitsChan {
@@ -1663,6 +1666,7 @@ typedef struct AstFitsChan {
    int defb1950;
    int tabok;
    int forcetab;
+   int ignorebadalt;
    int cdmatrix;
    int polytan;
    int sipok;
@@ -1673,6 +1677,7 @@ typedef struct AstFitsChan {
    int clean;
    int altaxes;
    int fitsdigits;
+   int fitsrounding;
    char *fitsaxisorder;
    char *warnings;
    void *card;
@@ -1712,6 +1717,7 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
    int astGetFitsCN_( AstFitsChan *, const char *, char **, int * );
    int astGetFitsF_( AstFitsChan *, const char *, double *, int * );
    int astGetFitsI_( AstFitsChan *, const char *, int *, int * );
+   int astGetFitsK_( AstFitsChan *, const char *, int64_t *, int * );
    int astGetFitsL_( AstFitsChan *, const char *, int *, int * );
    int astGetFitsS_( AstFitsChan *, const char *, char **, int * );
    int astTestFits_( AstFitsChan *, const char *, int *, int * );
@@ -1733,6 +1739,7 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
    void astSetFitsCN_( AstFitsChan *, const char *, const char *, const char *, int, int * );
    void astSetFitsF_( AstFitsChan *, const char *, double, const char *, int, int * );
    void astSetFitsI_( AstFitsChan *, const char *, int, const char *, int, int * );
+   void astSetFitsK_( AstFitsChan *, const char *, int64_t, const char *, int, int * );
    void astSetFitsL_( AstFitsChan *, const char *, int, const char *, int, int * );
    void astSetFitsS_( AstFitsChan *, const char *, const char *, const char *, int, int * );
    void astSetFitsU_( AstFitsChan *, const char *, const char *, int, int * );
@@ -1770,6 +1777,8 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
 
 #define astSetFitsI(this,name,value,comment,overwrite) astINVOKE(V,astSetFitsI_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
 
+#define astSetFitsK(this,name,value,comment,overwrite) astINVOKE(V,astSetFitsK_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
+
 #define astSetFitsF(this,name,value,comment,overwrite) astINVOKE(V,astSetFitsF_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
 
 #define astSetFitsS(this,name,value,comment,overwrite) astINVOKE(V,astSetFitsS_(astCheckFitsChan(this),name,value,comment,overwrite,STATUS_PTR))
@@ -1793,6 +1802,8 @@ AstFitsChan *astFitsChanForId_( const char *(*)( void ),
 #define astGetFitsF(this,name,value) astINVOKE(V,astGetFitsF_(astCheckFitsChan(this),name,value,STATUS_PTR))
 
 #define astGetFitsI(this,name,value) astINVOKE(V,astGetFitsI_(astCheckFitsChan(this),name,value,STATUS_PTR))
+
+#define astGetFitsK(this,name,value) astINVOKE(V,astGetFitsK_(astCheckFitsChan(this),name,value,STATUS_PTR))
 
 #define astGetFitsL(this,name,value) astINVOKE(V,astGetFitsL_(astCheckFitsChan(this),name,value,STATUS_PTR))
 
@@ -1824,6 +1835,7 @@ AstFitsTable *astFitsTableId_( void *, const char *, ... )__attribute__((format(
 AstFitsChan *astGetTableHeader_( AstFitsTable *, int * );
 void astPutTableHeader_( AstFitsTable *, AstFitsChan *, int * );
 int astColumnNull_( AstFitsTable *, const char *, int, int, int *, int *, int * );
+int64_t astColumnNullK_( AstFitsTable *, const char *, int, int64_t, int *, int *, int * );
 size_t astColumnSize_( AstFitsTable *, const char *, int * );
 void astGetColumnData_( AstFitsTable *, const char *, float, double, size_t, void *, int *, int * );
 void astPutColumnData_( AstFitsTable *, const char *, int, size_t, void *, int * );
@@ -1836,6 +1848,7 @@ void astPutColumnData_( AstFitsTable *, const char *, int, size_t, void *, int *
 #define astGetTableHeader(this) astINVOKE(O,astGetTableHeader_(astCheckFitsTable(this),STATUS_PTR))
 #define astPutTableHeader(this,header) astINVOKE(V,astPutTableHeader_(astCheckFitsTable(this),astCheckFitsChan(header),STATUS_PTR))
 #define astColumnNull(this,column,set,newval,wasset,hasnull) astINVOKE(V,astColumnNull_(astCheckFitsTable(this),column,set,newval,wasset,hasnull,STATUS_PTR))
+#define astColumnNullK(this,column,set,newval,wasset,hasnull) astINVOKE(V,astColumnNullK_(astCheckFitsTable(this),column,set,newval,wasset,hasnull,STATUS_PTR))
 #define astColumnSize(this,column) astINVOKE(V,astColumnSize_(astCheckFitsTable(this),column,STATUS_PTR))
 #define astGetColumnData(this,column,fnull,dnull,mxsize,coldata,nelem) astINVOKE(V,astGetColumnData_(astCheckFitsTable(this),column,fnull,dnull,mxsize,coldata,nelem,STATUS_PTR))
 #define astPutColumnData(this,column,clen,size,coldata) astINVOKE(V,astPutColumnData_(astCheckFitsTable(this),column,clen,size,coldata,STATUS_PTR))
@@ -1997,6 +2010,41 @@ void astIntraRegFor_( const char *, int, int, void (*)( AstMapping *, int, int, 
 #define astIntraMap astINVOKE(F,astIntraMapId_)
 #define astIntraReg(name,nin,nout,tran,flags,purpose,author,contact) astIntraReg_(name,nin,nout,tran,flags,purpose,author,contact,STATUS_PTR)
 #define astIntraRegFor(name,nin,nout,tran,tran_wrap,flags,purpose,author,contact) astIntraRegFor_(name,nin,nout,tran,tran_wrap,flags,purpose,author,contact,STATUS_PTR)
+/* splinemap. */
+/* ========== */
+#define STATUS_PTR astGetStatusPtr
+typedef struct AstSplineMap {
+
+   AstMapping mapping;
+
+   int kx;
+   int ky;
+   int nx;
+   int ny;
+   double *tx;
+   double *ty;
+   double *cu;
+   double *cv;
+   int invniter;
+   double invtol;
+} AstSplineMap;
+astPROTO_CHECK(SplineMap)
+astPROTO_ISA(SplineMap)
+
+AstSplineMap *astSplineMapId_( int, int, int, int, const double[], const double[], const double[], const double[], const char *, ... )__attribute__((format(printf,9,10)));
+void astSplineCoeffs_( AstSplineMap *, int, int, int, double *, int *);
+void astSplineKnots_( AstSplineMap *, int, int, double *, int *);
+#define astCheckSplineMap(this) astINVOKE_CHECK(SplineMap,this,0)
+#define astVerifySplineMap(this) astINVOKE_CHECK(SplineMap,this,1)
+
+#define astIsASplineMap(this) astINVOKE_ISA(SplineMap,this)
+
+#define astSplineMap astINVOKE(F,astSplineMapId_)
+#define astSplineCoeffs(this,axis,nel,coeffs) astINVOKE(V,astSplineCoeffs_(astCheckSplineMap(this),0,axis,nel,coeffs,STATUS_PTR))
+
+#define astSplineCoeffs_F77(this,axis,nel,coeffs) astINVOKE(V,astSplineCoeffs_(astCheckSplineMap(this),1,axis,nel,coeffs,STATUS_PTR))
+
+#define astSplineKnots(this,axis,nel,knots) astINVOKE(V,astSplineKnots_(astCheckSplineMap(this),axis,nel,knots,STATUS_PTR))
 /* lutmap. */
 /* ======= */
 typedef struct AstLutMap {
@@ -2137,6 +2185,23 @@ AstPermMap *astPermMapId_( int, const int [], int, const int [],
 #define astPermMap astINVOKE(F,astPermMapId_)
 /* polymap. */
 /* ======== */
+typedef struct AstShiftMap {
+
+   AstMapping mapping;
+
+   double *shift;
+
+} AstShiftMap;
+astPROTO_CHECK(ShiftMap)
+astPROTO_ISA(ShiftMap)
+
+AstShiftMap *astShiftMapId_( int, const double [], const char *, ... )__attribute__((format(printf,3,4)));
+#define astCheckShiftMap(this) astINVOKE_CHECK(ShiftMap,this,0)
+#define astVerifyShiftMap(this) astINVOKE_CHECK(ShiftMap,this,1)
+
+#define astIsAShiftMap(this) astINVOKE_ISA(ShiftMap,this)
+
+#define astShiftMap astINVOKE(F,astShiftMapId_)
 typedef struct AstPolyMap {
 
    AstMapping mapping;
@@ -2161,6 +2226,7 @@ astPROTO_ISA(PolyMap)
 AstPolyMap *astPolyMapId_( int, int, int, const double[], int, const double[], const char *, ... )__attribute__((format(printf,7,8)));
 AstPolyMap *astPolyTran_( AstPolyMap *, int, double, double, int, const double *, const double *, int * );
 void astPolyCoeffs_( AstPolyMap *, int, int, double *, int *, int *);
+void astShowPoly_( AstPolyMap *, int * );
 #define astCheckPolyMap(this) astINVOKE_CHECK(PolyMap,this,0)
 #define astVerifyPolyMap(this) astINVOKE_CHECK(PolyMap,this,1)
 
@@ -2170,6 +2236,8 @@ void astPolyCoeffs_( AstPolyMap *, int, int, double *, int *, int *);
 #define astPolyTran(this,forward,acc,maxacc,maxorder,lbnd,ubnd) astINVOKE(O,astPolyTran_(astCheckPolyMap(this),forward,acc,maxacc,maxorder,lbnd,ubnd,STATUS_PTR))
 
 #define astPolyCoeffs(this,forward,nel,coeffs,ncoeff) astINVOKE(V,astPolyCoeffs_(astCheckPolyMap(this),forward,nel,coeffs,ncoeff,STATUS_PTR))
+
+#define astShowPoly(this) astShowPoly_(astCheckPolyMap(this),STATUS_PTR)
 /* chebymap. */
 /* ========= */
 typedef struct AstChebyMap {
@@ -2384,23 +2452,6 @@ AstNormMap *astNormMapId_( void *, const char *, ... )__attribute__((format(prin
 #define astNormMap astINVOKE(F,astNormMapId_)
 /* shiftmap. */
 /* ========= */
-typedef struct AstShiftMap {
-
-   AstMapping mapping;
-
-   double *shift;
-
-} AstShiftMap;
-astPROTO_CHECK(ShiftMap)
-astPROTO_ISA(ShiftMap)
-
-AstShiftMap *astShiftMapId_( int, const double [], const char *, ... )__attribute__((format(printf,3,4)));
-#define astCheckShiftMap(this) astINVOKE_CHECK(ShiftMap,this,0)
-#define astVerifyShiftMap(this) astINVOKE_CHECK(ShiftMap,this,1)
-
-#define astIsAShiftMap(this) astINVOKE_ISA(ShiftMap,this)
-
-#define astShiftMap astINVOKE(F,astShiftMapId_)
 /* slamap. */
 /* ======= */
 #define AST__AU 1.49597870E11

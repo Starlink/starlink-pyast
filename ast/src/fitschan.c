@@ -126,12 +126,13 @@ f     encodings), then write operations using AST_WRITE will
 *     - Encoding: System for encoding Objects as FITS headers
 *     - FitsAxisOrder: Sets the order of WCS axes within new FITS-WCS headers
 *     - FitsDigits: Digits of precision for floating-point FITS values
+*     - FitsRounding: Controls rounding of floating-point FITS values
 *     - ForceTab: Force use of the FITS "-TAB" algorithm?
+*     - IgnoreBadAlt: Ignore unreadable alternate axis descriptions?
 *     - Iwc: Add a Frame describing Intermediate World Coords?
 *     - Ncard: Number of FITS header cards in a FitsChan
 *     - Nkey: Number of unique keywords in a FitsChan
 *     - PolyTan: Use PVi_m keywords to define distorted TAN projection?
-*     - SipReplace: Replace SIP inverse transformation?
 *     - SipOK: Use Spitzer Space Telescope keywords to define distortion?
 *     - SipReplace: Replace SIP inverse transformation?
 *     - TabOK: Should the FITS "-TAB" algorithm be recognised?
@@ -1254,7 +1255,30 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 *        alternate axis descriptions.
 *     19-FEB-2021 (DSB):
 *        - Fix bug in IsMapLinear for cases where the number of mapping
-         inputs and outputs differ and the Mapping can be split.
+*        inputs and outputs differ and the Mapping can be split.
+*     5-JAN-2022 (DSB):
+*        Fix bug in SpecTrans that caused 'Unable to find a value for FITS keyword
+*        "CRVAL2A"' error when reading a basic NCP projection header (i.e. a header
+*        with no alternate axis keywords).
+*     6-JAN-2022 (DSB):
+*        - Added attribute FitsRounding and re-wrote RoundFString.
+*        - Increase some buffer sizes to avoid compilation warnings.
+*     6-JUN-2022 (DSB):
+*        Avoid copying overlapping strings in RoundFString.
+*     25-SEP-2024 (DSB):
+*        - Added IgnoreBadAlt attribute.
+*        - Added warning "BadAlt"
+*        - Correct access to AltAxes attribute
+*        - Add support for 64 bit integer keyword values
+*     30-JUL-2025 (DSB):
+*        Extend the ability of astWrite to create FITS-WCS headers
+*        that include SIP distortion. Previously, it could only be done
+*        if the pixel->sky Mapping in the supplied Mapping included a
+*        PolyMap of exactly the nature defined by the SIP definition paper.
+*        Now, the SIPIntWorld function uses some intelligence to
+*        determine if a PolyMap conforming to the requirements of the SIP
+*        paper can be created from the supplied FrameSet by various
+*        rearrangement of the pixel->sky Mapping in the FrameSet.
 *class--
 */
 
@@ -1362,7 +1386,7 @@ f     - AST_WRITEFITS: Write all cards out to the sink function
 #define LATAX              1
 #define NDESC              9
 #define MXCTYPELEN        81
-#define ALLWARNINGS       " distortion noequinox noradesys nomjd-obs nolonpole nolatpole tnx zpx badcel noctype badlat badmat badval badctype badpv badkeyname badkeyvalue "
+#define ALLWARNINGS       " distortion noequinox noradesys nomjd-obs nolonpole nolatpole tnx zpx badcel noctype badlat badmat badval badctype badpv badkeyname badkeyvalue badalt "
 #define NPFIT             10
 #define SPD               86400.0
 #define FL  1.0/298.257  /*  Reference spheroid flattening factor */
@@ -1566,10 +1590,11 @@ static int (* parent_managelock)( AstObject *, int, int, AstObject **, int * );
 
 /* Strings to describe each data type. These should be in the order implied
    by the corresponding macros (eg AST__FLOAT, etc). */
-static const char *type_names[9] = {"comment", "integer", "floating point",
-                                    "string", "complex floating point",
-                                    "complex integer", "logical",
-                                    "continuation string", "undef" };
+static const char *type_names[10] = {"comment", "integer", "floating point",
+                                     "string", "complex floating point",
+                                     "complex integer", "logical",
+                                     "continuation string", "undef",
+                                     "64 bit integer" };
 
 /* Text values used to represent Encoding values externally. */
 static const char *xencod[8] = { NATIVE_STRING, FITSPC_STRING,
@@ -1778,6 +1803,10 @@ static void ClearFitsDigits( AstFitsChan *, int * );
 static int GetFitsDigits( AstFitsChan *, int * );
 static int TestFitsDigits( AstFitsChan *, int * );
 static void SetFitsDigits( AstFitsChan *, int, int * );
+static void ClearFitsRounding( AstFitsChan *, int * );
+static int GetFitsRounding( AstFitsChan *, int * );
+static int TestFitsRounding( AstFitsChan *, int * );
+static void SetFitsRounding( AstFitsChan *, int, int * );
 static void ClearAltAxes( AstFitsChan *, int * );
 static int GetAltAxes( AstFitsChan *, int * );
 static int TestAltAxes( AstFitsChan *, int * );
@@ -1798,6 +1827,10 @@ static void ClearForceTab( AstFitsChan *, int * );
 static int GetForceTab( AstFitsChan *, int * );
 static int TestForceTab( AstFitsChan *, int * );
 static void SetForceTab( AstFitsChan *, int, int * );
+static void ClearIgnoreBadAlt( AstFitsChan *, int * );
+static int GetIgnoreBadAlt( AstFitsChan *, int * );
+static int TestIgnoreBadAlt( AstFitsChan *, int * );
+static void SetIgnoreBadAlt( AstFitsChan *, int, int * );
 static void ClearCarLin( AstFitsChan *, int * );
 static int GetCarLin( AstFitsChan *, int * );
 static int TestCarLin( AstFitsChan *, int * );
@@ -1863,6 +1896,7 @@ static AstMatrixMap *WcsCDeltMatrix( FitsStore *, char, int, const char *, const
 static AstMatrixMap *WcsPCMatrix( FitsStore *, char, int, const char *, const char *, int * );
 static AstObject *FsetFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
 static AstObject *Read( AstChannel *, int * );
+static AstPolyMap *ScalePolyInputs( AstPolyMap *, double *, int * );
 static AstSkyFrame *WcsSkyFrame( AstFitsChan *, FitsStore *, char, int, char *, int, int, const char *, const char *, int * );
 static AstTimeScaleType TimeSysToAst( AstFitsChan *, const char *, const char *, const char *, int * );
 static AstWinMap *WcsShift( FitsStore *, char, int, const char *, const char *, int * );
@@ -1899,16 +1933,17 @@ static int AIPSFromStore( AstFitsChan *, FitsStore *, const char *, const char *
 static int AIPSPPFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
 static int AddEncodingFrame( AstFitsChan *, AstFrameSet *, int, const char *, const char *, int * );
 static int AddVersion( AstFitsChan *, AstFrameSet *, int, int, FitsStore *, double *, char, int, int, const char *, const char *, int * );
+static int AnalysePoly( AstPolyMap *, AstMapping **, AstMapping **, AstMapping **, int * );
 static int CLASSFromStore( AstFitsChan *, FitsStore *, AstFrameSet *, double *, const char *, const char *, int * );
 static int CardType( AstFitsChan *, int * );
 static int CheckFitsName( AstFitsChan *, const char *, const char *, const char *, int * );
 static int ChrLen( const char *, int * );
-static int CnvType( int, void *, size_t, int, int, void *, const char *, const char *, const char *, int * );
+static int CnvType( int, void *, size_t, int, int, int, void *, const char *, const char *, const char *, int * );
 static int CnvValue( AstFitsChan *, int , int, void *, const char *, int * );
 static int ComBlock( AstFitsChan *, int, const char *, const char *, int * );
 static int CountFields( const char *, char, const char *, const char *, int * );
 static int DSSFromStore( AstFitsChan *, FitsStore *, const char *, const char *, int * );
-static int EncodeFloat( char *, int, int, int, double, int * );
+static int EncodeFloat( char *, int, int, int, int, double, int * );
 static int EncodeValue( AstFitsChan *, char *, int, int, const char *, int * );
 static int FindBasisVectors( AstMapping *, int, int, double *, AstPointSet *, AstPointSet *, int * );
 static int FindFits( AstFitsChan *, const char *, char[ AST__FITSCHAN_FITSCARDLEN + 1 ], int, int * );
@@ -1929,6 +1964,7 @@ static int GetFitsCI( AstFitsChan *, const char *, int *, int * );
 static int GetFitsCN( AstFitsChan *, const char *, char **, int * );
 static int GetFitsF( AstFitsChan *, const char *, double *, int * );
 static int GetFitsI( AstFitsChan *, const char *, int *, int * );
+static int GetFitsK( AstFitsChan *, const char *, int64_t *, int * );
 static int GetFitsL( AstFitsChan *, const char *, int *, int * );
 static int GetFitsS( AstFitsChan *, const char *, char **, int * );
 static int GetFull( AstChannel *, int * );
@@ -1978,9 +2014,9 @@ static int WorldAxes( AstFitsChan *this, AstMapping *, double *, int *, int * );
 static int Write( AstChannel *, AstObject *, int * );
 static void *CardData( AstFitsChan *, size_t *, int * );
 static void AdaptLut( AstMapping *, int, double, double, double, double, double, double **, double **, int *, int * );
-static void AddFrame( AstFitsChan *, AstFrameSet *, int, int, FitsStore *, char, const char *, const char *, int * );
+static void AddFrame( AstFitsChan *, AstFrameSet *, int, int, FitsStore *, int, char, const char *, const char *, int * );
 static void ChangePermSplit( AstMapping *, int * );
-static void CheckZero( char *, double, int, int * );
+static void CheckZero( char *, double, int, int, int * );
 static void Chpc1( double *, double *, int, int *, int *, int * );
 static void ClassTrans( AstFitsChan *, AstFitsChan *, int, int, const char *, const char *, int * );
 static void ClearAttrib( AstObject *, const char *, int * );
@@ -2020,7 +2056,7 @@ static void ReadFits( AstFitsChan *, int * );
 static void ReadFromSource( AstFitsChan *, int * );
 static void RemoveTables( AstFitsChan *, const char *, int * );
 static void RetainFits( AstFitsChan *, int * );
-static void RoundFString( char *, int, int * );
+static void RoundFString( char *, int, int, int * );
 static void SetAlgCode( char *, const char *, int * );
 static void SetAttrib( AstObject *, const char *, int * );
 static void SetFitsCF( AstFitsChan *, const char *, double *, const char *, int, int * );
@@ -2030,6 +2066,7 @@ static void SetFitsCN( AstFitsChan *, const char *, const char *, const char *, 
 static void SetFitsCom( AstFitsChan *, const char *, const char *, int, int * );
 static void SetFitsF( AstFitsChan *, const char *, double, const char *, int, int * );
 static void SetFitsI( AstFitsChan *, const char *, int, const char *, int, int * );
+static void SetFitsK( AstFitsChan *, const char *, int64_t, const char *, int, int * );
 static void SetFitsL( AstFitsChan *, const char *, int, const char *, int, int * );
 static void SetFitsS( AstFitsChan *, const char *, const char *, const char *, int, int * );
 static void SetFitsU( AstFitsChan *, const char *, const char *, int, int * );
@@ -2418,8 +2455,8 @@ static int AddEncodingFrame( AstFitsChan *this, AstFrameSet *fs, int encoding,
 }
 
 static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
-                      int npix, FitsStore *store, char s, const char *method,
-                      const char *class, int *status ){
+                      int npix, FitsStore *store, int ignorebad, char s,
+                      const char *method, const char *class, int *status ){
 /*
 *  Name:
 *     AddFrame
@@ -2434,8 +2471,8 @@ static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
 *  Synopsis:
 *     #include "fitschan.h"
 *     void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
-*                    int npix, FitsStore *store, char s, const char *method,
-*                    const char *class, int *status )
+*                    int npix, FitsStore *store, int ignorebad, char s,
+*                    const char *method, const char *class, int *status )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -2461,6 +2498,11 @@ static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
 *     store
 *        The FitsStore containing the required information extracted from
 *        the FitsChan.
+*     ignorebad
+*        If non-zero, return the supplied FrameSet unchanged if no Frame
+*        can be created from the specified axes (no error is reported). If
+*        zero, return a NULL FrameSet pointer if no Frame can be created
+*        from the specified axes and report an error.
 *     s
 *        The co-ordinate version character. A space means the primary
 *        axis descriptions. Otherwise the supplied character should be
@@ -2480,20 +2522,42 @@ static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
    AstMapping *mapping;        /* Mapping from pixel to requested Frame */
    AstMapping *tmap;           /* Temporary Mapping pointer */
    AstPermMap *pmap;           /* PermMap pointer to add or remove axes */
+   char buf[60];               /* Buffer for error text */
    double con;                 /* Value to be assigned to missing axes */
    int *inperm;                /* Pointer to input axis permutation array */
    int *outperm;               /* Pointer to output axis permutation array */
    int i;                      /* Axis index */
    int nf;                     /* Number of Frames originally in fset */
    int nwcs;                   /* Number of wcs axes */
+   int rep;                    /* Original error reporting flag */
 
 /* Check the inherited status. */
    if( !astOK ) return;
+
+/* Temporarily supress error reporting. */
+   rep = astReporting( 0 );
 
 /* Get a Mapping between pixel coordinates and physical coordinates, using
    the requested axis descriptions. Also returns a Frame describing the
    physical coordinate system. */
    mapping = WcsMapFrm( this, store, s, &frame, method, class, status );
+
+/* If an error occurred reading the axis descriptions, clear it if we
+   are ignoring unreadable axis descriptions and ensure mapping and frame
+   are null. */
+   if( !astOK && ignorebad ) {
+      astClearStatus;
+      if( mapping ) mapping = astAnnul( mapping );
+      if( frame ) frame = astAnnul( frame );
+
+/* Adding a warning to the FitsChan and the parent Channel indicating
+   that the alternate axis description has been ignored. */
+      sprintf( buf, "Ignoring unusable FITS-WCS alternate axes label \'%c\'.", s );
+      Warn( this, "badalt", buf, method, class, status );
+   }
+
+/* Re-instate the original error reporting condition. */
+   astReporting( rep );
 
 /* Add the Frame into the FrameSet, and annul the mapping and frame. If
    the mapping has more inputs than there are axes in the pixel Frame,
@@ -2539,7 +2603,7 @@ static void AddFrame( AstFitsChan *this, AstFrameSet *fset, int pixel,
 /* Annul temporary resources. */
       mapping = astAnnul( mapping );
    }
-   frame = astAnnul( frame );
+   if( frame ) frame = astAnnul( frame );
 }
 
 static int AddVersion( AstFitsChan *this, AstFrameSet *fs, int ipix, int iwcs,
@@ -4042,6 +4106,432 @@ static int AIPSPPFromStore( AstFitsChan *this, FitsStore *store,
    return astOK ? ok : 0;
 }
 
+static int AnalysePoly( AstPolyMap *polymap, AstMapping **map1,
+                        AstMapping **map2, AstMapping **map3, int *status ){
+/*
+*  Name:
+*     AnalysePoly
+
+*  Purpose:
+*     Analyse a 2D PolyMap into an initial shift, a polynomial containing
+*     quadratic or higher terms, and a linear scaling.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "fitschan.h"
+*     int AnalysePoly( AstPolyMap *polymap, AstMapping **map1,
+*                      AstMapping **map2, AstMapping **map3, int *status )
+
+*  Class Membership:
+*     FitsChan member function.
+
+*  Description:
+*     The supplied 2-dimensional PolyMap is analysed into three Mappings
+*     which when applied in series are equivalent to the supplied PolyMap.
+*     The middle of these three Mappings will be a PolyMap that meets the
+*     requirements of the SIP standard for polynomial distortion in FITS
+*     headers (i.e. no constant or linearterms). The first Mapping will
+*     embody any shift of origin included in the supplied PolyMap and the
+*     third will embody any linear axis scaling or rotation in the supplied
+*     PolyMap.
+*
+*     The SIP convention requires that the polynomial distortion includes
+*     no constant or linear terms, representing simply the additional
+*     distortion to be added onto the basic linear transformation described
+*     by FITS-WCS. In the current context, this is not possible as the
+*     supplied PolyMap represents the full transformation, including the
+*     linear terms.  For this reason, the returned PolyMap will in fact
+*     contain some linear terms - namely, the expression for each
+*     polynomial output will include an unscaled copy of the corresponding
+*     input.
+
+*  Parameters:
+*     polymap
+*        Pointer to the supplied PolyMap to be analysed.
+*     map1
+*        Address at which to return a pointer to the first returned
+*        Mapping, representing any shift of origin in the supplied PolyMap.
+*     map2
+*        Address at which to return a pointer to the second returned
+*        Mapping - a PolyMap representing the distortion terms plus a copy
+*        of each input.
+*     map3
+*        Address at which to return a pointer to the third returned
+*        Mapping, representing any axis rotation or scaling in the supplied
+*        PolyMap.
+*     status
+*        Pointer to the inherited status variable.
+
+*  Returned Value:
+*     A non-zero value is returned if the supplied PolyMap was analysed
+*     successfully. Otherwise zero is returned.
+
+*/
+
+/* Local Variables: */
+   AstMapping *tmap;
+   AstPolyMap *pm1;
+   double *coeffs_f;
+   double *coeffs_f_new;
+   double *pv;
+   double *pw;
+   double a;
+   double b;
+   double c;
+   double d;
+   double det;
+   double matrix[ 4 ];
+   double shift[ 2 ];
+   double xo;
+   double yo;
+   int a_ico;
+   int b_ico;
+   int c_ico;
+   int d_ico;
+   int ico;
+   int inverted;
+   int ncoeff_f;
+   int ncoeff_f_new;
+   int nhigh;
+   int ret;
+
+/* Initialise safe returned value in case an error has already ocurred. */
+   ret = 0;
+   *map1 = NULL;
+   *map2 = NULL;
+   *map3 = NULL;
+
+/* Check the inherited status. */
+   if( !astOK ) return ret;
+
+/* If the inverse Ttransformation of the supplied PolyMap is defined by a
+   fixed set of coefficients (rather than being an iterative inverse)
+   then we cannot analyse the PolyMap. It may be possible to analyse it
+   with more work but I've run out of time at the moment. It would
+   require a PolyMap method astMergeMatrix to be written. modelled on
+   astMergeShift but applying a MatrixMap to the PolyMap rather than a
+   ShiftMap. */
+   if( !astGetIterInverse( polymap ) ) return ret;
+
+/* Check that the supplied PolyMap has 2 inputs and 2 outputs. */
+   if( astGetNin( polymap ) != 2 || astGetNout( polymap ) != 2 ){
+      astError( AST__INTER, "AnalysePoly(fitschan): AST internal error; "
+                "the supplied PolyMap is not 2-in, 2-out (internal AST "
+                "programming error).", status );
+      return ret;
+   }
+
+/* Temporarily clear the Invert attribute in the supplied PolyMap so that
+   we know that the forward transformation is defined by a set of coefficients
+   (rather than an iterative inversion). */
+   if( astGetInvert( polymap ) ){
+      astClearInvert( polymap );
+      inverted = 1;
+   } else {
+      inverted = 0;
+   }
+
+/* Use the iteratove inverse transformation of the supplied PolyMap to
+   transform the origin in the output system into the input system. */
+   xo = 0.0;
+   yo = 0.0;
+   astTran2( polymap, 1, &xo, &yo, 0, shift, shift + 1 );
+
+/* The ShiftMap returned as "map1" needs to shift the above input
+   position to (0,0). Since we know that the forward transformation of the
+   supplied PolyMap transforms the input position to (0,0). This means we
+   are guaranteed that the returned PolyMap must transform (0,0) to (0,0) -
+   i.e. have zero constant terms. Create the ShiftMap. */
+   shift[ 0 ] *= -1.0;
+   shift[ 1 ] *= -1.0;
+   *map1 = (AstMapping *) astShiftMap( 2, shift, " ", status );
+
+/* We create an interim PolyMap "pm1" such that the supplied PolyMap is
+   equivalent to the above ShiftMap followed by pm1. That is:
+
+   polymap == *map1 -> pm1
+
+   Therefore
+
+   *map1_inv -> polymap == pm1
+
+   In other words, pm1 is the result of applying the inverse of *map1,
+   followed by the supplied PolyMap. Note, we are only considering the
+   forward transformations at the moment. Create pm1. */
+   astInvert( *map1 );
+   pm1 = astMergeShift( polymap, *map1, 1, 1 );
+   astInvert( *map1 );
+
+/* Get the coefficients of the forward transformation of pm1. */
+   astPolyCoeffs( pm1, 1, 0, NULL, &ncoeff_f );
+   coeffs_f = astMalloc( ncoeff_f*4*sizeof( *coeffs_f ) );
+   if( coeffs_f ) {
+      astPolyCoeffs( pm1, 1, ncoeff_f*4, coeffs_f, &ncoeff_f );
+
+/* Initialise the values of the matrix that represents the scaling and
+   rotation implied by any linear terms in the PolyMap. Assume all
+   elements are zero until a corresponding coefficient value is found.
+   Note, the array returned by astPolyCoeff never includes any zero-valued
+   coefficients. The PolyMap pm1 can be represented as follows:
+
+   y0 = a*x0 + b*x1 + f(x0,x1)
+   y1 = c*x0 + d*x1 + g(x0,x1)
+
+   where (x0,x1) are the inputs, (y0,y1) are the outputs, f(x0,x1) gives the
+   quadratic and higher distortion terms for the first output (y0), g(x0,x1)
+   gives the quadratic and higher distortion terms for the second output (y1),
+   and (a,b,c,d) are the matrix elements found below (we know there are no
+   constant terms in pm1).  */
+      a = 0.0;
+      a_ico = -1; /* The index of the coefficient that stores "a" */
+      b = 0.0;
+      b_ico = -1;
+      c = 0.0;
+      c_ico = -1;
+      d = 0.0;
+      d_ico = -1;
+
+/* Initialise the number of quadratic or higher terms (i.e. the number of
+   coefficients excluding linear terms). */
+      nhigh = 0;
+
+/* Loop round all coefficients noting the coefficients of the linear terms. */
+      pv = coeffs_f;
+      for( ico = 0; ico < ncoeff_f; ico++,pv += 4 ){
+
+/* If the coefficient is used to calculate the first output value... */
+         if( pv[ 1 ] == 1 ){     /* Note, the axis index is 1-based */
+
+/* and it is a simple multiple of the first input... */
+            if( pv[ 2 ] == 1 && pv[ 3 ] == 0 ){
+
+/* record its value and coefficient index. */
+               a = pv[ 0 ];
+               a_ico = ico;
+
+/* If it is a simple multiple of the second input record its value and
+   coefficient index. */
+            } else if( pv[ 2 ] == 0 && pv[ 3 ] == 1 ){
+               b = pv[ 0 ];
+               b_ico = ico;
+
+/* Otherwise it must be quadratic or higher so increment the number of
+   quadratic or higher terms. */
+            } else {
+               nhigh++;
+            }
+
+/* Otherwise it must be used to calculate the second output value. */
+         } else {
+
+/* If it is a simple multiple of the first input, record its value
+   and coefficient index. */
+            if( pv[ 2 ] == 1 && pv[ 3 ] == 0 ){
+               c = pv[ 0 ];
+               c_ico = ico;
+
+/* If it is a simple multiple of the second input record its value and
+   coefficient index. */
+            } else if( pv[ 2 ] == 0 && pv[ 3 ] == 1 ){
+               d = pv[ 0 ];
+               d_ico = ico;
+
+/* Increment the number of quadratic or higher terms. */
+            } else {
+               nhigh++;
+            }
+         }
+      }
+
+/* Get the determinent of the matrix */
+      det = a*d - b*c;
+
+/* See if the supplied PolyMap introduces any axis scaling or rotation.
+   If not, we do not need to make any modifications to the existing
+   PolyMap (pm1) and we can return a UnitMap as the third returned
+   Mapping. */
+      if( a == 1.0 && b == 0.0 && c == 0.0 && d == 1.0 ){
+         *map3 = (AstMapping *) astUnitMap( 2, " ", status );
+         *map2 = astClone( pm1 );
+
+/* If PolyMap pm1 introduces axis scaling or rotation, we need to return
+   a MatrixMap representing the scaling and rotation of the outputs, and
+   then modify the PolyMap coefficients to remove that scaling and rotation
+   of the outputs. */
+      } else if( det != 0.0 ){
+         matrix[ 0 ] = a;
+         matrix[ 1 ] = b;
+         matrix[ 2 ] = c;
+         matrix[ 3 ] = d;
+         *map3 = (AstMapping *) astMatrixMap( 2, 2, 0, matrix, " ",
+                                              status );
+
+/* We now construct the array of coefficient values to use when
+   constructing the returned PolyMap (*map2). The returned PolyMap can be
+   represented as:
+
+   w0 = 1*x0 + f'(x0,x1)
+   w1 = 1*x1 + g'(x0,x1)
+
+   where (x0,x1) are the input values, (w0,w1) are the output values,
+   f'(x0,x1) gives the quadratic and higher distortion terms for the first
+   output (w0), g'(x0,x1) gives the quadratic and higher distortion terms
+   for the second output (w1). In addition:
+
+   f' = ( d*f - b*g )/( a*d - b*c )
+   g' = -( c*f - a*g )/( a*d - b*c )
+
+   where f and g are the equivalents of f' and g' but taken from the
+   PolyMap pm1 (see earlier comment).
+
+   These f and g function include no constant or linear terms. The number
+   of coeffs needed to represent f' will be the sum of the numbers needed to
+   represent f and g (since f' is a linear sum of f and g). This is the
+   total number of quqdratic or higher coeffs in the PolyMap pm1. The
+   number of coeffs needed to represent g' will be the same. So the total
+   number of coeffs for the returned PolyMap will be (2*nhigh + 2) - the
+   extra two are needed to store the unity-valued coefficients for the linear
+   terms in the expressions for (w0,w1) above.
+
+   Allocate the array to pass to the PolyMap constructor. */
+         ncoeff_f_new = 2*nhigh + 2;
+         coeffs_f_new = astMalloc( ncoeff_f_new*4*sizeof( *coeffs_f_new ) );
+         if( astOK ) {
+            pw = coeffs_f_new;
+
+/* Store values in this array describing the coefficients needed to
+   create the first output value (w0). First add the linear term "1*x0". */
+            pw[ 0 ] = 1.0;
+            pw[ 1 ] = 1;  /* Note, the PolyMap constructor uses 1-based */
+            pw[ 2 ] = 1;  /* axis indices */
+            pw[ 3 ] = 0;
+            pw += 4;
+
+/* Next add scaled versions of all the quadratic or higher coefficients
+   in PolyMap pm1 (these define the f' function above). Loop over all
+   coefficients in pm1. */
+            pv = coeffs_f;
+            for( ico = 0; ico < ncoeff_f; ico++,pv += 4 ){
+
+/* Indicate that this coefficient of the new PolyMap refers to its first
+   output. */
+               pw[ 1 ] = 1;    /* A 1-based axis index */
+
+/* Ignore zero coefficients (there shouldn't be any) and the linear terms
+   found earlier. */
+               if( pv[ 0 ] != 0.0 && ico != a_ico && ico != b_ico
+                                  && ico != c_ico && ico != d_ico ){
+
+/* Scale the coefficient appropriately, depending on whether it refers to
+   the first or second output of the original PolyMap. */
+                  if( pv[ 1 ] == 1 ) { /* Part of the f function */
+                     pw[ 0 ] = d*pv[ 0 ] / det;
+                  } else {             /* Part of the g function */
+                     pw[ 0 ] = -b*pv[ 0 ] / det;
+                  }
+
+/* Copy the powers for the input axes from the supplied PolyMap to the
+   new PolyMap. */
+                  pw[ 2 ] = pv[ 2 ];
+                  pw[ 3 ] = pv[ 3 ];
+
+/* Increment the pointer to the next coefficient for the output PolyMap. */
+                  pw += 4;
+               }
+            }
+
+/* In a similar way, store values describing the coefficients needed to
+   create the second output value of the returned PolyMap (w1). First add
+   the linear term "1*x1". */
+            pw[ 0 ] = 1.0;
+            pw[ 1 ] = 2;
+            pw[ 2 ] = 0;
+            pw[ 3 ] = 1;
+            pw += 4;
+
+/* Next add scaled versions of all the quadratic or higher coefficients
+   in the supplied PolyMap (these define the g' function above). Loop over
+   all coefficients in the supplied PolyMap. */
+            pv = coeffs_f;
+            for( ico = 0; ico < ncoeff_f; ico++,pv += 4 ){
+
+/* Indicate that this coefficient of the new PolyMap refers to its second
+   output. */
+               pw[ 1 ] = 2;
+
+/* Ignore zero coefficients (there shouldn't be any) and the linear terms
+   found earlier. */
+               if( pv[ 0 ] != 0.0 && ico != a_ico && ico != b_ico
+                                  && ico != c_ico && ico != d_ico ){
+
+/* Scale the coefficient appropriately, depending on whether it refers to
+   the first or second output of the original PolyMap. */
+                  if( pv[ 1 ] == 1 ) { /* Part of the f function */
+                     pw[ 0 ] = -c*pv[ 0 ] / det;
+                  } else {             /* Part of the g function */
+                     pw[ 0 ] = a*pv[ 0 ] / det;
+                  }
+
+/* Copy the powers for the input axes from the supplied PolyMap to the
+   new PolyMap. */
+                  pw[ 2 ] = pv[ 2 ];
+                  pw[ 3 ] = pv[ 3 ];
+
+/* Increment the pointer to the next coefficient for the output PolyMap. */
+                  pw += 4;
+               }
+            }
+         }
+
+/* Create the returned PolyMap. */
+         tmap = (AstMapping *) astPolyMap( 2, 2, ncoeff_f_new, coeffs_f_new,
+                                           0, NULL, " ", status );
+
+/* Simplify it. This amalgamates coefficients that relate to the same set
+   of input powers. */
+         *map2 = astSimplify( tmap );
+         tmap = astAnnul( tmap );
+
+/* Copy other attribute values from the supplied PolyMap to the returned
+   PolyMap (if set). */
+         if( astTestIterInverse( polymap ) ){
+            astSetIterInverse( *map2, astGetIterInverse( polymap ) );
+         }
+
+         if( astTestNiterInverse( polymap ) ){
+            astSetNiterInverse( *map2, astGetNiterInverse( polymap ) );
+         }
+
+         if( astTestTolInverse( polymap ) ){
+            astSetTolInverse( *map2, astGetTolInverse( polymap ) );
+         }
+
+/* Free resources. */
+         coeffs_f_new = astFree( coeffs_f_new );
+      }
+
+      coeffs_f = astFree( coeffs_f );
+   }
+   pm1 = astAnnul( pm1 );
+
+/* Set the Invert attribute in the supplied PolyMap if it was set on entry. */
+   if( inverted ) astSetInvert( polymap, 1 );
+
+/* Indicate success or annull any returned Mappings. */
+   if( astOK && *map1 && *map2 && *map3 ) {
+      ret = 1;
+   } else {
+      if( *map1 ) *map1 = astAnnul( *map1 );
+      if( *map2 ) *map2 = astAnnul( *map2 );
+      if( *map3 ) *map3 = astAnnul( *map3 );
+   }
+
+/* Return the answer. */
+   return ret;
+}
+
 static char *CardComm( AstFitsChan *this, int *status ){
 
 /*
@@ -5436,7 +5926,8 @@ static int CheckFitsName( AstFitsChan *this, const char *name,
    return ret;
 }
 
-static void CheckZero( char *text, double value, int width, int *status ){
+static void CheckZero( char *text, double value, int width, int fitsrnd,
+                       int *status ){
 /*
 *  Name:
 *     CheckZero
@@ -5449,7 +5940,8 @@ static void CheckZero( char *text, double value, int width, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-*     void CheckZero( char *text, double value, int width, int *status )
+*     void CheckZero( char *text, double value, int width, int fitsrnd,
+*                     int *status )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -5473,6 +5965,9 @@ static void CheckZero( char *text, double value, int width, int *status ){
 *     width
 *        The minimum field width to use. The value is right justified in
 *        this field width. Ignored if zero.
+*     fitsrnd
+*        The value of the FitsRounding attribute - the number of leading
+*        digits to protect from rounding.
 *     status
 *        Pointer to the inherited status variable.
 
@@ -5499,7 +5994,7 @@ static void CheckZero( char *text, double value, int width, int *status ){
 
 /* Otherwise, round out sequences of zeros or nines. */
    } else {
-      RoundFString( text, width, status );
+      RoundFString( text, width, fitsrnd, status );
    }
 }
 
@@ -5833,7 +6328,7 @@ static int CLASSFromStore( AstFitsChan *this, FitsStore *store,
    AstMapping *map3;   /* Mapping from (lon,lat) to (az,el) */
    char *comm;         /* Pointer to comment string */
    char *cval;         /* Pointer to string keyword value */
-   char attbuf[20];    /* Buffer for AST attribute name */
+   char attbuf[40];    /* Buffer for AST attribute name */
    char combuf[80];    /* Buffer for FITS card comment */
    char lattype[MXCTYPELEN];/* Latitude axis CTYPE */
    char lontype[MXCTYPELEN];/* Longitude axis CTYPE */
@@ -6632,6 +7127,11 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
    } else if ( !strcmp( attrib, "fitsdigits" ) ) {
       astClearFitsDigits( this );
 
+/* FitsRounding. */
+/* ------------- */
+   } else if ( !strcmp( attrib, "fitsrounding" ) ) {
+      astClearFitsRounding( this );
+
 /* DefB1950 */
 /* -------- */
    } else if ( !strcmp( attrib, "defb1950" ) ) {
@@ -6646,6 +7146,11 @@ static void ClearAttrib( AstObject *this_object, const char *attrib, int *status
 /* -------- */
    } else if ( !strcmp( attrib, "forcetab" ) ) {
       astClearForceTab( this );
+
+/* IgnoreBadAlt */
+/* ------------ */
+   } else if ( !strcmp( attrib, "ignorebadalt" ) ) {
+      astClearIgnoreBadAlt( this );
 
 /* CarLin */
 /* ------ */
@@ -6855,14 +7360,14 @@ static int CnvValue( AstFitsChan *this, int type, int undef, void *buff,
    odata = CardData( this, &osize, status );
 
 /* Do the conversion. */
-   return CnvType( otype, odata, osize, type, undef, buff,
-                   CardName( this, status ), method, astGetClass( this ),
+   return CnvType( otype, odata, osize, type, undef, astGetFitsRounding( this ),
+                   buff, CardName( this, status ), method, astGetClass( this ),
                    status );
 }
 
 static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
-                     void *buff, const char *name, const char *method,
-                     const char *class, int *status ){
+                    int fitsrnd, void *buff, const char *name, const char *method,
+                    const char *class, int *status ){
 /*
 *
 *  Name:
@@ -6877,8 +7382,8 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
 *  Synopsis:
 *     #include "fitschan.h"
 *     int CnvType( int otype, void *odata, size_t osize, int type, int undef,
-*                   void *buff, const char *name, const char *method,
-*                   const char *class, int *status )
+*                  int fitsrnd, void *buff, const char *name, const char *method,
+*                  const char *class, int *status )
 
 *  Class Membership:
 *     FitsChan method.
@@ -6903,6 +7408,9 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
 *        undefined If "undef" is zero, an error will be reported identifying
 *        the undefined keyword value. If "undef" is non-zero, no error is
 *        reported and the contents of the output buffer are left unchanged.
+*     fitsrnd
+*        The value of the FitsRounding attribute - the number of leading
+*        digits to protect from rounding.
 *     buff
 *        A pointer to a buffer to recieve the converted value. It is the
 *        responsibility of the caller to ensure that a suitable buffer is
@@ -6955,6 +7463,7 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
    const char *ostring;     /* String data value */
    double odouble;          /* Double data value */
    int oint;                /* Integer data value */
+   int64_t okint;           /* 64 bit integer data value */
    int ival;                /* Integer value read from string */
    int len;                 /* Length of character string */
    int nc;                  /* No. of characetsr used */
@@ -7007,13 +7516,15 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
          } else if( type == AST__STRING || type == AST__CONTINUE  ){
             if( odouble != AST__BAD ) {
                (void) sprintf( cnvtype_text, "%.*g", AST__DBL_DIG, odouble );
-               CheckZero( cnvtype_text, odouble, 0, status );
+               CheckZero( cnvtype_text, odouble, 0, fitsrnd, status );
             } else {
                strcpy( cnvtype_text, BAD_STRING );
             }
             *( (char **) buff ) = cnvtype_text;
          } else if( type == AST__INT      ){
             *( (int *) buff ) = (int) odouble;
+         } else if( type == AST__KINT     ){
+            *( (int64_t *) buff ) = (int64_t) odouble;
          } else if( type == AST__LOGICAL  ){
             *( (int *) buff ) = ( odouble == 0.0 ) ? 0 : 1;
          } else if( type == AST__COMPLEXF ){
@@ -7048,6 +7559,12 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
          } else if( type == AST__INT      ){
             if( nc = 0,
                      ( 1 != astSscanf( ostring, "%d %n", (int *) buff, &nc ) )
+                  || (nc < len ) ){
+               ret = 0;
+            }
+         } else if( type == AST__KINT     ){
+            if( nc = 0,
+                     ( 1 != astSscanf( ostring, "%" PRId64 " %n", (int64_t *) buff, &nc ) )
                   || (nc < len ) ){
                ret = 0;
             }
@@ -7112,6 +7629,8 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
             *( (char **) buff ) = cnvtype_text;
          } else if( type == AST__INT      ){
             (void) memcpy( buff, odata, osize );
+         } else if( type == AST__KINT     ){
+            *( (int64_t *) buff ) = oint;
          } else if( type == AST__LOGICAL  ){
             *( (int *) buff ) = oint ? 1 : 0;
          } else if( type == AST__COMPLEXF ){
@@ -7119,6 +7638,32 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
             ( (double *) buff )[ 1 ] = 0.0;
          } else if( type == AST__COMPLEXI ){
             ( (int *) buff )[ 0 ] = oint;
+            ( (int *) buff )[ 1 ] = 0;
+         } else if( astOK ){
+            ret = 0;
+            astError( AST__INTER, "CnvType: AST internal programming error - "
+                      "FITS data-type no. %d not yet supported.", status, type );
+         }
+
+/* Convert an AST__KINT data value to ... */
+      } else if( otype == AST__KINT     ){
+         okint = *( (int64_t *) odata );
+         if( type == AST__FLOAT ){
+            *( (double *) buff ) = (double) okint;
+         } else if( type == AST__STRING || type == AST__CONTINUE  ){
+            (void) sprintf( cnvtype_text, "%" PRId64, okint );
+            *( (char **) buff ) = cnvtype_text;
+         } else if( type == AST__KINT      ){
+            (void) memcpy( buff, odata, osize );
+         } else if( type == AST__INT     ){
+            *( (int *) buff ) = okint;
+         } else if( type == AST__LOGICAL  ){
+            *( (int *) buff ) = okint ? 1 : 0;
+         } else if( type == AST__COMPLEXF ){
+            ( (double *) buff )[ 0 ] = (double) okint;
+            ( (double *) buff )[ 1 ] = 0.0;
+         } else if( type == AST__COMPLEXI ){
+            ( (int *) buff )[ 0 ] = okint;
             ( (int *) buff )[ 1 ] = 0;
          } else if( astOK ){
             ret = 0;
@@ -7140,6 +7685,8 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
             *( (char **) buff ) = cnvtype_text;
          } else if( type == AST__INT      ){
             *( (int *) buff ) = oint;
+         } else if( type == AST__KINT      ){
+            *( (int64_t *) buff ) = oint;
          } else if( type == AST__LOGICAL  ){
             (void) memcpy( buff, odata, osize );
          } else if( type == AST__COMPLEXF ){
@@ -7161,13 +7708,15 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
             *( (double *) buff ) = odouble;
          } else if( type == AST__STRING || type == AST__CONTINUE  ){
             (void) sprintf( cnvtype_text0, "%.*g", AST__DBL_DIG, ( (double *) odata )[ 0 ] );
-            CheckZero( cnvtype_text0, ( (double *) odata )[ 0 ], 0, status );
+            CheckZero( cnvtype_text0, ( (double *) odata )[ 0 ], 0, fitsrnd, status );
             (void) sprintf( cnvtype_text1, "%.*g", AST__DBL_DIG, ( (double *) odata )[ 1 ] );
-            CheckZero( cnvtype_text1, ( (double *) odata )[ 1 ], 0, status );
+            CheckZero( cnvtype_text1, ( (double *) odata )[ 1 ], 0, fitsrnd, status );
             (void) sprintf( cnvtype_text, "%s %s", cnvtype_text0, cnvtype_text1 );
             *( (char **) buff ) = cnvtype_text;
          } else if( type == AST__INT      ){
             *( (int *) buff ) = (int) odouble;
+         } else if( type == AST__KINT      ){
+            *( (int64_t *) buff ) = (int64_t) odouble;
          } else if( type == AST__LOGICAL  ){
             *( (int *) buff ) = ( odouble == 0.0 ) ? 0 : 1;
          } else if( type == AST__COMPLEXF ){
@@ -7192,6 +7741,8 @@ static int CnvType( int otype, void *odata, size_t osize, int type, int undef,
             *( (char **) buff ) = cnvtype_text;
          } else if( type == AST__INT      ){
             *( (int *) buff ) = oint;
+         } else if( type == AST__KINT      ){
+            *( (int64_t *) buff ) = oint;
          } else if( type == AST__LOGICAL  ){
             *( (int *) buff ) = oint ? 1 : 0;
          } else if( type == AST__COMPLEXF ){
@@ -7423,7 +7974,7 @@ static char *ConcatWAT( AstFitsChan *this, int iaxis, const char *method,
 */
 
 /* Local Variables: */
-   char keyname[ FITSNAMLEN + 5 ];/* Keyword name */
+   char keyname[ FITSNAMLEN + 20 ];/* Keyword name */
    char *wat;                     /* Pointer to a single WAT string */
    char *result;                  /* Returned string */
    int watlen;                    /* Length of total WAT string (inc. term null)*/
@@ -9086,7 +9637,7 @@ f     Unlike AST_WRITEFITS,
 }
 
 static int EncodeFloat( char *buf, int digits, int width, int maxwidth,
-                        double value, int *status ){
+                        int fitsrnd, double value, int *status ){
 /*
 *
 *  Name:
@@ -9101,7 +9652,7 @@ static int EncodeFloat( char *buf, int digits, int width, int maxwidth,
 *  Synopsis:
 *     #include "fitschan.h"
 *     int EncodeFloat( char *buf, int digits, int width, int maxwidth,
-*                      double value, int *status )
+*                      int fitsrnd, double value, int *status )
 
 *  Class Membership:
 *     FitsChan method.
@@ -9129,6 +9680,9 @@ static int EncodeFloat( char *buf, int digits, int width, int maxwidth,
 *     maxwidth
 *        The maximum field width to use. A value of zero is returned if
 *        the maximum field width is exceeded.
+*     fitsrnd
+*        The value of the FitsRounding attribute - the number of leading
+*        digits to protect from rounding.
 *     value
 *        The value to format.
 *     status
@@ -9182,7 +9736,7 @@ static int EncodeFloat( char *buf, int digits, int width, int maxwidth,
 
 /* Check that the value zero is not encoded with a minus sign (e.g. "-0.").
    This also rounds out long sequences of zeros or nines.  */
-      CheckZero( buf, value, width, status );
+      CheckZero( buf, value, width, fitsrnd, status );
 
 /* If the formatted value includes an exponent, it will have 2 digits.
    If the exponent includes a leading zero, remove it. */
@@ -9374,7 +9928,8 @@ static int EncodeValue( AstFitsChan *this, char *buf, int col, int digits,
       if( type == AST__FLOAT ){
          dval = *( (double *) data );
          len = EncodeFloat( buf, digits, FITSRLCOL - FITSNAMLEN - 2,
-                            AST__FITSCHAN_FITSCARDLEN - col + 1, dval, status );
+                            AST__FITSCHAN_FITSCARDLEN - col + 1,
+                            astGetFitsRounding( this ), dval, status );
          if( len <= 0 && astOK ) {
             astError( AST__BDFTS, "%s(%s): Cannot encode floating point value "
                       "%g into a FITS header card for keyword '%s'.", status, method,
@@ -9436,6 +9991,17 @@ static int EncodeValue( AstFitsChan *this, char *buf, int col, int digits,
                       *( (int *) data ), name );
          }
 
+/* 64 bit INTEGER - stored internally in a variable of type "int". Right justified
+   to column 30 in the header card. */
+      } else if( type == AST__KINT ){
+         len = sprintf(  buf, "%*" PRId64, FITSRLCOL - col + 1,
+                         *( (int64_t *) data ) );
+         if( len < 0 || len > AST__FITSCHAN_FITSCARDLEN - col ) {
+            astError( AST__BDFTS, "%s(%s): Cannot encode integer value %" PRId64 " into a "
+                      "FITS header card for keyword '%s'.", status, method, astGetClass( this ),
+                      *( (int64_t *) data ), name );
+         }
+
 /* LOGICAL - stored internally in a variable of type "int". Represented by
    a "T" or "F" in column 30 of the FITS header card. */
       } else if( type == AST__LOGICAL ){
@@ -9453,7 +10019,8 @@ static int EncodeValue( AstFitsChan *this, char *buf, int col, int digits,
       } else if( type == AST__COMPLEXF ){
          dval = ( (double *) data )[ 0 ];
          rlen = EncodeFloat( buf, digits, FITSRLCOL - FITSNAMLEN - 2,
-                             AST__FITSCHAN_FITSCARDLEN - col + 1, dval, status );
+                             AST__FITSCHAN_FITSCARDLEN - col + 1,
+                             astGetFitsRounding( this ), dval, status );
          if( rlen <= 0 || rlen > AST__FITSCHAN_FITSCARDLEN - col ) {
             astError( AST__BDFTS, "%s(%s): Cannot encode real part of a complex "
                       "floating point value [%g,%g] into a FITS header card "
@@ -9463,7 +10030,8 @@ static int EncodeValue( AstFitsChan *this, char *buf, int col, int digits,
             dval = ( (double *) data )[ 1 ];
             ilen = EncodeFloat( buf + rlen, digits,
                                 FITSIMCOL - FITSRLCOL,
-                                AST__FITSCHAN_FITSCARDLEN - col - rlen, dval, status );
+                                AST__FITSCHAN_FITSCARDLEN - col - rlen,
+                                astGetFitsRounding( this ), dval, status );
             if( ilen <= 0 ) {
                astError( AST__BDFTS, "%s(%s): Cannot encode imaginary part of a "
                          "complex floating point value [%g,%g] into a FITS header "
@@ -10466,7 +11034,7 @@ static int FitsAxisOrder( AstFitsChan *this, int nwcs, AstFrame *wcsfrm,
 /* Local Variables: */
    AstKeyMap *km;    /* KeyMap holding axis indices keyed by axis symbols */
    char **words;     /* Pointer to array of words from FitsAxisOrder */
-   char attr_name[15];/* Attribute name */
+   char attr_name[50];/* Attribute name */
    const char *attr; /* Pointer to a string holding the FitsAxisOrder value */
    int i;            /* Loop count */
    int j;            /* Zero-based axis index */
@@ -11265,9 +11833,10 @@ static AstObject *FsetFromStore( AstFitsChan *this, FitsStore *store,
 /* Local Variables: */
    AstFrame *frame;   /* Pointer to pixel Frame */
    AstFrameSet *ret;  /* Pointer to returned FrameSet */
-   char buff[ 20 ];   /* Buffer for axis label */
+   char buff[ 40 ];   /* Buffer for axis label */
    char s;            /* Co-ordinate version character */
    int i;             /* Pixel axis index */
+   int ignoreBadAlt;  /* Ignore unreadable alternate axes? */
    int physical;      /* Index of primary physical co-ordinate Frame */
    int pixel;         /* Index of pixel Frame in returned FrameSet */
    int use;           /* Has this co-ordinate version been used? */
@@ -11307,11 +11876,16 @@ static AstObject *FsetFromStore( AstFitsChan *this, FitsStore *store,
    into the FrameSet. Only do this if there are some primary axis
    descriptions. */
       if( GetMaxJM( &(store->crpix), ' ', status ) >= 0 ) {
-         AddFrame( this, ret, pixel, store->naxis, store, ' ', method, class, status );
+         AddFrame( this, ret, pixel, store->naxis, store, 0, ' ', method,
+                   class, status );
       }
 
 /* Get the index of the primary physical co-ordinate Frame in the FrameSet. */
       physical = astGetCurrent( ret );
+
+/* See if failure to read a secondary axis frame should be fatal. If not,
+   the secondary axis Frame will simply be ignored. */
+      ignoreBadAlt = astGetIgnoreBadAlt( this );
 
 /* Loop, producing secondary axis Frames for each of the co-ordinate
    versions stored in the FitsStore. */
@@ -11331,7 +11905,8 @@ static AstObject *FsetFromStore( AstFitsChan *this, FitsStore *store,
 
 /* If this co-ordinate version has been used, add a Frame to the returned
    FrameSet holding this co-ordinate version. */
-         if( use ) AddFrame( this, ret, pixel, store->naxis, store, s, method, class, status );
+         if( use ) AddFrame( this, ret, pixel, store->naxis, store,
+                             ignoreBadAlt, s, method, class, status );
       }
 
 /* Ensure the pixel Frame is the Base Frame and the primary physical
@@ -13263,7 +13838,7 @@ static int GetUsedPolyTan( AstFitsChan *this, AstFitsChan *out, int latax,
 */
 
 /* Local Variables... */
-   char template[ 20 ];
+   char template[ 50 ];
    double pval;
    int lbnd_lat;
    int lbnd_lon;
@@ -14557,6 +15132,7 @@ f     RESULT = AST_GETFITS<X>( THIS, NAME, VALUE, STATUS )
 *     - CI - Complex integer values.
 *     - F  - Floating point values.
 *     - I  - Integer values.
+*     - K  - 64 bit integer values.
 *     - L  - Logical (i.e. boolean) values.
 *     - S  - String values.
 *     - CN - A "CONTINUE" value, these are treated like string values, but
@@ -14574,6 +15150,7 @@ c     - CI - "int *" (a pointer to a 2 element array to hold the real and
 c            imaginary parts of the complex value).
 c     - F  - "double *".
 c     - I  - "int *".
+c     - K  - "int64_t *".
 c     - L  - "int *".
 c     - S  - "char **" (a pointer to a static "char" array is returned at the
 c            location given by the "value" parameter, Note, the stored string
@@ -14586,6 +15163,7 @@ f     - CI - INTEGER(2) (a 2 element array to hold the real and imaginary
 f            parts of the complex value).
 f     - F  - DOUBLE PRECISION.
 f     - I  - INTEGER
+f     - K  - INTEGER*8
 f     - L  - LOGICAL
 f     - S  - CHARACTER
 f     - CN - CHARACTER
@@ -14756,6 +15334,7 @@ MAKE_FGET(CF,double *,AST__COMPLEXF)
 MAKE_FGET(CI,int *,AST__COMPLEXI)
 MAKE_FGET(F,double *,AST__FLOAT)
 MAKE_FGET(I,int *,AST__INT)
+MAKE_FGET(K,int64_t *,AST__KINT)
 MAKE_FGET(L,int *,AST__LOGICAL)
 MAKE_FGET(S,char **,AST__STRING)
 MAKE_FGET(CN,char **,AST__CONTINUE)
@@ -14896,7 +15475,6 @@ static int FitsGetCom( AstFitsChan *this, const char *name,
 
 static int SetFits( AstFitsChan *this, const char *keyname, void *value,
                     int type, const char *comment, int overwrite, int *status ){
-
 /*
 *  Name:
 *     SetFits
@@ -14909,7 +15487,6 @@ static int SetFits( AstFitsChan *this, const char *keyname, void *value,
 
 *  Synopsis:
 *     #include "fitschan.h"
-
 *     int SetFits( AstFitsChan *this, const char *keyname, void *value,
 *                  int type, const char *comment, int overwrite, int *status )
 
@@ -14971,6 +15548,8 @@ static int SetFits( AstFitsChan *this, const char *keyname, void *value,
    int eival;
    int ival;
    int ret;
+   int64_t ekval;
+   int64_t kval;
 
 /* Check the global status, and the supplied pointer. */
    if( !astOK || !value ) return 0;
@@ -15022,6 +15601,7 @@ static int SetFits( AstFitsChan *this, const char *keyname, void *value,
       }
    } else if( type == AST__COMMENT ){
       astSetFitsCom( this, keyname, comment, overwrite );
+
    } else if( type == AST__INT ){
       ival = *( (int *) value );
 
@@ -15032,6 +15612,17 @@ static int SetFits( AstFitsChan *this, const char *keyname, void *value,
          if( eival == ival ) comment = NULL;
       }
       astSetFitsI( this, keyname, ival, comment, overwrite );
+
+   } else if( type == AST__KINT ){
+      kval = *( (int64_t *) value );
+
+/* If the data value has not changed, retain the original comment. */
+      if( overwrite && CnvValue( this, type, 0, &ekval, "SetFits",
+                                 status ) &&
+         CardComm( this, status ) ) {
+         if( ekval == kval ) comment = NULL;
+      }
+      astSetFitsK( this, keyname, kval, comment, overwrite );
    } else if( type == AST__COMPLEXF ){
       if( ( (double *) value )[0] != AST__BAD &&
           ( (double *) value )[1] != AST__BAD ) {
@@ -15115,6 +15706,7 @@ f     The keyword data type is selected by replacing <X> in the routine name
 *     - CI - Complex integer values.
 *     - F  - Floating point values.
 *     - I  - Integer values.
+*     - K  - 64 bit integer values.
 *     - L  - Logical (i.e. boolean) values.
 *     - S  - String values.
 *     - CN - A "CONTINUE" value, these are treated like string values, but
@@ -15129,6 +15721,7 @@ c     - CI - "int *" (a pointer to a 2 element array holding the real and
 c            imaginary parts of the complex value).
 c     - F  - "double".
 c     - I  - "int".
+c     - K  - "int64_t".
 c     - L  - "int".
 c     - S  - "const char *".
 c     - CN - "const char *".
@@ -15139,6 +15732,7 @@ f     - CI - INTEGER(2) (a 2 element array holding the real and imaginary
 f            parts of the complex value).
 f     - F  - DOUBLE PRECISION.
 f     - I  - INTEGER
+f     - K  - INTEGER*8
 f     - L  - LOGICAL
 f     - S  - CHARACTER
 f     - CN - CHARACTER
@@ -15274,6 +15868,7 @@ static void SetFits##code( AstFitsChan *this, const char *name, ctype value, con
 /* Use the above macro to give defintions for the astSetFits<X> method
    for each FITS data type. */
 MAKE_FSET(I,int,AST__INT,(void *)&value)
+MAKE_FSET(K,int64_t,AST__KINT,(void *)&value)
 MAKE_FSET(F,double,AST__FLOAT,(void *)&value)
 MAKE_FSET(S,const char *,AST__STRING,(void *)value)
 MAKE_FSET(CN,const char *,AST__CONTINUE,(void *)value)
@@ -16316,6 +16911,15 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
          result = getattrib_buff;
       }
 
+/* IgnoreBadAlt */
+/* ------------ */
+   } else if ( !strcmp( attrib, "ignorebadalt" ) ) {
+      ival = astGetIgnoreBadAlt( this );
+      if ( astOK ) {
+         (void) sprintf( getattrib_buff, "%d", ival );
+         result = getattrib_buff;
+      }
+
 /* CarLin */
 /* ------ */
    } else if ( !strcmp( attrib, "carlin" ) ) {
@@ -16388,6 +16992,15 @@ const char *GetAttrib( AstObject *this_object, const char *attrib, int *status )
 /* ----------- */
    } else if ( !strcmp( attrib, "fitsdigits" ) ) {
       ival = astGetFitsDigits( this );
+      if ( astOK ) {
+         (void) sprintf( getattrib_buff, "%d", ival );
+         result = getattrib_buff;
+      }
+
+/* FitsRounding. */
+/* ------------- */
+   } else if ( !strcmp( attrib, "fitsrounding" ) ) {
+      ival = astGetFitsRounding( this );
       if ( astOK ) {
          (void) sprintf( getattrib_buff, "%d", ival );
          result = getattrib_buff;
@@ -17087,6 +17700,7 @@ static void GetNextData( AstChannel *this_channel, int skip, char **name,
    const char *method;           /* Pointer to method name */
    int cont;                     /* String ends with an ampersand? */
    int done;                     /* Data item found? */
+   int fitsrnd;                  /* Value of FitsRounding attribute */
    int freedata;                 /* Should the data pointer be freed? */
    int i;                        /* Loop counter for keyword characters */
    int len;                      /* Length of current keyword */
@@ -17108,6 +17722,9 @@ static void GetNextData( AstChannel *this_channel, int skip, char **name,
 /* Store the method name and object class. */
    method = "astRead";
    class = astGetClass( this );
+
+/* Get the value of the FitsRounding attribute */
+   fitsrnd = astGetFitsRounding( this );
 
 /* Loop to consider successive cards stored in the FitsChan (starting
    at the "current" card) until a valid data item is read or "end of
@@ -17239,6 +17856,7 @@ static void GetNextData( AstChannel *this_channel, int skip, char **name,
          } else if ( !skip &&
                      ( ( type == AST__STRING ) ||
                        ( type == AST__INT ) ||
+                       ( type == AST__KINT ) ||
                        ( type == AST__FLOAT ) ) &&
                      ( len > 2 ) &&
                      strchr( SEQ_CHARS, keyword[ len - 1 ] ) &&
@@ -17337,11 +17955,18 @@ static void GetNextData( AstChannel *this_channel, int skip, char **name,
                *val = astString( buff, (int) strlen( buff ) );
                break;
 
+/* If the value is a 64 bit int, format it and store the result in a
+   dynamically allocated string. */
+            case AST__KINT:
+               (void) sprintf( buff, "%" PRId64, *( (int64_t *) data ) );
+               *val = astString( buff, (int) strlen( buff ) );
+               break;
+
 /* If the value is a double, format it and store the result in a
    dynamically allocated string. */
             case AST__FLOAT:
                (void) sprintf( buff, "%.*g", AST__DBL_DIG, *( (double *) data ) );
-               CheckZero( buff,  *( (double *) data ), 0, status );
+               CheckZero( buff,  *( (double *) data ), 0, fitsrnd, status );
                *val = astString( buff, (int) strlen( buff ) );
                break;
             }
@@ -17864,6 +18489,7 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->GetFitsCI = GetFitsCI;
    vtab->GetFitsF = GetFitsF;
    vtab->GetFitsI = GetFitsI;
+   vtab->GetFitsK = GetFitsK;
    vtab->GetFitsL = GetFitsL;
    vtab->TestFits = TestFits;
    vtab->GetFitsS = GetFitsS;
@@ -17874,6 +18500,7 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->SetFitsCI = SetFitsCI;
    vtab->SetFitsF = SetFitsF;
    vtab->SetFitsI = SetFitsI;
+   vtab->SetFitsK = SetFitsK;
    vtab->SetFitsL = SetFitsL;
    vtab->SetFitsU = SetFitsU;
    vtab->SetFitsS = SetFitsS;
@@ -17891,6 +18518,10 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->TestFitsDigits = TestFitsDigits;
    vtab->SetFitsDigits = SetFitsDigits;
    vtab->GetFitsDigits = GetFitsDigits;
+   vtab->ClearFitsRounding = ClearFitsRounding;
+   vtab->TestFitsRounding = TestFitsRounding;
+   vtab->SetFitsRounding = SetFitsRounding;
+   vtab->GetFitsRounding = GetFitsRounding;
    vtab->ClearFitsAxisOrder = ClearFitsAxisOrder;
    vtab->TestFitsAxisOrder = TestFitsAxisOrder;
    vtab->SetFitsAxisOrder = SetFitsAxisOrder;
@@ -17907,6 +18538,10 @@ void astInitFitsChanVtab_(  AstFitsChanVtab *vtab, const char *name, int *status
    vtab->TestForceTab = TestForceTab;
    vtab->SetForceTab = SetForceTab;
    vtab->GetForceTab = GetForceTab;
+   vtab->ClearIgnoreBadAlt = ClearIgnoreBadAlt;
+   vtab->TestIgnoreBadAlt = TestIgnoreBadAlt;
+   vtab->SetIgnoreBadAlt = SetIgnoreBadAlt;
+   vtab->GetIgnoreBadAlt = GetIgnoreBadAlt;
    vtab->ClearCarLin = ClearCarLin;
    vtab->TestCarLin = TestCarLin;
    vtab->SetCarLin = SetCarLin;
@@ -18838,7 +19473,7 @@ static AstMapping *IsMapTab1D( AstMapping *map, double scale, const char *unit,
    AstMapping *ret;        /* Returned WCS axis Mapping */
    AstMapping *tmap;       /* Temporary Mapping */
    AstPermMap *pm;         /* PermMap pointer */
-   char cellname[ 20 ];    /* Buffer for cell name */
+   char cellname[ 21 ];    /* Buffer for cell name */
    char colname[ 20 ];     /* Buffer for column name */
    double *lut;            /* Pointer to table of Y values */
    double *work1;          /* Pointer to work array */
@@ -20472,8 +21107,8 @@ static AstFrameSet *MakeFitsFrameSet( AstFitsChan *this, AstFrameSet *fset,
    AstSpecFrame *specfrm;  /* Pointer to the SpecFrame within WCS Frame */
    AstWcsMap *map2;        /* Pointer to WcsMap */
    char card[ AST__FITSCHAN_FITSCARDLEN + 1 ]; /* A FITS header card */
-   char equinox_attr[ 13 ];/* Name of Equinox attribute for sky axes */
-   char system_attr[ 12 ]; /* Name of System attribute for sky axes */
+   char equinox_attr[ 40 ];/* Name of Equinox attribute for sky axes */
+   char system_attr[ 40 ]; /* Name of System attribute for sky axes */
    const char *eqn;        /* Pointer to original sky Equinox value */
    const char *extunit;    /* External units string */
    const char *intunit;    /* Internal units string */
@@ -21131,6 +21766,10 @@ static int MakeIntWorld( AstMapping *cmap, AstFrame *fr, int *wperm, char s,
 
 /* Check the inherited status. */
    if( !astOK ) return ret;
+
+/* Avoid compiler warnings. */
+   sipax[ 0 ] = 0;
+   sipax[ 1 ] = 0;
 
 /* Get the number of inputs and outputs for the Mapping. Return if the
    number of outputs is smaller than the number of inputs. */
@@ -22677,6 +23316,9 @@ static void NewCard( AstFitsChan *this, const char *name, int type,
          } else if( type == AST__INT ){
             new->size = sizeof( int );
             new->data = astStore( NULL, (void *) data, sizeof( int ) );
+         } else if( type == AST__KINT ){
+            new->size = sizeof( int64_t );
+            new->data = astStore( NULL, (void *) data, sizeof( int64_t ) );
          } else if( type == AST__FLOAT ){
             new->size = sizeof( double );
             new->data = astStore( NULL, (void *) data, sizeof( double ) );
@@ -23448,6 +24090,7 @@ static AstMapping *OtherAxes( AstFitsChan *this, AstFrameSet *fs, double *dim,
    }
 
 /* Only proceed if there are some axes to described. */
+   axmap = NULL;
    if( nother ) {
 
 /* Get a pointer to the WCS Frame. */
@@ -23759,7 +24402,7 @@ static int PCFromStore( AstFitsChan *this, FitsStore *store,
    char *comm;         /* Pointer to comment string */
    char *cval;         /* Pointer to string keyword value */
    char combuf[80];    /* Buffer for FITS card comment */
-   char keyname[10];   /* Buffer for keyword name string */
+   char keyname[40];   /* Buffer for keyword name string */
    char primsys[20];   /* Buffer for primnary RADECSYS value */
    char type[MXCTYPELEN];/* Buffer for CTYPE value */
    char s;             /* Co-ordinate version character */
@@ -24586,6 +25229,7 @@ f        The global status.
    double fval;           /* floating point keyword value */
    int cival[2];          /* Complex integer keyword value */
    int ival;              /* Integer keyword value */
+   int64_t kval;          /* 64 bit integer keyword value */
    int len;               /* No. of characters to read from the value string */
    int nc;                /* No. of characters read from value string */
    int type;              /* Keyword data type */
@@ -24645,6 +25289,15 @@ f        The global status.
             astSetFitsI( this, name, ival, comment, overwrite );
          } else {
             astError( AST__BDFTS, "%s(%s): Unable to read an integer FITS "
+                      "keyword value.", status, method, class );
+         }
+
+/* Read and store 64 bit integer values from the value string. */
+      } else if( type == AST__KINT ){
+         if( 1 == astSscanf( value, " %" PRId64 " %n", &kval, &nc ) && nc >= len ){
+            astSetFitsK( this, name, kval, comment, overwrite );
+         } else {
+            astError( AST__BDFTS, "%s(%s): Unable to read a 64 bit integer FITS "
                       "keyword value.", status, method, class );
          }
 
@@ -25528,10 +26181,10 @@ f        The global status.
    ( (FitsCard *) this->card )->flags = flags | PROTECTED;
 }
 
-static void RoundFString( char *text, int width, int *status ){
+static void RoundFString( char *text, int width, int fitsrnd, int *status ){
 /*
 *  Name:
-*     RoundString
+*     RoundFString
 
 *  Purpose:
 *     Modify a formatted floating point number to round out long
@@ -25542,7 +26195,7 @@ static void RoundFString( char *text, int width, int *status ){
 
 *  Synopsis:
 *     #include "fitschan.h"
-*     void RoundFString( char *text, int width )
+*     void RoundFString( char *text, int width, int fitsrnd )
 
 *  Class Membership:
 *     FitsChan member function.
@@ -25550,9 +26203,10 @@ static void RoundFString( char *text, int width, int *status ){
 *  Description:
 *     The supplied string is assumed to be a valid decimal representation of
 *     a floating point number. It is searched for sub-strings consisting
-*     of NSEQ or more adjacent zeros, or NSEQ or more adjacent nines. If found
-*     the string is modified to represent the result of rounding the
-*     number to remove the sequence of zeros or nines.
+*     of NSEQ or more adjacent zeros, or NSEQ or more adjacent nines. If
+*     found, and if the sub-string extends beyond the number of protected
+*     digits specified by "fitsrnd", the string is modified to represent the
+*     result of rounding the number to remove the sequence of zeros or nines.
 
 *  Parameters:
 *     text
@@ -25561,6 +26215,9 @@ static void RoundFString( char *text, int width, int *status ){
 *     width
 *        The minimum field width to use. The value is right justified in
 *        this field width. Ignored if zero.
+*     fitsrnd
+*        The value of the FitsRounding attribute - the number of leading
+*        digits to protect from rounding.
 */
 
 /* Local Constants: */
@@ -25569,261 +26226,290 @@ static void RoundFString( char *text, int width, int *status ){
 /* Local Variables: */
    char *a;
    char *c;
+   char *d;
    char *dot;
-   char *exp;
-   char *last;
-   char *start;
+   char *e;
    char *end;
-   int i;
-   int neg;
-   int nnine;
-   int nonzero;
-   int nzero;
-   int replace;
-   int started;
-   int len;
+   char *exp;
+   char *ltext;
+   char *prnd;
+   char *seq0;
+   char *seq9;
    int bu;
+   int first;
+   int i;
+   int len0;
+   int len;
+   int lexp;
    int nls;
+   int nsig;
+   int seqlen;
+   int started;
 
 /* Check the inherited status. */
    if( !astOK ) return;
 
 /* Save the original length of the text. */
-   len = strlen( text );
+   len0 = strlen( text );
 
-/* Locate the start of any exponent string. */
-   exp = strpbrk( text, "dDeE" );
+/* Allocate a buffer and store a copy of the text with an extra leading
+   space. */
+   len = len0 + 1;
+   ltext = astMalloc( len + 1 );
+   if( ltext ) {
+      *ltext = ' ';
+      strcpy( ltext + 1, text );
 
-/* First check for long strings of adjacent zeros.
-   =============================================== */
+/* Locate the start of any exponent string in the local copy. ALso get
+   its length. */
+      exp = strpbrk( ltext, "dDeE" );
+      lexp = exp ? strlen(exp) : 0;
 
-/* Indicate that we have not yet found a decimal point in the string. */
-   dot = NULL;
+/* Get a pointer to the terminator (either the exponent or the null at the end of
+   the string). */
+      end = exp ? exp : ltext + len;
 
-/* The "started" flag controls whether *leading* zeros should be removed
-   if there are more than NSEQ of them. They are only removed if there is an
-   exponent. */
-   started = ( exp != NULL );
+/* Values of "fitsrnd" that are less than 1 are equivalebnt to 1. */
+      if( fitsrnd < 1 ) fitsrnd = 1;
 
-/* We are not currently replacing digits with zeros. */
-   replace = 0;
+/* Get a pointer (prnd) to the character that defines the first position
+   at which rounding can occur. Step through the text from the start
+   until "fitsrnd" digits have been found (ignoring leading zeros) or
+   the terminator is reached. Also note if the string includes a decimal
+   point. */
+      started = 0;
+      nsig = 0;
+      prnd = NULL;
+      dot = NULL;
 
-/* We have not yet found any adjacent zeros. */
-   nzero = 0;
-
-/* We have no evidence yet that the number is non-zero. */
-   nonzero = 0;
-
-/* Loop round the supplied text string. */
-   c = text;
-   while( *c && c != exp ){
-
-/* If this is a zero, increment the number of adjacent zeros found, so
-   long as we have previously found a non-zero digit (or there is an
-   exponent). If this is the NSEQ'th adjacent zero, indicate that
-   subsequent digits should be replaced by zeros. */
-      if( *c == '0' ){
-         if( started && ++nzero >= NSEQ ) replace = 1;
-
-/* Note if the number contains a decimal point. */
-      } else if( *c == '.' ){
-         dot = c;
-
-/* If this character is a non-zero digit, indicate that we have found a
-   non-zero digit. If we have previously found a long string of adjacent
-   zeros, replace the digit by '0'. Otherwise, reset the count of
-   adjacent zeros, and indicate the final number is non-zero. */
-      } else if( *c != ' ' && *c != '+' && *c != '-' ){
-         started = 1;
-         if( replace ) {
-            *c = '0';
-         } else {
-            nzero = 0;
-            nonzero = 1;
+      c = ltext - 1;
+      while( ++c < end ){
+         if( isdigit( *c ) ){
+            if( *c != '0' ) started = 1;
+            if( started ) {
+               if( ++nsig == fitsrnd ) prnd = c;
+            }
+         } else if( *c == '.' ){
+            dot = c;
          }
       }
 
-/* Move on to the next character. */
-      c++;
-   }
-
-/* If the final number is zero, just return the most simple decimal zero
+/* If no non-zero digits were found, just return the most simple zero
    value. */
-   if( !nonzero ) {
-      strcpy( text, "0.0" );
+      if( !started ) {
+         if( dot ){
+            strcpy( ltext, "0.0" );
+         } else {
+            strcpy( ltext, "0" );
+         }
 
-/* Otherwise, we remove any trailing zeros which occur to the right of a
-   decimal point. */
-   } else if( dot ) {
+/* If the "fitsrnd" value is larger than the number of significant
+   figures in the value, "prnd" will be NULL, in which case we can do
+   no rounding. If "prnd" is not NULL, we round any sequences by modifying
+   the contents of the local text buffer. */
+      } else if( prnd ) {
 
-/* Find the last non-zero digit. */
-      while( c-- > text && *c == '0' );
+/* Initialise the current character pointer to point to the character immediately
+   before the terminator (either the exponent or the null at the end of the
+   string). */
+         c = end - 1;
 
-/* If any trailing zeros were found... */
-      if( c > text ) {
+/* Loop backwards over any trailing spaces */
+         while( c >= ltext && *c == ' ' ) c--;
 
-/* Retain one trailing zero after a decimal point. */
-         if( *c == '.' ) c++;
+/* Initialise flags to show we are not currently in any sequence. */
+         seq9 = NULL;
+         seq0 = NULL;
+         seqlen = 0;
 
-/* We put a terminator following the last non-zero character. The
-   terminator is the exponent, if there was one, or a null character.
-   Remember to update the pointer to the start of the exponent. */
-         c++;
+/* Loop backwards over the remaining characters, from end to start of the
+   string. */
+          while( c >= ltext ) {
+
+/* If we are in a sequence of 9's (i.e. the previous character was a 9)... */
+            if( seq9 ){
+
+/* If the current character is a 9, increment the length of the sequence. */
+               if( *c == '9' ) {
+                  seqlen++;
+
+/* If the current character is not a 9 but is a digit, the previous digit was
+   the start of the sequence. */
+               } else if( isdigit( *c ) ){
+
+/* If the sequence ends beyond the rounding limit and has a length of at
+   least NSEQ, replace it with a rounded value. */
+                  if( seq9 > prnd && seqlen >= NSEQ ){
+
+/* Replace all digits in or after the sequence with 0's. */
+                     d = c;
+                     while( ++d < end ) {
+                        if( isdigit(*d) ) *d = '0';
+                     }
+
+/* Increment the current digit (we know it's not a 9 and so it can
+   always be incremented to a higher digit value). */
+                     (*c)++;
+                  }
+
+/* If the current digit was incremented above to a 9 (i.e. the original
+   value was 8), we need to start a new sequence of 9's. */
+                  if( *c == '9' ) {
+                     seq9 = c;
+                     seqlen = 1;
+
+/* If the current digit is a 0, we need to start a new sequence of 0's. */
+                  } else if( *c == '0' ) {
+                     seq0 = c;
+                     seq9 = NULL;
+                     seqlen = 1;
+
+/* Otherwise, indicate we are no longer in a sequence of 9's. */
+                  } else {
+                     seq9 = NULL;
+                     seqlen = 0;
+                  }
+               }
+
+/* Otherwise, if we are in a sequence of 0's (i.e. the previous character
+   was a 0)... */
+            } else if( seq0 ){
+
+/* If the current character is a 0, increment the length of the sequence. */
+               if( *c == '0' ) {
+                  seqlen++;
+
+/* If the current character is not a 0 but is a digit, the previous digit
+   was the start of the sequence. */
+               } else if( isdigit( *c ) ){
+
+/* If the sequence ends beyond the rounding limit and has a length of at
+   least NSEQ, replace it with a rounded value. */
+                  if( seq0 > prnd && seqlen >= NSEQ ){
+
+/* Replace all digits in or after the sequence with 0's. */
+                     d = c;
+                     while( ++d < end ) {
+                        if( isdigit(*d) ) *d = '0';
+                     }
+                  }
+
+/* If the current digit is a 9, we need to start a new sequence of 9's. */
+                  if( *c == '9' ) {
+                     seq9 = c;
+                     seq0 = NULL;
+                     seqlen = 1;
+
+/* Otherwise, indicate we are no longer in a sequence of 0's. */
+                  } else {
+                     seq0 = NULL;
+                     seqlen = 0;
+                  }
+               }
+
+/* Otherwise we are not in a sequence. */
+            } else {
+
+/* If we are beyond the point at which any further rounding can occur, we
+   can leave the loop. */
+               if( c < prnd ) {
+                  break;
+
+/* If the current character is a 9, we are at the start of a possible
+   sequence of 9's. */
+               } else if( *c == '9' ) {
+                  seq9 = c;
+                  seqlen = 1;
+
+/* If the current character is a 0, we are at the start of a possible
+   sequence of 0's. */
+               } else if( *c == '0' ) {
+                  seq0 = c;
+                  seqlen = 1;
+               }
+            }
+
+/* Move the current character pointer to the next more significant
+   character in the formatted number. */
+            c--;
+         }
+
+/* If "seq9" is still set at the end of the loop, it must mean that the first
+   digit in the string is the start of a sequence of 9's. If the sequence ends
+   beyond the rounding limit and has a length of at least NSEQ, replace it with
+   a rounded value. */
+         if( seq9 && seq9 > prnd && seqlen >= NSEQ ){
+
+/* Replace all digits in or after the sequence with 0's. */
+            first = 1;
+            c = ltext - 1;
+            while( ++c < end ) {
+               if( isdigit( *c ) ) {
+                  *c = '0';
+
+/* If this is the first digit, move any characters (eg "+" or "-" ) that
+   occur before the digit one space to the left (we added a leading space
+   to the local buffer so that we could do this), and insert a "1"
+   immediately before the current zero. */
+                  if( first ) {
+                     e = ltext + 1;
+                     while( e < c ) {
+                        e[ -1 ] = e[ 0 ];
+                        e++;
+                     }
+                     e[ -1 ] = '1';
+                     first = 0;
+                  }
+               }
+            }
+         }
+      }
+
+/* Remove any trailing zeros which occur to the right of a decimal point. */
+      if( dot ) {
+
+/* Initialise the current character pointer to point to the character
+   immediately before the terminator (either the exponent or the null at
+   the end of the string). */
+         c = end - 1;
+
+/* Loop backwards over any trailing spaces or zeros. */
+         while( c >= ltext && ( *c == ' ' || *c == '0' ) ) c--;
+
+/* Ensure one space is left after a decimal point, if there is room for it. */
+         if( *c == '.' && c < end - 1 ) *(++c) = '0';
+
+/* Move the terminator to the following character. We are sure not to
+   overrun the text buffer since "c" is always less than "exp". */
          if( exp ) {
-            a = exp;
-            exp = c;
-            while( ( *(c++) = *(a++) ) );
+            for( i = 0; i <= lexp; i++ ) c[ i + 1 ] = exp[ i ];
          } else {
-            *c = 0;
-         }
-      }
-   }
-
-/* Next check for long strings of adjacent nines.
-   ============================================= */
-
-/* We have not yet found any adjacent nines. */
-   nnine = 0;
-
-/* We have not yet found a non-nine digit. */
-   a = NULL;
-
-/* We have not yet found a non-blank character */
-   start = NULL;
-   last = NULL;
-
-/* Number is assumed positive. */
-   neg = 0;
-
-/* Indicate that we have not yet found a decimal point in the string. */
-   dot = NULL;
-
-/* Loop round the supplied text string. */
-   c = text;
-   while( *c && c != exp ){
-
-/* Note the address of the first non-blank character. */
-      if( !start && *c != ' ' ) start = c;
-
-/* If this is a nine, increment the number of adjacent nines found. */
-      if( *c == '9' ){
-         ++nnine;
-
-/* Note if the number contains a decimal point. */
-      } else if( *c == '.' ){
-         dot = c;
-
-/* Note if the number is negative. */
-      } else if( *c == '-' ){
-         neg = 1;
-
-/* If this character is a non-nine digit, and we have not had a long
-   sequence of 9's, reset the count of adjacent nines, and update a pointer
-   to "the last non-nine digit prior to a long string of nines". */
-      } else if( *c != ' ' && *c != '+' ){
-         if( nnine < NSEQ ) {
-            nnine = 0;
-            a = c;
+            c[ 1 ] = 0;
          }
       }
 
-/* Note the address of the last non-blank character. */
-      if( *c != ' ' ) last = c;
+/* Copy the rounded string into the supplied text string, if there is room,
+   correcting for the offset thta was added at the start of this function if
+   there was no rounding. */
+      c = ltext;
+      if( *c == ' ' ) c++;
+      if( astChrLen( c ) <= len0 ) strcpy( text, c );
 
-/* Move on to the next character. */
-      c++;
-   }
 
-/* If a long string of adjacent nines was found... */
-   if( nnine >= NSEQ ) {
-      c = NULL;
+/* Free local resources. */
+      ltext = astFree( ltext );
 
-/* If we found at least one non-nine digit. */
-      if( a ) {
-
-/* "a" points to the last non-nine digit before the first of the group of 9's.
-   Increment this digit by 1. Since we know the digit is not a nine, there
-   is no danger of a carry. */
-         *a = *a + 1;
-
-/* Fill with zeros up to the decimal point, or to  the end if there is no
-   decimal point. */
-         c = a + 1;
-         if( dot ) {
-            while( c < dot ) *(c++) = '0';
-         } else {
-            while( *c ) *(c++) = '0';
-         }
-
-/* Now make "c" point to the first character for the terminator. This is
-   usually the character following the last non-nine digit. However, if
-   the last non-nine digit appears immediately before a decimal point, then
-   we append ".0" to the string before appending the terminator. */
-         if( *c == '.' ) {
-            *(++c) = '0';
-            c++;
-         }
-
-/* If all digits were nines, the rounded number will occupy one more
-   character than the supplied number. We can only do the rounding if there
-   is a spare character (i.e.a space) in the supplied string. */
-      } else if( last - start + 1 < len ) {
-
-/* Put the modified text at the left of the available space. */
-         c = text;
-
-/* Start with a minus sing if needed, followed by the leading "1" (caused
-   by the overflow from the long string of 9's). */
-         if( neg ) *(c++) = '-';
-         *(c++) = '1';
-
-/* Now find the number of zeros to place after the leading "1". This is
-   the number of characters in front of the terminator marking the end of
-   the integer part of the number. */
-         if( dot ) {
-            nzero = dot - start;
-         } else if( exp ) {
-            nzero = exp - start;
-         } else {
-            nzero = last - start;
-         }
-
-/* If the number is negative, the above count will include the leading
-   minus sign, which is not a digit. So reduce the count by one. */
-         if( neg ) nzero--;
-
-/* Now put in the correct number of zeros. */
-         for( i = 0; i < nzero; i++ ) *(c++) = '0';
-
-/* If the original string containsed a decimal point, make sure the
-   returned string also contains one. */
-         if( dot ) {
-            *(c++) = '.';
-            if( *c ) *(c++) = '0';
+/* If a minimum field width has been given, move the text to the right
+   hand end of the supplied buffer. */
+      if( width ) {
+         end = text + len0;
+         c = text + astChrLen( text );
+         *end = 0;
+         if( c != end ) {
+            while( c > text ) *(--end) = *(--c);
+            while( end > text ) *(--end) = ' ';
          }
       }
-
-/* We put a terminator following the last non-zero character. The
-   terminator is the exponent, if there was one, or a null character. */
-      if( c ) {
-         if( exp ) {
-            while( ( *(c++) = *(exp++) ) );
-         } else {
-            *c = 0;
-         }
-      }
-   }
-
-/* If a minimum field width has been given, right justify the returned
-   string in the original field width. */
-   if( width ) {
-      end = text + len;
-      c = text + strlen( text );
-      if( c != end ) {
-         while( c >= text ) *(end--) = *(c--);
-         while( end >= text ) *(end--) = ' ';
-      }
-   }
 
 /* If a minimum field width was given, shunt the text to the left in
    order to reduce the used field width to the specified value. This
@@ -25834,24 +26520,25 @@ static void RoundFString( char *text, int width, int *status ){
    as possible. First find the number of spaces we would like to remove
    from the front of the string (in order to reduce the used width to the
    specified value). */
-   bu = len - width;
+      bu = len0 - width;
 
 /* If we need to remove any leading spaces... */
-   if( width > 0 && bu > 0 ) {
+      if( width > 0 && bu > 0 ) {
 
 /* Find the number of leading spaces which are available to be removed. */
-      c = text - 1;
-      while( *(++c) == ' ' );
-      nls = c - text;
+         c = text - 1;
+         while( *(++c) == ' ' );
+         nls = c - text;
 
 /* If there are insufficient leading spaces, just use however many there
    are. */
-      if( bu > nls ) bu = nls;
+         if( bu > nls ) bu = nls;
 
 /* Shift the string. */
-      c = text;
-      a = c + bu;
-      while( ( *(c++) = *(a++) ) );
+         c = text;
+         a = c + bu;
+         while( ( *(c++) = *(a++) ) );
+      }
    }
 
 /* Undefine local constants. */
@@ -26127,6 +26814,186 @@ static int SAOTrans( AstFitsChan *this, AstFitsChan *out, const char *method,
 }
 #undef NC
 
+static AstPolyMap *ScalePolyInputs( AstPolyMap *polymap, double *scales,
+                                    int *status ){
+/*
+*  Name:
+*     ScalePolyInputs
+
+*  Purpose:
+*     Modify a PolyMap by applying a scaling factor to each of its inputs.
+
+*  Type:
+*     Private function.
+
+*  Synopsis:
+*     #include "fitschan.h"
+*     AstPolyMap *ScalePolyInputs( AstPolyMap *polymap, double *scales,
+*                                  int *status )
+
+*  Class Membership:
+*     FitsChan member function.
+
+*  Description:
+*     This function returns a new PolyMap that is a copy of the supplied
+*     PolyMap except that the coefficients of the new PolyMap are changed
+*     so that the PolyMap applies a specified scaling to each of its inputs
+*     before applying the supplied PolyMap transformation.
+
+*  Parameters:
+*     polymap
+*        Pointer to the supplied PolyMap. If no error occurs, the supplied
+*        pointer is annulled using astAnnul before returning.
+*     scales
+*        Pointer to an array holding the scaling factors to be applied to
+*        each PolyMap input. The length of the array should equal the
+*        number of inputs of the supplied PolyMap.
+*     status
+*        Pointer to the inherited status variable.
+
+*  Returned Value:
+*     If this function completes successfully, a pointer to the newly
+*     created PolyMap is returned and the supplied PolyMap pointer is annulled.
+*     If an error occurs before or during this function, a NULL pointer
+*     is returned and the supplied PolyMap pointer is not annulled.
+
+*/
+
+/* Local Variables: */
+   AstPolyMap *result;
+   double *coeffs_f;
+   double *coeffs_i;
+   double *pv;
+   double *scale;
+   double cof;
+   int ico;
+   int iin;
+   int ncoeff_f;
+   int ncoeff_i;
+   int nin;
+   int nout;
+
+/* Check the global status. */
+   result = NULL;
+   if( !astOK || !polymap ) return NULL;
+
+/* Get the number of inputs and outputs for the Mapping. */
+   nin = astGetNin( polymap );
+   nout = astGetNout( polymap );
+
+/* Check none of the scale factors are zero or bad. */
+   for( iin = 0; iin < nin; iin++ ){
+      if( scales[ iin ] == 0.0 || scales[ iin ] == AST__BAD ) {
+         astError( AST__INTER, "ScalePolyInputs(fitschan): AST internal programming error - "
+                   "Scale factor for input %d is zero or bad.", status, iin );
+         return NULL;
+      }
+   }
+
+/* Get the coefficients of the forward transformation of the supplied
+   PolyMap (if any). */
+   astPolyCoeffs( polymap, 1, 0, NULL, &ncoeff_f );
+   coeffs_f = astMalloc( ncoeff_f*( nin + 2 )*sizeof( *coeffs_f ) );
+   if( coeffs_f ) {
+      astPolyCoeffs( polymap, 1, ncoeff_f*( nin + 2 ), coeffs_f, &ncoeff_f );
+
+/* Loop over all coefficients, maintaining a pointer to the next value in
+   the coeffs array. */
+      pv = coeffs_f;
+      for( ico = 0; ico < ncoeff_f; ico++ ){
+
+/* Get the original coefficient value. */
+         cof = *pv;
+
+/* Loop over all inputs, maintaining pointers to the next coeff value
+   (which is the power to use with the current input) and the next input
+   scale value. */
+         pv += 2;
+         scale = scales;
+         for( iin = 0; iin < nin; iin++,scale++,pv++ ){
+
+/* Raise the input scale value to the appropriate power for the current
+   input, and use it to scale the current coefficient value. */
+            cof *= pow( *scale, *pv );
+         }
+
+/* Store the new coefficient value back in the coeffs array. */
+         pv[ -( 2 + nin ) ] = cof;
+      }
+   }
+
+/* Now get the coefficients of any inverse transformation. */
+   astPolyCoeffs( polymap, 0, 0, NULL, &ncoeff_i );
+   coeffs_i = astMalloc( ncoeff_i*( nout + 2 )*sizeof( *coeffs_i ) );
+   if( coeffs_i ) {
+      astPolyCoeffs( polymap, 0, ncoeff_i*( nout + 2 ), coeffs_i, &ncoeff_i );
+
+/* For the inverse transformation, the supplied scale values simply
+   factor the transformation output values (i.e. the Mapping inputs),
+   so we just scale all the coefficients directly. Loop over all the
+   coefficients. */
+      pv = coeffs_i;
+      for( ico = 0; ico < ncoeff_i; ico++,pv += 2 + nout ){
+
+/* Which Mapping input (i.e. transformation output) does this coefficient
+   refer to). Note, the axis indices returned by astPolyCoeffs are
+   one-based so we need to subtract 1.  */
+         iin = pv[ 1 ] - 1;
+
+/* Scale the coefficient by the reciprocal (i.e. inverse) of the scale
+   factor associated with the Mapping input. */
+         pv[ 0 ] *= 1.0/scale[ iin ];
+      }
+   }
+
+/* If all is ok, create the new PolyMap. */
+   if( astOK ){
+
+/* We want the returned PolyMap to look as much as possible like the
+   supplied PolyMap. So if the supplied PolyMap has been inverted, we
+   create the new one uninverted, and then invert it. */
+      if( astGetInvert( polymap ) ){
+         result = astPolyMap( nout, nin, ncoeff_i, coeffs_i, ncoeff_f,
+                              coeffs_f, " ", status );
+         astInvert( result );
+
+/* Otherwise, create the new PolyMap directly. */
+      } else {
+         result = astPolyMap( nin, nout, ncoeff_f, coeffs_f, ncoeff_i,
+                              coeffs_i, " ", status );
+      }
+
+/* Copy other attribute values from the supplied PolyMap to the returned
+   PolyMap (if set). */
+      if( astTestIterInverse( polymap ) ){
+         astSetIterInverse( result, astGetIterInverse( polymap ) );
+      }
+
+      if( astTestNiterInverse( polymap ) ){
+         astSetNiterInverse( result, astGetNiterInverse( polymap ) );
+      }
+
+      if( astTestTolInverse( polymap ) ){
+         astSetTolInverse( result, astGetTolInverse( polymap ) );
+      }
+
+   }
+
+/* Free resources */
+   coeffs_i = astFree( coeffs_i );
+   coeffs_f = astFree( coeffs_f );
+
+/* If no error has occurred, annull the supplied PolyMap. Otherwise,
+   annul any result and return a  NULL pointer. */
+   if( astOK ) {
+      polymap = astAnnul( polymap );
+   } else if( result ){
+      result = astAnnul( result );
+   }
+
+   return result;
+}
+
 static int SearchCard( AstFitsChan *this, const char *name,
                        const char *method, const char *class, int *status ){
 
@@ -26388,6 +27255,13 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
         && ( nc >= len ) ) {
       astSetFitsDigits( this, ival );
 
+/* FitsRounding. */
+/* ------------- */
+   } else if ( nc = 0,
+        ( 1 == astSscanf( setting, "fitsrounding= %d %n", &ival, &nc ) )
+        && ( nc >= len ) ) {
+      astSetFitsRounding( this, ival );
+
 /* FitsAxisOrder. */
 /* -------------- */
    } else if ( nc = 0,
@@ -26423,6 +27297,13 @@ static void SetAttrib( AstObject *this_object, const char *setting, int *status 
         ( 1 == astSscanf( setting, "forcetab= %d %n", &ival, &nc ) )
         && ( nc >= len ) ) {
       astSetForceTab( this, ival );
+
+/* IgnoreBadAlt */
+/* ------------ */
+   } else if ( nc = 0,
+        ( 1 == astSscanf( setting, "ignorebadalt= %d %n", &ival, &nc ) )
+        && ( nc >= len ) ) {
+      astSetIgnoreBadAlt( this, ival );
 
 /* CarLin */
 /* ------ */
@@ -27640,6 +28521,9 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
 
 /* Local Variables: */
    AstMapping **map_list;
+   AstMapping *map1;
+   AstMapping *map2;
+   AstMapping *map3;
    AstMapping *map_upper;
    AstMapping *map_lower;
    AstMapping *result;
@@ -27647,10 +28531,10 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
    AstMapping *tmap;
    AstMapping *tmap2;
    AstMapping *tmap1;
-   AstPolyMap *polymap;
    AstPermMap *pm;
-   const char *cval;
+   AstPolyMap *polymap;
    char buf[30];
+   const char *cval;
    double ****item;
    double *coeffs;
    double *pc;
@@ -27658,6 +28542,8 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
    double iwcxin;
    double iwcyin;
    double lbnd[ 2 ];
+   double scales[ 2 ];
+   double shift[ 2 ];
    double ubnd[ 2 ];
    double val;
    int *inax1;
@@ -27668,6 +28554,10 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
    int *outperm1;
    int *outperm2;
    int *outrem;
+   int aimax;
+   int ajmmax;
+   int bimax;
+   int bjmmax;
    int fwd;
    int i;
    int icoeff;
@@ -27685,16 +28575,17 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
    int ok;
    int old_invert;
    int outax[ 2 ];
-   int aimax;
-   int ajmmax;
-   int bimax;
-   int bjmmax;
+   int rotation;
+   int scaling;
 
 /* Initialise */
    result = NULL;
 
 /* Check the inherited status. */
    if( !astOK ) return result;
+
+/* Avoid compiler warnings */
+   noutrem = 0;
 
 /* Get the number of inputs and outputs for the Mapping. */
    nin = astGetNin( map );
@@ -27715,7 +28606,7 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
       astInvert( map );
 
 /* Check the Mapping could be split, and that the mapping that generates
-   lonax/latax has exactly two inputs (use the NBout attribute since
+   lonax/latax has exactly two inputs (use the Nout attribute since
    "tmap1" is inverted). Then invert "tmap1" so that it is in the same
    direction as the supplied mapping. */
       if( inax1 && tmap1 && astGetNout( tmap1 ) == 2 ) {
@@ -27791,8 +28682,10 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
                       astGetNin( map_upper ) == 2 &&
                       astGetNout( map_upper ) == 2 );
 
-/* Check that the lower Mapping is a shift of origin with no scaling or
-   rotation. */
+/* Check that the lower Mapping is linear and see if it produces any scaling
+   or rotation. */
+               scaling = 0;
+               rotation = 0;
                if( ok ) {
                   lbnd[ 0 ] = 0.0;
                   lbnd[ 1 ] = 0.0;
@@ -27801,14 +28694,68 @@ static AstMapping *SIPIntWorld( AstMapping *map, double tol, int lonax,
                   if( ubnd[ 0 ] == AST__BAD ) ubnd[ 0 ] = 1000.0;
                   if( ubnd[ 1 ] == AST__BAD ) ubnd[ 1 ] = 1000.0;
                   ok = astLinearApprox( map_lower, lbnd, ubnd, tol, fit );
+
                   if( fabs( fit[ 2 ] - 1.0 ) > 1.0E-7  ||
-                      fabs( fit[ 3 ] ) > 1.0E-7 ||
-                      fabs( fit[ 4 ] ) > 1.0E-7 ||
-                      fabs( fit[ 5 ] - 1.0 ) > 1.0E-7  ) ok = 0;
+                      fabs( fit[ 5 ] - 1.0 ) > 1.0E-7  ) scaling = 1;
+
+                  if( fabs( fit[ 3 ] ) > 1.0E-7 ||
+                      fabs( fit[ 4 ] ) > 1.0E-7 ) rotation = 1;
                }
 
-/* Check that the upper Mapping is a linear Mapping with no shift of origin.
-   Retain the fit coefficients for later use. */
+/* If it produces rotation, it cannot be used. */
+               if( rotation ) ok = 0;
+
+/* If it produces scaling, we can still use it if we 1) remove the scaling
+   from the lower Mapping and 2) modify the coefficients of the PolyMap to
+   include the removed scalings. */
+               shift[ 0 ] = fit[ 0 ];
+               shift[ 1 ] = fit[ 1 ];
+               if( scaling && ok ) {
+
+/* Replace the lower Mapping with a Mapping that implements just the shift of
+   origin produced by the original lower Mapping (without any subsequent
+   scaling). Note, the linear fit returned by astLinearApprox applies the
+   scaling first followed by the shift, but we need to apply the shift
+   first (effectively followed by unit scaling). So we need to modify the
+   offset terms in the fit to remove the scaling (the modified PolyMap will
+   then effectively put the scaling back in again). */
+                  shift[ 0 ] /= fit[ 2 ];
+                  shift[ 1 ] /= fit[ 5 ];
+                  (void) astAnnul( map_lower );
+                  map_lower = (AstMapping *) astShiftMap( 2, shift, " ", status );
+
+/* Now create a modified PolyMap that incorporates the scaling of the
+   input axes produced by the original lower Mapping. */
+                  scales[ 0 ] = fit[ 2 ];
+                  scales[ 1 ] = fit[ 5 ];
+                  polymap = ScalePolyInputs( polymap, scales, status );
+               }
+
+/* The SIP paper requires the SIP polynomial to contain no constant or
+   linear terms. So analyse the PolyMap into three Mappings in series:
+   1) a ShiftMap that applies any shift of origin in the PolyMap,
+   2) a PolyMap that contains no constant or linear terms (other than a
+      unit coefficient for the linear term of the corresponding input),
+   3) a MatrixMap that applies any axis scaling.
+   If the analysis is successful, combine the Shiftmap with the current
+   lower mapping and the matrixmap with the current upper mnapping. */
+               if( ok && AnalysePoly( polymap, &map1, &map2, &map3, status ) ){
+                  tmap = (AstMapping *) astCmpMap( map_lower, map1, 1, " ", status );
+                  map_lower = astAnnul( map_lower );
+                  map1 = astAnnul( map1 );
+                  map_lower = tmap;
+
+                  tmap = (AstMapping *) astCmpMap( map3, map_upper, 1, " ", status );
+                  map_upper = astAnnul( map_upper );
+                  map3 = astAnnul( map3 );
+                  map_upper = tmap;
+
+                  polymap = astAnnul( polymap );
+                  polymap = (AstPolyMap *) map2;
+               }
+
+/* Check that the upper Mapping is linear and see if it produces a shift of
+   origin (if so we cannot use it). Retain the fit coefficients for later use. */
                if( ok ) {
                   lbnd[ 0 ] = -ubnd[ 0 ];
                   lbnd[ 1 ] = -ubnd[ 1 ];
@@ -28641,10 +29588,10 @@ static int SkySys( AstFitsChan *this, AstSkyFrame *skyfrm, int wcstype,
 /* Local Variables: */
    astDECLARE_GLOBALS     /* Declare the thread specific global data */
    char *label;             /* Pointer to axis label string */
-   char attr[20];           /* Buffer for AST attribute name */
+   char attr[40];           /* Buffer for AST attribute name */
    char com[80];            /* Buffer for keyword comment */
-   char lattype[MXCTYPELEN];/* Latitude axis CTYPE value */
-   char lontype[MXCTYPELEN];/* Longitude axis CTYPE value */
+   char lattype[MXCTYPELEN+4];/* Latitude axis CTYPE value */
+   char lontype[MXCTYPELEN+4];/* Longitude axis CTYPE value */
    const char *latsym;      /* SkyFrame latitude axis symbol */
    const char *lonsym;      /* SkyFrame longitude axis symbol */
    const char *prj_name;    /* Pointer to projection name string */
@@ -29141,8 +30088,8 @@ static AstMapping *SpectralAxes( AstFitsChan *this, AstFrameSet *fs,
    char ctype[ MXCTYPELEN ]; /* The value for the FITS CTYPE keyword */
    char lin_unit[ 20 ];    /* Linear spectral Units being used */
    char orig_system[ 40 ]; /* Value of System attribute for current WCS axis */
-   char system_attr[ 10 ]; /* Name of System attribute for current WCS axis */
-   char unit_attr[ 10 ];   /* Name of Unit attribute for current WCS axis */
+   char system_attr[ 20 ]; /* Name of System attribute for current WCS axis */
+   char unit_attr[ 20 ];   /* Name of Unit attribute for current WCS axis */
    const char *cval;       /* Pointer to temporary character string */
    const char *x_sys[ 4 ]; /* Basic spectral systems */
    double *lbnd_p;         /* Pointer to array of lower pixel bounds */
@@ -29948,13 +30895,13 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    char *watmem;                  /* Pointer to total WAT string */
    char bj;                       /* Besselian/Julian indicator */
    char format[ 50 ];             /* scanf format string */
-   char keyname[ FITSNAMLEN + 5 ];/* General keyword name + formats */
+   char keyname[ FITSNAMLEN + 20 ];/* General keyword name + formats */
    char lattype[MXCTYPELEN];      /* CTYPE value for latitude axis */
    char lontype[MXCTYPELEN];      /* CTYPE value for longitude axis */
    char prj[6];                   /* Spatial projection string */
    char s;                        /* Co-ordinate version character */
-   char spectype[MXCTYPELEN];     /* CTYPE value for spectral axis */
-   char sprj[6];                  /* Spectral projection string */
+   char spectype[MXCTYPELEN + 20];/* CTYPE value for spectral axis */
+   char sprj[10];                  /* Spectral projection string */
    char ss;                       /* Co-ordinate version character */
    char template[ FITSNAMLEN + 1 ];/* General keyword name template */
    double *cvals;                 /* PVi_m values for TPN projection */
@@ -30007,6 +30954,12 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    for( s = 'A' - 1; s <= 'Z' && astOK; s++ ){
       if( s == 'A' - 1 ) s = ' ';
 
+/* Indicate that no celestial axes have yet been found for the current
+   axis description. */
+      axlon = -1;
+      axlat = -1;
+      prj[ 0 ] = 0;
+
 /* Find the highest axis index in a CTYPE keyword. */
       if( s != ' ' ) {
          sprintf( template, "CTYPE%%d%c", s );
@@ -30020,8 +30973,6 @@ static AstFitsChan *SpecTrans( AstFitsChan *this, int encoding,
    can be read again any number of times until the current astRead
    operation is completed. Also note the projection type. */
          j = 0;
-         axlon = -1;
-         axlat = -1;
          while( j < naxis && astOK ){
             if( GetValue2( ret, this, FormatKey( "CTYPE", j + 1, -1, s, status ),
                           AST__STRING, (void *) &cval, 0, method,
@@ -31122,7 +32073,7 @@ int Split( AstFitsChan *this, const char *card, char **name, char **value,
 
 *  Returned value:
 *     -  An integer identifying the data type of the keyword value. This
-*     will be one of the values AST__UNDEF, AST__COMMENT, AST__INT,
+*     will be one of the values AST__UNDEF, AST__COMMENT, AST__INT, AST__KINT,
 *     AST__STRING, AST__CONTINUE, AST__FLOAT, AST__COMPLEXI or AST__COMPLEXF
 *     defined in fitschan.h.
 
@@ -31153,6 +32104,7 @@ int Split( AstFitsChan *this, const char *card, char **name, char **value,
    int cont;                  /* Is this a continuation card? */
    int i;                     /* Character index */
    int ii, ir;                /* Values read from value string */
+   int64_t kr;                /* Values read from value string */
    int iopt;                  /* Index of option within list */
    int len;                   /* Used length of value string */
    int lq;                    /* Was previous character an escaping quote? */
@@ -31380,11 +32332,17 @@ int Split( AstFitsChan *this, const char *card, char **name, char **value,
                          ( nch >= len ) ) {
                         type = AST__COMPLEXI;
 
-/* If that failed, attempt to read a single integer from the string. */
+/* If that failed, attempt to read a single 64 bit integer from the string. */
                      } else if( nch = 0,
-                         ( 1 == astSscanf( v, " %d%n", &ir, &nch ) ) &&
+                         ( 1 == astSscanf( v, " %" PRId64 "%n", &kr, &nch ) ) &&
                          ( nch >= len ) ) {
-                        type = AST__INT;
+
+/* See if the value is small enough to fit in a 32 bit integer. */
+                        if( kr <= INT_MAX && kr >= INT_MIN ) {
+                           type = AST__INT;
+                        } else {
+                           type = AST__KINT;
+                        }
                      }
 
 /* If there are dots (decimal points) in the value... */
@@ -31487,14 +32445,14 @@ int Split( AstFitsChan *this, const char *card, char **name, char **value,
 /* If the value is deemed to be integer, check that the number of digits
    in the formatted value does not exceed the capacity of an int. This may
    be the case if there are too many digits in the integer for an "int" to
-   hold. In this case, change the data type to float. */
+   hold. In this case, change the data type to 64 bit integer. */
    if( *value && type == AST__INT ) {
       ndig = 0;
       c = *value;
       while( *c ) {
          if( isdigit( *(c++) ) ) ndig++;
       }
-      if( ndig >= int_dig ) type = AST__FLOAT;
+      if( ndig >= int_dig ) type = AST__KINT;
    }
 
 /* If an error occurred, free the returned strings and issue a context message. */
@@ -32820,7 +33778,7 @@ static void TabSourceWrap( void (*tabsource)( void  ),
    if ( !astOK ) return;
 
 /* Get an external identifier for the FitsChan. Could use astClone here
-   to avoid this function anulling the supplied pointer, but the F77 wrapper
+   to avoid this function annulling the supplied pointer, but the F77 wrapper
    cannot use the protected version of astClone, so for consistency we do
    not use it here either. */
    this_id = astMakeId( this );
@@ -33005,6 +33963,11 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
    } else if ( !strcmp( attrib, "fitsdigits" ) ) {
       result = astTestFitsDigits( this );
 
+/* FitsRounding. */
+/* ------------- */
+   } else if ( !strcmp( attrib, "fitsrounding" ) ) {
+      result = astTestFitsRounding( this );
+
 /* DefB1950. */
 /* --------- */
    } else if ( !strcmp( attrib, "defb1950" ) ) {
@@ -33019,6 +33982,11 @@ static int TestAttrib( AstObject *this_object, const char *attrib, int *status )
 /* --------- */
    } else if ( !strcmp( attrib, "forcetab" ) ) {
       result = astTestForceTab( this );
+
+/* IgnoreBadAlt. */
+/* ------------- */
+   } else if ( !strcmp( attrib, "ignorebadalt" ) ) {
+      result = astTestIgnoreBadAlt( this );
 
 /* CDMatrix. */
 /* --------- */
@@ -37619,7 +38587,7 @@ static AstMapping *WcsOthers( AstFitsChan *this, FitsStore *store, char s,
    AstMapping *map2;         /* Pointer to a Mapping */
    AstMapping *ret;          /* The returned Mapping */
    char **comms;             /* Pointer to array of CTYPE commments */
-   char buf[ 101 ];          /* Buffer for textual attribute value */
+   char buf[ 500 ];          /* Buffer for textual attribute value */
    char buf2[ 100 ];         /* Buffer for textual attribute value */
    char buf3[ 20 ];          /* Buffer for default CTYPE value */
    char *newdom;             /* Pointer to new Domain value */
@@ -41359,6 +42327,46 @@ astMAKE_GET(FitsChan,ForceTab,int,0,(this->forcetab == -INT_MAX ? 0 : this->forc
 astMAKE_SET(FitsChan,ForceTab,int,forcetab,value)
 astMAKE_TEST(FitsChan,ForceTab,( this->forcetab != -INT_MAX ))
 
+/* IgnoreBadAlt */
+/* ============ */
+
+/*
+*att++
+*  Name:
+*     IgnoreBadAlt
+
+*  Purpose:
+*     Ignore unreadable alternate axis descriptions?
+
+*  Type:
+*     Public attribute.
+
+*  Synopsis:
+*     Integer (boolean).
+
+*  Description:
+*     This attribute is a  boolean value which indicates what the astRead
+*     method should do if it encounters a set of alternate FITS-WCS axis
+*     descriptions that cannot be read. This may occur, for instance, if the
+*     alternate axis descriptions use a feature of FITS-WCS that is not
+*     supported by AST or are malformed in some way.
+*
+*     If IgnoreBadAlt is zero (the default), then the astRead method will
+*     report an error and abort, returning a null FrameSet pointer. If
+*     IgnoreBadAlt is non-zero, then the astRead method will simply ignore
+*     the unreadable alternate axis descriptions, returning a FrameSet
+*     containing any other axes read successfully from the FITS-WCS header.
+
+*  Applicability:
+*     FitsChan
+*        All FitsChans have this attribute.
+*att--
+*/
+astMAKE_CLEAR(FitsChan,IgnoreBadAlt,ignorebadalt,-INT_MAX)
+astMAKE_GET(FitsChan,IgnoreBadAlt,int,0,(this->ignorebadalt == -INT_MAX ? 0 : this->ignorebadalt))
+astMAKE_SET(FitsChan,IgnoreBadAlt,int,ignorebadalt,value)
+astMAKE_TEST(FitsChan,IgnoreBadAlt,( this->ignorebadalt != -INT_MAX ))
+
 /* CarLin */
 /* ====== */
 
@@ -41542,14 +42550,23 @@ f     AST_READ
 c     astWrite
 f     AST_WRITE
 *     to write a FrameSet to a FITS-WCS encoded header, suitable SIP
-*     keywords will be included in the header if the FrameSet contains a
-*     PolyMap immediately before the MatrixMap that corresponds to the
-*     FITS-WCS PC or CD matrix, but only if the SipOK attribute is non-zero.
-*     If the FrameSet contains a PolyMap but SipOK is zero, then an attempt
-*     will be made to write out the FrameSet without SIP keywords using a
-*     linear approximation to the pixel-to-IWC mapping. If this fails
-*     because the Mapping exceeds the linearity requirement specified by
-*     attribute FitsTol,
+*     keywords will be included in the header if the SipOK attribute is
+*     non-zero and the pixel to sky Mapping can be rearranged to met the
+*     requirements of the documented SIP scheme. The Mapping must contains a
+*     PolyMap at some point before the WcsMap. The Mapping between the PolyMap
+*     and the WcsMap may include a shift of orgin, axis scaling or rotation.
+*     The Mapping before the PolyMap can include a shift of origin and axis
+*     scaling but no rotation. Any axis scaling before the PolyMap or shift
+*     of origin after the PolyMap are subsumed into a modified PolyMap prior
+*     to writing out the headers. Finally any shift of origin or axis scaling
+*     or rotation in the original PolyMap are removed and placed into the
+*     adjoing Mappings (any shift goes into the pre-PolyMap Mapping that
+*     defines CRPIX and any axis scaling or rotation goes into the
+*     post-PolyMap Mapping that defines the CD matrix). If the FrameSet
+*     contains a PolyMap but SipOK is zero, then an attempt will be made
+*     to write out the FrameSet without SIP keywords using a linear
+*     approximation to the pixel-to-IWC mapping. If this fails because the
+*     Mapping exceeds the linearity requirement specified by attribute FitsTol,
 c     astWrite
 f     AST_WRITE
 *     will return zero, indicating that the FrameSet could not be written
@@ -41824,6 +42841,51 @@ astMAKE_GET(FitsChan,FitsDigits,int,AST__DBL_DIG,this->fitsdigits)
 astMAKE_SET(FitsChan,FitsDigits,int,fitsdigits,value)
 astMAKE_TEST(FitsChan,FitsDigits,( this->fitsdigits != AST__DBL_DIG ))
 
+/* FitsRounding. */
+/* =========== */
+
+/*
+*att++
+*  Name:
+*     FitsRounding
+
+*  Purpose:
+*     Controls rounding of floating-point FITS values.
+
+*  Type:
+*     Public attribute.
+
+*  Synopsis:
+*     Integer.
+
+*  Description:
+*     This attribute controls how floating point values are rounded when
+*     formatted for inclusion in the FITS header cards within a FitsChan.
+*
+*     The value is first formatted using the field width specified by
+*     attribute FitsDigits. If this formatted value contains a sequence of
+*     4 or more adjacent "9"s or 4 or more adjacent "0"s, the formatted
+*     value is truncated at the start of the sequence (rounding the
+*     final remaining digit up by one if the sequence contains "9"s).
+*     However this truncation only occurs if the sequence extends beyond
+*     the digit specified by attribute FitsRounding. For instance, if
+*     FitsRounding is set to 10, then the rounding will only occur for
+*     sequences of 4 or more "9"s or "0"s that extend beyond the tenth
+*     significant figure in the formatted value.
+*
+*     The default value is 10. When setting a new value, negative values
+*     are converted to zero.
+
+*  Applicability:
+*     FitsChan
+*        All FitsChans have this attribute.
+*att--
+*/
+astMAKE_CLEAR(FitsChan,FitsRounding,fitsrounding,-1)
+astMAKE_GET(FitsChan,FitsRounding,int,10,((this->fitsrounding!=-1)?this->fitsrounding:10))
+astMAKE_SET(FitsChan,FitsRounding,int,fitsrounding,astMAX(0,value))
+astMAKE_TEST(FitsChan,FitsRounding,( this->fitsrounding != -1 ))
+
 /* AltAxes. */
 /* ======== */
 
@@ -41877,7 +42939,7 @@ f     to AST_WRITE
 *att--
 */
 astMAKE_CLEAR(FitsChan,AltAxes,altaxes,INT_MAX)
-astMAKE_GET(FitsChan,AltAxes,int,INT_MAX,this->altaxes)
+astMAKE_GET(FitsChan,AltAxes,int,0,(this->altaxes == INT_MAX ? 0 : this->altaxes))
 astMAKE_SET(FitsChan,AltAxes,int,altaxes,value)
 astMAKE_TEST(FitsChan,AltAxes,( this->altaxes != INT_MAX ))
 
@@ -41955,8 +43017,8 @@ astMAKE_TEST(FitsChan,AltAxes,( this->altaxes != INT_MAX ))
 *  Description:
 *     This attribute gives the data type of the keyword value for the
 *     current card of the FitsChan. It will be one of the following
-*     integer constants: AST__NOTYPE, AST__COMMENT, AST__INT, AST__FLOAT,
-*     AST__STRING, AST__COMPLEXF, AST__COMPLEXI, AST__LOGICAL,
+*     integer constants: AST__NOTYPE, AST__COMMENT, AST__INT, AST__KINT,
+*     AST__FLOAT, AST__STRING, AST__COMPLEXF, AST__COMPLEXI, AST__LOGICAL,
 *     AST__CONTINUE, AST__UNDEF.
 
 *  Applicability:
@@ -42123,6 +43185,12 @@ astMAKE_TEST(FitsChan,Warnings,( this->warnings != NULL ))
 *  Conditions:
 *     The following conditions are currently recognised (all are
 *     case-insensitive):
+*
+*     - "BadAlt": This condition arises when reading a FrameSet from a
+*     non-Native encoded FitsChan if an alternate axis description is
+*     ignored because it cannot be read and attribute IgnoreBadAlt is
+*     non-zero. This condition never arises if IgnoreBadAlt is zero
+*     (instead an error is reported and astRead aborts).
 *
 *     - "BadCel": This condition arises when reading a FrameSet from a
 *     non-Native encoded FitsChan if an unknown celestial co-ordinate
@@ -42480,6 +43548,12 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
    ival = set ? GetFitsDigits( this, status ) : astGetFitsDigits( this );
    astWriteInt( channel, "FitsDg", set, 1, ival, "No. of digits for floating point values" );
 
+/* FitsRounding. */
+/* ------------- */
+   set = TestFitsRounding( this, status );
+   ival = set ? GetFitsRounding( this, status ) : astGetFitsRounding( this );
+   astWriteInt( channel, "FitsRn", set, 1, ival, "No. of digits guarded from rounding" );
+
 /* AltAXes. */
 /* -------- */
    set = TestAltAxes( this, status );
@@ -42503,6 +43577,12 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
    set = TestForceTab( this, status );
    ival = set ? GetForceTab( this, status ) : astGetForceTab( this );
    astWriteInt( channel, "FrcTab", set, 1, ival, ( ival != 0 ? "Force use of -TAB": "Only use -TAB if necessary") );
+
+/* IgnoreBadAlt */
+/* ------------ */
+   set = TestIgnoreBadAlt( this, status );
+   ival = set ? GetIgnoreBadAlt( this, status ) : astGetIgnoreBadAlt( this );
+   astWriteInt( channel, "IgBdAl", set, 1, ival,  ( ival != 0 ? "Skip unreadable alternate axes": "Abort on unreadable alternate axes") );
 
 /* CDMatrix */
 /* -------- */
@@ -42607,6 +43687,10 @@ static void Dump( AstObject *this_object, AstChannel *channel, int *status ) {
          } else if( cardtype == AST__INT ){
             (void) sprintf( buff, "Dt%d", ncard );
             astWriteInt( channel, buff, 1, 1, *( (int *) data ),
+                         "FITS keyword value" );
+         } else if( cardtype == AST__KINT ){
+            (void) sprintf( buff, "Dt%d", ncard );
+            astWriteInt( channel, buff, 1, 1, *( (int64_t *) data ),
                          "FITS keyword value" );
          } else if( cardtype == AST__LOGICAL ){
             (void) sprintf( buff, "Dt%d", ncard );
@@ -43377,6 +44461,7 @@ AstFitsChan *astInitFitsChan_( void *mem, size_t size, int init,
       new->defb1950 = -1;
       new->tabok = -INT_MAX;
       new->forcetab = -INT_MAX;
+      new->ignorebadalt = -INT_MAX;
       new->cdmatrix = -1;
       new->carlin = -1;
       new->sipreplace = -1;
@@ -43386,6 +44471,7 @@ AstFitsChan *astInitFitsChan_( void *mem, size_t size, int init,
       new->iwc = -1;
       new->clean = -1;
       new->fitsdigits = AST__DBL_DIG;
+      new->fitsrounding = -1;
       new->altaxes = INT_MAX;
       new->fitsaxisorder = NULL;
       new->encoding = UNKNOWN_ENCODING;
@@ -43501,6 +44587,7 @@ AstFitsChan *astLoadFitsChan_( void *mem, size_t size,
    int flags;                   /* Keyword flags */
    int free_data;               /* Should data memory be freed? */
    int ival[2];                 /* Integer data values */
+   int kval[2];                 /* 64 bit integer data values */
    int ncard;                   /* No. of FitsCards read so far */
    int type;                    /* Keyword type */
    void *data;                  /* Pointer to keyword data value */
@@ -43598,6 +44685,11 @@ AstFitsChan *astLoadFitsChan_( void *mem, size_t size,
       new->fitsdigits = astReadInt( channel, "fitsdg", AST__DBL_DIG );
       if ( TestFitsDigits( new, status ) ) SetFitsDigits( new, new->fitsdigits, status );
 
+/* FitsRounding. */
+/* ------------- */
+      new->fitsrounding = astReadInt( channel, "fitsrn", -1 );
+      if ( TestFitsRounding( new, status ) ) SetFitsRounding( new, new->fitsrounding, status );
+
 /* DefB1950 */
 /* -------- */
       new->defb1950 = astReadInt( channel, "dfb1950", -1 );
@@ -43612,6 +44704,11 @@ AstFitsChan *astLoadFitsChan_( void *mem, size_t size,
 /* -------- */
       new->forcetab = astReadInt( channel, "frctab", -INT_MAX );
       if ( TestForceTab( new, status ) ) SetForceTab( new, new->forcetab, status );
+
+/* IgnoreBadAlt */
+/* ------------ */
+      new->ignorebadalt = astReadInt( channel, "igbdal", -INT_MAX );
+      if ( TestIgnoreBadAlt( new, status ) ) SetIgnoreBadAlt( new, new->ignorebadalt, status );
 
 /* CDMatrix */
 /* -------- */
@@ -43703,6 +44800,10 @@ AstFitsChan *astLoadFitsChan_( void *mem, size_t size,
                (void) sprintf( buff, "dt%d", ncard );
                ival[ 0 ] = astReadInt( channel, buff, 0 );
                data = (void *) ival;
+            } else if( type == AST__KINT ){
+               (void) sprintf( buff, "dt%d", ncard );
+               kval[ 0 ] = astReadInt64( channel, buff, 0 );
+               data = (void *) kval;
             } else if( type == AST__LOGICAL ){
                (void) sprintf( buff, "dt%d", ncard );
                ival[ 0 ] = astReadInt( channel, buff, 0 );
@@ -43861,6 +44962,12 @@ void astSetFitsI_( AstFitsChan *this, const char *name, int value,
    (**astMEMBER(this,FitsChan,SetFitsI))( this, name, value, comment, overwrite, status );
 }
 
+void astSetFitsK_( AstFitsChan *this, const char *name, int64_t value,
+                   const char *comment, int overwrite, int *status ) {
+   if ( !astOK ) return;
+   (**astMEMBER(this,FitsChan,SetFitsK))( this, name, value, comment, overwrite, status );
+}
+
 void astSetFitsF_( AstFitsChan *this, const char *name, double value,
                        const char *comment, int overwrite, int *status ) {
    if ( !astOK ) return;
@@ -43981,6 +45088,11 @@ int astGetFitsF_( AstFitsChan *this, const char *name, double *value, int *statu
 int astGetFitsI_( AstFitsChan *this, const char *name, int *value, int *status ){
    if( !astOK ) return 0;
    return (**astMEMBER(this,FitsChan,GetFitsI))( this, name, value, status );
+}
+
+int astGetFitsK_( AstFitsChan *this, const char *name, int64_t *value, int *status ){
+   if( !astOK ) return 0;
+   return (**astMEMBER(this,FitsChan,GetFitsK))( this, name, value, status );
 }
 
 int astGetFitsL_( AstFitsChan *this, const char *name, int *value, int *status ){

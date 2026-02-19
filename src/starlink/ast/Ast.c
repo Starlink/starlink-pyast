@@ -1,4 +1,4 @@
-#define PYAST_VERSION "3.15.4"
+#include "pyast_version.h"
 
 #include <Python.h>
 #include <string.h>
@@ -6,29 +6,6 @@
 #include "ast.h"
 #include "pyast_extra.h"
 #include "src/grf.h"
-
-/* Define macros for things that changed between Python V2.7 and V3.2 */
-#if PY_MAJOR_VERSION >= 3
-#define PYTYPEOBJECT_HEAD PyVarObject_HEAD_INIT(NULL,0)
-#define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
-#define RETURN(value) return value
-#define STRING_CHECK(value) PyUnicode_Check(value)
-#define LONG_CHECK(value) PyLong_Check(value)
-#else
-#define PYTYPEOBJECT_HEAD PyObject_HEAD_INIT(NULL) 0,
-#define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
-#define RETURN(value) return
-#define STRING_CHECK(value) (PyString_Check(value)||PyUnicode_Check(value))
-#define LONG_CHECK(value) (PyInt_Check(value)||PyLong_Check(value))
-
-/* A pointer to the python module structure. This is needed to provide
-   support for Python V2.7, since in Python V2.7 module function do not
-   receive a pointer to the module object as their first argument (i.e. the
-   "self" argument for module functions is always NULL in V2.7). */
-static PyObject *pyast_module = NULL;
-
-#endif
-
 
 /* Define the name of the package and module, and initialise the current
    class and method name so that we have something to undef. */
@@ -45,10 +22,14 @@ static PyObject *PyAst_FromString( const char *string );
 static char *DumpToString( AstObject *object, const char *options );
 static char *GetString( void *mem, PyObject *value );
 static char *PyAst_ToString( PyObject *self );
-static const char *AttNorm( const char *att, char *buff );
+static const char *AttNorm( const char *att, char *buff, size_t buff_len );
 static void Sinka( const char *text );
 static char *FormatObject( PyObject *o );
 const char *GetObjectType( PyObject *o );
+static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr );
+static int GetOptionsFromKwds( PyObject *kwds, const char **options );
+static int GetAsciiUtf8AndSize( PyObject *value, const char *arg,
+                                const char **text, Py_ssize_t *text_len );
 
 /* Macros used in this file */
 #define PYAST_MODULE
@@ -63,52 +44,167 @@ const char *GetObjectType( PyObject *o );
 static const char * numpydtype2str ( int dtype ) {
   const char * retval;
   switch (dtype) {
-  case PyArray_DOUBLE:
+  case NPY_DOUBLE:
     retval = "double";
     break;
-  case PyArray_FLOAT:
+  case NPY_FLOAT:
     retval = "float";
     break;
-  case PyArray_INT:
+  case NPY_INT:
     retval = "int";
     break;
-  case PyArray_UINT:
+  case NPY_UINT:
     retval = "unsigned int";
     break;
-  case PyArray_BYTE:
+  case NPY_BYTE:
     retval = "byte";
     break;
-  case PyArray_UBYTE:
+  case NPY_UBYTE:
     retval = "unsigned byte";
     break;
-  case PyArray_SHORT:
+  case NPY_SHORT:
     retval = "short";
     break;
-  case PyArray_USHORT:
+  case NPY_USHORT:
     retval = "unsigned short";
     break;
-  case PyArray_LONG:
+  case NPY_LONG:
     retval = "long";
     break;
-  case PyArray_ULONG:
+  case NPY_ULONG:
     retval = "unsigned long";
     break;
-  case PyArray_LONGLONG:
+  case NPY_LONGLONG:
     retval = "long long";
     break;
-  case PyArray_ULONGLONG:
+  case NPY_ULONGLONG:
     retval = "unsigned long long";
     break;
-  case PyArray_CFLOAT:
+  case NPY_CFLOAT:
     retval = "complex float";
     break;
-  case PyArray_CDOUBLE:
+  case NPY_CDOUBLE:
     retval = "complex double";
     break;
   default:
     retval = "Unknown";
   }
   return retval;
+}
+
+/* Return 1 if the object has the named attribute, 0 if it does not,
+   and -1 on error. Use the modern API for newer Python releases while
+   retaining compatibility with Python 3.11 and 3.12. */
+static int PyAst_HasAttrStringWithError( PyObject *o, const char *attr ) {
+/* Python 3.13+ (0x030D0000): use the direct has-attr-with-error API. */
+#if PY_VERSION_HEX >= 0x030D0000
+   return PyObject_HasAttrStringWithError( o, attr );
+/* Python 3.11-3.12: emulate has-attr-with-error semantics. */
+#else
+   PyObject *tmp = PyObject_GetAttrString( o, attr );
+   if( tmp ) {
+      Py_DECREF( tmp );
+      return 1;
+   } else if( PyErr_ExceptionMatches( PyExc_AttributeError ) ) {
+      PyErr_Clear();
+      return 0;
+   } else {
+      return -1;
+   }
+#endif
+}
+
+/*
+ * GetAsciiUtf8AndSize
+ * -------------------
+ * Validate that `value` is an ASCII-only Python string, then return a
+ * borrowed UTF-8 pointer and length for its contents.
+ *
+ * Parameters:
+ *   value:
+ *     Python object expected to be a `str`.
+ *   arg:
+ *     Argument label used in error messages (defaults to "string" if NULL).
+ *   text:
+ *     Output pointer to the internal UTF-8 buffer.
+ *   text_len:
+ *     Output length in bytes of `text`.
+ *
+ * Returns:
+ *   1 on success, 0 on error (with a Python exception set). Errors include
+ *   non-string input, non-ASCII content, UTF-8 conversion failure, and
+ *   embedded NUL bytes.
+ */
+static int GetAsciiUtf8AndSize( PyObject *value, const char *arg,
+                                const char **text, Py_ssize_t *text_len ) {
+   const char *label = ( arg ? arg : "string" );
+
+   if( !PyUnicode_Check( value ) ) {
+      PyErr_Format( PyExc_TypeError, "%s must be a string", label );
+      return 0;
+   }
+
+   if( !PyUnicode_IS_ASCII( value ) ) {
+      PyErr_Format( PyExc_TypeError, "%s must contain only ASCII characters", label );
+      return 0;
+   }
+
+   *text = PyUnicode_AsUTF8AndSize( value, text_len );
+   if( !*text ) return 0;
+
+   if( memchr( *text, '\0', (size_t) *text_len ) ) {
+      PyErr_Format( PyExc_ValueError, "%s must not contain embedded NUL characters", label );
+      return 0;
+   }
+
+   return 1;
+}
+
+/*
+ * GetOptionsFromKwds
+ * ------------------
+ * Read the optional "options" keyword argument from a kwargs dictionary.
+ *
+ * Parameters:
+ *   kwds:
+ *     Keyword-argument dictionary passed to a constructor, or NULL when no
+ *     keyword arguments were supplied.
+ *   options:
+ *     Output pointer to the options string to use. Left unchanged if "options"
+ *     is not present in kwds. Set to " " if kwds["options"] is None.
+ *
+ * Returns:
+ *   1 on success (including when no "options" key is supplied),
+ *   0 on error (invalid type, non-ASCII input, or UTF-8 conversion failure).
+ *   On error a Python exception is set.
+ */
+static int GetOptionsFromKwds( PyObject *kwds, const char **options ) {
+   PyObject *opt;
+
+   if( !kwds ) return 1;
+
+   opt = PyDict_GetItemString( kwds, "options" );
+   if( !opt ) return 1;
+
+   if( opt == Py_None ) {
+      *options = " ";
+      return 1;
+   }
+
+   if( !PyUnicode_Check( opt ) ) {
+      PyErr_SetString( PyExc_TypeError, "options must be a string or None" );
+      return 0;
+   }
+
+   {
+      const char *text = NULL;
+      Py_ssize_t text_len = 0;
+      if( !GetAsciiUtf8AndSize( opt, "options", &text, &text_len ) ) {
+         return 0;
+      }
+      *options = text;
+   }
+   return 1;
 }
 
 /* Object */
@@ -189,6 +285,7 @@ MAKE_ISA(SpecFluxFrame)
 MAKE_ISA(SpecFrame)
 MAKE_ISA(SpecMap)
 MAKE_ISA(SphMap)
+MAKE_ISA(SplineMap)
 MAKE_ISA(StcsChan)
 MAKE_ISA(Table)
 MAKE_ISA(TimeFrame)
@@ -245,6 +342,7 @@ static PyMethodDef Object_methods[] = {
    DEF_ISA(SpecFrame,specframe),
    DEF_ISA(SpecMap,specmap),
    DEF_ISA(SphMap,sphmap),
+   DEF_ISA(SplineMap,splinemap),
    DEF_ISA(StcsChan,stcschan),
    DEF_ISA(Table,table),
    DEF_ISA(TimeFrame,timeframe),
@@ -292,36 +390,36 @@ static PyGetSetDef Object_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ObjectType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Object),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Object_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   Object_repr,               /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   Object_str,                /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Object",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Object_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   Object_getseters,          /* tp_getset */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Object),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Object_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = Object_repr,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = Object_str,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Object",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Object_methods,
+   .tp_members = 0,
+   .tp_getset = Object_getseters,
 };
 
 
@@ -652,36 +750,36 @@ static PyGetSetDef Mapping_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MappingType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Mapping),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Mapping",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Mapping_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   Mapping_getseters,         /* tp_getset */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Mapping),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Mapping",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Mapping_methods,
+   .tp_members = 0,
+   .tp_getset = Mapping_getseters,
 };
 
 
@@ -761,11 +859,11 @@ static PyObject *Mapping_linearapprox( Mapping *self, PyObject *args ) {
       ubnd = GetArray1D( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
          dims[ 0 ] = ( ncoord_in + 1 )*ncoord_out;
-         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( fit ) {
-            islinear = astLinearApprox( THIS, (const double *)lbnd->data,
-                                        (const double *)ubnd->data, tol,
-                                        (double *)fit->data ) ? Py_True : Py_False;
+            islinear = astLinearApprox( THIS, (const double *)PyArray_DATA(lbnd),
+                                        (const double *)PyArray_DATA(ubnd), tol,
+                                        (double *)PyArray_DATA(fit) ) ? Py_True : Py_False;
             if( astOK ) result = Py_BuildValue( "OO", islinear, fit );
             Py_XDECREF( islinear );
             Py_DECREF( fit );
@@ -814,13 +912,13 @@ static PyObject *Mapping_mapbox( Mapping *self, PyObject *args ) {
       ubnd_in = GetArray1D( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
       if( lbnd_in && ubnd_in ) {
          dims[ 0 ] = ncoord_in;
-         xl = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-         xu = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         xl = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+         xu = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( xl && xu ) {
-            astMapBox( THIS, (const double *)lbnd_in->data,
-                       (const double *)ubnd_in->data, forward, coord_out,
-                        &lbnd_out, &ubnd_out, (double *)xl->data,
-                       (double *)xu->data );
+            astMapBox( THIS, (const double *)PyArray_DATA(lbnd_in),
+                       (const double *)PyArray_DATA(ubnd_in), forward, coord_out,
+                        &lbnd_out, &ubnd_out, (double *)PyArray_DATA(xl),
+                       (double *)PyArray_DATA(xu) );
             if( astOK ) result = Py_BuildValue( "ddOO", lbnd_out, ubnd_out,
                                                 xl, xu );
          }
@@ -871,7 +969,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
                   mymaplist[ i ] = (AstMapping *) AST( o );
                } else {
                   char buf[200];
-                  sprintf( buf, "Element %d of the 'maplist' argument of the "
+                  snprintf( buf, sizeof(buf), "Element %d of the 'maplist' argument of the "
                            "Ast.Mapping.mapmerge() method is a %s (must be "
                            "an AST Mapping).", i, GetObjectType( o ) );
                   PyErr_SetString( PyExc_TypeError, buf );
@@ -889,7 +987,7 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
       }
 
       invlist_in = GetArray1I( invlist_object, &nmap, "invlist", NAME );
-      if( invlist_in ) myinvlist = astStore( NULL, (const int *) invlist_in->data,
+      if( invlist_in ) myinvlist = astStore( NULL, (const int *) PyArray_DATA(invlist_in),
                                              nmap*sizeof(*myinvlist) );
       if( myinvlist ) {
          myresult = astMapMerge( THIS, where, series, &nmap, &mymaplist,
@@ -897,9 +995,9 @@ static PyObject *Mapping_mapmerge( Mapping *self, PyObject *args ) {
 
          maplist_object = PyList_New( (Py_ssize_t) nmap );
          dims[ 0 ] = nmap;
-         invlist_out = PyArray_SimpleNew( 1, dims, PyArray_INT );
+         invlist_out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
          if( astOK && maplist_object && invlist_out ) {
-            pi = ((int *)invlist_out->data);
+            pi = ((int *)PyArray_DATA(invlist_out));
             for( i = 0; i < nmap; i++ ) {
                *(pi++) = myinvlist[ i ];
                PyObject *map = NewObject( (AstObject *) mymaplist[ i ] );
@@ -931,24 +1029,22 @@ static PyObject *Mapping_mapsplit( Mapping *self, PyObject *args ) {
    PyObject *in_object = NULL;
    PyObject *result = NULL;
    PyArrayObject *out = NULL;
-   int nin;
+   int nin = 0;
    npy_intp dims[1];
 
    if( PyErr_Occurred() ) return NULL;
 
    if( PyArg_ParseTuple( args, "O:" NAME, &in_object ) && astOK ) {
-      in = (PyArrayObject *) PyArray_ContiguousFromAny( in_object,
-                                                        PyArray_INT, 0, 100);
+      in = GetArray( in_object, NPY_INT, 1, 1, &nin, "in", NAME );
       if( in ) {
-         nin = PyArray_Size( (PyObject *) in );
          dims[ 0 ] = astGetI( THIS, "Nout" );
-         out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+         out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
          if( out ) {
 
-            memset( out->data, 0, dims[ 0 ]*sizeof( int ) );
+            memset( PyArray_DATA(out), 0, dims[ 0 ]*sizeof( int ) );
 
             AstMapping *map = NULL;
-            astMapSplit( THIS, nin, (const int *)in->data, (int *)out->data,
+            astMapSplit( THIS, nin, (const int *)PyArray_DATA(in), (int *)PyArray_DATA(out),
                          &map );
             if( astOK ) {
                PyObject *map_object = NewObject( (AstObject *) map );
@@ -996,11 +1092,11 @@ static PyObject *Mapping_quadapprox( Mapping *self, PyObject *args ) {
       ubnd = GetArray1D( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
          dims[ 0 ] = 6*ncoord_out;
-         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+         fit = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
          if( fit ) {
-            isquad = astQuadApprox( THIS, (const double *)lbnd->data,
-                                    (const double *)ubnd->data, nx, ny,
-                                    (double *)fit->data, &rms ) ? Py_True : Py_False;
+            isquad = astQuadApprox( THIS, (const double *)PyArray_DATA(lbnd),
+                                    (const double *)PyArray_DATA(ubnd), nx, ny,
+                                    (double *)PyArray_DATA(fit), &rms ) ? Py_True : Py_False;
             if( astOK ) result = Py_BuildValue( "OOd", isquad, fit, rms );
             Py_XDECREF( isquad );
             Py_DECREF( fit );
@@ -1034,7 +1130,7 @@ static PyObject *Mapping_rate( Mapping *self, PyObject *args ) {
        && astOK ) {
       at = GetArray1D( at_object, &ncoord_in, "at", NAME );
       if( at ) {
-         value = astRate( THIS, (double *)at->data, ax1, ax2 );
+         value = astRate( THIS, (double *)PyArray_DATA(at), ax1, ax2 );
          if( astOK ) result = Py_BuildValue( "d", value );
       }
       Py_XDECREF( at );
@@ -1115,15 +1211,15 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
                           "an array object" );
       } else {
 
-         type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) in_object);
+         if( type == NPY_DOUBLE ) {
             format[ 10 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ||
-                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
+         } else if( type == NPY_INT ||
+                    (type == NPY_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
@@ -1135,10 +1231,10 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
          }
 
 /* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) in_object)->nd;
-         pdims = ((PyArrayObject*) in_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) in_object);
+         pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -1185,7 +1281,7 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
    they are calculated. */
          j = ncoord_out - 1;
          for( i = 0; i < ncoord_out; i++,j-- ) {
-            pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
+            pdims_out[ j ] = ((const int *)PyArray_DATA(ubnd_out))[ i ] - ((const int *)PyArray_DATA(lbnd_out))[ i ] + 1;
          }
 
          out = (PyArrayObject *) PyArray_SimpleNew( ncoord_out, pdims_out, type );
@@ -1194,36 +1290,36 @@ static PyObject *Mapping_rebin( Mapping *self, PyObject *args ) {
 
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
-            if( type == PyArray_DOUBLE ) {
-               astRebinD( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const double *)in->data,
-                          (in_var ? (const double *)in_var->data : NULL),
-                          spread, (params ? (const double *)params->data : NULL),
+            if( type == NPY_DOUBLE ) {
+               astRebinD( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const double *)PyArray_DATA(in),
+                          (in_var ? (const double *)PyArray_DATA(in_var) : NULL),
+                          spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_d, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (double *)out->data,
-                          (out_var ? (double *)out_var->data : NULL ) );
-            } else if( type == PyArray_FLOAT ) {
-               astRebinF( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const float *)in->data,
-                          (in_var ? (const float *)in_var->data : NULL),
-                          spread, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (double *)PyArray_DATA(out),
+                          (out_var ? (double *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_FLOAT ) {
+               astRebinF( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const float *)PyArray_DATA(in),
+                          (in_var ? (const float *)PyArray_DATA(in_var) : NULL),
+                          spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_f, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (float *)out->data,
-                          (out_var ? (float *)out_var->data : NULL ) );
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (float *)PyArray_DATA(out),
+                          (out_var ? (float *)PyArray_DATA(out_var) : NULL ) );
             } else {
-               astRebinI( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const int *)in->data,
-                          (in_var ? (const int *)in_var->data : NULL),
-                          spread, (params ? (const double *)params->data : NULL),
+               astRebinI( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const int *)PyArray_DATA(in),
+                          (in_var ? (const int *)PyArray_DATA(in_var) : NULL),
+                          spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_i, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (int *)out->data,
-                          (out_var ? (int *)out_var->data : NULL ) );
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (int *)PyArray_DATA(out),
+                          (out_var ? (int *)PyArray_DATA(out_var) : NULL ) );
             }
 
             if( astOK ) {
@@ -1325,15 +1421,15 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) in_object);
+         if( type == NPY_DOUBLE ) {
             format[ 10 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 10 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ||
-                    (type == PyArray_LONG && sizeof(int) == sizeof(long))) {
+         } else if( type == NPY_INT ||
+                    (type == NPY_LONG && sizeof(int) == sizeof(long))) {
             format[ 10 ] = 'i';
             pbadval = &badval_i;
          } else {
@@ -1351,22 +1447,22 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          ubnd_in = GetArray1I( ubnd_in_object, &ncoord_in, "ubnd_in", NAME );
          ndim = ncoord_in;
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
             pbadval = NULL;
          } else {
             for( i = 0; i < ndim; i++ ) {
-               dims[ ndim - i - 1 ] = ((int*)ubnd_in->data)[ i ] - ((int*)lbnd_in->data)[ i ] + 1;
+               dims[ ndim - i - 1 ] = ((int*)PyArray_DATA(ubnd_in))[ i ] - ((int*)PyArray_DATA(lbnd_in))[ i ] + 1;
             }
          }
 
 /* Report an error if the weights array is not double. */
-         if( ((PyArrayObject*) weights_object)->descr->type_num != PyArray_DOUBLE ) {
+         if( PyArray_TYPE((PyArrayObject*) weights_object) != NPY_DOUBLE ) {
             PyErr_Format( PyExc_ValueError, "The 'weights' array supplied to "
                           NAME " is of type %s not not of type float64.",
-                          numpydtype2str(((PyArrayObject*) weights_object)->descr->type_num));
+                          numpydtype2str(PyArray_TYPE((PyArrayObject*) weights_object)));
             pbadval = NULL;
          }
       }
@@ -1400,14 +1496,14 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
 
       ndim = ncoord_out;
       if( ndim > MXDIM ) {
-         sprintf( buf, "The 'out' array supplied to " NAME " has too "
+         snprintf( buf, sizeof(buf), "The 'out' array supplied to " NAME " has too "
                   "many (%d) dimensions (must be no more than %d).",
                   ndim, MXDIM );
          PyErr_SetString( PyExc_ValueError, buf );
          pbadval = NULL;
       } else {
          for( i = 0; i < ndim; i++ ) {
-            dims[ ndim - i - 1 ] = ((int*)ubnd_out->data)[ i ] - ((int*)lbnd_out->data)[ i ] + 1;
+            dims[ ndim - i - 1 ] = ((int*)PyArray_DATA(ubnd_out))[ i ] - ((int*)PyArray_DATA(lbnd_out))[ i ] + 1;
          }
       }
 
@@ -1421,10 +1517,10 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
          for( i = 0; i < ndim; i++ ) {
             wdims[ i + 1 ] = dims[ i ];
          }
-         weights = GetArray( weights_object, PyArray_DOUBLE, 1, ndim + 1,
+         weights = GetArray( weights_object, NPY_DOUBLE, 1, ndim + 1,
                              wdims, "weights", NAME );
       } else {
-         weights = GetArray( weights_object, PyArray_DOUBLE, 1, ndim,
+         weights = GetArray( weights_object, NPY_DOUBLE, 1, ndim,
                              dims, "weights", NAME );
       }
 
@@ -1432,40 +1528,40 @@ static PyObject *Mapping_rebinseq( Mapping *self, PyObject *args ) {
           in && out && weights ) {
          nused = lnused;
 
-         if( type == PyArray_DOUBLE ) {
-            astRebinSeqD( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                       (const int *)ubnd_in->data, (const double *)in->data,
-                       (in_var ? (const double *)in_var->data : NULL),
-                       spread, (params ? (const double *)params->data : NULL),
+         if( type == NPY_DOUBLE ) {
+            astRebinSeqD( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                       (const int *)PyArray_DATA(ubnd_in), (const double *)PyArray_DATA(in),
+                       (in_var ? (const double *)PyArray_DATA(in_var) : NULL),
+                       spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                        flags, tol, maxpix, badval_d, ncoord_out,
-                       (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                       (const int *)lbnd->data, (const int *)ubnd->data,
-                       (double *)out->data,
-                       (out_var ? (double *)out_var->data : NULL ),
-                       (double *)weights->data, &nused );
+                       (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                       (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                       (double *)PyArray_DATA(out),
+                       (out_var ? (double *)PyArray_DATA(out_var) : NULL ),
+                       (double *)PyArray_DATA(weights), &nused );
 
-         } else if( type == PyArray_FLOAT ) {
-            astRebinSeqF( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                       (const int *)ubnd_in->data, (const float *)in->data,
-                       (in_var ? (const float *)in_var->data : NULL),
-                       spread, (params ? (const double *)params->data : NULL),
+         } else if( type == NPY_FLOAT ) {
+            astRebinSeqF( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                       (const int *)PyArray_DATA(ubnd_in), (const float *)PyArray_DATA(in),
+                       (in_var ? (const float *)PyArray_DATA(in_var) : NULL),
+                       spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                        flags, tol, maxpix, badval_f, ncoord_out,
-                       (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                       (const int *)lbnd->data, (const int *)ubnd->data,
-                       (float *)out->data,
-                       (out_var ? (float *)out_var->data : NULL ),
-                       (double *)weights->data, &nused );
+                       (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                       (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                       (float *)PyArray_DATA(out),
+                       (out_var ? (float *)PyArray_DATA(out_var) : NULL ),
+                       (double *)PyArray_DATA(weights), &nused );
          } else {
-            astRebinSeqI( THIS, wlim, ncoord_in, (const int *)lbnd_in->data,
-                       (const int *)ubnd_in->data, (const int *)in->data,
-                       (in_var ? (const int *)in_var->data : NULL),
-                       spread, (params ? (const double *)params->data : NULL),
+            astRebinSeqI( THIS, wlim, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                       (const int *)PyArray_DATA(ubnd_in), (const int *)PyArray_DATA(in),
+                       (in_var ? (const int *)PyArray_DATA(in_var) : NULL),
+                       spread, (params ? (const double *)PyArray_DATA(params) : NULL),
                        flags, tol, maxpix, badval_i, ncoord_out,
-                       (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                       (const int *)lbnd->data, (const int *)ubnd->data,
-                       (int *)out->data,
-                       (out_var ? (int *)out_var->data : NULL ),
-                       (double *)weights->data, &nused );
+                       (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                       (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                       (int *)PyArray_DATA(out),
+                       (out_var ? (int *)PyArray_DATA(out_var) : NULL ),
+                       (double *)PyArray_DATA(weights), &nused );
          }
 
          if( astOK ) {
@@ -1571,32 +1667,32 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                           "an array object" );
       } else {
 
-         type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) in_object);
+         if( type == NPY_DOUBLE ) {
             format[ 9 ] = 'd';
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 9 ] = 'f';
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 9 ] = 'i';
             pbadval = &badval_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 9 ] = 'l';
             pbadval = &badval_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 9 ] = 'h';
             pbadval = &badval_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 9 ] = 'b';
             pbadval = &badval_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 9 ] = 'I';
             pbadval = &badval_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 9 ] = 'H';
             pbadval = &badval_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 9 ] = 'B';
             pbadval = &badval_B;
          } else {
@@ -1606,10 +1702,10 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
          }
 
 /* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) in_object)->nd;
-         pdims = ((PyArrayObject*) in_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) in_object);
+         pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -1656,7 +1752,7 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
    they are calculated. */
          j = ncoord_out - 1;
          for( i = 0; i < ncoord_out; i++,j-- ) {
-            pdims_out[ j ] = ((const int *)ubnd_out->data)[ i ] - ((const int *)lbnd_out->data)[ i ] + 1;
+            pdims_out[ j ] = ((const int *)PyArray_DATA(ubnd_out))[ i ] - ((const int *)PyArray_DATA(lbnd_out))[ i ] + 1;
          }
 
          out = (PyArrayObject *) PyArray_SimpleNew( ncoord_out, pdims_out, type );
@@ -1664,96 +1760,96 @@ static PyObject *Mapping_resample( Mapping *self, PyObject *args ) {
                                                                  pdims_out, type );
          if( out && ( ( in_var && out_var ) || !in_var ) ) {
 
-            if( type == PyArray_DOUBLE ) {
-               noutpix = astResampleD( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const double *)in->data,
-                          (in_var ? (const double *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+            if( type == NPY_DOUBLE ) {
+               noutpix = astResampleD( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const double *)PyArray_DATA(in),
+                          (in_var ? (const double *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_d, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (double *)out->data,
-                          (out_var ? (double *)out_var->data : NULL ) );
-            } else if( type == PyArray_FLOAT ) {
-               noutpix = astResampleF( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const float *)in->data,
-                          (in_var ? (const float *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (double *)PyArray_DATA(out),
+                          (out_var ? (double *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_FLOAT ) {
+               noutpix = astResampleF( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const float *)PyArray_DATA(in),
+                          (in_var ? (const float *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_f, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (float *)out->data,
-                          (out_var ? (float *)out_var->data : NULL ) );
-            } else if( type == PyArray_LONG ) {
-               noutpix = astResampleL( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const long *)in->data,
-                          (in_var ? (const long *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (float *)PyArray_DATA(out),
+                          (out_var ? (float *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_LONG ) {
+               noutpix = astResampleL( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const long *)PyArray_DATA(in),
+                          (in_var ? (const long *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_l, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (long *)out->data,
-                          (out_var ? (long *)out_var->data : NULL ) );
-            } else if( type == PyArray_INT ) {
-               noutpix = astResampleI( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const int *)in->data,
-                          (in_var ? (const int *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (long *)PyArray_DATA(out),
+                          (out_var ? (long *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_INT ) {
+               noutpix = astResampleI( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const int *)PyArray_DATA(in),
+                          (in_var ? (const int *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_i, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (int *)out->data,
-                          (out_var ? (int *)out_var->data : NULL ) );
-            } else if( type == PyArray_SHORT ) {
-               noutpix = astResampleS( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const short int *)in->data,
-                          (in_var ? (const short int *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (int *)PyArray_DATA(out),
+                          (out_var ? (int *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_SHORT ) {
+               noutpix = astResampleS( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const short int *)PyArray_DATA(in),
+                          (in_var ? (const short int *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_h, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (short int *)out->data,
-                          (out_var ? (short int *)out_var->data : NULL ) );
-            } else if( type == PyArray_BYTE ) {
-               noutpix = astResampleB( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const signed char *)in->data,
-                          (in_var ? (const signed char *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (short int *)PyArray_DATA(out),
+                          (out_var ? (short int *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_BYTE ) {
+               noutpix = astResampleB( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const signed char *)PyArray_DATA(in),
+                          (in_var ? (const signed char *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_b, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (signed char *)out->data,
-                          (out_var ? (signed char *)out_var->data : NULL ) );
-            } else if( type == PyArray_UINT ) {
-               noutpix = astResampleUI( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const unsigned int *)in->data,
-                          (in_var ? (const unsigned int *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (signed char *)PyArray_DATA(out),
+                          (out_var ? (signed char *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_UINT ) {
+               noutpix = astResampleUI( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const unsigned int *)PyArray_DATA(in),
+                          (in_var ? (const unsigned int *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_I, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (unsigned int *)out->data,
-                          (out_var ? (unsigned int *)out_var->data : NULL ) );
-            } else if( type == PyArray_USHORT ) {
-               noutpix = astResampleUS( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const unsigned short int *)in->data,
-                          (in_var ? (const unsigned short int *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (unsigned int *)PyArray_DATA(out),
+                          (out_var ? (unsigned int *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_USHORT ) {
+               noutpix = astResampleUS( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const unsigned short int *)PyArray_DATA(in),
+                          (in_var ? (const unsigned short int *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_H, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (unsigned short int *)out->data,
-                          (out_var ? (unsigned short int *)out_var->data : NULL ) );
-            } else if( type == PyArray_UBYTE ) {
-               noutpix = astResampleUB( THIS, ncoord_in, (const int *)lbnd_in->data,
-                          (const int *)ubnd_in->data, (const unsigned char *)in->data,
-                          (in_var ? (const unsigned char *)in_var->data : NULL),
-                          interp, NULL, (params ? (const double *)params->data : NULL),
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (unsigned short int *)PyArray_DATA(out),
+                          (out_var ? (unsigned short int *)PyArray_DATA(out_var) : NULL ) );
+            } else if( type == NPY_UBYTE ) {
+               noutpix = astResampleUB( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd_in),
+                          (const int *)PyArray_DATA(ubnd_in), (const unsigned char *)PyArray_DATA(in),
+                          (in_var ? (const unsigned char *)PyArray_DATA(in_var) : NULL),
+                          interp, NULL, (params ? (const double *)PyArray_DATA(params) : NULL),
                           flags, tol, maxpix, badval_B, ncoord_out,
-                          (const int *)lbnd_out->data, (const int *)ubnd_out->data,
-                          (const int *)lbnd->data, (const int *)ubnd->data,
-                          (unsigned char *)out->data,
-                          (out_var ? (unsigned char *)out_var->data : NULL ) );
+                          (const int *)PyArray_DATA(lbnd_out), (const int *)PyArray_DATA(ubnd_out),
+                          (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                          (unsigned char *)PyArray_DATA(out),
+                          (out_var ? (unsigned char *)PyArray_DATA(out_var) : NULL ) );
             } else {
                PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
                                 "to " NAME " has a data type that is not "
@@ -1878,8 +1974,8 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
       ubnd = GetArray1I( ubnd_object, &ncoord_in, "ubnd", NAME );
       if( lbnd && ubnd ) {
 
-         lb = (const int *) lbnd->data;
-         ub = (const int *) ubnd->data;
+         lb = (const int *) PyArray_DATA(lbnd);
+         ub = (const int *) PyArray_DATA(ubnd);
          outdim = 1;
          for( i = 0; i < ncoord_in; i++ ) {
             outdim *= *(ub++) - *(lb++) + 1;
@@ -1888,12 +1984,12 @@ static PyObject *Mapping_trangrid( Mapping *self, PyObject *args ) {
          dims[ 0 ] = ncoord_out;
          dims[ 1 ] = outdim;
 
-         pout = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+         pout = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
          if( pout ) {
 
-            astTranGrid( THIS, ncoord_in, (const int *)lbnd->data,
-                         (const int *)ubnd->data, tol, maxpix, forward,
-                         ncoord_out, outdim, (double *) pout->data );
+            astTranGrid( THIS, ncoord_in, (const int *)PyArray_DATA(lbnd),
+                         (const int *)PyArray_DATA(ubnd), tol, maxpix, forward,
+                         ncoord_out, outdim, (double *) PyArray_DATA(pout) );
             if( astOK ) {
                result = (PyObject *) pout;
             } else {
@@ -1967,14 +2063,14 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
 
       dims[ 0 ] = ncoord_in;
       dims[ 1 ] = 0;
-      in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
+      in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims, "in", NAME );
 
       if( in ) {
          dims[ 0 ] = ncoord_out;
          if( out_object ) {
-            out = GetArray( out_object, PyArray_DOUBLE, 0, 2, dims, "out", NAME );
+            out = GetArray( out_object, NPY_DOUBLE, 0, 2, dims, "out", NAME );
          } else {
-            if( in->nd == 1 ){
+            if( PyArray_NDIM(in) == 1 ){
                ndim = 1;
                pdims[ 0 ] = dims[ 1 ];
             } else {
@@ -1983,14 +2079,14 @@ static PyObject *Mapping_tran( Mapping *self, PyObject *args ) {
                pdims[ 1 ] = dims[ 1 ];
             }
             out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims,
-                                                       PyArray_DOUBLE );
+                                                       NPY_DOUBLE );
          }
       }
 
       if( out ) {
          npoint = dims[ 1 ];
-         astTranN( THIS, npoint, ncoord_in, npoint, (const double *) in->data,
-                   forward, ncoord_out, npoint, (double *) out->data );
+         astTranN( THIS, npoint, ncoord_in, npoint, (const double *) PyArray_DATA(in),
+                   forward, ncoord_out, npoint, (double *) PyArray_DATA(out) );
          if( astOK ) result = (PyObject *) out;
       }
 
@@ -2026,44 +2122,44 @@ static PyGetSetDef ZoomMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ZoomMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ZoomMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ZoomMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   ZoomMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ZoomMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ZoomMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ZoomMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = ZoomMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ZoomMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2073,6 +2169,7 @@ static int ZoomMap_init( ZoomMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord,zoom,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    double zoom;
    int ncoord;
    int result = -1;
@@ -2115,44 +2212,44 @@ static PyGetSetDef MathMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MathMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MathMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MathMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   MathMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MathMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MathMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MathMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = MathMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MathMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2166,6 +2263,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
    const char **fwd = NULL;
    const char **inv = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int i;
    int nfwd = 0;
    int nin;
@@ -2178,7 +2276,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
    if( PyArg_ParseTuple( args, "iiOO|s:" CLASS, &nin, &nout, &fwd_object,
                          &inv_object, &options ) ) {
 
-      if( STRING_CHECK( fwd_object ) ) {
+      if( PyUnicode_Check( fwd_object ) ) {
          nfwd = 1;
          fwd = astMalloc( sizeof(*fwd) );
          if( astOK ) fwd[0] = GetString( NULL, fwd_object );
@@ -2189,7 +2287,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
          if( astOK ) {
             for( i = 0; i < nfwd; i++ ) {
                PyObject *o = PySequence_GetItem( fwd_object, (Py_ssize_t) i );
-               if( STRING_CHECK( o ) ) {
+               if( PyUnicode_Check( o ) ) {
                   fwd[ i ] = GetString( NULL, o );
                } else {
                   PyErr_SetString( PyExc_TypeError, "The MathMap fwd argument must "
@@ -2206,7 +2304,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
                           "be a string or a sequence of strings");
       }
 
-      if( STRING_CHECK( inv_object ) ) {
+      if( PyUnicode_Check( inv_object ) ) {
          ninv = 1;
          inv = astMalloc( sizeof(*inv) );
          if( astOK ) inv[0] = GetString( NULL, inv_object );
@@ -2217,7 +2315,7 @@ static int MathMap_init( MathMap *self, PyObject *args, PyObject *kwds ){
          if( astOK ) {
             for( i = 0; i < ninv; i++ ) {
                PyObject *o = PySequence_GetItem( inv_object, (Py_ssize_t) i );
-               if( STRING_CHECK( o ) ) {
+               if( PyUnicode_Check( o ) ) {
                   inv[ i ] = GetString( NULL, o );
                } else {
                   PyErr_SetString( PyExc_TypeError, "The MathMap inv argument must "
@@ -2275,44 +2373,44 @@ static PyGetSetDef SphMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SphMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SphMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SphMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   SphMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SphMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SphMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SphMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = SphMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SphMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2322,6 +2420,7 @@ static int SphMap_init( SphMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -2373,44 +2472,44 @@ static PyGetSetDef GrismMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject GrismMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(GrismMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST GrismMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   GrismMap_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)GrismMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(GrismMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST GrismMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = GrismMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)GrismMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2420,6 +2519,7 @@ static int GrismMap_init( GrismMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -2459,44 +2559,44 @@ static PyGetSetDef PcdMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PcdMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PcdMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PcdMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   PcdMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PcdMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PcdMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PcdMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = PcdMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PcdMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2506,6 +2606,7 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
 /* args: :disco,pcdcen,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    double disco;
    PyArrayObject * pcdcen = NULL;
@@ -2516,7 +2617,7 @@ static int PcdMap_init( PcdMap *self, PyObject *args, PyObject *kwds ){
       int ncoord = 2;
       pcdcen = GetArray1D( pcdcen_object, &ncoord, "pcdcen", NAME );
       if (pcdcen) {
-	this = astPcdMap( disco, (const double *)pcdcen->data, "%s", options );
+	this = astPcdMap( disco, (const double *)PyArray_DATA(pcdcen), "%s", options );
 	result = SetProxy( (AstObject *) this, (Object *) self );
 	this = astAnnul( this );
       }
@@ -2563,44 +2664,44 @@ static PyGetSetDef WcsMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject WcsMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(WcsMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WcsMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   WcsMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)WcsMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(WcsMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST WcsMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = WcsMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)WcsMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2610,6 +2711,7 @@ static int WcsMap_init( WcsMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord=2,type=starlink.Ast.TAN,lonax=1,latax=2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    int ncoord = 2;
    int type = AST__TAN;
@@ -2645,44 +2747,44 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject UnitMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(UnitMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST UnitMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)UnitMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(UnitMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST UnitMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)UnitMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2692,6 +2794,7 @@ static int UnitMap_init( UnitMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ncoord,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int ncoord;
    int result = -1;
 
@@ -2729,44 +2832,44 @@ static PyMethodDef TimeMap_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject TimeMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TimeMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TimeMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   TimeMap_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TimeMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TimeMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TimeMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = TimeMap_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TimeMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2776,6 +2879,7 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
 /* args: :flags=0,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int result = -1;
 
@@ -2787,6 +2891,131 @@ static int TimeMap_init( TimeMap *self, PyObject *args, PyObject *kwds ){
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
+   }
+
+   TIDY;
+   return result;
+}
+
+/* SplineMap */
+/* ========= */
+
+/* Define a string holding the fully qualified Python class name. */
+#undef CLASS
+#define CLASS MODULE ".SplineMap"
+
+/* Define the class structure */
+typedef struct {
+   Mapping parent;
+} SplineMap;
+
+/* Prototypes for class functions */
+static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds );
+
+/* Define the AST attributes of the class */
+MAKE_GETSETI(SplineMap,InvNiter)
+MAKE_GETSETL(SplineMap,OutUnit)
+MAKE_GETSETD(SplineMap,InvTol)
+MAKE_GETROI(SplineMap,SplineKx)
+MAKE_GETROI(SplineMap,SplineKy)
+MAKE_GETROI(SplineMap,SplineNx)
+MAKE_GETROI(SplineMap,SplineNy)
+static PyGetSetDef SplineMap_getseters[] = {
+   DEFATT(InvNiter,"Maximum number of iterations for iterative inverse"),
+   DEFATT(OutUnit,"Out-of-bounds inputs return unit offset values?"),
+   DEFATT(InvTol,"Target relative error for iterative inverse"),
+   DEFATT(SplineKx,"Spline order in input X direction"),
+   DEFATT(SplineKy,"Spline order in input Y direction"),
+   DEFATT(SplineNx,"Number of spline coefficients in input X direction"),
+   DEFATT(SplineNy,"Number of spline coefficients in input Y direction"),
+   {NULL, NULL, NULL, NULL, NULL}  /* Sentinel */
+};
+
+/* Define the class Python type structure */
+static PyTypeObject SplineMapType = {
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SplineMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SplineMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = SplineMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SplineMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
+};
+
+
+/* Define the class methods */
+static int SplineMap_init( SplineMap *self, PyObject *args, PyObject *kwds ){
+
+/* args: :kx,ky,nx,ny,tx,ty,cu,cv,options=None */
+
+   const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
+   int kx;
+   int ky;
+   int nx;
+   int ny;
+   PyArrayObject *tx = NULL;
+   PyArrayObject *ty = NULL;
+   PyArrayObject *cu = NULL;
+   PyArrayObject *cv = NULL;
+   PyObject *tx_object = NULL;
+   PyObject *ty_object = NULL;
+   PyObject *cu_object = NULL;
+   PyObject *cv_object = NULL;
+   int result = -1;
+
+   if( PyArg_ParseTuple(args, "iiiiOOOO|s:" CLASS, &kx, &ky, &nx, &ny,
+                        &tx_object, &ty_object, &cu_object, &cv_object,
+                        &options ) ) {
+      tx = GetArray( tx_object, NPY_DOUBLE, 1, -1, NULL, "tx", NAME );
+      ty = GetArray( ty_object, NPY_DOUBLE, 1, -1, NULL, "ty", NAME );
+      cu = GetArray( cu_object, NPY_DOUBLE, 1, -1, NULL, "cu", NAME );
+      cv = GetArray( cv_object, NPY_DOUBLE, 1, -1, NULL, "cv", NAME );
+      if( tx && ty && cu && cv ) {
+         AstSplineMap *this = astSplineMap( kx, ky, nx, ny,
+                                            (const double *) PyArray_DATA(tx),
+                                            (const double *) PyArray_DATA(ty),
+                                            (const double *) PyArray_DATA(cu),
+                                            (const double *) PyArray_DATA(cv),
+                                            "%s", options );
+         result = SetProxy( (AstObject *) this, (Object *) self );
+         this = astAnnul( this );
+      }
+      Py_XDECREF( tx );
+      Py_XDECREF( ty );
+      Py_XDECREF( cu );
+      Py_XDECREF( cv );
    }
 
    TIDY;
@@ -2813,10 +3042,9 @@ static PyObject *TimeMap_timeadd( TimeMap *self, PyObject *args ) {
     /* Ideally we would like to determine how many elements we
        have in "args" to make sure it is correct. Putting the code
        here and in AST seems silly though. */
-    astargs = (PyArrayObject *) PyArray_ContiguousFromAny( astargs_object,
-                                                           PyArray_DOUBLE, 0, 100);
+    astargs = GetArray( astargs_object, NPY_DOUBLE, 1, -1, NULL, "args", NAME );
     if (astargs) {
-      astTimeAdd( THIS, cvt, astargs->dimensions[0], (const double *)astargs->data );
+      astTimeAdd( THIS, cvt, PyArray_DIMS(astargs)[0], (const double *)PyArray_DATA(astargs) );
       if( astOK ) {
          Py_INCREF(Py_None);
          result = Py_None;
@@ -2846,44 +3074,44 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject RateMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(RateMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST RateMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)RateMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(RateMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST RateMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)RateMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2893,6 +3121,7 @@ static int RateMap_init( RateMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map,ax1=1,ax2=1,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    int ax1 = 1;
    int ax2 = 1;
@@ -2926,44 +3155,44 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST CmpMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -2973,6 +3202,7 @@ static int CmpMap_init( CmpMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map1,map2,series=True,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    Mapping *another;
    int series = 1;
@@ -3006,44 +3236,44 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject TranMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TranMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TranMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TranMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TranMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TranMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TranMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3053,6 +3283,7 @@ static int TranMap_init( TranMap *self, PyObject *args, PyObject *kwds ){
 /* args: :map1,map2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    Mapping *another;
    int result = -1;
@@ -3085,44 +3316,44 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject PermMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PermMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PermMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PermMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PermMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PermMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PermMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3132,6 +3363,7 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
 /* args: :inperm,outperm,constant=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * inperm = NULL;
    PyArrayObject * outperm = NULL;
    PyArrayObject * constant = NULL;
@@ -3144,13 +3376,10 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "OO|Os:" CLASS, &inperm_object,
                         &outperm_object, &constant_object, &options ) ) {
-      inperm = (PyArrayObject *) PyArray_ContiguousFromAny( inperm_object,
-                                                            PyArray_INT, 0, 100);
-      outperm = (PyArrayObject *) PyArray_ContiguousFromAny( outperm_object,
-                                                             PyArray_INT, 0, 100);
+      inperm = GetArray( inperm_object, NPY_INT, 1, -1, NULL, "inperm", NAME );
+      outperm = GetArray( outperm_object, NPY_INT, 1, -1, NULL, "outperm", NAME );
       if (constant_object) {
-        constant = (PyArrayObject *) PyArray_ContiguousFromAny( constant_object,
-                                                                PyArray_DOUBLE, 0, 100);
+        constant = GetArray( constant_object, NPY_DOUBLE, 1, -1, NULL, "constant", NAME );
       }
       if (inperm && outperm) {
          AstPermMap * this = NULL;
@@ -3159,10 +3388,10 @@ static int PermMap_init( PermMap *self, PyObject *args, PyObject *kwds ){
             big it is and we can search through inperm and outperm for negative
             values */
          this = astPermMap( PyArray_Size( (PyObject*)inperm),
-                            (const int *)inperm->data,
+                            (const int *)PyArray_DATA(inperm),
                             PyArray_Size( (PyObject*)outperm),
-                            (const int *)outperm->data,
-                            (constant ? (const double*)constant->data : NULL),
+                            (const int *)PyArray_DATA(outperm),
+                            (constant ? (const double*)PyArray_DATA(constant) : NULL),
                             "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -3193,44 +3422,44 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject ShiftMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ShiftMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ShiftMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ShiftMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ShiftMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ShiftMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ShiftMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3240,6 +3469,7 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
 /* args: :shift,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * shift = NULL;
    PyObject * shift_object = NULL;
 
@@ -3248,12 +3478,11 @@ static int ShiftMap_init( ShiftMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &shift_object,
                         &options ) ) {
-      shift = (PyArrayObject *) PyArray_ContiguousFromAny( shift_object,
-                                                            PyArray_DOUBLE, 0, 100);
+      shift = GetArray( shift_object, NPY_DOUBLE, 1, -1, NULL, "shift", NAME );
       if (shift) {
          AstShiftMap * this = NULL;
          this = astShiftMap( PyArray_Size( (PyObject*)shift),
-                            (const double *)shift->data,
+                            (const double *)PyArray_DATA(shift),
                             "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -3282,44 +3511,44 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 
 /* Define the class Python type structure */
 static PyTypeObject UnitNormMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(UnitNormMap),       /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST UnitNormMap",         /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)UnitNormMap_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(UnitNormMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST UnitNormMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)UnitNormMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3329,6 +3558,7 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 /* args: :centre,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject *centre = NULL;
    PyObject *centre_object = NULL;
 
@@ -3336,12 +3566,11 @@ static int UnitNormMap_init( UnitNormMap *self, PyObject *args, PyObject *kwds )
 
    // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &centre_object, &options ) ) {
-      centre = (PyArrayObject *) PyArray_ContiguousFromAny( centre_object,
-                                                            PyArray_DOUBLE, 0, 100);
+      centre = GetArray( centre_object, NPY_DOUBLE, 1, -1, NULL, "centre", NAME );
       if( centre ) {
          AstUnitNormMap *this = NULL;
          this = astUnitNormMap( PyArray_Size( (PyObject*)centre ),
-                               (const double *)centre->data, "%s", options );
+                               (const double *)PyArray_DATA(centre), "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
@@ -3369,44 +3598,44 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject LutMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(LutMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST LutMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)LutMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(LutMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST LutMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)LutMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3416,6 +3645,7 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
 /* args: :lut,start=0.0,inc=1.0,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * lut = NULL;
    PyObject * lut_object = NULL;
    double start = 0.0;
@@ -3426,12 +3656,11 @@ static int LutMap_init( LutMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nout from the arrays themselves
    if( PyArg_ParseTuple(args, "O|dds:" CLASS, &lut_object,
                         &start, &inc, &options ) ) {
-      lut = (PyArrayObject *) PyArray_ContiguousFromAny( lut_object,
-                                                         PyArray_DOUBLE, 0, 100);
+      lut = GetArray( lut_object, NPY_DOUBLE, 1, -1, NULL, "lut", NAME );
       if (lut) {
          AstLutMap * this = NULL;
          this = astLutMap( PyArray_Size( (PyObject*)lut),
-                           (const double *)lut->data,
+                           (const double *)PyArray_DATA(lut),
                            start, inc, "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -3460,44 +3689,44 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject WinMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(WinMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST WinMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)WinMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(WinMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST WinMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)WinMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3507,6 +3736,7 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
 /* args: :ina,inb,outa,outb,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyArrayObject * ina = NULL;
    PyArrayObject * inb = NULL;
    PyArrayObject * outa= NULL;
@@ -3521,26 +3751,22 @@ static int WinMap_init( WinMap *self, PyObject *args, PyObject *kwds ){
    // We get nin and nou from the arrays themselves
    if( PyArg_ParseTuple(args, "OOOO|s:" CLASS, &ina_object,
                         &inb_object, &outa_object, &outb_object, &options ) ) {
-      ina = (PyArrayObject *) PyArray_ContiguousFromAny( ina_object,
-                                                         PyArray_DOUBLE, 0, 100);
-      inb = (PyArrayObject *) PyArray_ContiguousFromAny( inb_object,
-                                                         PyArray_DOUBLE, 0, 100);
-      outa = (PyArrayObject *) PyArray_ContiguousFromAny( outa_object,
-                                                         PyArray_DOUBLE, 0, 100);
-      outb = (PyArrayObject *) PyArray_ContiguousFromAny( outb_object,
-                                                         PyArray_DOUBLE, 0, 100);
+      ina = GetArray( ina_object, NPY_DOUBLE, 1, -1, NULL, "ina", NAME );
+      inb = GetArray( inb_object, NPY_DOUBLE, 1, -1, NULL, "inb", NAME );
+      outa = GetArray( outa_object, NPY_DOUBLE, 1, -1, NULL, "outa", NAME );
+      outb = GetArray( outb_object, NPY_DOUBLE, 1, -1, NULL, "outb", NAME );
       if (ina && inb && outa && outb ) {
          AstWinMap * this = NULL;
          // Sanity check size
-         size_t ncoord = PyArray_Size( (PyObject*)ina );
+         npy_intp ncoord = PyArray_Size( (PyObject*)ina );
          if ( ncoord == PyArray_Size( (PyObject*)inb ) &&
               ncoord == PyArray_Size( (PyObject*)outa) &&
               ncoord == PyArray_Size( (PyObject*)outb) ) {
            this = astWinMap( ncoord,
-                             (const double *)ina->data,
-                             (const double *)inb->data,
-                             (const double *)outa->data,
-                             (const double *)outb->data,
+                             (const double *)PyArray_DATA(ina),
+                             (const double *)PyArray_DATA(inb),
+                             (const double *)PyArray_DATA(outa),
+                             (const double *)PyArray_DATA(outb),
                              "%s", options );
            result = SetProxy( (AstObject *) this, (Object *) self );
            this = astAnnul( this );
@@ -3681,44 +3907,44 @@ static PyGetSetDef Frame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Frame),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Frame",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Frame_methods,             /* tp_methods */
-   0,                         /* tp_members */
-   Frame_getseters,           /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Frame_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Frame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Frame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Frame_methods,
+   .tp_members = 0,
+   .tp_getset = Frame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Frame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -3728,6 +3954,7 @@ static int Frame_init( Frame *self, PyObject *args, PyObject *kwds ){
 /* args: :naxes,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    int naxes;
 
@@ -3765,9 +3992,9 @@ static PyObject *Frame_angle( Frame *self, PyObject *args ) {
     b = GetArray1D( b_object, &naxes, "b", NAME );
     c = GetArray1D( c_object, &naxes, "c", NAME );
     if (a && b && c ) {
-      double angle = astAngle( THIS, (const double *)a->data,
-                               (const double *)b->data,
-                               (const double *)c->data);
+      double angle = astAngle( THIS, (const double *)PyArray_DATA(a),
+                               (const double *)PyArray_DATA(b),
+                               (const double *)PyArray_DATA(c));
       if( astOK ) result = Py_BuildValue( "d", angle );
     }
     Py_XDECREF( a );
@@ -3801,8 +4028,8 @@ static PyObject *Frame_axangle( Frame *self, PyObject *args ) {
     a = GetArray1D( a_object, &naxes, "a", NAME );
     b = GetArray1D( b_object, &naxes, "b", NAME );
     if (a && b ) {
-      double axangle = astAxAngle( THIS, (const double *)a->data,
-                                   (const double *)b->data, axis );
+      double axangle = astAxAngle( THIS, (const double *)PyArray_DATA(a),
+                                   (const double *)PyArray_DATA(b), axis );
       if( astOK ) result = Py_BuildValue( "d", axangle );
     }
     Py_XDECREF( a );
@@ -3906,8 +4133,8 @@ static PyObject *Frame_distance( Frame *self, PyObject *args ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
     if (point1 && point2 ) {
-      double distance = astDistance( THIS, (const double *)point1->data,
-                                   (const double *)point2->data );
+      double distance = astDistance( THIS, (const double *)PyArray_DATA(point1),
+                                   (const double *)PyArray_DATA(point2) );
       if( astOK ) result = Py_BuildValue( "d", distance );
     }
     Py_XDECREF( point1 );
@@ -4007,12 +4234,12 @@ static PyObject *Frame_intersect( Frame *self, PyObject *args ) {
     b1 = GetArray1D( b1_object, &naxes, "b1", NAME );
     b2 = GetArray1D( b2_object, &naxes, "b2", NAME );
     dims[0] = naxes;
-    out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    out = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (a1 && a2 && b1 && b2 && out ) {
-      astIntersect( THIS, (const double *)a1->data,
-                    (const double *)a2->data,
-                    (const double *)b1->data,
-                    (const double *)b2->data, (double *)out->data );
+      astIntersect( THIS, (const double *)PyArray_DATA(a1),
+                    (const double *)PyArray_DATA(a2),
+                    (const double *)PyArray_DATA(b1),
+                    (const double *)PyArray_DATA(b2), (double *)PyArray_DATA(out) );
       if( astOK ) result = Py_BuildValue("O", PyArray_Return(out));
     }
     Py_XDECREF( a1 );
@@ -4042,9 +4269,9 @@ static PyObject *Frame_matchaxes( Frame *self, PyObject *args ) {
    if( PyArg_ParseTuple( args, "O!:" NAME, &FrameType,
                          (PyObject **) &other ) && astOK ) {
      dims[0] = astGetI( THAT, "Naxes" );
-     axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+     axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
      if (axes) {
-       astMatchAxes( THIS, THAT, (int *)axes->data );
+       astMatchAxes( THIS, THAT, (int *)PyArray_DATA(axes) );
        if( astOK ) result = Py_BuildValue("O", PyArray_Return(axes));
      }
      Py_XDECREF( axes );
@@ -4084,6 +4311,7 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
    int npos;
    int vstride0;
    int vstride1;
+   int value_dims[2];
    npy_intp dims[2];
 
    if( PyErr_Occurred() ) return NULL;
@@ -4094,15 +4322,16 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* Get a PyArrayObject from the PyObject, allowing any number of
    dimensions. */
-      value = (PyArrayObject *) PyArray_ContiguousFromAny( value_object,
-                                                      PyArray_DOUBLE, 0, 100 );
+      value_dims[ 0 ] = naxes;
+      value_dims[ 1 ] = -1;
+      value = GetArray( value_object, NPY_DOUBLE, 1, 2, value_dims, "value", NAME );
       if( value ) {
 
 /* In all cases the length of the first dimensions should be "naxes". */
-         if( value->dimensions[ 0 ] != naxes ) {
-            sprintf( buf, "The 'value' array supplied to %s has a length "
+         if( PyArray_DIMS(value)[ 0 ] != naxes ) {
+            snprintf( buf, sizeof(buf), "The 'value' array supplied to %s has a length "
                      "of %d for dimension 1 (one-based) - should be %d.",
-                     NAME, (int) value->dimensions[ 0 ], naxes );
+                     NAME, (int) PyArray_DIMS(value)[ 0 ], naxes );
             PyErr_SetString( PyExc_ValueError, buf );
             Py_DECREF( value );
             value = NULL;
@@ -4110,12 +4339,12 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 /* If the array is one-dimensional, it is assumed to be a list of "naxes"
    axis values representing a single point in the Frame. Copy it to a new
    output array and then call astNorm to normalise it. */
-         } else if( value->nd == 1 ) {
+         } else if( PyArray_NDIM(value) == 1 ) {
             dims[0] = naxes;
-            axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+            axes = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
             if ( value && axes ) {
-              memcpy( axes->data, value->data, sizeof(double)*naxes);
-              astNorm( THIS, (double *)axes->data );
+              memcpy( PyArray_DATA(axes), PyArray_DATA(value), sizeof(double)*naxes);
+              astNorm( THIS, (double *)PyArray_DATA(axes) );
               if( astOK ) result = Py_BuildValue( "O", PyArray_Return(axes) );
             }
             Py_XDECREF( value );
@@ -4123,23 +4352,23 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* If it is a 2-dimensional array, it is assumed to be a list of positions
    each of which is to be normalised. */
-         } else if( value->nd == 2 ) {
-            npos = value->dimensions[ 1 ];
+         } else if( PyArray_NDIM(value) == 2 ) {
+            npos = PyArray_DIMS(value)[ 1 ];
 
             dims[0] = naxes;
             dims[1] = npos;
-            axes = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+            axes = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
             if ( value && axes ) {
 
 
 /* Initialise pointers to the first value on each axis in both input
    and output arrays. */
-               vstride0 = value->strides[ 0 ]/sizeof(double);
-               vstride1 = value->strides[ 1 ]/sizeof(double);
-               astride0 = axes->strides[ 0 ]/sizeof(double);
-               astride1 = axes->strides[ 1 ]/sizeof(double);
-               pin[ 0 ] = (double *) value->data;
-               pout[ 0 ] = (double *) axes->data;
+               vstride0 = PyArray_STRIDES(value)[ 0 ]/sizeof(double);
+               vstride1 = PyArray_STRIDES(value)[ 1 ]/sizeof(double);
+               astride0 = PyArray_STRIDES(axes)[ 0 ]/sizeof(double);
+               astride1 = PyArray_STRIDES(axes)[ 1 ]/sizeof(double);
+               pin[ 0 ] = (double *) PyArray_DATA(value);
+               pout[ 0 ] = (double *) PyArray_DATA(axes);
                for( iaxis = 1; iaxis < naxes; iaxis++ ) {
                   pin[ iaxis ] = pin[ iaxis - 1 ] + vstride0;
                   pout[ iaxis ] = pout[ iaxis - 1 ] + astride0;
@@ -4173,9 +4402,9 @@ static PyObject *Frame_norm( Frame *self, PyObject *args ) {
 
 /* Input array must have 1 or 2 axes. */
          } else {
-            sprintf( buf, "The 'value' array supplied to %s has %d "
+            snprintf( buf, sizeof(buf), "The 'value' array supplied to %s has %d "
                      "dimensions - should be 1 or 2.", NAME, (int)
-                     value->nd );
+                     PyArray_NDIM(value) );
             PyErr_SetString( PyExc_ValueError, buf );
             Py_DECREF( value );
             value = NULL;
@@ -4228,14 +4457,14 @@ static PyObject *Frame_normpoints( Frame *self, PyObject *args ) {
 
       dims[ 0 ] = naxes;
       dims[ 1 ] = 0;
-      in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims, "in", NAME );
+      in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims, "in", NAME );
 
       if( in ) {
          dims[ 0 ] = naxes;
          if( out_object ) {
-            out = GetArray( out_object, PyArray_DOUBLE, 0, 2, dims, "out", NAME );
+            out = GetArray( out_object, NPY_DOUBLE, 0, 2, dims, "out", NAME );
          } else {
-            if( in->nd == 1 ){
+            if( PyArray_NDIM(in) == 1 ){
                ndim = 1;
                pdims[ 0 ] = dims[ 1 ];
             } else {
@@ -4244,14 +4473,14 @@ static PyObject *Frame_normpoints( Frame *self, PyObject *args ) {
                pdims[ 1 ] = dims[ 1 ];
             }
             out = (PyArrayObject *) PyArray_SimpleNew( ndim, pdims,
-                                                       PyArray_DOUBLE );
+                                                       NPY_DOUBLE );
          }
       }
 
       if( out ) {
          npoint = dims[ 1 ];
-         astNormPoints( THIS, npoint, naxes, npoint, (const double *) in->data,
-                        contig, naxes, npoint, (double *) out->data );
+         astNormPoints( THIS, npoint, naxes, npoint, (const double *) PyArray_DATA(in),
+                        contig, naxes, npoint, (double *) PyArray_DATA(out) );
          if( astOK ) result = (PyObject *) out;
       }
 
@@ -4286,11 +4515,11 @@ static PyObject *Frame_offset( Frame *self, PyObject *args ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
     dims[0] = naxes;
-    point3 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point3 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 && point3 ) {
-      astOffset( THIS, (const double *)point1->data,
-                 (const double *)point2->data, offset,
-                 (double *)point3->data );
+      astOffset( THIS, (const double *)PyArray_DATA(point1),
+                 (const double *)PyArray_DATA(point2), offset,
+                 (double *)PyArray_DATA(point3) );
       if( astOK ) result = Py_BuildValue("O", PyArray_Return(point3));
     }
     Py_XDECREF( point1 );
@@ -4324,11 +4553,11 @@ static PyObject *Frame_offset2( Frame *self, PyObject *args ) {
                          &angle, &offset ) && astOK ) {
     point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
     dims[0] = naxes;
-    point2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 ) {
-      double direction = astOffset2( THIS, (const double *)point1->data,
+      double direction = astOffset2( THIS, (const double *)PyArray_DATA(point1),
                                     angle, offset,
-                                    (double *)point2->data );
+                                    (double *)PyArray_DATA(point2) );
       if( astOK ) result = Py_BuildValue("dO", direction, PyArray_Return(point2));
     }
     Py_XDECREF( point1 );
@@ -4356,7 +4585,7 @@ static PyObject *Frame_permaxes( Frame *self, PyObject *args ) {
   if ( PyArg_ParseTuple( args, "O:" NAME, &perm_object ) && astOK ) {
     perm = GetArray1I( perm_object, &naxes, "perm", NAME );
     if (perm) {
-      astPermAxes( THIS, (const int *)perm->data );
+      astPermAxes( THIS, (const int *)PyArray_DATA(perm) );
       if( astOK ) {
          Py_INCREF(Py_None);
          result = Py_None;
@@ -4383,8 +4612,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
 
   // We get naxes from the axes argument
   if ( PyArg_ParseTuple( args, "O:" NAME, &axes_object ) && astOK ) {
-    axes = (PyArrayObject *) PyArray_ContiguousFromAny( axes_object,
-                                                        PyArray_INT, 0, 100);
+    axes = GetArray( axes_object, NPY_INT, 1, -1, NULL, "axes", NAME );
     if (axes) {
       AstMapping *map = NULL;
       AstFrame * frame = NULL;
@@ -4392,7 +4620,7 @@ static PyObject *Frame_pickaxes( Frame *self, PyObject *args ) {
 
       naxes = PyArray_Size( (PyObject*)axes );
       frame = astPickAxes( THIS, naxes,
-                           (const int *)axes->data,
+                           (const int *)PyArray_DATA(axes),
                            &map);
       if( astOK ) {
         PyObject *map_object = NULL;
@@ -4441,14 +4669,14 @@ static PyObject *Frame_resolve( Frame *self, PyObject *args ) {
     point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
     point3 = GetArray1D( point3_object, &naxes, "point3", NAME );
     dims[0] = naxes;
-    point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+    point4 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
     if (point1 && point2 && point3 && point4) {
       double d1;
       double d2;
-      astResolve( THIS, (const double *)point1->data,
-                  (const double *)point2->data,
-                  (const double *)point3->data,
-                  (double *)point4->data, &d1, &d2);
+      astResolve( THIS, (const double *)PyArray_DATA(point1),
+                  (const double *)PyArray_DATA(point2),
+                  (const double *)PyArray_DATA(point3),
+                  (double *)PyArray_DATA(point4), &d1, &d2);
       if( astOK ) result = Py_BuildValue("Odd", PyArray_Return(point4), d1, d2);
     }
     Py_XDECREF( point1 );
@@ -4501,44 +4729,44 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject MatrixMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MatrixMap),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MatrixMap",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MatrixMap_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MatrixMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MatrixMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MatrixMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -4558,23 +4786,23 @@ static int MatrixMap_init( MatrixMap *self, PyObject *args, PyObject *kwds ){
 	 resulting MatrixMap would have Nin=3 and Nout=2. */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    PyObject *matrix_object = NULL;
    AstMatrixMap *this = NULL;
 
    int result = -1;
 
    if( PyArg_ParseTuple(args, "O|s:" CLASS, &matrix_object, &options ) ) {
-      PyArrayObject *matrix = (PyArrayObject *) PyArray_ContiguousFromAny( matrix_object,
-                                                            PyArray_DOUBLE, 0, 100);
+      PyArrayObject *matrix = GetArray( matrix_object, NPY_DOUBLE, 1, -1, NULL, "matrix", NAME );
       if( matrix ) {
 
-         int ndim = matrix->nd;
+         int ndim = PyArray_NDIM(matrix);
          if( ndim == 1 ) {
-            this = astMatrixMap( matrix->dimensions[0], matrix->dimensions[0],
-                                 1, (const double *) matrix->data, "%s", options );
+            this = astMatrixMap( PyArray_DIMS(matrix)[0], PyArray_DIMS(matrix)[0],
+                                 1, (const double *) PyArray_DATA(matrix), "%s", options );
          } else if( ndim == 2 ) {
-            this = astMatrixMap( matrix->dimensions[1], matrix->dimensions[0],
-                                 0, (const double *) matrix->data, "%s", options );
+            this = astMatrixMap( PyArray_DIMS(matrix)[1], PyArray_DIMS(matrix)[0],
+                                 0, (const double *) PyArray_DATA(matrix), "%s", options );
          } else {
             PyErr_Format( PyExc_ValueError, "The supplied array of matrix "
                           "elements must be either 1 or 2 dimensional, not "
@@ -4628,44 +4856,44 @@ static PyGetSetDef PolyMap_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PolyMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PolyMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST PolyMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   PolyMap_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   PolyMap_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PolyMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PolyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST PolyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = PolyMap_methods,
+   .tp_members = 0,
+   .tp_getset = PolyMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PolyMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -4679,6 +4907,7 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
    PyObject *fcoeff_object = NULL;
    PyObject *icoeff_object = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    const double *coeff_f = NULL;
    const double *coeff_i = NULL;
    int i;
@@ -4694,49 +4923,35 @@ static int PolyMap_init( PolyMap *self, PyObject *args, PyObject *kwds ){
                          &options ) ) {
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
-         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               PyArray_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         fcoeff = GetArray( fcoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "fcoeff", NAME );
          if( fcoeff ) {
-            if( fcoeff->nd != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", fcoeff->nd );
-            } else {
-               coeff_f = (const double *) fcoeff->data;
-               ncoeff_f = fcoeff->dimensions[ 0 ];
-               nin1 = fcoeff->dimensions[ 1 ] - 2;
-               nout1 = 0;
-               const double *p = coeff_f + 1;
-               for( i = 0; i < ncoeff_f; i++ ) {
-                  int iout = (int) ( *p + 0.5 );
-                  if( iout > nout1 ) nout1 = iout;
-                  p += nin1 + 2;
-               }
+            coeff_f = (const double *) PyArray_DATA(fcoeff);
+            ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
+            nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
+            nout1 = 0;
+            const double *p = coeff_f + 1;
+            for( i = 0; i < ncoeff_f; i++ ) {
+               int iout = (int) ( *p + 0.5 );
+               if( iout > nout1 ) nout1 = iout;
+               p += nin1 + 2;
             }
          }
       }
 
       if( icoeff_object && icoeff_object != Py_None ) {
-         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               PyArray_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         icoeff = GetArray( icoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "icoeff", NAME );
          if( icoeff ) {
-            if( icoeff->nd != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", icoeff->nd );
-            } else {
-               coeff_i = (const double *) icoeff->data;
-               ncoeff_i = icoeff->dimensions[ 0 ];
-               nout2 = icoeff->dimensions[ 1 ] - 2;
-               nin2 = 0;
-               const double *p = coeff_i + 1;
-               for( i = 0; i < ncoeff_i; i++ ) {
-                  int iin = (int) ( *p + 0.5 );
-                  if( iin > nin2 ) nin2 = iin;
-                  p += nout2 + 2;
-               }
+            coeff_i = (const double *) PyArray_DATA(icoeff);
+            ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
+            nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
+            nin2 = 0;
+            const double *p = coeff_i + 1;
+            for( i = 0; i < ncoeff_i; i++ ) {
+               int iin = (int) ( *p + 0.5 );
+               if( iin > nin2 ) nin2 = iin;
+               p += nout2 + 2;
             }
          }
       }
@@ -4791,8 +5006,8 @@ static PyObject *PolyMap_polytran( PolyMap *self, PyObject *args ) {
       PyArrayObject *ubnd = GetArray1D( ubnd_object, &ndim, "ubnd", NAME );
       if( lbnd && ubnd ) {
          AstPolyMap *new = astPolyTran( THIS, forward, acc, maxacc, maxorder,
-                                        (const double *)lbnd->data,
-                                        (const double *)ubnd->data );
+                                        (const double *)PyArray_DATA(lbnd),
+                                        (const double *)PyArray_DATA(ubnd) );
          if( astOK ) {
             if( new ) {
                PyObject *new_object = NewObject( (AstObject *) new );
@@ -4834,44 +5049,44 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject ChebyMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(ChebyMap),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ChebyMap",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)ChebyMap_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(ChebyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ChebyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)ChebyMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -4893,6 +5108,7 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
    PyObject *ubnd_f_object = NULL;
    PyObject *ubnd_i_object = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    const double *coeff_i = NULL;
    const double *coeff_f = NULL;
    int i;
@@ -4912,53 +5128,39 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
                          &lbnd_i_object, &ubnd_i_object, &options ) ) {
 
       if( fcoeff_object && fcoeff_object != Py_None ) {
-         fcoeff = (PyArrayObject *) PyArray_ContiguousFromAny( fcoeff_object,
-                                                               PyArray_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         fcoeff = GetArray( fcoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "fcoeff", NAME );
          if( fcoeff ) {
-            if( fcoeff->nd != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of forward "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", fcoeff->nd );
-            } else {
-               if( lbnd_f_object ) lbnd_f = GetArray1D( lbnd_f_object, &size, "lbnd_f", NAME );
-               if( ubnd_f_object ) ubnd_f = GetArray1D( ubnd_f_object, &size, "ubnd_f", NAME );
-               coeff_f = (const double *) fcoeff->data;
-               ncoeff_f = fcoeff->dimensions[ 0 ];
-               nin1 = fcoeff->dimensions[ 1 ] - 2;
-               nout1 = 0;
-               const double *p = coeff_f + 1;
-               for( i = 0; i < ncoeff_f; i++ ) {
-                  int iout = (int) ( *p + 0.5 );
-                  if( iout > nout1 ) nout1 = iout;
-                  p += nin1 + 2;
-               }
+            if( lbnd_f_object ) lbnd_f = GetArray1D( lbnd_f_object, &size, "lbnd_f", NAME );
+            if( ubnd_f_object ) ubnd_f = GetArray1D( ubnd_f_object, &size, "ubnd_f", NAME );
+            coeff_f = (const double *) PyArray_DATA(fcoeff);
+            ncoeff_f = PyArray_DIMS(fcoeff)[ 0 ];
+            nin1 = PyArray_DIMS(fcoeff)[ 1 ] - 2;
+            nout1 = 0;
+            const double *p = coeff_f + 1;
+            for( i = 0; i < ncoeff_f; i++ ) {
+               int iout = (int) ( *p + 0.5 );
+               if( iout > nout1 ) nout1 = iout;
+               p += nin1 + 2;
             }
          }
       }
 
       if( icoeff_object && icoeff_object != Py_None ) {
-         icoeff = (PyArrayObject *) PyArray_ContiguousFromAny( icoeff_object,
-                                                               PyArray_DOUBLE,
-                                                               0, 100);
+         int coeff_dims[ 2 ] = { -1, -1 };
+         icoeff = GetArray( icoeff_object, NPY_DOUBLE, 1, 2, coeff_dims, "icoeff", NAME );
          if( icoeff ) {
-            if( icoeff->nd != 2 ) {
-               PyErr_Format( PyExc_ValueError, "The supplied array of inverse "
-                             "coefficients must be 2 dimensional, not %d "
-                             "dimensional.", icoeff->nd );
-            } else {
-               if( lbnd_i_object ) lbnd_i = GetArray1D( lbnd_i_object, &size, "lbnd_f", NAME );
-               if( ubnd_i_object ) ubnd_i = GetArray1D( ubnd_i_object, &size, "ubnd_f", NAME );
-               coeff_i = (const double *) icoeff->data;
-               ncoeff_i = icoeff->dimensions[ 0 ];
-               nout2 = icoeff->dimensions[ 1 ] - 2;
-               nin2 = 0;
-               const double *p = coeff_i + 1;
-               for( i = 0; i < ncoeff_i; i++ ) {
-                  int iin = (int) ( *p + 0.5 );
-                  if( iin > nin2 ) nin2 = iin;
-                  p += nout2 + 2;
-               }
+            if( lbnd_i_object ) lbnd_i = GetArray1D( lbnd_i_object, &size, "lbnd_f", NAME );
+            if( ubnd_i_object ) ubnd_i = GetArray1D( ubnd_i_object, &size, "ubnd_f", NAME );
+            coeff_i = (const double *) PyArray_DATA(icoeff);
+            ncoeff_i = PyArray_DIMS(icoeff)[ 0 ];
+            nout2 = PyArray_DIMS(icoeff)[ 1 ] - 2;
+            nin2 = 0;
+            const double *p = coeff_i + 1;
+            for( i = 0; i < ncoeff_i; i++ ) {
+               int iin = (int) ( *p + 0.5 );
+               if( iin > nin2 ) nin2 = iin;
+               p += nout2 + 2;
             }
          }
       }
@@ -4999,10 +5201,10 @@ static int ChebyMap_init( ChebyMap *self, PyObject *args, PyObject *kwds ){
       } else {
          AstChebyMap *this = astChebyMap( coeff_f?nin1:nin2, coeff_f?nout1:nout2,
                                         ncoeff_f, coeff_f, ncoeff_i, coeff_i,
-                                        lbnd_f?(const double *)lbnd_f->data:NULL,
-                                        ubnd_f?(const double *)ubnd_f->data:NULL,
-                                        lbnd_i?(const double *)lbnd_i->data:NULL,
-                                        ubnd_i?(const double *)ubnd_i->data:NULL,
+                                        lbnd_f?(const double *)PyArray_DATA(lbnd_f):NULL,
+                                        ubnd_f?(const double *)PyArray_DATA(ubnd_f):NULL,
+                                        lbnd_i?(const double *)PyArray_DATA(lbnd_i):NULL,
+                                        ubnd_i?(const double *)PyArray_DATA(ubnd_i):NULL,
                                         "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -5037,44 +5239,44 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject NormMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(NormMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST NormMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)NormMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(NormMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST NormMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)NormMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5084,6 +5286,7 @@ static int NormMap_init( NormMap *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Mapping *other;
    int result = -1;
 
@@ -5145,44 +5348,44 @@ static PyGetSetDef FrameSet_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FrameSetType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FrameSet),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FrameSet",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   FrameSet_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   FrameSet_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FrameSet_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FrameSet),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FrameSet",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = FrameSet_methods,
+   .tp_members = 0,
+   .tp_getset = FrameSet_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FrameSet_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5192,6 +5395,7 @@ static int FrameSet_init( FrameSet *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    FrameSet *other;
    int result = -1;
 
@@ -5390,44 +5594,44 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST CmpFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST CmpFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5437,6 +5641,7 @@ static int CmpFrame_init( CmpFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :frame1,frame2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    FrameSet *other;
    FrameSet *another;
    int result = -1;
@@ -5506,44 +5711,44 @@ static PyGetSetDef SkyFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SkyFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SkyFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SkyFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   SkyFrame_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   SkyFrame_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SkyFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SkyFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SkyFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = SkyFrame_methods,
+   .tp_members = 0,
+   .tp_getset = SkyFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SkyFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5553,6 +5758,7 @@ static int SkyFrame_init( SkyFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -5643,44 +5849,44 @@ static PyGetSetDef SpecFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject SpecFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecFrame),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFrame",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   SpecFrame_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   SpecFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecFrame_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = SpecFrame_methods,
+   .tp_members = 0,
+   .tp_getset = SpecFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5690,6 +5896,7 @@ static int SpecFrame_init( SpecFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -5769,44 +5976,44 @@ static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject SpecMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecMap),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecMap",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecMap_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5816,6 +6023,7 @@ static int SpecMap_init( SpecMap *self, PyObject *args, PyObject *kwds ){
 /* args: :nin,flags=0 */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int nin;
    int result = -1;
@@ -5847,44 +6055,44 @@ static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject SlaMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SlaMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SlaMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SlaMap_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SlaMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SlaMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SlaMap_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5894,6 +6102,7 @@ static int SlaMap_init( SlaMap *self, PyObject *args, PyObject *kwds ){
 /* args: :flags=0 */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int flags = 0;
    int result = -1;
 
@@ -5940,44 +6149,44 @@ static PyGetSetDef DSBSpecFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject DSBSpecFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(DSBSpecFrame),      /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST DSBSpecFrame",        /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   DSBSpecFrame_getseters,    /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)DSBSpecFrame_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(DSBSpecFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST DSBSpecFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = DSBSpecFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)DSBSpecFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -5987,6 +6196,7 @@ static int DSBSpecFrame_init( DSBSpecFrame *self, PyObject *args, PyObject *kwds
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -6037,44 +6247,44 @@ static PyGetSetDef TimeFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject TimeFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(TimeFrame),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST TimeFrame",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   TimeFrame_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   TimeFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)TimeFrame_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(TimeFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST TimeFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = TimeFrame_methods,
+   .tp_members = 0,
+   .tp_getset = TimeFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)TimeFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6084,6 +6294,7 @@ static int TimeFrame_init( TimeFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -6140,44 +6351,44 @@ static PyGetSetDef FluxFrame_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FluxFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FluxFrame),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FluxFrame",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   FluxFrame_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FluxFrame_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FluxFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FluxFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = FluxFrame_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FluxFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6187,6 +6398,7 @@ static int FluxFrame_init( FluxFrame *self, PyObject *args, PyObject *kwds ){
 /* args: :specval=starlink.Ast.BAD,specfrm=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    double specval = AST__BAD;
    Object *other = NULL;
@@ -6219,44 +6431,44 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 
 /* Define the class Python type structure */
 static PyTypeObject SpecFluxFrameType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(SpecFluxFrame),     /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST SpecFluxFrame",       /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)SpecFluxFrame_init,/* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(SpecFluxFrame),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST SpecFluxFrame",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)SpecFluxFrame_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6266,6 +6478,7 @@ static int SpecFluxFrame_init( SpecFluxFrame *self, PyObject *args, PyObject *kw
 /* args: :frame1,frame2,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    Object *other;
    Object *another;
@@ -6341,36 +6554,36 @@ static PyMethodDef Region_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject RegionType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Region),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Region",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Region_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   Region_getseters,          /* tp_getset */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Region),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Region_methods,
+   .tp_members = 0,
+   .tp_getset = Region_getseters,
 };
 
 
@@ -6391,10 +6604,10 @@ static PyObject *Region_getregionbounds( Region *self ) {
 
   naxes = astGetI( THIS, "Naxes" );
   dims[0] = naxes;
-  lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( lbnd && ubnd ) {
-     astGetRegionBounds( THIS, (double *)lbnd->data, (double*)ubnd->data );
+     astGetRegionBounds( THIS, (double *)PyArray_DATA(lbnd), (double*)PyArray_DATA(ubnd) );
      if( astOK ) result = Py_BuildValue("OO", PyArray_Return(lbnd),
                                         PyArray_Return(ubnd));
   }
@@ -6421,9 +6634,9 @@ static PyObject *Region_getregiondisc( Region *self ) {
 
   naxes = astGetI( THIS, "Naxes" );
   dims[0] = naxes;
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre ) {
-     astGetRegionDisc( THIS, (double *)centre->data, &radius );
+     astGetRegionDisc( THIS, (double *)PyArray_DATA(centre), &radius );
      if( astOK ) result = Py_BuildValue( "Od", PyArray_Return(centre),
                                          radius );
   }
@@ -6551,14 +6764,14 @@ static PyObject *Region_getregionpoints( Region *self, PyObject *args ) {
 /* Create the returned array. */
    dims[0] = naxes;
    dims[1] = npoint;
-   points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+   points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
 
 /* If successful, put the axis values at the required positions into the
    array. */
    if( points ) {
       astGetRegionPoints( THIS, 0, 0, &npoint, NULL );
       astGetRegionPoints( THIS, npoint, naxes, &npoint,
-                          (double *) points->data );
+                          (double *) PyArray_DATA(points) );
 
       if( astOK ) result = Py_BuildValue("O", PyArray_Return(points) );
   }
@@ -6600,14 +6813,14 @@ static PyObject *Region_getregionmesh( Region *self, PyObject *args ) {
 /* Create the returned array. */
       dims[0] = naxes;
       dims[1] = npoint;
-      points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, PyArray_DOUBLE );
+      points = (PyArrayObject *) PyArray_SimpleNew( 2, dims, NPY_DOUBLE );
    }
 
 /* If successful, put the axis values at the required positions into the
    array. */
    if( points ) {
       astGetRegionMesh( THIS, surface, npoint, naxes, &npoint,
-                          (double *) points->data );
+                          (double *) PyArray_DATA(points) );
 
       if( astOK ) result = Py_BuildValue("O", PyArray_Return(points) );
       Py_XDECREF(points);
@@ -6668,32 +6881,32 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'in' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) in_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) in_object);
+         if( type == NPY_DOUBLE ) {
             format[ 6 ] = 'd';
             pval = &val_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 6 ] = 'f';
             pval = &val_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 6 ] = 'i';
             pval = &val_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 6 ] = 'l';
             pval = &val_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 6 ] = 'h';
             pval = &val_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 6 ] = 'b';
             pval = &val_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 6 ] = 'I';
             pval = &val_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 6 ] = 'H';
             pval = &val_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 6 ] = 'B';
             pval = &val_B;
          } else {
@@ -6703,10 +6916,10 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
          }
 
 /* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) in_object)->nd;
-         pdims = ((PyArrayObject*) in_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) in_object);
+         pdims = PyArray_DIMS((PyArrayObject*) in_object);
          if( ndim > MXDIM ) {
-            sprintf( buf, "The 'in' array supplied to " NAME " has too "
+            snprintf( buf, sizeof(buf), "The 'in' array supplied to " NAME " has too "
                      "many (%d) dimensions (must be no more than %d).",
                      ndim, MXDIM );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -6728,52 +6941,52 @@ static PyObject *Region_mask( Region *self, PyObject *args ) {
 
       lbnd = GetArray1I( lbnd_object, &ndim, "lbnd", NAME );
       if( lbnd ) {
-         for( i = 0; i < ndim; i++ ) lbnd_vals[ i ] = ((int *) lbnd->data)[ i ];
+         for( i = 0; i < ndim; i++ ) lbnd_vals[ i ] = ((int *) PyArray_DATA(lbnd))[ i ];
       }
 
       ubnd = GetArray1I( ubnd_object, &ndim, "ubnd", NAME );
       if( ubnd ) {
-         for( i = 0; i < ndim; i++ ) ubnd_vals[ i ] = ((int *) ubnd->data)[ i ];
+         for( i = 0; i < ndim; i++ ) ubnd_vals[ i ] = ((int *) PyArray_DATA(ubnd))[ i ];
       }
 
       in = GetArray( in_object, type, 1, ndim, dims, "in", NAME );
       if( lbnd && ubnd && in ){
 
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             nmasked = astMaskD( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (double *)in->data, val_d );
+                                ubnd_vals, (double *)PyArray_DATA(in), val_d );
 
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             nmasked = astMaskF( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (float *)in->data, val_f );
+                                ubnd_vals, (float *)PyArray_DATA(in), val_f );
 
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             nmasked = astMaskL( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (long *)in->data, val_l );
+                                ubnd_vals, (long *)PyArray_DATA(in), val_l );
 
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             nmasked = astMaskI( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (int *)in->data, val_i );
+                                ubnd_vals, (int *)PyArray_DATA(in), val_i );
 
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             nmasked = astMaskS( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (short int *)in->data, val_h );
+                                ubnd_vals, (short int *)PyArray_DATA(in), val_h );
 
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             nmasked = astMaskB( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (signed char *)in->data, val_b );
+                                ubnd_vals, (signed char *)PyArray_DATA(in), val_b );
 
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             nmasked = astMaskUI( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (unsigned int *)in->data, val_I );
+                                ubnd_vals, (unsigned int *)PyArray_DATA(in), val_I );
 
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             nmasked = astMaskUS( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (unsigned short int *)in->data, val_H );
+                                ubnd_vals, (unsigned short int *)PyArray_DATA(in), val_H );
 
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             nmasked = astMaskUB( THIS, THAT, inside, ndim, lbnd_vals,
-                                ubnd_vals, (unsigned char *)in->data, val_B );
+                                ubnd_vals, (unsigned char *)PyArray_DATA(in), val_B );
 
          } else {
             PyErr_SetString( PyExc_ValueError, "The 'in' array supplied "
@@ -6813,7 +7026,7 @@ static PyObject *Region_pointinregion( Region *self, PyObject *args ) {
                          &point_object ) && astOK ) {
       point = GetArray1D( point_object, &naxes, "point", NAME );
       if ( point ) {
-         inside = astPointInRegion( THIS, (double *)point->data );
+         inside = astPointInRegion( THIS, (double *)PyArray_DATA(point) );
          if( astOK ) result = Py_BuildValue( "O", (inside ?  Py_True : Py_False));
       }
       Py_XDECREF( point );
@@ -6841,44 +7054,44 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject BoxType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Box),               /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST box",                 /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Box_init,        /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Box),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST box",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Box_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6888,6 +7101,7 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,point1,point2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -6908,8 +7122,8 @@ static int Box_init( Box *self, PyObject *args, PyObject *kwds ){
       naxes = astGetI( THAT, "Naxes" );
       point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
       point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
-      this = astBox( THAT, form, (const double*)point1->data,
-                     (const double*)point2->data, unc, "%s", options );
+      this = astBox( THAT, form, (const double*)PyArray_DATA(point1),
+                     (const double*)PyArray_DATA(point2), unc, "%s", options );
       result = SetProxy( (AstObject *) this, (Object *) self );
       this = astAnnul( this );
    }
@@ -6942,44 +7156,44 @@ static PyMethodDef Circle_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject CircleType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Circle),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST circle",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Circle_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Circle_init,     /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Circle),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST circle",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Circle_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Circle_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -6989,6 +7203,7 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,centre,point,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -7011,8 +7226,8 @@ static int Circle_init( Circle *self, PyObject *args, PyObject *kwds ){
       if (form == 1) naxes = 1;
       point = GetArray1D( point_object, &naxes, "point", NAME );
       if (centre && point) {
-        this = astCircle( THAT, form, (const double*)centre->data,
-                          (const double*)point->data, unc, "%s", options );
+        this = astCircle( THAT, form, (const double*)PyArray_DATA(centre),
+                          (const double*)PyArray_DATA(point), unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
       }
@@ -7038,10 +7253,10 @@ static PyObject *Circle_circlepars( Circle *self, PyObject *args ) {
   if( PyErr_Occurred() ) return NULL;
 
   dims[0] = astGetI( THIS, "Naxes" );
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre && p1 ) {
-    astCirclePars( THIS, (double *)centre->data, &radius, (double *)p1->data );
+    astCirclePars( THIS, (double *)PyArray_DATA(centre), &radius, (double *)PyArray_DATA(p1) );
     if( astOK ) result = Py_BuildValue( "OdO", PyArray_Return(centre),
                                         radius, PyArray_Return(p1));
   }
@@ -7116,44 +7331,44 @@ static PyMethodDef Moc_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MocType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Moc),               /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST moc",                 /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Moc_methods,               /* tp_methods */
-   0,                         /* tp_members */
-   Moc_getseters,             /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Moc_init,        /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Moc),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST moc",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Moc_methods,
+   .tp_members = 0,
+   .tp_getset = Moc_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Moc_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7163,6 +7378,7 @@ static int Moc_init( Moc *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -7227,12 +7443,12 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'data' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) data_object)->descr->type_num;
-         if( type == PyArray_INT ) {
+         type = PyArray_TYPE((PyArrayObject*) data_object);
+         if( type == NPY_INT ) {
             nbyte = sizeof(int);
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             nbyte = sizeof(long int);
-         } else if( type == PyArray_LONGLONG ) {
+         } else if( type == NPY_LONGLONG ) {
             nbyte = sizeof(long long int);
          } else {
             PyErr_SetString( PyExc_ValueError, "The 'data' array supplied "
@@ -7240,23 +7456,23 @@ static PyObject *Moc_addmocdata( Moc *self, PyObject *args ) {
                              "supported by " NAME "." );
          }
 
-         ndim = ((PyArrayObject*) data_object)->nd;
+         ndim = PyArray_NDIM((PyArrayObject*) data_object);
          if( ndim != 1 ) {
-            sprintf( buf, "The 'data' array supplied to " NAME " has bad "
+            snprintf( buf, sizeof(buf), "The 'data' array supplied to " NAME " has bad "
                      "number (%d) of dimensions (must be one-dimensional).",
                      ndim );
             PyErr_SetString( PyExc_ValueError, buf );
          } else {
-            len = (((PyArrayObject*) data_object)->dimensions)[ 0 ];
+            len = PyArray_DIMS((PyArrayObject*) data_object)[ 0 ];
          }
       }
 
       if( len > 0 && nbyte > 0 ) {
-         data = (PyArrayObject *) PyArray_ContiguousFromAny( data_object,
-                                                             type, 1, 1 );
+         int shape[ 1 ] = { len };
+         data = GetArray( data_object, type, 1, 1, shape, "data", NAME );
          if( data ) {
             astAddMocData( THIS, cmode, negate, maxorder, len, nbyte,
-                           data->data );
+                           PyArray_DATA(data) );
             Py_DECREF( data );
          }
       }
@@ -7353,40 +7569,40 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) array_object);
+         if( type == NPY_DOUBLE ) {
             format[ 2 ] = 'd';
             pvalue = &value_d;
             pbadval = &badval_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 2 ] = 'f';
             pvalue = &value_f;
             pbadval = &badval_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 2 ] = 'i';
             pvalue = &value_i;
             pbadval = &badval_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 2 ] = 'l';
             pvalue = &value_l;
             pbadval = &badval_l;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 2 ] = 'h';
             pvalue = &value_h;
             pbadval = &badval_h;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 2 ] = 'b';
             pvalue = &value_b;
             pbadval = &badval_b;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 2 ] = 'I';
             pvalue = &value_I;
             pbadval = &badval_I;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 2 ] = 'H';
             pvalue = &value_H;
             pbadval = &badval_H;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 2 ] = 'B';
             pvalue = &value_B;
             pbadval = &badval_B;
@@ -7400,10 +7616,10 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
          format[ 3 ] = format[ 2 ];
 
 /* Also check the number of axes and record the dimensions in the array. */
-         ndim = ((PyArrayObject*) array_object)->nd;
-         pdims = ((PyArrayObject*) array_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) array_object);
+         pdims = PyArray_DIMS((PyArrayObject*) array_object);
          if( ndim != 2 ) {
-            sprintf( buf, "The 'array' array supplied to " NAME " has bad "
+            snprintf( buf, sizeof(buf), "The 'array' array supplied to " NAME " has bad "
                      "number (%d) of dimensions (must be 2-dimensional).",
                      ndim );
             PyErr_SetString( PyExc_ValueError, buf );
@@ -7425,41 +7641,41 @@ static PyObject *Moc_addpixelmask( Moc *self, PyObject *args ) {
 
       array = GetArray( array_object, type, 1, 2, dims, "array", NAME );
       if( array ) {
-         if( type == PyArray_DOUBLE ) {
+         if( type == NPY_DOUBLE ) {
             astAddPixelMaskD( THIS, cmode, THAT, value_d, oper, flags,
-                              badval_d, (const double *)array->data,
+                              badval_d, (const double *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             astAddPixelMaskF( THIS, cmode, THAT, value_f, oper, flags,
-                              badval_f, (const float *)array->data,
+                              badval_f, (const float *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             astAddPixelMaskL( THIS, cmode, THAT, value_l, oper, flags,
-                              badval_l, (const long int *)array->data,
+                              badval_l, (const long int *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             astAddPixelMaskI( THIS, cmode, THAT, value_i, oper, flags,
-                              badval_i, (const int *)array->data,
+                              badval_i, (const int *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             astAddPixelMaskS( THIS, cmode, THAT, value_h, oper, flags,
-                              badval_h, (const short int *)array->data,
+                              badval_h, (const short int *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             astAddPixelMaskB( THIS, cmode, THAT, value_b, oper, flags,
-                              badval_b, (const signed char *)array->data,
+                              badval_b, (const signed char *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             astAddPixelMaskUI( THIS, cmode, THAT, value_I, oper, flags,
-                              badval_I, (const unsigned int *)array->data,
+                              badval_I, (const unsigned int *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             astAddPixelMaskUS( THIS, cmode, THAT, value_H, oper, flags,
-                              badval_H, (const unsigned short int *)array->data,
+                              badval_H, (const unsigned short int *)PyArray_DATA(array),
                               dims );
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             astAddPixelMaskUB( THIS, cmode, THAT, value_B, oper, flags,
-                              badval_B, (const unsigned char *)array->data,
+                              badval_B, (const unsigned char *)PyArray_DATA(array),
                               dims );
          } else {
             PyErr_SetString( PyExc_ValueError, "The 'array' array supplied "
@@ -7548,9 +7764,9 @@ static PyObject *Moc_getmocdata( Moc *self, PyObject *args ) {
 /* Create a suitable numpy array in which to store the data values. */
    dims[ 0 ] = len;
    data = (PyArrayObject *) PyArray_SimpleNew( 1, dims,
-                             ( nbyte == 4 ) ? PyArray_INT : PyArray_LONGLONG );
+                             ( nbyte == 4 ) ? NPY_INT : NPY_LONGLONG );
    if( data ) {
-      astGetMocData( THIS, dims[ 0 ]*nbyte, data->data );
+      astGetMocData( THIS, dims[ 0 ]*nbyte, PyArray_DATA(data) );
       if( astOK ) result = Py_BuildValue( "O", data );
       Py_XDECREF( data );
    }
@@ -7664,44 +7880,44 @@ static PyMethodDef Polygon_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PolygonType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Polygon),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST polygon",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Polygon_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Polygon_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Polygon),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST polygon",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Polygon_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Polygon_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7711,6 +7927,7 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,points,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject *points = NULL;
@@ -7723,13 +7940,13 @@ static int Polygon_init( Polygon *self, PyObject *args, PyObject *kwds ){
                          &options ) ) {
       dims[ 0 ] = 2;
       dims[ 1 ] = 0;
-      points = GetArray( points_object, PyArray_DOUBLE, 0, 2, dims, "points",
+      points = GetArray( points_object, NPY_DOUBLE, 0, 2, dims, "points",
                          NAME );
       if( points ) {
          AstRegion *unc = NULL;
          if( another ) unc = (AstRegion *) ANOTHER;
          AstPolygon *this = astPolygon( THAT, dims[ 1 ], dims[ 1 ],
-                                        (const double*)points->data, unc,
+                                        (const double*)PyArray_DATA(points), unc,
                                         "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -7795,44 +8012,44 @@ static PyGetSetDef PointList_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PointListType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(PointList),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST polygon",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   PointList_getseters,       /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)PointList_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(PointList),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST polygon",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = PointList_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)PointList_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7842,6 +8059,7 @@ static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,points,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject *points = NULL;
@@ -7855,13 +8073,13 @@ static int PointList_init( PointList *self, PyObject *args, PyObject *kwds ){
       int ncoord = astGetI( THAT, "Naxes" );
       dims[ 0 ] = ncoord;
       dims[ 1 ] = 0;
-      points = GetArray( points_object, PyArray_DOUBLE, 0, 2, dims, "points",
+      points = GetArray( points_object, NPY_DOUBLE, 0, 2, dims, "points",
                          NAME );
       if( points ) {
          AstRegion *unc = NULL;
          if( another ) unc = (AstRegion *) ANOTHER;
          AstPointList *this = astPointList( THAT, dims[ 1 ], ncoord, dims[ 1 ],
-                                        (const double*)points->data, unc,
+                                        (const double*)PyArray_DATA(points), unc,
                                         "%s", options );
          result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
@@ -7897,44 +8115,44 @@ static PyMethodDef Ellipse_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject EllipseType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Ellipse),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST ellipse",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Ellipse_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Ellipse_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Ellipse),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST ellipse",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Ellipse_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Ellipse_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -7944,6 +8162,7 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,form,centre,point1,point2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int form; /* boolean */
@@ -7968,9 +8187,9 @@ static int Ellipse_init( Ellipse *self, PyObject *args, PyObject *kwds ){
       point1 = GetArray1D( point1_object, &naxes, "point1", NAME );
       point2 = GetArray1D( point2_object, &naxes, "point2", NAME );
       if (centre && point1 && point2 ) {
-        this = astEllipse( THAT, form, (const double*)centre->data,
-			   (const double*)point1->data,
-			   (const double*)point2->data,
+        this = astEllipse( THAT, form, (const double*)PyArray_DATA(centre),
+			   (const double*)PyArray_DATA(point1),
+			   (const double*)PyArray_DATA(point2),
 			   unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
@@ -8000,12 +8219,12 @@ static PyObject *Ellipse_ellipsepars( Ellipse *self, PyObject *args ) {
   if( PyErr_Occurred() ) return NULL;
 
   dims[0] = astGetI( THIS, "Naxes" );
-  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-  p2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+  centre = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p1 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+  p2 = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
   if( centre && p1 && p2 ) {
-    astEllipsePars( THIS, (double *)centre->data, &a, &b, &angle,
-                    (double *)p1->data, (double *)p2->data );
+    astEllipsePars( THIS, (double *)PyArray_DATA(centre), &a, &b, &angle,
+                    (double *)PyArray_DATA(p1), (double *)PyArray_DATA(p2) );
     if( astOK ) result = Py_BuildValue( "OdddOO", PyArray_Return(centre),
                                         a, b, angle, PyArray_Return(p1),
                                         PyArray_Return(p2));
@@ -8036,44 +8255,44 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject IntervalType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Interval),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST interval",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Interval_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Interval),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST interval",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Interval_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8083,6 +8302,7 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,lbnd,ubnd,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    PyArrayObject * ubnd = NULL;
@@ -8103,8 +8323,8 @@ static int Interval_init( Interval *self, PyObject *args, PyObject *kwds ){
       lbnd = GetArray1D( lbnd_object, &naxes, "lbnd", NAME );
       ubnd = GetArray1D( ubnd_object, &naxes, "ubnd", NAME );
       if (lbnd && ubnd) {
-        this = astInterval( THAT, (const double*)lbnd->data,
-                          (const double*)ubnd->data, unc, "%s", options );
+        this = astInterval( THAT, (const double*)PyArray_DATA(lbnd),
+                          (const double*)PyArray_DATA(ubnd), unc, "%s", options );
         result = SetProxy( (AstObject *) this, (Object *) self );
         this = astAnnul( this );
       }
@@ -8131,44 +8351,44 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject NullRegionType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(NullRegion),        /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST null region",         /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)NullRegion_init, /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(NullRegion),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST null region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)NullRegion_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8178,6 +8398,7 @@ static int NullRegion_init( NullRegion *self, PyObject *args, PyObject *kwds ){
 /* args: :frame,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *other;
    Region *another = NULL;
    int result = -1;
@@ -8214,44 +8435,44 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject CmpRegionType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(CmpRegion),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST compound region",     /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)CmpRegion_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(CmpRegion),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST compound region",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)CmpRegion_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8261,6 +8482,7 @@ static int CmpRegion_init( CmpRegion *self, PyObject *args, PyObject *kwds ){
 /* args: :region1,region2,oper=starlink.Ast.OR,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Region *other;
    Region *another;
    int result = -1;
@@ -8294,44 +8516,44 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds );
 
 /* Define the class Python type structure */
 static PyTypeObject PrismType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Prism),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST prism",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Prism_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Prism),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST prism",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Prism_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8341,6 +8563,7 @@ static int Prism_init( Prism *self, PyObject *args, PyObject *kwds ){
 /* args: :region1,region2,unc=None,options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Region *other;
    Region *another;
    int result = -1;
@@ -8422,44 +8645,44 @@ static PyGetSetDef Channel_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject ChannelType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Channel),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Channel_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Channel",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Channel_methods,           /* tp_methods */
-   0,                         /* tp_members */
-   Channel_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Channel_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Channel),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Channel_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Channel",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Channel_methods,
+   .tp_members = 0,
+   .tp_getset = Channel_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Channel_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -8494,6 +8717,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void );
    void (* sink_wrap)( const char * );
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    Channel_def( (Object *) self );
@@ -8514,7 +8738,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
          astPutChannelData( (AstChannel *) this, (Channel *) self );
 
 /* Store self as the Python proxy for the AST Channel. */
-         result = SetProxy( this, self );
+         result = SetProxy( (AstObject *) this, (Object *) self );
          this = astAnnul( this );
       }
    }
@@ -8675,12 +8899,16 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
    use srcseq_wrapper as the wrapper, which reads a single item from the
    sequence on each invocation. Otherwise, we use a NULL wrapper. */
    if( source ) {
-      if( PyObject_HasAttrString( source, "astsource" ) ) {
+      int has_astsource = PyAst_HasAttrStringWithError( source, "astsource" );
+      if( has_astsource > 0 ) {
          *source_wrap = source_wrapper;
          self->source = source;
          Py_INCREF( source );
 
-      } else if( STRING_CHECK( source ) ) {
+      } else if( has_astsource < 0 ) {
+         result = -1;
+
+      } else if( PyUnicode_Check( source ) ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "No 'source' object "
                        "supplied." );
@@ -8701,10 +8929,13 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 
 /* Do the same for the sink object (except the sink cannot be a sequence). */
    if( sink ) {
-      if( PyObject_HasAttrString( sink, "astsink" ) ) {
+      int has_astsink = PyAst_HasAttrStringWithError( sink, "astsink" );
+      if( has_astsink > 0 ) {
          *sink_wrap = sink_wrapper;
          self->sink = sink;
          Py_INCREF( sink );
+      } else if( has_astsink < 0 ) {
+         result = -1;
       } else if( sink != Py_None ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "The supplied 'sink' "
@@ -8939,44 +9170,44 @@ static PySequenceMethods FitsChanAsSequence = {
 
 /* Define the class Python type structure */
 static PyTypeObject FitsChanType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FitsChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)FitsChan_dealloc,/* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   &FitsChanAsSequence,       /* tp_as_sequence */
-   &FitsChanAsMapping,        /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FitsChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   FitsChan_getiter,	      /* tp_iter */
-   FitsChan_next,	      /* tp_iternext */
-   FitsChan_methods,          /* tp_methods */
-   0,                         /* tp_members */
-   FitsChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FitsChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FitsChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)FitsChan_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = &FitsChanAsSequence,
+   .tp_as_mapping = &FitsChanAsMapping,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FitsChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = FitsChan_getiter,
+   .tp_iternext = FitsChan_next,
+   .tp_methods = FitsChan_methods,
+   .tp_members = 0,
+   .tp_getset = FitsChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FitsChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 /* Define the class methods */
@@ -9007,6 +9238,7 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void );
    void (* sink_wrap)( const char * );
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    FitsChan_def( (Object *) self );
@@ -9137,7 +9369,7 @@ static int FitsChan_contains( PyObject *self, PyObject *index ) {
 /* If the index is actually an integer, treat it as the Card index. The
    card exists if the (zero based) card index is less than the number of
    cards in the FitsChan (NCard). */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
       if( (long int) val != lval ) {
@@ -9147,7 +9379,7 @@ static int FitsChan_contains( PyObject *self, PyObject *index ) {
       }
 
 /* Otherwise, if it is a string, just test for the supplied index string. */
-   } else if( STRING_CHECK( index ) ) {
+   } else if( PyUnicode_Check( index ) ) {
       char *keyw = GetString( NULL, index );
 
 /* Save the current card index, and then rewind the FitsChan. */
@@ -9204,7 +9436,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 /* If the index is actually an integer, treat it as the Card index. Set
    the Card attribute in the FitsChan, and then get the current card.
    Change from python zero-based index to ATS one-based index. */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       char card[ 81 ];
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
@@ -9218,12 +9450,12 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
          result = Py_BuildValue( "s", card );
       } else {
         char buff[ 200 ];
-        sprintf( buff, "FITS card at index %d not found in FitsChan.", val - 1 );
+        snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
         PyErr_SetString( PyExc_KeyError, buff );
       }
 
 /* Otherwise, if the index is a string, get the keyword to be searched for. */
-   } else if( STRING_CHECK( index ) ){
+   } else if( PyUnicode_Check( index ) ){
       keyw = GetString( NULL, index );
 
 /* Rewind the FitsChan so that we search all cards. */
@@ -9290,7 +9522,7 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
 
          } else {
             char buff[ 200 ];
-            sprintf( buff, "FITS keyword %s not found in FitsChan.", keyw );
+            snprintf( buff, sizeof(buff), "FITS keyword %s not found in FitsChan.", keyw );
             PyErr_SetString( PyExc_KeyError, buff );
          }
 
@@ -9325,7 +9557,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the supplied index is an integer, overwrite the card with the
    corresponding index. */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       long int lval = PyLong_AsLong( index );
       int val = (int) lval;
       if( (long int) val != lval ) {
@@ -9346,7 +9578,7 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
       }
 
 /* Otherwise, if the index is a string, get the keyword to be searched for. */
-   } else if( STRING_CHECK( index ) ){
+   } else if( PyUnicode_Check( index ) ){
       keyw = GetString( NULL, index );
 
 /* If the keyword name is blank, just insert the supplied value (as a
@@ -9378,12 +9610,12 @@ static int FitsChan_setitem( PyObject *self, PyObject *index, PyObject *value ){
             /* Do nothing if no value supplied - the current card will be
                deleted later */
 
-         } else if( LONG_CHECK( value ) ) {
+         } else if( PyLong_Check( value ) ) {
             long int lval = PyLong_AsLong( value );
             int val = (int) lval;
             if( (long int) val != lval ) {
                char buff[ 200 ];
-               sprintf( buff, "Cannot assign value %ld to FITS keyword %s - "
+               snprintf( buff, sizeof(buff), "Cannot assign value %ld to FITS keyword %s - "
                         "integer overflow.", lval, keyw );
                PyErr_SetString( PyExc_OverflowError, buff );
             }  else {
@@ -9758,44 +9990,44 @@ static PyGetSetDef MocChan_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject MocChanType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(MocChan),           /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST MocChan",             /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   MocChan_getseters,         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)MocChan_init,    /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(MocChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST MocChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = MocChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)MocChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -9819,6 +10051,7 @@ static int MocChan_init( MocChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
@@ -9888,44 +10121,44 @@ static PyGetSetDef StcsChan_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject StcsChanType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(StcsChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST StcsChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   StcsChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)StcsChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(StcsChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST StcsChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = StcsChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)StcsChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -9949,6 +10182,7 @@ static int StcsChan_init( StcsChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
@@ -10052,42 +10286,42 @@ static PySequenceMethods KeyMapAsSequence = {
 
 /* Define the class Python type structure */
 static PyTypeObject KeyMapType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(KeyMap),            /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   &KeyMapAsSequence,         /* tp_as_sequence */
-   &KeyMapAsMapping,          /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST KeyMap",              /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   KeyMap_getiter,	      /* tp_iter */
-   KeyMap_next,	              /* tp_iternext */
-   KeyMap_methods,            /* tp_methods */
-   0,                         /* tp_members */
-   KeyMap_getseters,          /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)KeyMap_init,     /* tp_init */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(KeyMap),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = &KeyMapAsSequence,
+   .tp_as_mapping = &KeyMapAsMapping,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST KeyMap",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = KeyMap_getiter,
+   .tp_iternext = KeyMap_next,
+   .tp_methods = KeyMap_methods,
+   .tp_members = 0,
+   .tp_getset = KeyMap_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)KeyMap_init,
 };
 
 
@@ -10097,6 +10331,7 @@ static int KeyMap_init( KeyMap *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -10169,7 +10404,7 @@ static int KeyMap_contains( PyObject *self, PyObject *index ) {
 
 /* If the index is actually an integer, the key exists if the (zero-based)
    index is less than the number of entries in the KeyMap. */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) {
@@ -10179,7 +10414,7 @@ static int KeyMap_contains( PyObject *self, PyObject *index ) {
       }
 
 /* Otherwise, if it is a string, just test the supplied key. */
-   } else if( STRING_CHECK( index ) ) {
+   } else if( PyUnicode_Check( index ) ) {
       char *key = GetString( NULL, index );
       result = astMapHasKey( THIS, key );
       key = astFree( key );
@@ -10222,7 +10457,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 
 /* If the index is actually an integer, get the corresponding key using
    astMapKey, and return a tuple containing the key and value. */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) ikey = INT_MAX;
@@ -10231,7 +10466,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
       return_key = 1;
 
 /* Otherwise, if it is a string, just use the supplied key. */
-   } else if( STRING_CHECK( index ) ) {
+   } else if( PyUnicode_Check( index ) ) {
       key = GetString( NULL, index );
 
 /* Report an error for other index data types. */
@@ -10334,7 +10569,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 /* UNDEF values cannot be handled. */
          } else {
             char buff[ 200 ];
-            sprintf( buff, "The value of AST KeyMap entry %s is undefined.",
+            snprintf( buff, sizeof(buff), "The value of AST KeyMap entry %s is undefined.",
                      key );
             PyErr_SetString( PyExc_TypeError, buff );
          }
@@ -10365,7 +10600,7 @@ static PyObject *KeyMap_getitem( PyObject *self, PyObject *index ){
 
    } else {
       char buff[ 200 ];
-      sprintf( buff, "Key %s not found in AST KeyMap.", key );
+      snprintf( buff, sizeof(buff), "Key %s not found in AST KeyMap.", key );
       PyErr_SetString( PyExc_KeyError, buff );
    }
 
@@ -10386,7 +10621,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the index is actually an integer, get the corresponding key using
    astMapKey. */
-   if( LONG_CHECK( index ) ) {
+   if( PyLong_Check( index ) ) {
       long int lval = PyLong_AsLong( index );
       int ikey = (int) lval;
       if( (long int) ikey != lval ) ikey = INT_MAX;
@@ -10394,7 +10629,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
       if( astOK ) key = astStore( NULL, key, strlen( key ) + 1 );
 
 /* Otherwise, if it is a string, just use the supplied key. */
-   } else if( STRING_CHECK( index ) ) {
+   } else if( PyUnicode_Check( index ) ) {
       key = GetString( NULL, index );
 
 /* Report an error for other index data types. */
@@ -10413,7 +10648,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If a non-string Sequence was supplied, extract the PyObjects from it. */
       } else if( PySequence_Check( value ) &&
-                 !STRING_CHECK( value ) ) {
+                 !PyUnicode_Check( value ) ) {
          nval = (int) PySequence_Size( value );
          vals = astMalloc( nval*sizeof( *vals ) );
          if( astOK ) {
@@ -10434,7 +10669,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 
 /* If the value(s) are integers, get the integer values and store then in
    the keymap. */
-         if( LONG_CHECK( vals[ 0 ] ) ) {
+         if( PyLong_Check( vals[ 0 ] ) ) {
             int *buf = astMalloc( nval*sizeof( *buf ) );
             if( astOK ) {
                for( ival = 0; ival < nval; ival++ ) {
@@ -10442,7 +10677,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
                   buf[ ival ] = (int) lval;
                   if( (long int) buf[ ival ] != lval ) {
                      char buff[ 200 ];
-                     sprintf( buff, "Cannot assign value %ld to AST KeyMap entry %s - "
+                     snprintf( buff, sizeof(buff), "Cannot assign value %ld to AST KeyMap entry %s - "
                               "integer overflow.", lval, key );
                      PyErr_SetString( PyExc_OverflowError, buff );
                      break;
@@ -10464,7 +10699,7 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
             buf = astFree( buf );
 
 /* Do the same for string values. */
-         } else if( STRING_CHECK( vals[ 0 ] ) ) {
+         } else if( PyUnicode_Check( vals[ 0 ] ) ) {
             char **buf = astCalloc( nval, sizeof( *buf ) );
             if( astOK ) {
                for( ival = 0; ival < nval; ival++ ) {
@@ -10490,26 +10725,26 @@ static int KeyMap_setitem( PyObject *self, PyObject *index, PyObject *value ){
 /* If an array was supplied, store it as a 1D vector without conversion. */
       } else if( PyArray_Check( vals[ 0 ] ) && nval == 1 ) {
          PyArrayObject *array = (PyArrayObject *) vals[ 0 ];
-         int type = array->descr->type_num;
+         int type = PyArray_TYPE(array);
          nval = 1;
          int i;
-         for( i = 0; i < array->nd; i++ ) {
-            nval *= (array->dimensions)[ i ];
+         for( i = 0; i < PyArray_NDIM(array); i++ ) {
+            nval *= (PyArray_DIMS(array))[ i ];
          }
-         if( type == PyArray_DOUBLE ) {
-            astMapPut1D( THIS, key, nval, (const double *) array->data, NULL );
+         if( type == NPY_DOUBLE ) {
+            astMapPut1D( THIS, key, nval, (const double *) PyArray_DATA(array), NULL );
 
-         } else if( type == PyArray_FLOAT ) {
-            astMapPut1F( THIS, key, nval, (const float *) array->data, NULL );
+         } else if( type == NPY_FLOAT ) {
+            astMapPut1F( THIS, key, nval, (const float *) PyArray_DATA(array), NULL );
 
-         } else if( type == PyArray_INT ) {
-            astMapPut1I( THIS, key, nval, (const int *) array->data, NULL );
+         } else if( type == NPY_INT ) {
+            astMapPut1I( THIS, key, nval, (const int *) PyArray_DATA(array), NULL );
 
-         } else if( type == PyArray_SHORT ) {
-            astMapPut1S( THIS, key, nval, (const short int *) array->data, NULL );
+         } else if( type == NPY_SHORT ) {
+            astMapPut1S( THIS, key, nval, (const short int *) PyArray_DATA(array), NULL );
 
-         } else if( type == PyArray_UBYTE ) {
-            astMapPut1B( THIS, key, nval, (const unsigned char *) array->data, NULL );
+         } else if( type == NPY_UBYTE ) {
+            astMapPut1B( THIS, key, nval, (const unsigned char *) PyArray_DATA(array), NULL );
 
          } else {
             PyErr_SetString( PyExc_ValueError, "Cannot store given data "
@@ -10680,44 +10915,44 @@ static PyGetSetDef Plot_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject PlotType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Plot),              /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   (destructor)Plot_dealloc,  /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Plot",                /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Plot_methods,              /* tp_methods */
-   0,                         /* tp_members */
-   Plot_getseters,            /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Plot_init,       /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Plot),
+   .tp_itemsize = 0,
+   .tp_dealloc = (destructor)Plot_dealloc,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Plot",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Plot_methods,
+   .tp_members = 0,
+   .tp_getset = Plot_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Plot_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 static void Plot_def( Object *self ){
@@ -10738,6 +10973,7 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
          written following the same pattern. */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    Frame *frame;
    PyObject *bbox_object = NULL;
    PyObject *gbox_object = NULL;
@@ -10763,12 +10999,12 @@ static int Plot_init( Plot *self, PyObject *args, PyObject *kwds ){
          bbox = GetArray1D( bbox_object, &size, "basebox", NAME );
          if( gbox && bbox ) {
             float graphbox[ 4 ];
-            graphbox[ 0 ] = ((const double *)gbox->data)[ 0 ];
-            graphbox[ 1 ] = ((const double *)gbox->data)[ 1 ];
-            graphbox[ 2 ] = ((const double *)gbox->data)[ 2 ];
-            graphbox[ 3 ] = ((const double *)gbox->data)[ 3 ];
+            graphbox[ 0 ] = ((const double *)PyArray_DATA(gbox))[ 0 ];
+            graphbox[ 1 ] = ((const double *)PyArray_DATA(gbox))[ 1 ];
+            graphbox[ 2 ] = ((const double *)PyArray_DATA(gbox))[ 2 ];
+            graphbox[ 3 ] = ((const double *)PyArray_DATA(gbox))[ 3 ];
             AstPlot *this = astPlot( AST(frame), graphbox,
-                                     (const double *)bbox->data, "%s", options );
+                                     (const double *)PyArray_DATA(bbox), "%s", options );
             result = SetProxy( (AstObject *) this, (Object *) self );
             if( result == 0 ) result = setGrf( self, grf_object );
             this = astAnnul( this );
@@ -10870,15 +11106,15 @@ static PyObject *Plot_boundingbox( Plot *self, PyObject *args ) {
    if( astOK ) {
       npy_intp dims[1];
       dims[0] = 2;
-      PyArrayObject *lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *lbnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( lbnd ) {
-         double *v = (double *)lbnd->data;
+         double *v = (double *)PyArray_DATA(lbnd);
          v[ 0 ] = flbnd[ 0 ];
          v[ 1 ] = flbnd[ 1 ];
       }
-      PyArrayObject *ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *ubnd = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( ubnd ) {
-         double *v = (double *)ubnd->data;
+         double *v = (double *)PyArray_DATA(ubnd);
          v[ 0 ] = fubnd[ 0 ];
          v[ 1 ] = fubnd[ 1 ];
       }
@@ -10916,8 +11152,8 @@ static PyObject *Plot_clip( Plot *self, PyObject *args ) {
          PyArrayObject *ubnd = GetArray1D( ubnd_object, &naxes, "ubnd_in",
                                            NAME );
          if( lbnd && ubnd ) {
-            astClip( THIS, iframe, (const double *)lbnd->data,
-                     (const double *)ubnd->data );
+            astClip( THIS, iframe, (const double *)PyArray_DATA(lbnd),
+                     (const double *)PyArray_DATA(ubnd) );
             if( astOK ) {
                Py_INCREF(Py_None);
                result = Py_None;
@@ -10958,8 +11194,8 @@ static PyObject *Plot_curve( Plot *self, PyObject *args ) {
       PyArrayObject *start = GetArray1D( start_object, &naxes, "start", NAME );
       PyArrayObject *finish = GetArray1D( finish_object, &naxes, "finish", NAME );
       if( start && finish ) {
-         astCurve( THIS, (const double *)start->data,
-                       (const double *)finish->data );
+         astCurve( THIS, (const double *)PyArray_DATA(start),
+                       (const double *)PyArray_DATA(finish) );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -10992,7 +11228,7 @@ static PyObject *Plot_gridline( Plot *self, PyObject *args ) {
        astOK ) {
       PyArrayObject *start = GetArray1D( start_object, &naxes, "start", NAME );
       if( start ) {
-         astGridLine( THIS, axis, (const double *)start->data, length );
+         astGridLine( THIS, axis, (const double *)PyArray_DATA(start), length );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -11060,11 +11296,11 @@ static PyObject *Plot_mark( Plot *self, PyObject *args ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
-      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 1, 2, dims,
+      PyArrayObject *in = GetArray( in_object, NPY_DOUBLE, 1, 2, dims,
                                     "in", NAME );
       if( in ) {
          astMark( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
-                       (const double *)in->data, type );
+                       (const double *)PyArray_DATA(in), type );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -11092,11 +11328,11 @@ static PyObject *Plot_polycurve( Plot *self, PyObject *args ) {
       int dims[ 2 ];
       dims[ 0 ] = astGetI( THIS, "Naxes" );
       dims[ 1 ] = 0;
-      PyArrayObject *in = GetArray( in_object, PyArray_DOUBLE, 0, 2, dims,
+      PyArrayObject *in = GetArray( in_object, NPY_DOUBLE, 0, 2, dims,
                                     "in", NAME );
       if( in ) {
          astPolyCurve( THIS, dims[ 1 ], dims[ 0 ], dims[ 1 ],
-                       (const double *)in->data );
+                       (const double *)PyArray_DATA(in) );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -11169,13 +11405,13 @@ static PyObject *Plot_text( Plot *self, PyObject *args ) {
       if( pos && text ) {
          float fup[2];
          if( up ) {
-            fup[ 0 ] = ((const double *)up->data)[ 0 ];
-            fup[ 1 ] = ((const double *)up->data)[ 1 ];
+            fup[ 0 ] = ((const double *)PyArray_DATA(up))[ 0 ];
+            fup[ 1 ] = ((const double *)PyArray_DATA(up))[ 1 ];
          } else {
             fup[ 0 ] = 0.0;
             fup[ 1 ] = 1.0;
          }
-         astText( THIS, text, (const double *)pos->data, fup, just?just:"CC" );
+         astText( THIS, text, (const double *)PyArray_DATA(pos), fup, just?just:"CC" );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -11198,7 +11434,8 @@ static int ColourToInt( Plot *self, const char *colour ){
    int ret = -1;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrString(self->grf, "ColToInt") ){
+      int has_coltoint = PyAst_HasAttrStringWithError( self->grf, "ColToInt" );
+      if( has_coltoint > 0 ){
          PyObject *result = PyObject_CallMethod( self->grf, "ColToInt", "s", colour );
 
          if( result ) {
@@ -11209,7 +11446,7 @@ static int ColourToInt( Plot *self, const char *colour ){
                           "an integer - no such colour is known.", colour );
          }
 
-      } else if( sscanf( colour, "%d", &ret ) != 1 ) {
+      } else if( has_coltoint == 0 && sscanf( colour, "%d", &ret ) != 1 ) {
          PyErr_SetString( PyExc_TypeError, "Cannot convert a colour name to "
                           "a colour index since the supplied Grf object "
                           "has no ColToInt method." );
@@ -11239,10 +11476,11 @@ static const char *IntToColour( Plot *self, int colour ){
    buf[0] = 0;
 
    if( self && self->grf ) {
-      if( PyObject_HasAttrString(self->grf, "IntToCol") ){
+      int has_inttocol = PyAst_HasAttrStringWithError( self->grf, "IntToCol" );
+      if( has_inttocol > 0 ){
          PyObject *result = PyObject_CallMethod( self->grf, "IntToCol", "i", colour );
 
-         if( result && result != Py_None && STRING_CHECK( result ) ) {
+         if( result && result != Py_None && PyUnicode_Check( result ) ) {
             char *p = GetString( NULL, result );
             if( p ){
                if( strlen( p ) > MAXLENCOL ) {
@@ -11314,8 +11552,12 @@ static int setGrf( Plot *self, PyObject *value ){
       Py_XINCREF(self->grf);
 
       for( ifun = 0; ifun < NFUN; ifun++ ) {
-         if( PyObject_HasAttrString( value, fname[ ifun ] ) ) {
+         int has_fun = PyAst_HasAttrStringWithError( value, fname[ ifun ] );
+         if( has_fun > 0 ) {
             astGrfSet( THIS, fname[ ifun ], fun[ ifun ] );
+         } else if( has_fun < 0 ) {
+            result = -1;
+            break;
          } else {
             PyErr_Format( PyExc_TypeError, "The supplied grf object does "
                           "not implement the '%s' method.", fname[ ifun ] );
@@ -11427,14 +11669,14 @@ static int Line_wrapper( AstObject *grfcon, int n, const float *x, const float *
 
    if( self && self->grf ) {
       dims[ 0 ] = n;
-      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( xo && yo ) {
 
          int i;
          for( i = 0; i < n; i++ ) {
-            ((double *) xo->data)[ i ] = (double) x[ i ];
-            ((double *) yo->data)[ i ] = (double) y[ i ];
+            ((double *) PyArray_DATA(xo))[ i ] = (double) x[ i ];
+            ((double *) PyArray_DATA(yo))[ i ] = (double) y[ i ];
          }
 
          PyObject *result = PyObject_CallMethod( self->grf, "Line", "iOO",
@@ -11460,14 +11702,14 @@ static int Mark_wrapper( AstObject *grfcon, int n, const float *x, const float *
 
    if( self && self->grf ) {
       dims[ 0 ] = n;
-      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
-      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_DOUBLE );
+      PyArrayObject *xo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
+      PyArrayObject *yo = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_DOUBLE );
       if( xo && yo ) {
 
          int i;
          for( i = 0; i < n; i++ ) {
-            ((double *) xo->data)[ i ] = (double) x[ i ];
-            ((double *) yo->data)[ i ] = (double) y[ i ];
+            ((double *) PyArray_DATA(xo))[ i ] = (double) x[ i ];
+            ((double *) PyArray_DATA(yo))[ i ] = (double) y[ i ];
          }
 
          PyObject *result = PyObject_CallMethod( self->grf, "Mark", "iOOi",
@@ -11493,7 +11735,7 @@ static int Qch_wrapper( AstObject *grfcon, float *chv, float *chh ){
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Qch' method"
                           " returns a tuple of length %d, should be 2.",
@@ -11526,7 +11768,7 @@ static int Scales_wrapper( AstObject *grfcon, float *alpha, float *beta ){
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 2 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'Scales' method"
                           " returns a tuple of length %d, should be 2.",
@@ -11579,7 +11821,7 @@ static int TxExt_wrapper( AstObject *grfcon, const char *text, float x, float y,
          if( !PyTuple_Check( result ) ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' "
                           "method returns a %s, should be a Tuple.",
-                          result->ob_type->tp_name );
+                          Py_TYPE(result)->tp_name );
          } else if( (int) PyTuple_Size( result ) != 8 ) {
             PyErr_Format( PyExc_TypeError, "The Grf object 'TxExt' method"
                           " returns a tuple of length %d, should be 8.",
@@ -11675,44 +11917,44 @@ static PyGetSetDef Table_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject TableType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(Table),             /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST Table",               /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   Table_methods,             /* tp_methods */
-   0,                         /* tp_members */
-   Table_getseters,           /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)Table_init,      /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(Table),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST Table",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = Table_methods,
+   .tp_members = 0,
+   .tp_getset = Table_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)Table_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -11722,6 +11964,7 @@ static int Table_init( Table *self, PyObject *args, PyObject *kwds ){
 /* args: :options=None */
 
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|s:" CLASS, &options ) ) {
@@ -11753,7 +11996,7 @@ static PyObject *Table_addcolumn( Table *self, PyObject *args ) {
       int ndim = 0;
       PyArrayObject *dims = GetArray1I( dims_object, &ndim, "dims", NAME );
       if( dims ) {
-         astAddColumn( THIS, name, type, ndim, (int *) dims->data, unit );
+         astAddColumn( THIS, name, type, ndim, (int *) PyArray_DATA(dims), unit );
          if( astOK ) {
             Py_INCREF(Py_None);
             result = Py_None;
@@ -11824,12 +12067,12 @@ static PyObject *Table_columnshape( Table *self, PyObject *args ) {
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       int ndim;
       char buf[100];
-      sprintf( buf, "ColumnNdim(%s)", column );
+      snprintf( buf, sizeof(buf), "ColumnNdim(%s)", column );
       ndim = astGetI( THIS, buf );
       dims[ 0 ] = ndim;
-      PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, PyArray_INT );
+      PyArrayObject *dims_array = (PyArrayObject *) PyArray_SimpleNew( 1, dims, NPY_INT );
       if( dims_array ) {
-         astColumnShape( THIS, column, ndim, &ndim, (int *) dims_array->data );
+         astColumnShape( THIS, column, ndim, &ndim, (int *) PyArray_DATA(dims_array) );
          if( astOK ) {
             result = (PyObject *) dims_array;
          } else {
@@ -12002,7 +12245,7 @@ static PyObject *Table_columnlenc( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnLenC(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnLenC(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12025,7 +12268,7 @@ static PyObject *Table_columnlength( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnLength(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnLength(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12048,7 +12291,7 @@ static PyObject *Table_columnndim( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnNdim(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnNdim(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12071,7 +12314,7 @@ static PyObject *Table_columntype( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnType(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnType(%s)", column );
       int value = astGetI( THIS, buff );
       if( astOK ) result = Py_BuildValue( "i", value );
    }
@@ -12093,7 +12336,7 @@ static PyObject *Table_columnunit( Table *self, PyObject *args ) {
 
    if( PyArg_ParseTuple( args, "s:" NAME, &column ) && astOK ) {
       char buff[200];
-      sprintf( buff, "ColumnUnit(%s)", column );
+      snprintf( buff, sizeof(buff), "ColumnUnit(%s)", column );
       const char *value = astGetC( THIS, buff );
       if( astOK ) result = Py_BuildValue( "s", value );
    }
@@ -12133,44 +12376,44 @@ static PyMethodDef FitsTable_methods[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject FitsTableType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(FitsTable),         /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST FitsTable",           /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   FitsTable_methods,         /* tp_methods */
-   0,                         /* tp_members */
-   0,                         /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)FitsTable_init,  /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(FitsTable),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST FitsTable",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = FitsTable_methods,
+   .tp_members = 0,
+   .tp_getset = 0,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)FitsTable_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -12181,6 +12424,7 @@ static int FitsTable_init( FitsTable *self, PyObject *args, PyObject *kwds ){
 
    PyObject *header = Py_None;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
 
    if( PyArg_ParseTuple(args, "|O!s:" CLASS, &FitsChanType, &header, &options ) ) {
@@ -12403,10 +12647,15 @@ static PyObject *FitsChan_tablesource( FitsChan  *self, PyObject *args ) {
 
       if( tabsource && tabsource != Py_None ) {
 
-         if( PyObject_HasAttrString( tabsource, "asttablesource" ) ) {
+         int has_tabsource = PyAst_HasAttrStringWithError( tabsource,
+                                                           "asttablesource" );
+         if( has_tabsource > 0 ) {
             astTableSource( THIS, tabsource_wrapper );
             self->tabsource = tabsource;
             Py_INCREF( tabsource );
+
+         } else if( has_tabsource < 0 ) {
+            /* Attribute lookup error already set. */
 
          } else {
             PyErr_SetString( PyExc_TypeError, "The supplied 'tabsource' "
@@ -12474,44 +12723,44 @@ static PyGetSetDef YamlChan_getseters[] = {
 
 /* Define the class Python type structure */
 static PyTypeObject YamlChanType = {
-   PYTYPEOBJECT_HEAD
-   CLASS,                     /* tp_name */
-   sizeof(YamlChan),          /* tp_basicsize */
-   0,                         /* tp_itemsize */
-   0,                         /* tp_dealloc */
-   0,                         /* tp_print */
-   0,                         /* tp_getattr */
-   0,                         /* tp_setattr */
-   0,                         /* tp_reserved */
-   0,                         /* tp_repr */
-   0,                         /* tp_as_number */
-   0,                         /* tp_as_sequence */
-   0,                         /* tp_as_mapping */
-   0,                         /* tp_hash  */
-   0,                         /* tp_call */
-   0,                         /* tp_str */
-   0,                         /* tp_getattro */
-   0,                         /* tp_setattro */
-   0,                         /* tp_as_buffer */
-   Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-   "AST YamlChan",            /* tp_doc */
-   0,		              /* tp_traverse */
-   0,		              /* tp_clear */
-   0,		              /* tp_richcompare */
-   0,		              /* tp_weaklistoffset */
-   0,		              /* tp_iter */
-   0,		              /* tp_iternext */
-   0,                         /* tp_methods */
-   0,                         /* tp_members */
-   YamlChan_getseters,        /* tp_getset */
-   0,                         /* tp_base */
-   0,                         /* tp_dict */
-   0,                         /* tp_descr_get */
-   0,                         /* tp_descr_set */
-   0,                         /* tp_dictoffset */
-   (initproc)YamlChan_init,   /* tp_init */
-   0,                         /* tp_alloc */
-   0,                         /* tp_new */
+   PyVarObject_HEAD_INIT(NULL,0)
+   .tp_name = CLASS,
+   .tp_basicsize = sizeof(YamlChan),
+   .tp_itemsize = 0,
+   .tp_dealloc = 0,
+   .tp_vectorcall_offset = 0,
+   .tp_getattr = 0,
+   .tp_setattr = 0,
+   .tp_as_async = 0,
+   .tp_repr = 0,
+   .tp_as_number = 0,
+   .tp_as_sequence = 0,
+   .tp_as_mapping = 0,
+   .tp_hash = 0,
+   .tp_call = 0,
+   .tp_str = 0,
+   .tp_getattro = 0,
+   .tp_setattro = 0,
+   .tp_as_buffer = 0,
+   .tp_flags = Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,
+   .tp_doc = "AST YamlChan",
+   .tp_traverse = 0,
+   .tp_clear = 0,
+   .tp_richcompare = 0,
+   .tp_weaklistoffset = 0,
+   .tp_iter = 0,
+   .tp_iternext = 0,
+   .tp_methods = 0,
+   .tp_members = 0,
+   .tp_getset = YamlChan_getseters,
+   .tp_base = 0,
+   .tp_dict = 0,
+   .tp_descr_get = 0,
+   .tp_descr_set = 0,
+   .tp_dictoffset = 0,
+   .tp_init = (initproc)YamlChan_init,
+   .tp_alloc = 0,
+   .tp_new = 0,
 };
 
 
@@ -12535,6 +12784,7 @@ static int YamlChan_init( YamlChan *self, PyObject *args, PyObject *kwds ){
    const char *(* source_wrap)( void ) = NULL;
    void (* sink_wrap)( const char * ) = NULL;
    const char *options = " ";
+   if( !GetOptionsFromKwds( kwds, &options ) ) return -1;
    int result = -1;
    if( PyArg_ParseTuple(args, "|OOs:" CLASS, &source, &sink, &options ) ) {
 
@@ -12631,35 +12881,35 @@ static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) array_object);
+         if( type == NPY_DOUBLE ) {
             format[ 0 ] = 'd';
             pvalue = &value_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 0 ] = 'f';
             pvalue = &value_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 0 ] = 'i';
             pvalue = &value_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 0 ] = 'l';
             pvalue = &value_l;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 0 ] = 'I';
             pvalue = &value_I;
-         } else if( type == PyArray_ULONG ) {
+         } else if( type == NPY_ULONG ) {
             format[ 0 ] = 'L';
             pvalue = &value_L;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 0 ] = 'h';
             pvalue = &value_h;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 0 ] = 'H';
             pvalue = &value_H;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 0 ] = 'b';
             pvalue = &value_b;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 0 ] = 'B';
             pvalue = &value_B;
          } else {
@@ -12671,8 +12921,8 @@ static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
          }
 
 /* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) array_object)->nd;
-         pdims = ((PyArrayObject*) array_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) array_object);
+         pdims = PyArray_DIMS((PyArrayObject*) array_object);
          if( ndim != 2 ) {
             PyErr_Format( PyExc_ValueError, "The 'in' array supplied to " NAME
                           " has %d dimensions - must be 2.", ndim );
@@ -12695,45 +12945,45 @@ static PyObject *PyAst_convex( PyObject *self, PyObject *args ) {
       if( array && lbnd && ubnd ) {
          AstPolygon *new = NULL;
 
-         if( type == PyArray_DOUBLE ) {
-            new = astConvexD( value_d, oper, (const double *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         if( type == NPY_DOUBLE ) {
+            new = astConvexD( value_d, oper, (const double *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_FLOAT ) {
-            new = astConvexF( value_f, oper, (const float *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_FLOAT ) {
+            new = astConvexF( value_f, oper, (const float *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_LONG) {
-            new = astConvexL( value_l, oper, (const long int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_LONG) {
+            new = astConvexL( value_l, oper, (const long int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_INT) {
-            new = astConvexI( value_i, oper, (const int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_INT) {
+            new = astConvexI( value_i, oper, (const int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_ULONG) {
-            new = astConvexUL( value_L, oper, (const unsigned long int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_ULONG) {
+            new = astConvexUL( value_L, oper, (const unsigned long int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_UINT) {
-            new = astConvexUI( value_I, oper, (const unsigned int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_UINT) {
+            new = astConvexUI( value_I, oper, (const unsigned int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_SHORT) {
-            new = astConvexS( value_h, oper, (const short int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_SHORT) {
+            new = astConvexS( value_h, oper, (const short int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_USHORT) {
-            new = astConvexUS( value_H, oper, (const unsigned short int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_USHORT) {
+            new = astConvexUS( value_H, oper, (const unsigned short int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_BYTE) {
-            new = astConvexB( value_b, oper, (const signed char *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_BYTE) {
+            new = astConvexB( value_b, oper, (const signed char *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
-         } else if( type == PyArray_UBYTE) {
-            new = astConvexUB( value_B, oper, (const unsigned char *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
+         } else if( type == NPY_UBYTE) {
+            new = astConvexUB( value_B, oper, (const unsigned char *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
                                starpix );
          }
 
@@ -12873,35 +13123,35 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
          PyErr_SetString( PyExc_TypeError, "The 'array' argument for " NAME " must be "
                           "an array object" );
       } else {
-         type = ((PyArrayObject*) array_object)->descr->type_num;
-         if( type == PyArray_DOUBLE ) {
+         type = PyArray_TYPE((PyArrayObject*) array_object);
+         if( type == NPY_DOUBLE ) {
             format[ 0 ] = 'd';
             pvalue = &value_d;
-         } else if( type == PyArray_FLOAT ) {
+         } else if( type == NPY_FLOAT ) {
             format[ 0 ] = 'f';
             pvalue = &value_f;
-         } else if( type == PyArray_INT ) {
+         } else if( type == NPY_INT ) {
             format[ 0 ] = 'i';
             pvalue = &value_i;
-         } else if( type == PyArray_LONG ) {
+         } else if( type == NPY_LONG ) {
             format[ 0 ] = 'l';
             pvalue = &value_l;
-         } else if( type == PyArray_UINT ) {
+         } else if( type == NPY_UINT ) {
             format[ 0 ] = 'I';
             pvalue = &value_I;
-         } else if( type == PyArray_ULONG ) {
+         } else if( type == NPY_ULONG ) {
             format[ 0 ] = 'L';
             pvalue = &value_L;
-         } else if( type == PyArray_SHORT ) {
+         } else if( type == NPY_SHORT ) {
             format[ 0 ] = 'h';
             pvalue = &value_h;
-         } else if( type == PyArray_USHORT ) {
+         } else if( type == NPY_USHORT ) {
             format[ 0 ] = 'H';
             pvalue = &value_H;
-         } else if( type == PyArray_BYTE ) {
+         } else if( type == NPY_BYTE ) {
             format[ 0 ] = 'b';
             pvalue = &value_b;
-         } else if( type == PyArray_UBYTE ) {
+         } else if( type == NPY_UBYTE ) {
             format[ 0 ] = 'B';
             pvalue = &value_B;
          } else {
@@ -12913,8 +13163,8 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
          }
 
 /* Also record the number of axes and dimensions in the input array. */
-         ndim = ((PyArrayObject*) array_object)->nd;
-         pdims = ((PyArrayObject*) array_object)->dimensions;
+         ndim = PyArray_NDIM((PyArrayObject*) array_object);
+         pdims = PyArray_DIMS((PyArrayObject*) array_object);
          if( ndim != 2 ) {
             PyErr_Format( PyExc_ValueError, "The 'in' array supplied to " NAME
                           " has %d dimensions - must be 2.", ndim );
@@ -12939,46 +13189,46 @@ static PyObject *PyAst_outline( PyObject *self, PyObject *args ) {
       if( array && lbnd && ubnd && inside ) {
          AstPolygon *new = NULL;
 
-         if( type == PyArray_DOUBLE ) {
-            new = astOutlineD( value_d, oper, (const double *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_FLOAT ) {
-            new = astOutlineF( value_f, oper, (const float *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_LONG) {
-            new = astOutlineL( value_l, oper, (const long int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_INT) {
-            new = astOutlineI( value_i, oper, (const int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_ULONG) {
-            new = astOutlineUL( value_L, oper, (const unsigned long int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_UINT) {
-            new = astOutlineUI( value_I, oper, (const unsigned int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_SHORT) {
-            new = astOutlineS( value_h, oper, (const short int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_USHORT) {
-            new = astOutlineUS( value_H, oper, (const unsigned short int *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_BYTE) {
-            new = astOutlineB( value_b, oper, (const signed char *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
-         } else if( type == PyArray_UBYTE) {
-            new = astOutlineUB( value_B, oper, (const unsigned char *)array->data,
-                               (const int *)lbnd->data, (const int *)ubnd->data,
-                               maxerr, maxvert, (const int *)inside->data, starpix );
+         if( type == NPY_DOUBLE ) {
+            new = astOutlineD( value_d, oper, (const double *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_FLOAT ) {
+            new = astOutlineF( value_f, oper, (const float *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_LONG) {
+            new = astOutlineL( value_l, oper, (const long int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_INT) {
+            new = astOutlineI( value_i, oper, (const int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_ULONG) {
+            new = astOutlineUL( value_L, oper, (const unsigned long int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_UINT) {
+            new = astOutlineUI( value_I, oper, (const unsigned int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_SHORT) {
+            new = astOutlineS( value_h, oper, (const short int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_USHORT) {
+            new = astOutlineUS( value_H, oper, (const unsigned short int *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_BYTE) {
+            new = astOutlineB( value_b, oper, (const signed char *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
+         } else if( type == NPY_UBYTE) {
+            new = astOutlineUB( value_B, oper, (const unsigned char *)PyArray_DATA(array),
+                               (const int *)PyArray_DATA(lbnd), (const int *)PyArray_DATA(ubnd),
+                               maxerr, maxvert, (const int *)PyArray_DATA(inside), starpix );
          }
 
          if( astOK ) {
@@ -13046,14 +13296,6 @@ static PyObject *PyAst_get_include( PyObject *self ) {
 /* Check no error has occurred already. */
    if( PyErr_Occurred() ) return result;
 
-#if PY_MAJOR_VERSION < 3
-
-/* In Python V2.7, the "self" argument is always NULL, so use a global copy
-   of the module pointer stored when the module was initialised. */
-   self = pyast_module;
-
-#endif
-
 /* Get a string holding the full path to the pyast sharable library. */
    str = PyObject_GetAttrString( self, "__file__" );
    buff = GetString( NULL, str );
@@ -13099,7 +13341,6 @@ static PyMethodDef PyAst_methods[] = {
 };
 
 /* Describe the properties of the module. */
-#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef astmodule = {
    PyModuleDef_HEAD_INIT,
    "Ast",
@@ -13108,11 +13349,10 @@ static struct PyModuleDef astmodule = {
    PyAst_methods,
    NULL, NULL, NULL, NULL
 };
-#endif
 
 /* Tell the python interpreter about this module. This includes telling
    the interpreter about each of the types defined by this module. */
-MOD_INIT(Ast) {
+PyMODINIT_FUNC PyInit_Ast(void) {
    static void *PyAst_API[ PyAst_API_pointers ];
    PyObject *c_api_object, *m;
 
@@ -13128,22 +13368,18 @@ MOD_INIT(Ast) {
                     "at least version 6.0 of the AST library to be "
                     "available, but version %d.%d-%d was found.", maj, min,
                     rel );
-      RETURN( NULL );
+      return NULL;
    }
 
-#if PY_MAJOR_VERSION >= 3
    m = PyModule_Create(&astmodule);
-#else
-   m = Py_InitModule3( "Ast", PyAst_methods, "AST Python interface." );
-#endif
 
-   if( m == NULL ) RETURN( NULL );
+   if( m == NULL ) return NULL;
 
 /* Create singleton instances of the AST Exception classes. The
    RegisterErrors function is defined within file exceptions.c (generated
    automatically by the make_exceptions.py script on the basis of the ast_err.msg
    file). */
-   if( !RegisterErrors( m ) ) RETURN( NULL );
+   if( !RegisterErrors( m ) ) goto fail;
 
 /* Pointers to functions for use by other extension modules. */
    PyAst_API[PyAst_ToString_NUM] = (void *)PyAst_ToString;
@@ -13151,335 +13387,318 @@ MOD_INIT(Ast) {
 
 /* Create a Capsule containing the API pointer array's address */
    c_api_object = PyCapsule_New( (void *) PyAst_API, MODULE "._C_API", NULL );
-   if( c_api_object ) PyModule_AddObject( m, "_C_API", c_api_object );
+   if( !c_api_object ) goto fail;
+   if( PyModule_AddObjectRef( m, "_C_API", c_api_object ) < 0 ) {
+      Py_DECREF( c_api_object );
+      goto fail;
+   }
+   Py_DECREF( c_api_object );
 
 /* The types provided by this module. */
-   if( PyType_Ready(&ObjectType) < 0) RETURN( NULL );
-   Py_INCREF(&ObjectType);
-   PyModule_AddObject( m, "Object", (PyObject *)&ObjectType);
+   if( PyType_Ready(&ObjectType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Object", (PyObject *)&ObjectType ) < 0 ) goto fail;
 
    MappingType.tp_base = &ObjectType;
-   if( PyType_Ready(&MappingType) < 0) RETURN( NULL );
-   Py_INCREF(&MappingType);
-   PyModule_AddObject( m, "Mapping", (PyObject *)&MappingType);
+   if( PyType_Ready(&MappingType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Mapping", (PyObject *)&MappingType ) < 0 ) goto fail;
 
    ZoomMapType.tp_new = PyType_GenericNew;
    ZoomMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ZoomMapType) < 0) RETURN( NULL );
-   Py_INCREF(&ZoomMapType);
-   PyModule_AddObject( m, "ZoomMap", (PyObject *)&ZoomMapType);
+   if( PyType_Ready(&ZoomMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ZoomMap", (PyObject *)&ZoomMapType ) < 0 ) goto fail;
 
    MathMapType.tp_new = PyType_GenericNew;
    MathMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MathMapType) < 0) RETURN( NULL );
-   Py_INCREF(&MathMapType);
-   PyModule_AddObject( m, "MathMap", (PyObject *)&MathMapType);
+   if( PyType_Ready(&MathMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MathMap", (PyObject *)&MathMapType ) < 0 ) goto fail;
 
    SphMapType.tp_new = PyType_GenericNew;
    SphMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SphMapType) < 0) RETURN( NULL );
-   Py_INCREF(&SphMapType);
-   PyModule_AddObject( m, "SphMap", (PyObject *)&SphMapType);
+   if( PyType_Ready(&SphMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SphMap", (PyObject *)&SphMapType ) < 0 ) goto fail;
 
    GrismMapType.tp_new = PyType_GenericNew;
    GrismMapType.tp_base = &MappingType;
-   if( PyType_Ready(&GrismMapType) < 0) RETURN( NULL );
-   Py_INCREF(&GrismMapType);
-   PyModule_AddObject( m, "GrismMap", (PyObject *)&GrismMapType);
+   if( PyType_Ready(&GrismMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "GrismMap", (PyObject *)&GrismMapType ) < 0 ) goto fail;
 
    PcdMapType.tp_new = PyType_GenericNew;
    PcdMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PcdMapType) < 0) RETURN( NULL );
-   Py_INCREF(&PcdMapType);
-   PyModule_AddObject( m, "PcdMap", (PyObject *)&PcdMapType);
+   if( PyType_Ready(&PcdMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PcdMap", (PyObject *)&PcdMapType ) < 0 ) goto fail;
 
    WcsMapType.tp_new = PyType_GenericNew;
    WcsMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WcsMapType) < 0) RETURN( NULL );
-   Py_INCREF(&WcsMapType);
-   PyModule_AddObject( m, "WcsMap", (PyObject *)&WcsMapType);
+   if( PyType_Ready(&WcsMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "WcsMap", (PyObject *)&WcsMapType ) < 0 ) goto fail;
 
    UnitMapType.tp_new = PyType_GenericNew;
    UnitMapType.tp_base = &MappingType;
-   if( PyType_Ready(&UnitMapType) < 0) RETURN( NULL );
-   Py_INCREF(&UnitMapType);
-   PyModule_AddObject( m, "UnitMap", (PyObject *)&UnitMapType);
+   if( PyType_Ready(&UnitMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "UnitMap", (PyObject *)&UnitMapType ) < 0 ) goto fail;
 
    TimeMapType.tp_new = PyType_GenericNew;
    TimeMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TimeMapType) < 0) RETURN( NULL );
-   Py_INCREF(&TimeMapType);
-   PyModule_AddObject( m, "TimeMap", (PyObject *)&TimeMapType);
+   if( PyType_Ready(&TimeMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TimeMap", (PyObject *)&TimeMapType ) < 0 ) goto fail;
+
+   SplineMapType.tp_new = PyType_GenericNew;
+   SplineMapType.tp_base = &MappingType;
+   if( PyType_Ready(&SplineMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SplineMap", (PyObject *)&SplineMapType ) < 0 ) goto fail;
 
    RateMapType.tp_new = PyType_GenericNew;
    RateMapType.tp_base = &MappingType;
-   if( PyType_Ready(&RateMapType) < 0) RETURN( NULL );
-   Py_INCREF(&RateMapType);
-   PyModule_AddObject( m, "RateMap", (PyObject *)&RateMapType);
+   if( PyType_Ready(&RateMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "RateMap", (PyObject *)&RateMapType ) < 0 ) goto fail;
 
    CmpMapType.tp_new = PyType_GenericNew;
    CmpMapType.tp_base = &MappingType;
-   if( PyType_Ready(&CmpMapType) < 0) RETURN( NULL );
-   Py_INCREF(&CmpMapType);
-   PyModule_AddObject( m, "CmpMap", (PyObject *)&CmpMapType);
+   if( PyType_Ready(&CmpMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpMap", (PyObject *)&CmpMapType ) < 0 ) goto fail;
 
    TranMapType.tp_new = PyType_GenericNew;
    TranMapType.tp_base = &MappingType;
-   if( PyType_Ready(&TranMapType) < 0) RETURN( NULL );
-   Py_INCREF(&TranMapType);
-   PyModule_AddObject( m, "TranMap", (PyObject *)&TranMapType);
+   if( PyType_Ready(&TranMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TranMap", (PyObject *)&TranMapType ) < 0 ) goto fail;
 
    NormMapType.tp_new = PyType_GenericNew;
    NormMapType.tp_base = &MappingType;
-   if( PyType_Ready(&NormMapType) < 0) RETURN( NULL );
-   Py_INCREF(&NormMapType);
-   PyModule_AddObject( m, "NormMap", (PyObject *)&NormMapType);
+   if( PyType_Ready(&NormMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "NormMap", (PyObject *)&NormMapType ) < 0 ) goto fail;
 
    PermMapType.tp_new = PyType_GenericNew;
    PermMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PermMapType) < 0) RETURN( NULL );
-   Py_INCREF(&PermMapType);
-   PyModule_AddObject( m, "PermMap", (PyObject *)&PermMapType);
+   if( PyType_Ready(&PermMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PermMap", (PyObject *)&PermMapType ) < 0 ) goto fail;
 
    ShiftMapType.tp_new = PyType_GenericNew;
    ShiftMapType.tp_base = &MappingType;
-   if( PyType_Ready(&ShiftMapType) < 0) RETURN( NULL );
-   Py_INCREF(&ShiftMapType);
-   PyModule_AddObject( m, "ShiftMap", (PyObject *)&ShiftMapType);
+   if( PyType_Ready(&ShiftMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ShiftMap", (PyObject *)&ShiftMapType ) < 0 ) goto fail;
 
    UnitNormMapType.tp_new = PyType_GenericNew;
    UnitNormMapType.tp_base = &MappingType;
-   if( PyType_Ready(&UnitNormMapType) < 0) RETURN( NULL );
-   Py_INCREF(&UnitNormMapType);
-   PyModule_AddObject( m, "UnitNormMap", (PyObject *)&UnitNormMapType);
+   if( PyType_Ready(&UnitNormMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "UnitNormMap", (PyObject *)&UnitNormMapType ) < 0 ) goto fail;
 
    LutMapType.tp_new = PyType_GenericNew;
    LutMapType.tp_base = &MappingType;
-   if( PyType_Ready(&LutMapType) < 0) RETURN( NULL );
-   Py_INCREF(&LutMapType);
-   PyModule_AddObject( m, "LutMap", (PyObject *)&LutMapType);
+   if( PyType_Ready(&LutMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "LutMap", (PyObject *)&LutMapType ) < 0 ) goto fail;
 
    WinMapType.tp_new = PyType_GenericNew;
    WinMapType.tp_base = &MappingType;
-   if( PyType_Ready(&WinMapType) < 0) RETURN( NULL );
-   Py_INCREF(&WinMapType);
-   PyModule_AddObject( m, "WinMap", (PyObject *)&WinMapType);
+   if( PyType_Ready(&WinMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "WinMap", (PyObject *)&WinMapType ) < 0 ) goto fail;
 
    MatrixMapType.tp_new = PyType_GenericNew;
    MatrixMapType.tp_base = &MappingType;
-   if( PyType_Ready(&MatrixMapType) < 0) RETURN( NULL );
-   Py_INCREF(&MatrixMapType);
-   PyModule_AddObject( m, "MatrixMap", (PyObject *)&MatrixMapType);
+   if( PyType_Ready(&MatrixMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MatrixMap", (PyObject *)&MatrixMapType ) < 0 ) goto fail;
 
    PolyMapType.tp_new = PyType_GenericNew;
    PolyMapType.tp_base = &MappingType;
-   if( PyType_Ready(&PolyMapType) < 0) RETURN( NULL );
-   Py_INCREF(&PolyMapType);
-   PyModule_AddObject( m, "PolyMap", (PyObject *)&PolyMapType);
+   if( PyType_Ready(&PolyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PolyMap", (PyObject *)&PolyMapType ) < 0 ) goto fail;
 
    ChebyMapType.tp_new = PyType_GenericNew;
    ChebyMapType.tp_base = &PolyMapType;
-   if( PyType_Ready(&ChebyMapType) < 0) RETURN( NULL );
-   Py_INCREF(&ChebyMapType);
-   PyModule_AddObject( m, "ChebyMap", (PyObject *)&ChebyMapType);
+   if( PyType_Ready(&ChebyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "ChebyMap", (PyObject *)&ChebyMapType ) < 0 ) goto fail;
 
    FrameType.tp_new = PyType_GenericNew;
    FrameType.tp_base = &MappingType;
-   if( PyType_Ready(&FrameType) < 0) RETURN( NULL );
-   Py_INCREF(&FrameType);
-   PyModule_AddObject( m, "Frame", (PyObject *)&FrameType);
+   if( PyType_Ready(&FrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Frame", (PyObject *)&FrameType ) < 0 ) goto fail;
 
    FrameSetType.tp_new = PyType_GenericNew;
    FrameSetType.tp_base = &FrameType;
-   if( PyType_Ready(&FrameSetType) < 0) RETURN( NULL );
-   Py_INCREF(&FrameSetType);
-   PyModule_AddObject( m, "FrameSet", (PyObject *)&FrameSetType);
+   if( PyType_Ready(&FrameSetType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FrameSet", (PyObject *)&FrameSetType ) < 0 ) goto fail;
 
    PlotType.tp_new = PyType_GenericNew;
    PlotType.tp_base = &FrameSetType;
-   if( PyType_Ready(&PlotType) < 0) RETURN( NULL );
-   Py_INCREF(&PlotType);
-   PyModule_AddObject( m, "Plot", (PyObject *)&PlotType);
+   if( PyType_Ready(&PlotType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Plot", (PyObject *)&PlotType ) < 0 ) goto fail;
 
    CmpFrameType.tp_new = PyType_GenericNew;
    CmpFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&CmpFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&CmpFrameType);
-   PyModule_AddObject( m, "CmpFrame", (PyObject *)&CmpFrameType);
+   if( PyType_Ready(&CmpFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpFrame", (PyObject *)&CmpFrameType ) < 0 ) goto fail;
 
    SpecFrameType.tp_new = PyType_GenericNew;
    SpecFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SpecFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&SpecFrameType);
-   PyModule_AddObject( m, "SpecFrame", (PyObject *)&SpecFrameType);
+   if( PyType_Ready(&SpecFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecFrame", (PyObject *)&SpecFrameType ) < 0 ) goto fail;
 
    SlaMapType.tp_new = PyType_GenericNew;
    SlaMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SlaMapType) < 0) RETURN( NULL );
-   Py_INCREF(&SlaMapType);
-   PyModule_AddObject( m, "SlaMap", (PyObject *)&SlaMapType);
+   if( PyType_Ready(&SlaMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SlaMap", (PyObject *)&SlaMapType ) < 0 ) goto fail;
 
    SpecMapType.tp_new = PyType_GenericNew;
    SpecMapType.tp_base = &MappingType;
-   if( PyType_Ready(&SpecMapType) < 0) RETURN( NULL );
-   Py_INCREF(&SpecMapType);
-   PyModule_AddObject( m, "SpecMap", (PyObject *)&SpecMapType);
+   if( PyType_Ready(&SpecMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecMap", (PyObject *)&SpecMapType ) < 0 ) goto fail;
 
    DSBSpecFrameType.tp_new = PyType_GenericNew;
    DSBSpecFrameType.tp_base = &SpecFrameType;
-   if( PyType_Ready(&DSBSpecFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&DSBSpecFrameType);
-   PyModule_AddObject( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType);
+   if( PyType_Ready(&DSBSpecFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "DSBSpecFrame", (PyObject *)&DSBSpecFrameType ) < 0 ) goto fail;
 
    SkyFrameType.tp_new = PyType_GenericNew;
    SkyFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&SkyFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&SkyFrameType);
-   PyModule_AddObject( m, "SkyFrame", (PyObject *)&SkyFrameType);
+   if( PyType_Ready(&SkyFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SkyFrame", (PyObject *)&SkyFrameType ) < 0 ) goto fail;
 
    TimeFrameType.tp_new = PyType_GenericNew;
    TimeFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&TimeFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&TimeFrameType);
-   PyModule_AddObject( m, "TimeFrame", (PyObject *)&TimeFrameType);
+   if( PyType_Ready(&TimeFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "TimeFrame", (PyObject *)&TimeFrameType ) < 0 ) goto fail;
 
    FluxFrameType.tp_new = PyType_GenericNew;
    FluxFrameType.tp_base = &FrameType;
-   if( PyType_Ready(&FluxFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&FluxFrameType);
-   PyModule_AddObject( m, "FluxFrame", (PyObject *)&FluxFrameType);
+   if( PyType_Ready(&FluxFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FluxFrame", (PyObject *)&FluxFrameType ) < 0 ) goto fail;
 
    SpecFluxFrameType.tp_new = PyType_GenericNew;
    SpecFluxFrameType.tp_base = &CmpFrameType;
-   if( PyType_Ready(&SpecFluxFrameType) < 0) RETURN( NULL );
-   Py_INCREF(&SpecFluxFrameType);
-   PyModule_AddObject( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType);
+   if( PyType_Ready(&SpecFluxFrameType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "SpecFluxFrame", (PyObject *)&SpecFluxFrameType ) < 0 ) goto fail;
 
    RegionType.tp_new = PyType_GenericNew;
    RegionType.tp_base = &FrameType;
-   if( PyType_Ready(&RegionType) < 0) RETURN( NULL );
-   Py_INCREF(&RegionType);
-   PyModule_AddObject( m, "Region", (PyObject *)&RegionType);
+   if( PyType_Ready(&RegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Region", (PyObject *)&RegionType ) < 0 ) goto fail;
 
    BoxType.tp_new = PyType_GenericNew;
    BoxType.tp_base = &RegionType;
-   if( PyType_Ready(&BoxType) < 0) RETURN( NULL );
-   Py_INCREF(&BoxType);
-   PyModule_AddObject( m, "Box", (PyObject *)&BoxType);
+   if( PyType_Ready(&BoxType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Box", (PyObject *)&BoxType ) < 0 ) goto fail;
 
    CircleType.tp_new = PyType_GenericNew;
    CircleType.tp_base = &RegionType;
-   if( PyType_Ready(&CircleType) < 0) RETURN( NULL );
-   Py_INCREF(&CircleType);
-   PyModule_AddObject( m, "Circle", (PyObject *)&CircleType);
+   if( PyType_Ready(&CircleType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Circle", (PyObject *)&CircleType ) < 0 ) goto fail;
 
    PointListType.tp_new = PyType_GenericNew;
    PointListType.tp_base = &RegionType;
-   if( PyType_Ready(&PointListType) < 0) RETURN( NULL );
-   Py_INCREF(&PointListType);
-   PyModule_AddObject( m, "PointList", (PyObject *)&PointListType);
+   if( PyType_Ready(&PointListType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "PointList", (PyObject *)&PointListType ) < 0 ) goto fail;
 
    PolygonType.tp_new = PyType_GenericNew;
    PolygonType.tp_base = &RegionType;
-   if( PyType_Ready(&PolygonType) < 0) RETURN( NULL );
-   Py_INCREF(&PolygonType);
-   PyModule_AddObject( m, "Polygon", (PyObject *)&PolygonType);
+   if( PyType_Ready(&PolygonType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Polygon", (PyObject *)&PolygonType ) < 0 ) goto fail;
 
    EllipseType.tp_new = PyType_GenericNew;
    EllipseType.tp_base = &RegionType;
-   if( PyType_Ready(&EllipseType) < 0) RETURN( NULL );
-   Py_INCREF(&EllipseType);
-   PyModule_AddObject( m, "Ellipse", (PyObject *)&EllipseType);
+   if( PyType_Ready(&EllipseType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Ellipse", (PyObject *)&EllipseType ) < 0 ) goto fail;
 
    IntervalType.tp_new = PyType_GenericNew;
    IntervalType.tp_base = &RegionType;
-   if( PyType_Ready(&IntervalType) < 0) RETURN( NULL );
-   Py_INCREF(&IntervalType);
-   PyModule_AddObject( m, "Interval", (PyObject *)&IntervalType);
+   if( PyType_Ready(&IntervalType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Interval", (PyObject *)&IntervalType ) < 0 ) goto fail;
 
    MocType.tp_new = PyType_GenericNew;
    MocType.tp_base = &RegionType;
-   if( PyType_Ready(&MocType) < 0) RETURN( NULL );
-   Py_INCREF(&MocType);
-   PyModule_AddObject( m, "Moc", (PyObject *)&MocType);
+   if( PyType_Ready(&MocType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Moc", (PyObject *)&MocType ) < 0 ) goto fail;
 
    NullRegionType.tp_new = PyType_GenericNew;
    NullRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&NullRegionType) < 0) RETURN( NULL );
-   Py_INCREF(&NullRegionType);
-   PyModule_AddObject( m, "NullRegion", (PyObject *)&NullRegionType);
+   if( PyType_Ready(&NullRegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "NullRegion", (PyObject *)&NullRegionType ) < 0 ) goto fail;
 
    CmpRegionType.tp_new = PyType_GenericNew;
    CmpRegionType.tp_base = &RegionType;
-   if( PyType_Ready(&CmpRegionType) < 0) RETURN( NULL );
-   Py_INCREF(&CmpRegionType);
-   PyModule_AddObject( m, "CmpRegion", (PyObject *)&CmpRegionType);
+   if( PyType_Ready(&CmpRegionType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "CmpRegion", (PyObject *)&CmpRegionType ) < 0 ) goto fail;
 
    PrismType.tp_new = PyType_GenericNew;
    PrismType.tp_base = &RegionType;
-   if( PyType_Ready(&PrismType) < 0) RETURN( NULL );
-   Py_INCREF(&PrismType);
-   PyModule_AddObject( m, "Prism", (PyObject *)&PrismType);
+   if( PyType_Ready(&PrismType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Prism", (PyObject *)&PrismType ) < 0 ) goto fail;
 
    ChannelType.tp_new = PyType_GenericNew;
    ChannelType.tp_base = &ObjectType;
-   if( PyType_Ready(&ChannelType) < 0) RETURN( NULL );
-   Py_INCREF(&ChannelType);
-   PyModule_AddObject( m, "Channel", (PyObject *)&ChannelType);
+   if( PyType_Ready(&ChannelType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Channel", (PyObject *)&ChannelType ) < 0 ) goto fail;
 
    FitsChanType.tp_new = PyType_GenericNew;
    FitsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&FitsChanType) < 0) RETURN( NULL );
-   Py_INCREF(&FitsChanType);
-   PyModule_AddObject( m, "FitsChan", (PyObject *)&FitsChanType);
+   if( PyType_Ready(&FitsChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FitsChan", (PyObject *)&FitsChanType ) < 0 ) goto fail;
 
    StcsChanType.tp_new = PyType_GenericNew;
    StcsChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&StcsChanType) < 0) RETURN( NULL );
-   Py_INCREF(&StcsChanType);
-   PyModule_AddObject( m, "StcsChan", (PyObject *)&StcsChanType);
+   if( PyType_Ready(&StcsChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "StcsChan", (PyObject *)&StcsChanType ) < 0 ) goto fail;
 
    YamlChanType.tp_new = PyType_GenericNew;
    YamlChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&YamlChanType) < 0) RETURN( NULL );
-   Py_INCREF(&YamlChanType);
-   PyModule_AddObject( m, "YamlChan", (PyObject *)&YamlChanType);
+   if( PyType_Ready(&YamlChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "YamlChan", (PyObject *)&YamlChanType ) < 0 ) goto fail;
 
    MocChanType.tp_new = PyType_GenericNew;
    MocChanType.tp_base = &ChannelType;
-   if( PyType_Ready(&MocChanType) < 0) RETURN( NULL );
-   Py_INCREF(&MocChanType);
-   PyModule_AddObject( m, "MocChan", (PyObject *)&MocChanType);
+   if( PyType_Ready(&MocChanType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "MocChan", (PyObject *)&MocChanType ) < 0 ) goto fail;
 
    KeyMapType.tp_new = PyType_GenericNew;
    KeyMapType.tp_base = &ObjectType;
-   if( PyType_Ready(&KeyMapType) < 0) RETURN( NULL );
-   Py_INCREF(&KeyMapType);
-   PyModule_AddObject( m, "KeyMap", (PyObject *)&KeyMapType);
+   if( PyType_Ready(&KeyMapType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "KeyMap", (PyObject *)&KeyMapType ) < 0 ) goto fail;
 
    TableType.tp_new = PyType_GenericNew;
    TableType.tp_base = &KeyMapType;
-   if( PyType_Ready(&TableType) < 0) RETURN( NULL );
-   Py_INCREF(&TableType);
-   PyModule_AddObject( m, "Table", (PyObject *)&TableType);
+   if( PyType_Ready(&TableType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "Table", (PyObject *)&TableType ) < 0 ) goto fail;
 
    FitsTableType.tp_new = PyType_GenericNew;
    FitsTableType.tp_base = &TableType;
-   if( PyType_Ready(&FitsTableType) < 0) RETURN( NULL );
-   Py_INCREF(&FitsTableType);
-   PyModule_AddObject( m, "FitsTable", (PyObject *)&FitsTableType);
+   if( PyType_Ready(&FitsTableType) < 0) goto fail;
+   if( PyModule_AddObjectRef( m, "FitsTable", (PyObject *)&FitsTableType ) < 0 ) goto fail;
 
 /* The constants provided by this module. */
-   PyModule_AddObject( m, "__version__", PyUnicode_FromString(PYAST_VERSION) );
+   {
+      PyObject *version = PyUnicode_FromString( PYAST_VERSION );
+      if( !version ) goto fail;
+      if( PyModule_AddObjectRef( m, "__version__", version ) < 0 ) {
+         Py_DECREF( version );
+         goto fail;
+      }
+      Py_DECREF( version );
+   }
 
 #define ICONST(Name) \
-   PyModule_AddIntConstant( m, #Name, AST__##Name )
+   do { \
+      if( PyModule_AddIntConstant( m, #Name, AST__##Name ) < 0 ) goto fail; \
+   } while(0)
 
 #define DCONST(Name) \
-   PyModule_AddObject( m, #Name, PyFloat_FromDouble(AST__##Name) )
+   do { \
+      PyObject *tmp = PyFloat_FromDouble( AST__##Name ); \
+      if( !tmp ) goto fail; \
+      if( PyModule_AddObjectRef( m, #Name, tmp ) < 0 ) { \
+         Py_DECREF( tmp ); \
+         goto fail; \
+      } \
+      Py_DECREF( tmp ); \
+   } while(0)
 
 #define CCONST(Name) \
-   PyModule_AddObject( m, #Name, PyUnicode_FromString(AST__##Name) )
+   do { \
+      PyObject *tmp = PyUnicode_FromString( AST__##Name ); \
+      if( !tmp ) goto fail; \
+      if( PyModule_AddObjectRef( m, #Name, tmp ) < 0 ) { \
+         Py_DECREF( tmp ); \
+         goto fail; \
+      } \
+      Py_DECREF( tmp ); \
+   } while(0)
 
 
    CCONST(XMLNS);
@@ -13647,7 +13866,9 @@ MOD_INIT(Ast) {
 #undef DCONST
 
 #define ICONST(Name) \
-   PyModule_AddIntConstant( m, "grf" #Name, GRF__##Name )
+   do { \
+      if( PyModule_AddIntConstant( m, "grf" #Name, GRF__##Name ) < 0 ) goto fail; \
+   } while(0)
 
    ICONST(STYLE);
    ICONST(WIDTH);
@@ -13687,18 +13908,11 @@ MOD_INIT(Ast) {
 
 
 
-#if PY_MAJOR_VERSION < 3
+   return m;
 
-/* Save a pointer to the module so that module functions can get at it
-   (in Python 2.7 module functions always receive NULL for the first argument
-   - "self"). */
-   pyast_module = m;
-   Py_INCREF(m);
-
-#endif
-
-
-   RETURN( m );
+fail:
+   Py_XDECREF( m );
+   return NULL;
 }
 
 
@@ -13733,7 +13947,7 @@ static PyObject *PyAst_FromString( const char *string ) {
 /* Report an error if unsuccesfull. */
    if( !this && !PyErr_Occurred() ) {
       char mess[255];
-      sprintf( mess, "PyAst_FromString: Could not create an AST Object "
+      snprintf( mess, sizeof(mess), "PyAst_FromString: Could not create an AST Object "
                "from supplied string (%.40s).", string );
       PyErr_SetString( PyExc_ValueError, mess );
       return NULL;
@@ -13770,12 +13984,12 @@ static char *PyAst_ToString( PyObject *self ) {
 /* Report an error if supplied PyObject is not an AST Object */
    if( !PyObject_IsInstance( self, (PyObject *) &ObjectType ) ) {
       char mess[255];
-      if( self->ob_type && self->ob_type->tp_name ) {
-         sprintf( mess, "PyAst_ToString: Expected an AST Object but a %.*s "
+      if( Py_TYPE(self)->tp_name ) {
+         snprintf( mess, sizeof(mess), "PyAst_ToString: Expected an AST Object but a %.*s "
                   "was supplied.", (int)( sizeof(mess) - 60 ),
-                  self->ob_type->tp_name );
+                  Py_TYPE(self)->tp_name );
       } else {
-         sprintf( mess, "PyAst_ToString: Expected an AST Object." );
+         snprintf( mess, sizeof(mess), "PyAst_ToString: Expected an AST Object." );
       }
       PyErr_SetString( PyExc_TypeError, mess );
       return NULL;
@@ -13816,24 +14030,12 @@ static char *GetString( void *mem, PyObject *value ) {
 */
    char *result = NULL;
    if( value && value != Py_None ) {
-
-
       if( PyUnicode_Check( value ) ) {
-         PyObject *bytes = PyUnicode_AsASCIIString(value);
-         if( bytes ) {
-            const char *bytestr =  PyBytes_AS_STRING(bytes);
-            result = astStore( mem, bytestr, PyBytes_Size( bytes ) + 1 );
-            Py_DECREF(bytes);
+         const char *text = NULL;
+         Py_ssize_t text_len = 0;
+         if( GetAsciiUtf8AndSize( value, "string", &text, &text_len ) ) {
+            result = astStore( mem, text, (size_t) text_len + 1 );
          }
-
-#if PY_MAJOR_VERSION < 3
-      } else if( PyString_Check( value ) ) {
-         const char *bytestr =  PyString_AsString(value);
-         if( bytestr ) {
-            result = astStore( mem, bytestr, strlen( bytestr ) + 1 );
-         }
-#endif
-
       } else {
          result = astFree( mem );
       }
@@ -13955,6 +14157,8 @@ static PyTypeObject *GetType( AstObject *this,
         result = (PyTypeObject *) &UnitMapType;
       } else if( !strcmp( class, "TimeMap" ) ) {
         result = (PyTypeObject *) &TimeMapType;
+      } else if( !strcmp( class, "SplineMap" ) ) {
+        result = (PyTypeObject *) &SplineMapType;
       } else if( !strcmp( class, "SphMap" ) ) {
         result = (PyTypeObject *) &SphMapType;
       } else if( !strcmp( class, "GrismMap" ) ) {
@@ -14062,7 +14266,7 @@ static PyTypeObject *GetType( AstObject *this,
          result = (PyTypeObject *) &FitsTableType;
       } else {
          char buff[ 200 ];
-         sprintf( buff, "Python AST function GetType does not yet "
+         snprintf( buff, sizeof(buff), "Python AST function GetType does not yet "
                   "support to the %s class", class );
          PyErr_SetString( INTER_err, buff );
       }
@@ -14079,8 +14283,8 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 *     GetArray
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject has specified dimensions.
+*     Coerce a Python object into a C-contiguous NumPy array, with
+*     standardised shape validation and clearer error reporting.
 
 */
    char buf[400];
@@ -14092,34 +14296,41 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 /* Check a PyObject was supplied. */
    if( object ) {
 
-/* Get a PyArrayObject from the PyObject, using the specified data type,
-   but allowing any number of dimensions (so that we can produce a more
-   helpful error message). */
-      result = (PyArrayObject *) PyArray_ContiguousFromAny( object, type, 0,
-                                                            100 );
+/* Get a C-contiguous aligned NumPy array view/copy with the requested
+   dtype. */
+      result = (PyArrayObject *) PyArray_FromAny(
+                                    object,
+                                    PyArray_DescrFromType( type ),
+                                    0,
+                                    0,
+                                    NPY_ARRAY_CARRAY_RO,
+                                    NULL );
 
 /* Check the array was created succesfully. */
       if( result ) {
 
+/* If no dimensionality constraints are required, return immediately. */
+         if( ndim < 0 || !dims ) return result;
+
 /* If the ArrayObject has more axes than requested, check that the first
    ndim axes have the correct length, and that all the extra trailing
    axes are degenerate (i.e. have a length of one). */
-         if( result->nd > ndim ) {
+         if( PyArray_NDIM(result) > ndim ) {
 
             for( i = 0; i < ndim && !error; i++ ) {
-               if( dims[ i ] > 0 && result->dimensions[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+               if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
-                           "be %d.", arg, fun, (int) result->dimensions[ i ],
+                           "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
                   error = 1;
                }
-               dims[ i ] = result->dimensions[ i ];
+               dims[ i ] = PyArray_DIMS(result)[ i ];
             }
 
-            for( ; i < result->nd && !error; i++ ) {
-               if( result->dimensions[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has too many "
+            for( ; i < PyArray_NDIM(result) && !error; i++ ) {
+               if( PyArray_DIMS(result)[ i ] > 1 ) {
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has too many "
                           "significant %s, but no more than %d %s allowed.",
                           arg, fun, (ndim==1?"dimension":"dimensions"),
                           ndim, (ndim==1?"is":"are") );
@@ -14129,16 +14340,16 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
 
 /* If the ArrayObject has exactly the right number of axes, check that
    they have the correct lengths. */
-         } else if( result->nd == ndim ) {
+         } else if( PyArray_NDIM(result) == ndim ) {
             for( i = 0; i < ndim && !error; i++ ) {
-               if( dims[ i ] > 0 && result->dimensions[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+               if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
-                           "be %d.", arg, fun, (int) result->dimensions[ i ],
+                           "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
                   error = 1;
                }
-               dims[ i ] = result->dimensions[ i ];
+               dims[ i ] = PyArray_DIMS(result)[ i ];
             }
 
 /* If the ArrayObject has too few axes, and we are using the available
@@ -14146,21 +14357,21 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
    trailing degenerate axes), check the available axes. */
          } else if( append ){
 
-            for( i = 0; i < result->nd && !error; i++ ) {
-               if( dims[ i ] > 0 && result->dimensions[ i ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+            for( i = 0; i < PyArray_NDIM(result) && !error; i++ ) {
+               if( dims[ i ] > 0 && PyArray_DIMS(result)[ i ] != dims[ i ] ) {
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
-                           "be %d.", arg, fun, (int) result->dimensions[ i ],
+                           "be %d.", arg, fun, (int) PyArray_DIMS(result)[ i ],
                            i+1, dims[ i ] );
                   error = 1;
                }
-               dims[ i ] = result->dimensions[ i ];
+               dims[ i ] = PyArray_DIMS(result)[ i ];
             }
 
             for( ; i < ndim && !error; i++ ) {
                if( dims[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has %d "
-                          "%s, but %d %s required.", arg, fun, result->nd,
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has %d "
+                          "%s, but %d %s required.", arg, fun, PyArray_NDIM(result),
                           (ndim==1?"dimension":"dimensions"), ndim,
                           (ndim==1?"is":"are") );
                   error = 1;
@@ -14173,10 +14384,10 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
    leading degenerate axes), check the available axes. */
          } else {
 
-            for( i = 0; i < ndim - result->nd && !error; i++ ) {
+            for( i = 0; i < ndim - PyArray_NDIM(result) && !error; i++ ) {
                if( dims[ i ] > 1 ) {
-                  sprintf( buf, "The '%s' array supplied to %s has %d "
-                          "%s, but %d %s required.", arg, fun, result->nd,
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has %d "
+                          "%s, but %d %s required.", arg, fun, PyArray_NDIM(result),
                           (ndim==1?"dimension":"dimensions"), ndim,
                           (ndim==1?"is":"are") );
                   error = 1;
@@ -14185,14 +14396,14 @@ static PyArrayObject *GetArray( PyObject *object, int type, int append,
             }
 
             for( j = 0; i < ndim && !error; i++,j++ ) {
-               if( dims[ i ] > 0 && result->dimensions[ j ] != dims[ i ] ) {
-                  sprintf( buf, "The '%s' array supplied to %s has a length "
+               if( dims[ i ] > 0 && PyArray_DIMS(result)[ j ] != dims[ i ] ) {
+                  snprintf( buf, sizeof(buf), "The '%s' array supplied to %s has a length "
                            "of %d for dimension %d (one-based) - should "
-                           "be %d.", arg, fun, (int) result->dimensions[ j ],
+                           "be %d.", arg, fun, (int) PyArray_DIMS(result)[ j ],
                            j+1, dims[ i ] );
                   error = 1;
                }
-               dims[ i ] = result->dimensions[ j ];
+               dims[ i ] = PyArray_DIMS(result)[ j ];
             }
          }
       }
@@ -14216,12 +14427,10 @@ static PyArrayObject *GetArray1D( PyObject *object, int *dim, const char *arg,
 *     GetArray1D
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject is 1-D with double
-*     precision values.
+*     A convenience wrapper around GetArray for 1-D double arrays.
 
 */
-   return GetArray( object, PyArray_DOUBLE, 1, 1, dim, arg, fun );
+   return GetArray( object, NPY_DOUBLE, 1, 1, dim, arg, fun );
 }
 
 static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
@@ -14231,12 +14440,10 @@ static PyArrayObject *GetArray1I( PyObject *object, int *dim, const char *arg,
 *     GetArray1I
 
 *  Purpose:
-*     A wrapper for PyArray_ContiguousFromAny that issues better
-*     error messages, and checks the ArrayObject is 1-D with integer
-*     values.
+*     A convenience wrapper around GetArray for 1-D int arrays.
 
 */
-   return GetArray( object, PyArray_INT, 1, 1, dim, arg, fun );
+   return GetArray( object, NPY_INT, 1, 1, dim, arg, fun );
 }
 
 static char *DumpToString( AstObject *this, const char *options ){
@@ -14280,7 +14487,7 @@ static void Sinka( const char *text ){
    }
 }
 
-static const char *AttNorm( const char *att, char *buff ){
+static const char *AttNorm( const char *att, char *buff, size_t buff_len ){
 /*
 *  Name:
 *     AttNorm
@@ -14291,10 +14498,10 @@ static const char *AttNorm( const char *att, char *buff ){
 
 */
    const char *result = att;
-   if( att && buff ) {
+   if( att && buff && buff_len > 0 ) {
       const char *us = strchr( att, '_' );
       if( us ) {
-         sprintf( buff, "%.*s(%s)", (int)( us - att ), att, us + 1 );
+         snprintf( buff, buff_len, "%.*s(%s)", (int)( us - att ), att, us + 1 );
          result = buff;
       }
    }
@@ -14316,23 +14523,13 @@ char *FormatObject( PyObject *o ){
    const char *text = NULL;
    char *result = NULL;
    PyObject *repr = PyObject_Repr( o );
+   Py_ssize_t text_len = 0;
 
-   if( PyUnicode_Check( repr ) ) {
-      PyObject *bytes = PyUnicode_AsASCIIString(repr);
-      if( bytes ) {
-         text =  PyBytes_AS_STRING(bytes);
-         if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
-         Py_DECREF(bytes);
-      }
-
-#if PY_MAJOR_VERSION < 3
-   } else if( PyString_Check( repr ) ) {
-      text =  PyString_AsString(repr);
-      if( text ) result = astStore( NULL, text, strlen( text ) + 1 );
-#endif
+   if( repr && GetAsciiUtf8AndSize( repr, "repr", &text, &text_len ) ) {
+      result = astStore( NULL, text, (size_t) text_len + 1 );
    }
 
-   Py_DECREF(repr);
+   Py_XDECREF(repr);
    return result;
 }
 
@@ -14346,5 +14543,5 @@ const char *GetObjectType( PyObject *o ){
 *     Return a pointer to the type name of an object.
 
 */
-   return o->ob_type->tp_name;
+   return Py_TYPE(o)->tp_name;
 }

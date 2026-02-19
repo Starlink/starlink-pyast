@@ -1,4 +1,5 @@
 build/
+dist/
 starlink/ast/exceptions.c
 __pycache__/
 .#*
@@ -6,4 +7,11 @@ __pycache__/
 *.pyc
 starlink/ast/*_def.c
 starlink/ast/*_desc.c
-
+starlink/ast/pyast_version.h
+*.so
+*.egg-info/
+*.dist-info/
+sun211.htx/
+src/starlink/ast/*_def.c
+src/starlink/ast/*_desc.c
+src/starlink/ast/pyast_version.h
