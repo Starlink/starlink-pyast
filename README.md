@@ -19,6 +19,11 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 
 ## History
 
+### 4.0.1
+
+* Remove GPL license file from AST subdirectory that was included by mistake.
+  The package has always used LGPL and this change removes some confusion.
+
 ### 4.0.0
 
 * Update AST to version 9.3.0.
