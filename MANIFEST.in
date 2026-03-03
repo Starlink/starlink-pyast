@@ -12,3 +12,5 @@ recursive-include src/starlink/ast/test *.box
 recursive-include src/starlink/ast/test *.head
 recursive-include src/starlink/ast/test *.fit
 recursive-include src/starlink/ast/test *.py
+include src/starlink/Ast.pyi
+include src/starlink/py.typed

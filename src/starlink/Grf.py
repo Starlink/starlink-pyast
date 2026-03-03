@@ -27,7 +27,7 @@ class grf_matplotlib:  # noqa: N801
     """
 
     # ------------------------------------------------------------------------
-    def __init__(self, axes):
+    def __init__(self, axes: matplotlib.axes.Axes) -> None:
         if isinstance(axes, matplotlib.axes.Axes):
             self.axes = axes
             self.renderer = None
@@ -293,7 +293,7 @@ class grf_matplotlib:  # noqa: N801
         return oldval
 
     # ------------------------------------------------------------------------
-    def BBuf(self):
+    def BBuf(self) -> None:
         return
 
     # ------------------------------------------------------------------------
@@ -305,11 +305,11 @@ class grf_matplotlib:  # noqa: N801
         return 0
 
     # ------------------------------------------------------------------------
-    def EBuf(self):
+    def EBuf(self) -> None:
         return
 
     # ------------------------------------------------------------------------
-    def Flush(self):
+    def Flush(self) -> None:
         return
 
     # ------------------------------------------------------------------------
@@ -356,7 +356,16 @@ class grf_matplotlib:  # noqa: N801
         return (self.__alpha, self.__beta)
 
     # ------------------------------------------------------------------------
-    def Text(self, text, x, y, just, upx, upy, boxprops=None):
+    def Text(
+        self,
+        text: str,
+        x: float,
+        y: float,
+        just: str,
+        upx: float,
+        upy: float,
+        boxprops: dict[str, str] | None = None,
+    ) -> matplotlib.text.Text:
         if boxprops is None:
             boxprops = {}
         if just[0] == "T":
@@ -396,7 +405,7 @@ class grf_matplotlib:  # noqa: N801
         return otext
 
     # ------------------------------------------------------------------------
-    def TxExt(self, text, x, y, just, upx, upy):
+    def TxExt(self, text: str, x: float, y: float, just: str, upx: float, upy: float):
         otext = self.Text(text, x, y, just, upx, upy, boxprops={"boxstyle": "square,pad=0.0"})
         renderer = self.find_renderer(self.axes.get_figure())
         otext.draw(renderer)

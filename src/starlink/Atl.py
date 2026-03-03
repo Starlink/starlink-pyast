@@ -1,5 +1,7 @@
 import astropy.io.fits as pyfits
 
+from collections.abc import Sequence
+from typing import Any
 from starlink import Ast
 
 """
@@ -39,7 +41,7 @@ class PyFITSAdapter:
 
     """
 
-    def __init__(self, hdu, clear=True):
+    def __init__(self, hdu: Any, clear: bool = True) -> None:
         """Construct a PyFITSAdapter for a specified PyFITS HDU.
 
         Parameters
@@ -97,7 +99,7 @@ class PyFITSAdapter:
         #  "image". The source function defined below will split such long
         #  images up into two or more sub-cards. These are managed using the
         #  following values.
-        self.subcards = None
+        self.subcards: list[str] | None = None
         self.nextsub = 0
         self.nsub = 0
 
@@ -106,7 +108,7 @@ class PyFITSAdapter:
         self.clear = clear
 
     # -----------------------------------------------------------------
-    def astsource(self):
+    def astsource(self) -> str | None:
         """This method is called by the FitsChan to obtain a single
         80-character FITS header card.
 
@@ -140,7 +142,7 @@ class PyFITSAdapter:
         return result
 
     # -----------------------------------------------------------------
-    def astsink(self, card):
+    def astsink(self, cardstr: str) -> None:
         """This method is called by the FitsChan to store a single 80-character
         FITS header card. On the first invocation all cards will be deleted
         form the header if the "clear" property is true. Otherwise, if the
@@ -152,7 +154,7 @@ class PyFITSAdapter:
             self.hdu.header = pyfits.Header()
             self.hdu.header.clear()
 
-        card = pyfits.Card.fromstring(card)
+        card = pyfits.Card.fromstring(cardstr)
 
         #  Doesn't seem to be any way to store a CONTINUE card, so all that is
         #  left is to truncated them by ignoring the continuations :-(
@@ -166,7 +168,7 @@ class PyFITSAdapter:
 
 
 # ======================================================================
-def readfitswcs(hdu, Iwc=False):
+def readfitswcs(hdu: Any, Iwc: bool = False) -> tuple[Ast.Object, str]:
     r"""Reads an AST FrameSet from a FITS header.
 
     The header from the specified FITS HDU is read, and an AST FrameSet
@@ -217,7 +219,7 @@ def readfitswcs(hdu, Iwc=False):
 
 
 # ======================================================================
-def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
+def writefitswcs(frameset: Ast.FrameSet, hdu: Any, encoding: str = "FITS-WCS") -> int:
     r"""Write an AST FrameSet to a FITS file.
 
     The WCS information described by the supplied FrameSet is converted
@@ -257,7 +259,13 @@ def writefitswcs(frameset, hdu, encoding="FITS-WCS"):
 
 
 # ======================================================================
-def plotframeset(axes, gbox, bbox, frameset, options=""):
+def plotframeset(
+    axes: Any,
+    gbox: Sequence[float],
+    bbox: Sequence[float],
+    frameset: Ast.Frameset,
+    options: str = ""
+) -> Ast.Plot:
     r"""Plot an annotated coordinate grid in a matplotlib axes area.
 
     plot = starlink.Atl.plotframeset( axes, gbox, bbox, frameset,
@@ -310,7 +318,7 @@ def plotframeset(axes, gbox, bbox, frameset, options=""):
 
 
 # ======================================================================
-def plotfitswcs(axes, gbox, hdu, options=""):
+def plotfitswcs(axes: Any, gbox: Sequence[float], hdu: Any, options: str = "") -> Ast.Plot:
     r"""Read WCS from a PyFITS HDU and plot an annotated coordinate grid
     in a matplotlib axes area. The grid covers the entire image.
 
