@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import matplotlib
 import matplotlib.lines
@@ -30,7 +31,7 @@ class grf_matplotlib:  # noqa: N801
     def __init__(self, axes: matplotlib.axes.Axes) -> None:
         if isinstance(axes, matplotlib.axes.Axes):
             self.axes = axes
-            self.renderer = None
+            self.renderer: Any | None = None
 
             #  Save the current axis scales.
             self.Scales()
@@ -59,12 +60,27 @@ class grf_matplotlib:  # noqa: N801
 
             #  A list used to convert AST integer marker types into matplotlib
             #  character marker types.
-            self.markers = ["s", ".", "+", "*", "o", "x", ",", "^", "v", "<", ">", "p", "h", "D"]
+            self.markers: list[str] = [
+                "s",
+                ".",
+                "+",
+                "*",
+                "o",
+                "x",
+                ",",
+                "^",
+                "v",
+                "<",
+                ">",
+                "p",
+                "h",
+                "D",
+            ]
 
             #  A list used to convert AST integer line style types into
             #  corresponding matplotlib properties. Ensure the first line style
             #  is the default.
-            self.styles = [
+            self.styles: list[dict[str, Any]] = [
                 {"linestyle": defstyle},
                 {"linestyle": "-"},
                 {"linestyle": "--"},
@@ -74,7 +90,7 @@ class grf_matplotlib:  # noqa: N801
 
             #  A list used to convert AST integer font types into corresponding
             #  matplotlib properties. Ensure the first font is the default.
-            self.fonts = [
+            self.fonts: list[dict[str, Any]] = [
                 deffont,
                 {"family": "serif", "style": "normal"},
                 {"family": "serif", "style": "italic"},
@@ -86,7 +102,7 @@ class grf_matplotlib:  # noqa: N801
 
             #  A list used to convert AST integer colours into corresponding
             #  matplotlib properties. Ensure the first colour is the default.
-            self.colours = [
+            self.colours: list[dict[str, str]] = [
                 {"color": defcol},
                 {"color": "#ff0000"},
                 {"color": "#00ff00"},
@@ -102,7 +118,7 @@ class grf_matplotlib:  # noqa: N801
             ]
 
             #  The current graphics attribute values as used by AST
-            self.__attrs = {
+            self.__attrs: dict[int, dict[int, float]] = {
                 Ast.grfLINE: {
                     Ast.grfSTYLE: 1,
                     Ast.grfWIDTH: 1,
@@ -127,7 +143,11 @@ class grf_matplotlib:  # noqa: N801
             }
 
             #  The corresponding graphics properties used by matplotlib
-            self.__props = {Ast.grfLINE: {"solid_capstyle": "butt"}, Ast.grfMARK: {}, Ast.grfTEXT: {}}
+            self.__props: dict[int, dict[str, Any]] = {
+                Ast.grfLINE: {"solid_capstyle": "butt"},
+                Ast.grfMARK: {},
+                Ast.grfTEXT: {},
+            }
 
             #  Ensure the defaults are current.
             for attr in (Ast.grfCOLOUR, Ast.grfWIDTH, Ast.grfSIZE, Ast.grfFONT, Ast.grfSTYLE):
@@ -172,7 +192,7 @@ class grf_matplotlib:  # noqa: N801
     #  trick is stolen from the matplotlib backend_bases.py print_figure()
     #  method.
 
-    def find_renderer(self, fig):
+    def find_renderer(self, fig: matplotlib.figure.Figure) -> Any:
         if not self.renderer:
             if hasattr(fig, "canvas"):
                 if hasattr(fig.canvas, "get_renderer"):
@@ -195,7 +215,7 @@ class grf_matplotlib:  # noqa: N801
         return self.renderer
 
     # ------------------------------------------------------------------------
-    def Attr(self, attr, value, prim):
+    def Attr(self, attr: int, value: float, prim: int) -> float:
         #  Save the old AST attribute value.
         oldval = self.__attrs[prim][attr]
 
@@ -297,7 +317,7 @@ class grf_matplotlib:  # noqa: N801
         return
 
     # ------------------------------------------------------------------------
-    def Cap(self, cap, value):
+    def Cap(self, cap: int, value: float) -> int:
         if cap == Ast.grfSCALES or cap == Ast.grfMJUST:
             return 1
         if cap == Ast.grfESC:
@@ -313,11 +333,11 @@ class grf_matplotlib:  # noqa: N801
         return
 
     # ------------------------------------------------------------------------
-    def Line(self, n, x, y):
+    def Line(self, n: int, x: list[float], y: list[float]) -> None:
         self.axes.add_line(matplotlib.lines.Line2D(x, y, **self.__props[Ast.grfLINE]))
 
     # ------------------------------------------------------------------------
-    def Mark(self, n, x, y, type):
+    def Mark(self, n: int, x: list[float], y: list[float], type: int) -> None:
         if type < 0 or type >= len(self.markers):
             marker = "."
         else:
@@ -329,7 +349,7 @@ class grf_matplotlib:  # noqa: N801
         self.axes.add_line(matplotlib.lines.Line2D(x, y, **props))
 
     # ------------------------------------------------------------------------
-    def Qch(self):
+    def Qch(self) -> tuple[float, float]:
         xl, xr = self.axes.get_xlim()
         yb, yt = self.axes.get_ylim()
         x = 0.5 * (xl + xr)
@@ -347,7 +367,7 @@ class grf_matplotlib:  # noqa: N801
         return (self._chv, self._chh)
 
     # ------------------------------------------------------------------------
-    def Scales(self):
+    def Scales(self) -> tuple[float, float]:
         xleft, xright = self.axes.get_xlim()
         ybot, ytop = self.axes.get_ylim()
         a = self.axes.transData.transform([(xleft, ybot), (xright, ytop)])
@@ -405,7 +425,7 @@ class grf_matplotlib:  # noqa: N801
         return otext
 
     # ------------------------------------------------------------------------
-    def TxExt(self, text: str, x: float, y: float, just: str, upx: float, upy: float):
+    def TxExt(self, text: str, x: float, y: float, just: str, upx: float, upy: float) -> tuple[float, ...]:
         otext = self.Text(text, x, y, just, upx, upy, boxprops={"boxstyle": "square,pad=0.0"})
         renderer = self.find_renderer(self.axes.get_figure())
         otext.draw(renderer)
@@ -425,7 +445,7 @@ class grf_matplotlib:  # noqa: N801
         )
 
     # ------------------------------------------------------------------------
-    def ColToInt(self, colour):
+    def ColToInt(self, colour: Any) -> int:
         result = -1
 
         #  If integer, use as is.
@@ -464,17 +484,17 @@ class grf_matplotlib:  # noqa: N801
         return result
 
     # ------------------------------------------------------------------------
-    def IntToCol(self, colour):
+    def IntToCol(self, colour: Any) -> str | None:
         result = None
 
         #  Convert from 1-based AST values to zero based Grf values.
-        colour = int(colour) - 1
+        colour_index = int(colour) - 1
 
         #  Check it is in the range of the list of known colours (otherwise we
         #  return None).
-        if colour >= 0 and colour < len(self.colours):
+        if colour_index >= 0 and colour_index < len(self.colours):
             #  Get the corresponding colour name (a html hex string).
-            result = self.colours[colour]["color"].upper()
+            result = self.colours[colour_index]["color"].upper()
 
             #  Replace the hex string with any corresponding standard colour
             #  name.
