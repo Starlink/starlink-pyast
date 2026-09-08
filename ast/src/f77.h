@@ -215,6 +215,11 @@
 *        Initialise pointers.
 *      11-MAY-2011 (DSB):
 *        Added F77_LOCK
+*      10-MAY-2022 (DSB):
+*        Added version of F77_EXPORT_CHARACTER that uses AST for memory
+*        management instead of CNF. This was driven by the change of
+*        TRAIL_TYPE from int to size_t in gfortran v8. Some AST source
+*        files were assuming int (e.g. fplot.c).
 *     {enter_further_changes_here}
 *
 
@@ -272,7 +277,7 @@
 
 /*  Macros used in referring to FORTRAN common blocks.			    */
 
-#define F77_BLANK_COMMON                @BLANK_COMMON_SYMBOL@
+#define F77_BLANK_COMMON                __BLNK__
 #define F77_NAMED_COMMON(B)             F77_EXTERNAL_NAME(B)
 
 
@@ -299,6 +304,9 @@
 /*  Define macros for the type of a CHARACTER and CHARACTER_ARRAY argument  */
 #define F77_CHARACTER_ARG_TYPE char
 #define F77_CHARACTER_ARRAY_ARG_TYPE char
+
+/*  Additional macro for casting a function with a character argument.      */
+#define F77_TRAIL_TYPE     size_t
 
 /*  Define a macro to use when passing arguments that STARLINK FORTRAN	    */
 /*  treats as a pointer. From the point of view of C, this type should be   */
@@ -404,7 +412,7 @@
 /*  variables.								    */
 
 #define CHARACTER(X)             F77_CHARACTER_TYPE *CNF_CONST X
-#define TRAIL(X)                 ,int X ## _length
+#define TRAIL(X)                 ,size_t X ## _length
 #define CHARACTER_ARRAY(X)       F77_CHARACTER_TYPE *CNF_CONST X
 
 
@@ -469,7 +477,7 @@
 #define DECLARE_POINTER(X) F77_POINTER_TYPE X
 
 #define DECLARE_CHARACTER(X,L) F77_CHARACTER_TYPE X[L]; \
-   const int X##_length = L
+   size_t X##_length = L
 
 
 /*  ---  Declare arrays ---						    */
@@ -484,11 +492,11 @@
 #define DECLARE_UWORD_ARRAY(X,D)   F77_UWORD_TYPE X[D]
 #define DECLARE_POINTER_ARRAY(X,D) F77_POINTER_TYPE X[D]
 #define DECLARE_CHARACTER_ARRAY(X,L,D) F77_CHARACTER_TYPE X[D][L]; \
-   const int X##_length = L
+   const size_t X##_length = L
 
 /*  ---  Declare and construct dynamic CHARACTER arguments ---                      */
 #define DECLARE_CHARACTER_DYN(X)   F77_CHARACTER_TYPE *X = NULL;\
-   int X##_length = 0
+   size_t X##_length = 0
 #define F77_CREATE_CHARACTER(X,L)  X=cnfCref(L);\
    X##_length = (L>0?L:1)
 
@@ -503,7 +511,7 @@
 #define DECLARE_UWORD_ARRAY_DYN(X)   F77_UWORD_TYPE *X = NULL
 #define DECLARE_POINTER_ARRAY_DYN(X) F77_POINTER_TYPE *X = NULL
 #define DECLARE_CHARACTER_ARRAY_DYN(X)   F77_CHARACTER_TYPE *X = NULL;\
-   int X##_length = 0
+   size_t X##_length = 0
 
 /* Create arrays dynamic Fortran arrays for those types which require */
 /* Separate space for Fortran and C arrays                            */
@@ -556,7 +564,6 @@
 
 /*  ---  IMPORT and EXPORT of values  --- */
 /* Export C variables to Fortran variables */
-#define F77_EXPORT_CHARACTER(C,F,L) cnfExprt(C,F,L)
 #define F77_EXPORT_DOUBLE(C,F) F=C
 #define F77_EXPORT_INTEGER(C,F) F=C
 #define F77_EXPORT_LOGICAL(C,F) F=C?F77_TRUE:F77_FALSE
@@ -567,6 +574,19 @@
 #define F77_EXPORT_UWORD(C,F) F=C
 #define F77_EXPORT_POINTER(C,F) F=cnfFptr(C)
 #define F77_EXPORT_LOCATOR(C,F) cnfExpch(C,F,DAT__SZLOC)
+
+/* CNF functions are not available within AST, so re-define a
+   F77_EXPORT_CHARACTER macro that exports a character string
+   from C to Fortran using functions in the AST memory.c module. */
+/* #define F77_EXPORT_CHARACTER(C,F,L) cnfExprt(C,F,L) */
+#define F77_EXPORT_CHARACTERL(C,F,L) \
+   if( F##_length > L ) F##_length = L; \
+   astStringExport( C, F, F##_length ); \
+
+#define F77_EXPORT_CHARACTER(C,F) { \
+   size_t clen = strlen(C); \
+   F77_EXPORT_CHARACTERL(C,F,clen); \
+}
 
 /* Allow for character strings to be NULL, protects strlen. Note this
  * does not allow lengths to differ. */
@@ -736,23 +756,23 @@
 /*  Macros to handle character dummy arguments.				    */
 
 #undef  TRAIL
-#define TRAIL(X) ,int X/**/_length
+#define TRAIL(X) ,size_t X/**/_length
 
 
 /*  ---  Declare variables  ---						    */
 
 #undef  DECLARE_CHARACTER
 #define DECLARE_CHARACTER(X,L)         F77_CHARACTER_TYPE X[L]; \
-   const int X/**/_length = L
+   const size_t X/**/_length = L
 #undef  DECLARE_CHARACTER_ARRAY
 #define DECLARE_CHARACTER_ARRAY(X,L,D) F77_CHARACTER_TYPE X[D][L]; \
-   const int X/**/_length = L
+   const size_t X/**/_length = L
 #undef DECLARE_CHARACTER_DYN
 #define DECLARE_CHARACTER_DYN(X)   F77_CHARACTER_TYPE *X;\
-   int X/**/_length
+   size_t X/**/_length
 #undef DECLARE_CHARACTER_ARRAY_DYN
 #define DECLARE_CHARACTER_ARRAY_DYN(X)   F77_CHARACTER_TYPE *X;\
-   int X/**/_length
+   size_t X/**/_length
 #undef F77_CREATE_CHARACTER
 #define F77_CREATE_CHARACTER(X,L)  X=cnfCref(L);\
    X/**/_length = L
@@ -847,7 +867,7 @@
 #undef  GENPTR_CHARACTER
 #define GENPTR_CHARACTER(X) \
    F77_CHARACTER_TYPE *X = X/**/_arg->dsc$a_pointer; \
-   int X/**/_length = X/**/_arg->dsc$w_length;
+   size_t X/**/_length = X/**/_arg->dsc$w_length;
 #undef  GENPTR_CHARACTER_ARRAY
 #define GENPTR_CHARACTER_ARRAY(X)   GENPTR_CHARACTER(X)
 
@@ -872,13 +892,13 @@
 
 #undef  DECLARE_CHARACTER
 #define DECLARE_CHARACTER(X,L) \
-   F77_CHARACTER_TYPE X[L];    const int X/**/_length = L; \
+   F77_CHARACTER_TYPE X[L];    const size_t X/**/_length = L; \
    F77_CHARACTER_ARG_TYPE X/**/_descr = \
       { L, DSC$K_DTYPE_T, DSC$K_CLASS_S, X }; \
    F77_CHARACTER_ARG_TYPE *X/**/_arg = &X/**/_descr
 #undef  DECLARE_CHARACTER_ARRAY
 #define DECLARE_CHARACTER_ARRAY(X,L,D) \
-   F77_CHARACTER_TYPE X[D][L]; const int X/**/_length = L; \
+   F77_CHARACTER_TYPE X[D][L]; const size_t X/**/_length = L; \
    F77_CHARACTER_ARRAY_ARG_TYPE X/**/_descr = \
       { L, DSC$K_DTYPE_T, DSC$K_CLASS_S, X }; \
    F77_CHARACTER_ARRAY_ARG_TYPE *X/**/_arg = &X/**/_descr
@@ -886,11 +906,11 @@
 
 /*  ---  The dynamic allocation of character arguments  ---                 */
 #undef DECLARE_CHARACTER_DYN
-#define DECLARE_CHARACTER_DYN(X) int X/**/_length;\
+#define DECLARE_CHARACTER_DYN(X) size_t X/**/_length;\
                                   F77_CHARACTER_ARG_TYPE *X/**/_arg;\
                                   F77_CHARACTER_TYPE *X
 #undef DECLARE_CHARACTER_ARRAY_DYN
-#define DECLARE_CHARACTER_ARRAY_DYN(X) int X/**/_length;\
+#define DECLARE_CHARACTER_ARRAY_DYN(X) size_t X/**/_length;\
                                   F77_CHARACTER_ARRAY_ARG_TYPE *X/**/_arg;\
                                   F77_CHARACTER_TYPE *X
 #undef F77_CREATE_CHARACTER

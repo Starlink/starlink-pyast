@@ -97,6 +97,22 @@ f     - AST_SPLINECOEFFS: Retrieve the coefficients of a SplineMap
 *        - Change CMLIB code to avoid bad values being returned for input
 *        positions that are on the top edge of the knot bounding box.
 *        - Added attribute OutUnit.
+*     2-JUL-2026 (TIMJ):
+*        - Dbvalu returns zero, rather than reporting an error, when the
+*        requested derivative order is not less than the spline order:
+*        such a derivative is mathematically zero, and the condition
+*        arises from valid data (the iterative inverse of an order-1
+*        spline), so the inverse now yields AST__BAD outputs instead of
+*        raising an error.
+*     17-AUG-2026 (TIMJ):
+*        Report an error if InvNiter, InvTol or OutUnit is set or cleared once
+*        the SplineMap has been cloned, as SUN/210 says AST does for the
+*        attributes of any Mapping. Use the guarded astMAKE_SET1 and
+*        astMAKE_CLEAR1 macros.
+*     17-AUG-2026 (TIMJ):
+*        Discard the record that the SplineMap has been simplified when
+*        InvNiter, InvTol or OutUnit is set or cleared, since all three
+*        change what the SplineMap does.
 *class--
 */
 
@@ -540,11 +556,19 @@ static double Dbvalu( const double *t, const double *a, int n, int k, int ideriv
 /* Check inherited status */
    if( !astOK ) return AST__BAD;
 
-   if( k < 1 || n < k || ideriv < 0 || ideriv >= k ) {
+   if( k < 1 || n < k || ideriv < 0 ) {
       astError( AST__INTER, "SplineMap: Dbvalu called with inappropriate "
                 "arguments (internal AST programming error).", status );
       return AST__BAD;
    }
+
+/* A spline of order k is a piecewise polynomial of degree k-1, so any
+   derivative of order k or higher is identically zero within each piece.
+   This arises from valid data - e.g. the iterative inverse requesting the
+   Jacobian of an order-1 spline - so return the mathematical value rather
+   than reporting an error.  A zero Jacobian makes the inverse iteration
+   flag its points as singular, yielding AST__BAD outputs. */
+   if( ideriv >= k ) return 0.0;
 
    if( x < t[ k - 1 ] ) return AST__BAD;
    kmider = k - ideriv;
@@ -2520,9 +2544,11 @@ static AstPointSet *Transform( AstMapping *this, AstPointSet *in,
 
 *att--
 */
-astMAKE_CLEAR(SplineMap,InvNiter,invniter,-INT_MAX)
+astMAKE_CLEAR1(SplineMap,InvNiter,invniter,(astClearIsSimple(this),-INT_MAX))
 astMAKE_GET(SplineMap,InvNiter,int,0,( this->invniter == -INT_MAX ? 6 : this->invniter))
-astMAKE_SET(SplineMap,InvNiter,int,invniter,value)
+astMAKE_SET1(SplineMap,InvNiter,int,invniter,(
+            ( value != this->invniter ) ? astClearIsSimple(this) : (void)0,
+            value))
 astMAKE_TEST(SplineMap,InvNiter,( this->invniter != -INT_MAX ))
 
 /* InvTol. */
@@ -2559,9 +2585,11 @@ astMAKE_TEST(SplineMap,InvNiter,( this->invniter != -INT_MAX ))
 *        All SplineMaps have this attribute.
 *att--
 */
-astMAKE_CLEAR(SplineMap,InvTol,invtol,AST__BAD)
+astMAKE_CLEAR1(SplineMap,InvTol,invtol,(astClearIsSimple(this),AST__BAD))
 astMAKE_GET(SplineMap,InvTol,double,0.0,( this->invtol == AST__BAD ? 1.0E-6 : this->invtol))
-astMAKE_SET(SplineMap,InvTol,double,invtol,value)
+astMAKE_SET1(SplineMap,InvTol,double,invtol,(
+            ( value != this->invtol ) ? astClearIsSimple(this) : (void)0,
+            value))
 astMAKE_TEST(SplineMap,InvTol,( this->invtol != AST__BAD ))
 
 /* OutUnit. */
@@ -2603,9 +2631,11 @@ astMAKE_TEST(SplineMap,InvTol,( this->invtol != AST__BAD ))
 
 *att--
 */
-astMAKE_CLEAR(SplineMap,OutUnit,outunit,-INT_MAX)
+astMAKE_CLEAR1(SplineMap,OutUnit,outunit,(astClearIsSimple(this),-INT_MAX))
 astMAKE_GET(SplineMap,OutUnit,int,0,(this->outunit==-INT_MAX?0:this->outunit))
-astMAKE_SET(SplineMap,OutUnit,int,outunit,(value?1:0))
+astMAKE_SET1(SplineMap,OutUnit,int,outunit,(
+            ( (value?1:0) != this->outunit ) ? astClearIsSimple(this) : (void)0,
+            (value?1:0)))
 astMAKE_TEST(SplineMap,OutUnit,(this->outunit!=-INT_MAX))
 
 /* SplineKx. */
