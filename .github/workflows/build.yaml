@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15", "3.15t"]
 
     steps:
       - uses: actions/checkout@v6
@@ -94,7 +94,9 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest"]
-        python-version: ["311", "312", "313", "314"]
+        # For now skip 315t since for true 315t support we need to make
+        # many changes.
+        python-version: ["311", "312", "313", "314", "315"]
     runs-on: ${{ matrix.os }}
     needs: [build_and_test]
     if: startsWith(github.ref, 'refs/tags/')
