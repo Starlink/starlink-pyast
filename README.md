@@ -19,6 +19,9 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 
 ## History
 
+### 4.2.0
+
+Update to AST release 9.5.0.
 ### 4.1.0
 
 Update to AST release 9.4.0.
