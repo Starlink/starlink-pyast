@@ -47,7 +47,7 @@ version_file_template = '#define PYAST_VERSION "{version}"'
 where = ["src"]
 
 [tool.setuptools.package-data]
-starlink = ["include/star/pyast.h"]
+starlink = ["include/star/pyast.h", "Ast.pyi", "py.typed"]
 
 [tool.black]
 line-length = 110
@@ -99,3 +99,21 @@ max-doc-length = 79
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 79
+
+[tool.mypy]
+warn_unused_configs = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["numpy.*", "scipy.*", "astropy.*", "matplotlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["starlink.*"]
+ignore_missing_imports = false
+ignore_errors = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+strict_equality = true
+warn_unreachable = true
+warn_unused_ignores = true

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 from starlink import Ast, Grf
 
+box: tuple[float, float, float, float] | None
+
 #  Check the header name was supplied on the command line
 if len(sys.argv) < 2:
     print("Usage: plothead.py <basename>")
@@ -36,7 +38,8 @@ with open(sys.argv[1] + ".head") as fin1:
     #  area of the FITS array to be plotted.
     try:
         with open(sys.argv[1] + ".box") as fin2:
-            box = [float(v) for v in fin2.read().strip().split()]
+            vals = [float(v) for v in fin2.read().strip().split()]
+            box = (vals[0], vals[1], vals[2], vals[3])
     except OSError:
         box = None
 
@@ -67,7 +70,7 @@ ax.yaxis.set_visible(False)
 
 #  If the bounds of the pixel grid to be plotted were specified, use them
 if box is not None:
-    bbox = box
+    bbox: tuple[float, float, float, float] = box
 
 #  Otherwise, we map the entire FITS pixel grid onto this box. So get the
 #  bounds of the pixel grid from the FitsChan. If the NAXIS1/2 keywords
@@ -82,7 +85,7 @@ else:
         naxis2 = fc["NAXIS2"]
     else:
         naxis2 = 500
-    bbox = (0.5, 0.5, naxis1 + 0.5, naxis2 + 0.5)
+    bbox = (0.5, 0.5, float(naxis1) + 0.5, float(naxis2) + 0.5)
 
 #  Set the bounds (in matplotlib data coordinates) of the largest rectangle
 #  that can be drawn on the matplotlib plotting area that has the same
