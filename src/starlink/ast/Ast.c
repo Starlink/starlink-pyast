@@ -8997,9 +8997,9 @@ const char *srcseq_wrapper( void ){
       if( channel->source_line ) {
          int len = strlen( channel->source_line );
          char first = channel->source_line[ 0 ];
-         char *last = channel->source_line + len - 1;
-         if( *last == first && ( first == '\'' || first == '"' ) ) {
-            *(last--) = 0;
+         if( len >= 2 && channel->source_line[ len - 1 ] == first &&
+             ( first == '\'' || first == '"' ) ) {
+            channel->source_line[ len - 1 ] = 0;
             char *w = channel->source_line;
             char *r = w + 1;
             while( *r ) {
@@ -9007,9 +9007,12 @@ const char *srcseq_wrapper( void ){
                *(w++) = *(r++);
             }
             *w = 0;
-            last = w - 1;
-            while( last[-1] == '\\' ) last -= 2;
-            last[ 1 ] = 0;
+            int content_len = (int) ( w - channel->source_line );
+            while( content_len >= 2 &&
+                   channel->source_line[ content_len - 2 ] == '\\' ) {
+               content_len -= 2;
+            }
+            channel->source_line[ content_len ] = 0;
          }
       }
 
