@@ -968,6 +968,47 @@ class TestAst(unittest.TestCase):
         os.remove("fred.txt")
         os.remove("fred2.txt")
 
+    def test_Channel_short_sequence_strings(self):
+        # Exercise the sequence source callback with empty, escaped and
+        # one-character strings as well as ordinary parser input.
+        # Backslash-only items currently normalize to empty lines; these
+        # expectations preserve that behavior while checking string bounds.
+        for text in ("", "\n", "\\", "\\\\"):
+            with self.subTest(text=text):
+                self.assertIsNone(starlink.Ast.Channel([text]).read())
+        for text in ("x", "x\n", "'", "xy"):
+            with self.subTest(text=text):
+                with self.assertRaises(starlink.Ast.BADIN):
+                    starlink.Ast.Channel([text]).read()
+
+        class ShortRepr:
+            def __init__(self, text):
+                self.text = text
+
+            def __repr__(self):
+                return self.text
+
+        self.assertIsNone(starlink.Ast.Channel([ShortRepr("")]).read())
+        for text in ("'", '"'):
+            with self.subTest(repr_text=text):
+                with self.assertRaises(starlink.Ast.BADIN):
+                    starlink.Ast.Channel([ShortRepr(text)]).read()
+
+    def test_Channel_sequence_normalization(self):
+        stream = TextStream()
+        original = starlink.Ast.ZoomMap(2, 0.1, "ID=He said 'hello'")
+        self.assertEqual(starlink.Ast.Channel(stream, stream).write(original), 1)
+        lines = [line.split("\t", 1)[0] for line in stream.get()]
+        self.assertTrue(lines)
+        for source in (lines, [line + "\n" for line in lines]):
+            with self.subTest(newline=source is not lines):
+                restored = starlink.Ast.Channel(source).read()
+                self.assertIsInstance(restored, starlink.Ast.ZoomMap)
+                self.assertEqual(restored.ID, "He said 'hello'")
+                self.assertEqual(restored.Nin, 2)
+                self.assertEqual(restored.Nout, 2)
+                self.assertAlmostEqual(restored.Zoom, 0.1)
+
     def test_MyChannel(self):
         ss = DummyStream()
         with self.assertRaises(TypeError):
