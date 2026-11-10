@@ -460,12 +460,8 @@ static PyObject *Object_copy( Object *self ) {
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
 
-   if( PyErr_Occurred() ) return NULL;
-
-   if( astOK ) {
-      result = NewObject( new );
-      new = astAnnul( new );
-   }
+   if( astOK && !PyErr_Occurred() ) result = NewObject( new );
+   if( new ) new = astAnnul( new );
    TIDY;
    return result;
 }
@@ -8606,6 +8602,7 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
 static int Channel_setproxy( AstObject *this, Object *self );
 const char *source_wrapper( void );
 const char *srcseq_wrapper( void );
+static const char *EndSource( Channel *channel );
 void sink_wrapper( const char *text );
 static int ChannelFuncs( Channel *self,  PyObject *source, PyObject *sink,
                          const char *(** source_wrap)( void ),
@@ -8774,8 +8771,17 @@ static void Channel_dealloc( Channel *self ) {
       char *source_line = self->source_line;
 
 /* Now deallocate the parent. This may use the above resources, and may
-   then additionally wipe the Channel memory structure. */
+   then additionally wipe the Channel memory structure. Deleting the AST
+   object can invoke the source and sink functions. A deallocator cannot
+   raise an exception, so any exception they raise is reported as
+   unraisable, and any exception that was already pending is preserved. */
+      PyObject *etype;
+      PyObject *evalue;
+      PyObject *etraceback;
+      PyErr_Fetch( &etype, &evalue, &etraceback );
       Object_dealloc( (Object *) self );
+      if( PyErr_Occurred() ) PyErr_WriteUnraisable( source ? source : sink );
+      PyErr_Restore( etype, evalue, etraceback );
 
 /* Free the resources used by the Channel. */
       Py_XDECREF( source );
@@ -8961,7 +8967,7 @@ const char *source_wrapper( void ){
    PyObject *pytext = PyObject_CallMethod( channel->source, "astsource", NULL );
    if( pytext && pytext != Py_None ) {
       channel->source_line = GetString( channel->source_line, pytext );
-      if( !channel->source_line ) {
+      if( !channel->source_line && !PyErr_Occurred() ) {
          PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
                           "function is not a string" );
       }
@@ -8969,7 +8975,21 @@ const char *source_wrapper( void ){
       channel->source_line = astFree( channel->source_line );
    }
    Py_XDECREF(pytext);
+   if( !channel->source_line ) return EndSource( channel );
    return channel->source_line;
+}
+
+/* Called by the source functions when there is no line to return, either
+   because the source is exhausted or because a Python exception has been
+   raised. The line buffer is freed. If a Python exception is pending, the
+   AST status is set so that the AST function that invoked the source
+   function aborts, and the Python method that called it then returns with
+   the exception still set. */
+
+static const char *EndSource( Channel *channel ){
+   channel->source_line = astFree( channel->source_line );
+   if( PyErr_Occurred() && astOK ) astSetStatus( AST__BADIN );
+   return NULL;
 }
 
 void sink_wrapper( const char *text ){
@@ -9744,9 +9764,17 @@ static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
 
    if ( PyArg_ParseTuple( args, "s|i:" NAME, &name, &inc ) && astOK ) {
       char card[ 81 ];
-      int found = astFindFits( THIS, name, card, inc );
+
+/* A FitsChan reads its source the first time its cards are needed.
+   astFindFits does not check for an error after reading the source, so
+   get the number of cards first. This reads the source at a point where
+   a failure can be detected. */
+      (void) astGetI( THIS, "Ncard" );
       if( astOK ) {
-         result = Py_BuildValue( "Os", (found ? Py_True : Py_False), card );
+         int found = astFindFits( THIS, name, card, inc );
+         if( astOK ) {
+            result = Py_BuildValue( "Os", (found ? Py_True : Py_False), card );
+         }
       }
    }
 
@@ -14038,6 +14066,8 @@ static char *GetString( void *mem, PyObject *value ) {
          Py_ssize_t text_len = 0;
          if( GetAsciiUtf8AndSize( value, "string", &text, &text_len ) ) {
             result = astStore( mem, text, (size_t) text_len + 1 );
+         } else {
+            result = astFree( mem );
          }
       } else {
          result = astFree( mem );

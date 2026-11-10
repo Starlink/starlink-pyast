@@ -19,6 +19,10 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 
 ## History
 
+### Unreleased
+
+* Exceptions raised while reading from a Channel or FitsChan source are now propagated to the caller.
+
 ### 4.2.0
 
 Update to AST release 9.5.0.

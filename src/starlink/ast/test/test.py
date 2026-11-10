@@ -4,6 +4,7 @@ import gc
 import math
 import os
 import os.path
+import subprocess
 import sys
 import unittest
 
@@ -1016,6 +1017,80 @@ class TestAst(unittest.TestCase):
                 self.assertEqual(restored.Nin, 2)
                 self.assertEqual(restored.Nout, 2)
                 self.assertAlmostEqual(restored.Zoom, 0.1)
+
+    def test_Channel_astsource_errors(self):
+        class RaisingSource:
+            def astsource(self):
+                raise ValueError("boom")
+
+        class ReturningSource:
+            def __init__(self, value):
+                self.value = value
+
+            def astsource(self):
+                return self.value
+
+        with self.assertRaises(ValueError):
+            starlink.Ast.Channel(RaisingSource()).read()
+        with self.assertRaisesRegex(TypeError, "not a string"):
+            starlink.Ast.Channel(ReturningSource(42)).read()
+        with self.assertRaisesRegex(TypeError, "ASCII"):
+            starlink.Ast.Channel(ReturningSource("é")).read()
+
+        # A FitsChan reads its source on first use, not on construction.
+        fc = starlink.Ast.FitsChan(RaisingSource())
+        with self.assertRaises(ValueError):
+            fc.readfits()
+
+        # A failed copy leaves AST able to create further objects.
+        fc = starlink.Ast.FitsChan(RaisingSource())
+        with self.assertRaises(ValueError):
+            copy.deepcopy(fc)
+        self.assertIsInstance(starlink.Ast.ZoomMap(2, 0.1), starlink.Ast.ZoomMap)
+
+        # The failure being guarded against in findfits is a crash inside
+        # AST, so the call is made in a separate process.
+        code = (
+            "import starlink.Ast\n"
+            "class RaisingSource:\n"
+            "    def astsource(self):\n"
+            "        raise ValueError('boom')\n"
+            "fc = starlink.Ast.FitsChan(RaisingSource())\n"
+            "try:\n"
+            "    fc.findfits('NAXIS1', False)\n"
+            "except ValueError:\n"
+            "    print('ValueError')\n"
+        )
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        self.assertEqual((result.returncode, result.stdout.strip()), (0, "ValueError"))
+
+        # An exception that is already being raised when a FitsChan is
+        # destroyed is not replaced by one from its source.
+        def consume(fitschan, value):
+            return value
+
+        zero = 0
+        unraisable = []
+        old_hook = sys.unraisablehook
+        sys.unraisablehook = lambda info: unraisable.append(type(info.exc_value))
+        try:
+            with self.assertRaises(ZeroDivisionError):
+                consume(starlink.Ast.FitsChan(RaisingSource()), 1 / zero)
+        finally:
+            sys.unraisablehook = old_hook
+        self.assertEqual(unraisable, [ValueError])
+
+        # A FitsChan that is destroyed unread calls its source during
+        # destruction. The failure must be reported as unraisable.
+        unraisable = []
+        old_hook = sys.unraisablehook
+        sys.unraisablehook = lambda info: unraisable.append(type(info.exc_value))
+        try:
+            fc = starlink.Ast.FitsChan(RaisingSource())
+            del fc
+        finally:
+            sys.unraisablehook = old_hook
+        self.assertEqual(unraisable, [ValueError])
 
     def test_MyChannel(self):
         ss = DummyStream()
