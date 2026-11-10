@@ -8592,6 +8592,8 @@ typedef struct {
    PyObject *sink;
    char *source_line;
    int src_count;
+   int src_maxlen;
+   Py_ssize_t src_offset;
 } Channel;
 
 /* Prototypes for class functions */
@@ -8693,6 +8695,8 @@ static void Channel_def( Object *self ){
    channel->sink = NULL;
    channel->source_line = NULL;
    channel->src_count = 0;
+   channel->src_maxlen = 0;
+   channel->src_offset = 0;
 }
 
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
@@ -8924,6 +8928,8 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
       } else if( PySequence_Check( source ) ) {
          *source_wrap = srcseq_wrapper;
          self->src_count = 0;
+         self->src_maxlen = 0;
+         self->src_offset = 0;
          self->source = source;
          Py_INCREF( source );
 
@@ -9028,7 +9034,16 @@ void sink_wrapper( const char *text ){
    the next item in a sequence as a line of text. An item that is a string
    is used as it is, a bytes or bytearray item is decoded as ASCII, and any
    other item is converted to a string as if by the Python "str" function.
-   Any line terminator characters at the end of the text are removed. */
+   Any line terminator characters at the end of the text are removed.
+
+   If the Channel has a maximum line length (a FitsChan uses the length of
+   a FITS header card), text whose length is a multiple of the maximum is
+   taken to be several concatenated header cards. Trailing spaces beyond
+   the first card are removed, and the remaining text is returned over
+   successive invocations as lines of the maximum length. The item is
+   read again on each of these invocations, with "src_offset" recording
+   how much of it has already been returned. Text of any other length is
+   returned as a single line. */
 
 const char *srcseq_wrapper( void ){
    Channel *channel = astChannelData;
@@ -9036,7 +9051,7 @@ const char *srcseq_wrapper( void ){
    if( nitem < 0 || channel->src_count >= nitem ) return EndSource( channel );
 
    PyObject *pyitem = PySequence_GetItem( channel->source,
-                                          (Py_ssize_t) channel->src_count++ );
+                                          (Py_ssize_t) channel->src_count );
    if( !pyitem ) return EndSource( channel );
 
    PyObject *pytext = SourceText( pyitem );
@@ -9051,7 +9066,31 @@ const char *srcseq_wrapper( void ){
    size_t len = strlen( channel->source_line );
    while( len > 0 && ( channel->source_line[ len - 1 ] == '\n' ||
                        channel->source_line[ len - 1 ] == '\r' ) ) len--;
+
+   size_t maxlen = (size_t) channel->src_maxlen;
+   int cards = ( maxlen > 0 && len > maxlen && len % maxlen == 0 );
+   if( cards ) {
+      while( len > maxlen && channel->source_line[ len - 1 ] == ' ' ) len--;
+   }
    channel->source_line[ len ] = 0;
+
+   size_t offset = (size_t) channel->src_offset;
+   if( cards && len > maxlen && offset < len ) {
+      size_t nc = len - offset;
+      if( nc > maxlen ) nc = maxlen;
+      memmove( channel->source_line, channel->source_line + offset, nc );
+      channel->source_line[ nc ] = 0;
+      offset += nc;
+   } else {
+      offset = len;
+   }
+
+   if( offset >= len ) {
+      channel->src_offset = 0;
+      channel->src_count++;
+   } else {
+      channel->src_offset = (Py_ssize_t) offset;
+   }
 
    return channel->source_line;
 }
@@ -9062,6 +9101,9 @@ const char *srcseq_wrapper( void ){
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
 #define CLASS MODULE ".FitsChan"
+
+/* The number of characters in a FITS header card. */
+#define FITSCARD_LEN 80
 
 /* Define the class structure */
 typedef struct {
@@ -9284,8 +9326,11 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
       result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
                              &sink_wrap );
 
-/* Create the FitsChan using the above selected wrapper functions. */
+/* Create the FitsChan using the above selected wrapper functions. Each
+   line read from a sequence source is limited to the length of a header
+   card. */
       if( result == 0 ) {
+         ( (Channel *) self )->src_maxlen = FITSCARD_LEN;
          AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, "%s", options );
 
 /* Set up "self" to be a proxy for "this". */

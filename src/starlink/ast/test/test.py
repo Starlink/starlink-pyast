@@ -1154,6 +1154,59 @@ class TestAst(unittest.TestCase):
             sys.unraisablehook = old_hook
         self.assertEqual(unraisable, [ValueError])
 
+    def test_FitsChan_sequence_long_items(self):
+        class Image:
+            def __init__(self, text):
+                self.text = text
+
+            def __str__(self):
+                return self.text
+
+        first = "LONGSTR = '" + "x" * 67 + "&'"
+        second = "CONTINUE  '" + "x" * 33 + "'"
+        naxis1 = "NAXIS1  =                  100"
+        naxis2 = "NAXIS2  =                  200"
+        self.assertEqual(len(first), 80)
+        source = [Image(first + second.ljust(80)), naxis1.ljust(80) + "  \n", naxis2]
+        cards = [card.rstrip() for card in starlink.Ast.FitsChan(source)]
+        self.assertEqual(cards, [first, second, naxis1, naxis2])
+
+    def test_FitsChan_sequence_item_lengths(self):
+        card = "NAXIS1  =                  100 / " + "a very long comment " * 4
+        self.assertEqual(len(card), 113)
+        blank = " " * 80
+        naxis2 = "NAXIS2  =                  200"
+        cases = {
+            # A line that is not a whole number of cards is one card.
+            "over-length line": ([card, naxis2], [card[:80].rstrip(), naxis2]),
+            "card and tab": ([naxis2.ljust(80) + "\t", naxis2], [naxis2, naxis2]),
+            "exact card": ([naxis2.ljust(80), naxis2], [naxis2, naxis2]),
+            "blank card": ([naxis2, blank, naxis2], [naxis2, "", naxis2]),
+            "two cards": ([naxis2.ljust(80) + naxis2.ljust(80)], [naxis2, naxis2]),
+            "two cards as bytes": ([(naxis2.ljust(80) * 2).encode("ascii")], [naxis2, naxis2]),
+        }
+        for label, (source, expected) in cases.items():
+            with self.subTest(case=label):
+                cards = [c.rstrip() for c in starlink.Ast.FitsChan(source)]
+                self.assertEqual(cards, expected)
+
+    def test_FitsChan_from_astropy_cards(self):
+        try:
+            from astropy.io import fits
+        except ImportError:
+            raise self.skipTest("astropy required for Card test") from None
+        header = fits.Header()
+        header["NAXIS1"] = (100, "length of axis")
+        header["OBJECT"] = ("O'Neil \\ back", "name")
+        header["LONGSTR"] = "x" * 100
+        header["NAXIS2"] = 200
+        expected = []
+        for card in header.cards:
+            image = str(card)
+            expected.extend(image[i : i + 80].rstrip() for i in range(0, len(image), 80))
+        cards = [card.rstrip() for card in starlink.Ast.FitsChan(header.cards)]
+        self.assertEqual(cards, expected)
+
     def test_MyChannel(self):
         ss = DummyStream()
         with self.assertRaises(TypeError):
