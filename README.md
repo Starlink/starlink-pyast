@@ -22,6 +22,8 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 ### Unreleased
 
 * Exceptions raised while reading from a Channel or FitsChan source are now propagated to the caller.
+* Items in a sequence used as a Channel or FitsChan source are now passed to AST as their string value, so lines containing backslashes, tabs or quotes are read correctly.
+* Channel and FitsChan sources can supply lines as ASCII bytes as well as strings.
 
 ### 4.2.0
 
