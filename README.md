@@ -22,7 +22,9 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 ### Unreleased
 
 * Exceptions raised while reading from a Channel or FitsChan source are now propagated to the caller.
-* Items in a sequence used as a Channel or FitsChan source are now passed to AST as their string value, so lines containing backslashes, tabs or quotes are read correctly.
+* Fixed the construction of a FitsChan or Channel from a sequence, which converted each item with `repr()` internally.
+  Lines containing backslashes or tabs were corrupted, and items that were not plain strings (such as astropy cards) were read as their `repr()` text.
+  Items are now passed to AST as their string value.
 * Channel and FitsChan sources can supply lines as ASCII bytes as well as strings.
 * A FitsChan can be created from a sequence of astropy Card objects (e.g. header.cards).
 
