@@ -8591,7 +8591,7 @@ typedef struct {
    PyObject *source;
    PyObject *sink;
    char *source_line;
-   int src_count;
+   Py_ssize_t src_count;
    int src_maxlen;
    Py_ssize_t src_offset;
 } Channel;
@@ -9057,8 +9057,7 @@ const char *srcseq_wrapper( void ){
    Py_ssize_t nitem = PySequence_Length( channel->source );
    if( nitem < 0 || channel->src_count >= nitem ) return EndSource( channel );
 
-   PyObject *pyitem = PySequence_GetItem( channel->source,
-                                          (Py_ssize_t) channel->src_count );
+   PyObject *pyitem = PySequence_GetItem( channel->source, channel->src_count );
    if( !pyitem ) return EndSource( channel );
 
    PyObject *pytext = SourceText( pyitem );
