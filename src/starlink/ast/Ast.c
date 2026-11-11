@@ -460,12 +460,8 @@ static PyObject *Object_copy( Object *self ) {
    PyObject *result = NULL;
    AstObject *new = astCopy( THIS );
 
-   if( PyErr_Occurred() ) return NULL;
-
-   if( astOK ) {
-      result = NewObject( new );
-      new = astAnnul( new );
-   }
+   if( astOK && !PyErr_Occurred() ) result = NewObject( new );
+   if( new ) new = astAnnul( new );
    TIDY;
    return result;
 }
@@ -8596,6 +8592,8 @@ typedef struct {
    PyObject *sink;
    char *source_line;
    int src_count;
+   int src_maxlen;
+   Py_ssize_t src_offset;
 } Channel;
 
 /* Prototypes for class functions */
@@ -8606,6 +8604,8 @@ static int Channel_init( Channel *self, PyObject *args, PyObject *kwds );
 static int Channel_setproxy( AstObject *this, Object *self );
 const char *source_wrapper( void );
 const char *srcseq_wrapper( void );
+static const char *EndSource( Channel *channel );
+static PyObject *SourceText( PyObject *value );
 void sink_wrapper( const char *text );
 static int ChannelFuncs( Channel *self,  PyObject *source, PyObject *sink,
                          const char *(** source_wrap)( void ),
@@ -8695,6 +8695,8 @@ static void Channel_def( Object *self ){
    channel->sink = NULL;
    channel->source_line = NULL;
    channel->src_count = 0;
+   channel->src_maxlen = 0;
+   channel->src_offset = 0;
 }
 
 static int Channel_init( Channel *self, PyObject *args, PyObject *kwds ){
@@ -8774,8 +8776,17 @@ static void Channel_dealloc( Channel *self ) {
       char *source_line = self->source_line;
 
 /* Now deallocate the parent. This may use the above resources, and may
-   then additionally wipe the Channel memory structure. */
+   then additionally wipe the Channel memory structure. Deleting the AST
+   object can invoke the source and sink functions. A deallocator cannot
+   raise an exception, so any exception they raise is reported as
+   unraisable, and any exception that was already pending is preserved. */
+      PyObject *etype;
+      PyObject *evalue;
+      PyObject *etraceback;
+      PyErr_Fetch( &etype, &evalue, &etraceback );
       Object_dealloc( (Object *) self );
+      if( PyErr_Occurred() ) PyErr_WriteUnraisable( source ? source : sink );
+      PyErr_Restore( etype, evalue, etraceback );
 
 /* Free the resources used by the Channel. */
       Py_XDECREF( source );
@@ -8908,7 +8919,8 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
       } else if( has_astsource < 0 ) {
          result = -1;
 
-      } else if( PyUnicode_Check( source ) ) {
+      } else if( PyUnicode_Check( source ) || PyBytes_Check( source ) ||
+                 PyByteArray_Check( source ) ) {
          result = -1;
          PyErr_SetString( PyExc_TypeError, "No 'source' object "
                        "supplied." );
@@ -8916,6 +8928,8 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
       } else if( PySequence_Check( source ) ) {
          *source_wrap = srcseq_wrapper;
          self->src_count = 0;
+         self->src_maxlen = 0;
+         self->src_offset = 0;
          self->source = source;
          Py_INCREF( source );
 
@@ -8958,18 +8972,55 @@ static int ChannelFuncs( Channel *self, PyObject *source, PyObject *sink,
 
 const char *source_wrapper( void ){
    Channel *channel = astChannelData;
-   PyObject *pytext = PyObject_CallMethod( channel->source, "astsource", NULL );
-   if( pytext && pytext != Py_None ) {
-      channel->source_line = GetString( channel->source_line, pytext );
-      if( !channel->source_line ) {
-         PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
-                          "function is not a string" );
+   PyObject *pyline = PyObject_CallMethod( channel->source, "astsource", NULL );
+   if( pyline && pyline != Py_None ) {
+      PyObject *pytext = SourceText( pyline );
+      if( pytext ) {
+         channel->source_line = GetString( channel->source_line, pytext );
+         Py_DECREF(pytext);
+      } else {
+         channel->source_line = astFree( channel->source_line );
+         if( !PyErr_Occurred() ) {
+            PyErr_SetString( PyExc_TypeError, "Object returned by an AST source "
+                             "function is not a string" );
+         }
       }
    } else {
       channel->source_line = astFree( channel->source_line );
    }
-   Py_XDECREF(pytext);
+   Py_XDECREF(pyline);
+   if( !channel->source_line ) return EndSource( channel );
    return channel->source_line;
+}
+
+/* Returns a new reference to a Python string holding a line of text
+   supplied by a source. A string is returned unchanged, and a bytes or
+   bytearray object is decoded as ASCII. NULL is returned for any other
+   type of object, without an exception being set. NULL is also returned,
+   with an exception set, if the bytes cannot be decoded. */
+
+static PyObject *SourceText( PyObject *value ){
+   PyObject *result = NULL;
+   if( PyUnicode_Check( value ) ) {
+      result = value;
+      Py_INCREF( result );
+   } else if( PyBytes_Check( value ) || PyByteArray_Check( value ) ) {
+      result = PyUnicode_FromEncodedObject( value, "ascii", "strict" );
+   }
+   return result;
+}
+
+/* Called by the source functions when there is no line to return, either
+   because the source is exhausted or because a Python exception has been
+   raised. The line buffer is freed. If a Python exception is pending, the
+   AST status is set so that the AST function that invoked the source
+   function aborts, and the Python method that called it then returns with
+   the exception still set. */
+
+static const char *EndSource( Channel *channel ){
+   channel->source_line = astFree( channel->source_line );
+   if( PyErr_Occurred() && astOK ) astSetStatus( AST__BADIN );
+   return NULL;
 }
 
 void sink_wrapper( const char *text ){
@@ -8979,47 +9030,66 @@ void sink_wrapper( const char *text ){
 }
 
 
-/* Source functions which are called by the AST Channel C code. It
-   returns the next item in a sequence. PyObject_Repr puts quotes (single
-   or double) round the returned string, so remove them. Also remove any
-   formatted control characters at the end of the string such as "\n".
-   Also remove any escape characters in front of remaining occurences
-   of the opening quote character. */
+/* Source function which is called by the AST Channel C code. It returns
+   the next item in a sequence as a line of text. An item that is a string
+   is used as it is, a bytes or bytearray item is decoded as ASCII, and any
+   other item is converted to a string as if by the Python "str" function.
+   Any line terminator characters at the end of the text are removed.
+
+   If the Channel has a maximum line length (a FitsChan uses the length of
+   a FITS header card), text whose length is a multiple of the maximum is
+   taken to be several concatenated header cards. Trailing spaces beyond
+   the first card are removed, and the remaining text is returned over
+   successive invocations as lines of the maximum length. The item is
+   read again on each of these invocations, with "src_offset" recording
+   how much of it has already been returned. Text of any other length is
+   returned as a single line. */
 
 const char *srcseq_wrapper( void ){
    Channel *channel = astChannelData;
-   if( channel->src_count < PySequence_Length( channel->source ) ) {
-      PyObject *pyitem = PySequence_GetItem( channel->source,
-                                          (Py_ssize_t) channel->src_count++ );
-      PyObject *pytext = PyObject_Repr( pyitem );
-      channel->source_line = GetString( channel->source_line, pytext );
+   Py_ssize_t nitem = PySequence_Length( channel->source );
+   if( nitem < 0 || channel->src_count >= nitem ) return EndSource( channel );
 
-      if( channel->source_line ) {
-         int len = strlen( channel->source_line );
-         char first = channel->source_line[ 0 ];
-         if( len >= 2 && channel->source_line[ len - 1 ] == first &&
-             ( first == '\'' || first == '"' ) ) {
-            channel->source_line[ len - 1 ] = 0;
-            char *w = channel->source_line;
-            char *r = w + 1;
-            while( *r ) {
-               if( *r == '\\' && r[1] == first ) r++;
-               *(w++) = *(r++);
-            }
-            *w = 0;
-            int content_len = (int) ( w - channel->source_line );
-            while( content_len >= 2 &&
-                   channel->source_line[ content_len - 2 ] == '\\' ) {
-               content_len -= 2;
-            }
-            channel->source_line[ content_len ] = 0;
-         }
-      }
+   PyObject *pyitem = PySequence_GetItem( channel->source,
+                                          (Py_ssize_t) channel->src_count );
+   if( !pyitem ) return EndSource( channel );
 
-      Py_XDECREF(pytext);
-      Py_XDECREF(pyitem);
+   PyObject *pytext = SourceText( pyitem );
+   if( !pytext && !PyErr_Occurred() ) pytext = PyObject_Str( pyitem );
+   Py_DECREF(pyitem);
+   if( !pytext ) return EndSource( channel );
+
+   channel->source_line = GetString( channel->source_line, pytext );
+   Py_DECREF(pytext);
+   if( !channel->source_line ) return EndSource( channel );
+
+   size_t len = strlen( channel->source_line );
+   while( len > 0 && ( channel->source_line[ len - 1 ] == '\n' ||
+                       channel->source_line[ len - 1 ] == '\r' ) ) len--;
+
+   size_t maxlen = (size_t) channel->src_maxlen;
+   int cards = ( maxlen > 0 && len > maxlen && len % maxlen == 0 );
+   if( cards ) {
+      while( len > maxlen && channel->source_line[ len - 1 ] == ' ' ) len--;
+   }
+   channel->source_line[ len ] = 0;
+
+   size_t offset = (size_t) channel->src_offset;
+   if( cards && len > maxlen && offset < len ) {
+      size_t nc = len - offset;
+      if( nc > maxlen ) nc = maxlen;
+      memmove( channel->source_line, channel->source_line + offset, nc );
+      channel->source_line[ nc ] = 0;
+      offset += nc;
    } else {
-      channel->source_line = astFree( channel->source_line );
+      offset = len;
+   }
+
+   if( offset >= len ) {
+      channel->src_offset = 0;
+      channel->src_count++;
+   } else {
+      channel->src_offset = (Py_ssize_t) offset;
    }
 
    return channel->source_line;
@@ -9031,6 +9101,9 @@ const char *srcseq_wrapper( void ){
 /* Define a string holding the fully qualified Python class name. */
 #undef CLASS
 #define CLASS MODULE ".FitsChan"
+
+/* The number of characters in a FITS header card. */
+#define FITSCARD_LEN 80
 
 /* Define the class structure */
 typedef struct {
@@ -9253,8 +9326,11 @@ static int FitsChan_init( FitsChan *self, PyObject *args, PyObject *kwds ){
       result = ChannelFuncs( (Channel *) self, source, sink, &source_wrap,
                              &sink_wrap );
 
-/* Create the FitsChan using the above selected wrapper functions. */
+/* Create the FitsChan using the above selected wrapper functions. Each
+   line read from a sequence source is limited to the length of a header
+   card. */
       if( result == 0 ) {
+         ( (Channel *) self )->src_maxlen = FITSCARD_LEN;
          AstFitsChan *this = astFitsChan( source_wrap, sink_wrap, "%s", options );
 
 /* Set up "self" to be a proxy for "this". */
@@ -9744,9 +9820,17 @@ static PyObject *FitsChan_findfits( FitsChan *self, PyObject *args ) {
 
    if ( PyArg_ParseTuple( args, "s|i:" NAME, &name, &inc ) && astOK ) {
       char card[ 81 ];
-      int found = astFindFits( THIS, name, card, inc );
+
+/* A FitsChan reads its source the first time its cards are needed.
+   astFindFits does not check for an error after reading the source, so
+   get the number of cards first. This reads the source at a point where
+   a failure can be detected. */
+      (void) astGetI( THIS, "Ncard" );
       if( astOK ) {
-         result = Py_BuildValue( "Os", (found ? Py_True : Py_False), card );
+         int found = astFindFits( THIS, name, card, inc );
+         if( astOK ) {
+            result = Py_BuildValue( "Os", (found ? Py_True : Py_False), card );
+         }
       }
    }
 
@@ -14038,6 +14122,8 @@ static char *GetString( void *mem, PyObject *value ) {
          Py_ssize_t text_len = 0;
          if( GetAsciiUtf8AndSize( value, "string", &text, &text_len ) ) {
             result = astStore( mem, text, (size_t) text_len + 1 );
+         } else {
+            result = astFree( mem );
          }
       } else {
          result = astFree( mem );

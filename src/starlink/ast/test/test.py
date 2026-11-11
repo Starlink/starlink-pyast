@@ -4,6 +4,7 @@ import gc
 import math
 import os
 import os.path
+import subprocess
 import sys
 import unittest
 
@@ -974,48 +975,237 @@ class TestAst(unittest.TestCase):
         for text in ("", "\n"):
             with self.subTest(text=text):
                 self.assertIsNone(starlink.Ast.Channel([text]).read())
-        for text in ("x", "x\n", "'", "xy"):
+        for text in ("x", "x\n", "x\r\n", "'", "xy", "\\", "\\\\"):
             with self.subTest(text=text):
                 with self.assertRaises(starlink.Ast.BADIN):
                     starlink.Ast.Channel([text]).read()
 
-        # Backslash-only items drive the trailing-escape handling back to
-        # the start of the string. Only memory safety is being checked, so
-        # the outcome of the read is deliberately not asserted.
-        for text in ("\\", "\\\\"):
-            with self.subTest(text=text):
-                try:
-                    starlink.Ast.Channel([text]).read()
-                except starlink.Ast.BADIN:
-                    pass
-
-        class ShortRepr:
+        class ShortStr:
             def __init__(self, text):
                 self.text = text
 
-            def __repr__(self):
+            def __str__(self):
                 return self.text
 
-        self.assertIsNone(starlink.Ast.Channel([ShortRepr("")]).read())
+        self.assertIsNone(starlink.Ast.Channel([ShortStr("")]).read())
         for text in ("'", '"'):
-            with self.subTest(repr_text=text):
+            with self.subTest(str_text=text):
                 with self.assertRaises(starlink.Ast.BADIN):
-                    starlink.Ast.Channel([ShortRepr(text)]).read()
+                    starlink.Ast.Channel([ShortStr(text)]).read()
 
-    def test_Channel_sequence_normalization(self):
+        with self.assertRaises(UnicodeDecodeError):
+            starlink.Ast.Channel([b"\xe9"]).read()
+        card = "NAXIS1  =                  100"
+        for item in (card.encode("ascii"), bytearray(card, "ascii")):
+            with self.subTest(item=item):
+                cards = [c.rstrip() for c in starlink.Ast.FitsChan([item])]
+                self.assertEqual(cards, [card])
+        with self.assertRaises(ValueError):
+            starlink.Ast.Channel(["a\0b"]).read()
+        with self.assertRaises(starlink.Ast.BADIN):
+            starlink.Ast.Channel([42]).read()
+
+    def test_Channel_sequence_round_trip(self):
+        class Line:
+            def __init__(self, text):
+                self.text = text
+
+            def __str__(self):
+                return self.text
+
+        class BytesSource:
+            def __init__(self, lines):
+                self.lines = [line.encode("ascii") for line in lines]
+
+            def astsource(self):
+                return self.lines.pop(0) if self.lines else None
+
         stream = TextStream()
-        original = starlink.Ast.ZoomMap(2, 0.1, "ID=He said 'hello'")
+        original = starlink.Ast.ZoomMap(2, 0.1, "ID=a\\b 'q' \"d\"")
         self.assertEqual(starlink.Ast.Channel(stream, stream).write(original), 1)
-        lines = [line.split("\t", 1)[0] for line in stream.get()]
-        self.assertTrue(lines)
-        for source in (lines, [line + "\n" for line in lines]):
-            with self.subTest(newline=source is not lines):
+        lines = list(stream.get())
+        self.assertTrue(any("\t" in line for line in lines))
+        sources = {
+            "list": lines,
+            "newline": [line + "\n" for line in lines],
+            "crlf": [line + "\r\n" for line in lines],
+            "objects": tuple(Line(line) for line in lines),
+            "numpy": [np.str_(line) for line in lines],
+            "bytes": [line.encode("ascii") for line in lines],
+            "bytearray": [bytearray(line, "ascii") for line in lines],
+            "astsource bytes": BytesSource(lines),
+        }
+        for label, source in sources.items():
+            with self.subTest(source=label):
                 restored = starlink.Ast.Channel(source).read()
                 self.assertIsInstance(restored, starlink.Ast.ZoomMap)
-                self.assertEqual(restored.ID, "He said 'hello'")
-                self.assertEqual(restored.Nin, 2)
-                self.assertEqual(restored.Nout, 2)
+                self.assertEqual(restored.ID, original.ID)
                 self.assertAlmostEqual(restored.Zoom, 0.1)
+
+    def test_Channel_sequence_errors(self):
+        class RaisingGetItem:
+            def __len__(self):
+                return 2
+
+            def __getitem__(self, index):
+                raise KeyError("boom")
+
+        class RaisingLen:
+            def __len__(self):
+                raise RuntimeError("boom")
+
+            def __getitem__(self, index):
+                return "x"
+
+        class RaisingStr:
+            def __str__(self):
+                raise ValueError("boom")
+
+        with self.assertRaises(KeyError):
+            starlink.Ast.Channel(RaisingGetItem()).read()
+        with self.assertRaises(RuntimeError):
+            starlink.Ast.Channel(RaisingLen()).read()
+        with self.assertRaises(ValueError):
+            starlink.Ast.Channel([RaisingStr()]).read()
+        with self.assertRaisesRegex(TypeError, "ASCII"):
+            starlink.Ast.Channel(["é"]).read()
+        with self.assertRaises(KeyError):
+            list(starlink.Ast.FitsChan(RaisingGetItem()))
+
+        # A string or bytes object is a line of text, not a sequence of lines.
+        for source in ("NAXIS1  = 1", b"NAXIS1  = 1", bytearray(b"NAXIS1  = 1")):
+            with self.subTest(source=source):
+                with self.assertRaises(TypeError):
+                    starlink.Ast.FitsChan(source)
+                with self.assertRaises(TypeError):
+                    starlink.Ast.Channel(source)
+
+    def test_Channel_astsource_errors(self):
+        class RaisingSource:
+            def astsource(self):
+                raise ValueError("boom")
+
+        class ReturningSource:
+            def __init__(self, value):
+                self.value = value
+
+            def astsource(self):
+                return self.value
+
+        with self.assertRaises(ValueError):
+            starlink.Ast.Channel(RaisingSource()).read()
+        with self.assertRaisesRegex(TypeError, "not a string"):
+            starlink.Ast.Channel(ReturningSource(42)).read()
+        with self.assertRaisesRegex(TypeError, "ASCII"):
+            starlink.Ast.Channel(ReturningSource("é")).read()
+
+        # A FitsChan reads its source on first use, not on construction.
+        fc = starlink.Ast.FitsChan(RaisingSource())
+        with self.assertRaises(ValueError):
+            fc.readfits()
+
+        # A failed copy leaves AST able to create further objects.
+        fc = starlink.Ast.FitsChan(RaisingSource())
+        with self.assertRaises(ValueError):
+            copy.deepcopy(fc)
+        self.assertIsInstance(starlink.Ast.ZoomMap(2, 0.1), starlink.Ast.ZoomMap)
+
+        # The failure being guarded against in findfits is a crash inside
+        # AST, so the call is made in a separate process.
+        code = (
+            "import starlink.Ast\n"
+            "class RaisingSource:\n"
+            "    def astsource(self):\n"
+            "        raise ValueError('boom')\n"
+            "fc = starlink.Ast.FitsChan(RaisingSource())\n"
+            "try:\n"
+            "    fc.findfits('NAXIS1', False)\n"
+            "except ValueError:\n"
+            "    print('ValueError')\n"
+        )
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        self.assertEqual((result.returncode, result.stdout.strip()), (0, "ValueError"))
+
+        # An exception that is already being raised when a FitsChan is
+        # destroyed is not replaced by one from its source.
+        def consume(fitschan, value):
+            return value
+
+        zero = 0
+        unraisable = []
+        old_hook = sys.unraisablehook
+        sys.unraisablehook = lambda info: unraisable.append(type(info.exc_value))
+        try:
+            with self.assertRaises(ZeroDivisionError):
+                consume(starlink.Ast.FitsChan(RaisingSource()), 1 / zero)
+        finally:
+            sys.unraisablehook = old_hook
+        self.assertEqual(unraisable, [ValueError])
+
+        # A FitsChan that is destroyed unread calls its source during
+        # destruction. The failure must be reported as unraisable.
+        unraisable = []
+        old_hook = sys.unraisablehook
+        sys.unraisablehook = lambda info: unraisable.append(type(info.exc_value))
+        try:
+            fc = starlink.Ast.FitsChan(RaisingSource())
+            del fc
+        finally:
+            sys.unraisablehook = old_hook
+        self.assertEqual(unraisable, [ValueError])
+
+    def test_FitsChan_sequence_long_items(self):
+        class Image:
+            def __init__(self, text):
+                self.text = text
+
+            def __str__(self):
+                return self.text
+
+        first = "LONGSTR = '" + "x" * 67 + "&'"
+        second = "CONTINUE  '" + "x" * 33 + "'"
+        naxis1 = "NAXIS1  =                  100"
+        naxis2 = "NAXIS2  =                  200"
+        self.assertEqual(len(first), 80)
+        source = [Image(first + second.ljust(80)), naxis1.ljust(80) + "  \n", naxis2]
+        cards = [card.rstrip() for card in starlink.Ast.FitsChan(source)]
+        self.assertEqual(cards, [first, second, naxis1, naxis2])
+
+    def test_FitsChan_sequence_item_lengths(self):
+        card = "NAXIS1  =                  100 / " + "a very long comment " * 4
+        self.assertEqual(len(card), 113)
+        blank = " " * 80
+        naxis2 = "NAXIS2  =                  200"
+        cases = {
+            # A line that is not a whole number of cards is one card.
+            "over-length line": ([card, naxis2], [card[:80].rstrip(), naxis2]),
+            "card and tab": ([naxis2.ljust(80) + "\t", naxis2], [naxis2, naxis2]),
+            "exact card": ([naxis2.ljust(80), naxis2], [naxis2, naxis2]),
+            "blank card": ([naxis2, blank, naxis2], [naxis2, "", naxis2]),
+            "two cards": ([naxis2.ljust(80) + naxis2.ljust(80)], [naxis2, naxis2]),
+            "two cards as bytes": ([(naxis2.ljust(80) * 2).encode("ascii")], [naxis2, naxis2]),
+        }
+        for label, (source, expected) in cases.items():
+            with self.subTest(case=label):
+                cards = [c.rstrip() for c in starlink.Ast.FitsChan(source)]
+                self.assertEqual(cards, expected)
+
+    def test_FitsChan_from_astropy_cards(self):
+        try:
+            from astropy.io import fits
+        except ImportError:
+            raise self.skipTest("astropy required for Card test") from None
+        header = fits.Header()
+        header["NAXIS1"] = (100, "length of axis")
+        header["OBJECT"] = ("O'Neil \\ back", "name")
+        header["LONGSTR"] = "x" * 100
+        header["NAXIS2"] = 200
+        expected = []
+        for card in header.cards:
+            image = str(card)
+            expected.extend(image[i : i + 80].rstrip() for i in range(0, len(image), 80))
+        cards = [card.rstrip() for card in starlink.Ast.FitsChan(header.cards)]
+        self.assertEqual(cards, expected)
 
     def test_MyChannel(self):
         ss = DummyStream()
