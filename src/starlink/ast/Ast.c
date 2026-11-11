@@ -488,7 +488,7 @@ static PyObject *Object_repr( PyObject *self ) {
       p2 = astAppendString( p2, &nc, "<" );
       p2 = astAppendString( p2, &nc, p1 );
       p2 = astAppendString( p2, &nc, ">" );
-      result = Py_BuildValue( "s", p2 );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "s", p2 );
       p2 = astFree( p2 );
       p1 = astFree( p1 );
    }
@@ -505,7 +505,7 @@ static PyObject *Object_str( PyObject *self ) {
 
    if( THIS ) {
       p1 = DumpToString( THIS, "Comment=1,Full=0" );
-      result = Py_BuildValue( "s", p1 );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "s", p1 );
       p1 = astFree( p1 );
    }
 
@@ -553,7 +553,7 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
       value = astHasAttribute( THIS, attrib);
-      if( astOK ) result = Py_BuildValue( "O", (value ? Py_True : Py_False) );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "O", (value ? Py_True : Py_False) );
    }
    TIDY;
    return result;
@@ -3867,7 +3867,7 @@ MAKE_GETSETL(Frame,PreserveAxes)
 
 // Have to write our own GETSET routines for ActiveUnit
 MAKE_GET( Frame, ActiveUnit,
-          astGetActiveUnit( THIS ) ? Py_True : Py_False );
+          PyBool_FromLong( astGetActiveUnit( THIS ) ) );
 MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == Py_True ) ); if( astOK ) result = 0; );
 
 
@@ -8591,7 +8591,7 @@ typedef struct {
    PyObject *source;
    PyObject *sink;
    char *source_line;
-   int src_count;
+   Py_ssize_t src_count;
    int src_maxlen;
    Py_ssize_t src_offset;
 } Channel;
@@ -8616,7 +8616,7 @@ static void Channel_def( Object *self );
 
 /* Describe the methods of the class */
 static PyMethodDef Channel_methods[] = {
-   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
+   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns a KeyMap holding any warnings issued by the previous read or write operation, or None if there were none"},
    {"read", (PyCFunction)Channel_read, METH_VARARGS, "Read an Object from a Channel."},
    {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -8812,7 +8812,7 @@ static PyObject *Channel_warnings( Channel *self ) {
          result = Py_BuildValue( "O", km_object );
          Py_DECREF( km_object );
       }
-      km = astAnnul( km );
+      if( km ) km = astAnnul( km );
    }
    TIDY;
    return result;
@@ -9023,9 +9023,16 @@ static const char *EndSource( Channel *channel ){
    return NULL;
 }
 
+/* Sink function which is called by the AST Channel C code. It passes a
+   line of text to the "astsink" method of the Python sink object. If the
+   method raises an exception, the AST status is set so that the AST
+   function that invoked the sink function aborts, and the Python method
+   that called it then returns with the exception still set. */
+
 void sink_wrapper( const char *text ){
    Channel *channel = astChannelData;
    PyObject *result = PyObject_CallMethod( channel->sink, "astsink", "s", text );
+   if( !result && astOK ) astSetStatus( AST__WRERR );
    Py_XDECREF(result);
 }
 
@@ -9050,8 +9057,7 @@ const char *srcseq_wrapper( void ){
    Py_ssize_t nitem = PySequence_Length( channel->source );
    if( nitem < 0 || channel->src_count >= nitem ) return EndSource( channel );
 
-   PyObject *pyitem = PySequence_GetItem( channel->source,
-                                          (Py_ssize_t) channel->src_count );
+   PyObject *pyitem = PySequence_GetItem( channel->source, channel->src_count );
    if( !pyitem ) return EndSource( channel );
 
    PyObject *pytext = SourceText( pyitem );
@@ -9166,7 +9172,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"getfitsL", (PyCFunction)FitsChan_getfitsL, METH_VARARGS, "Get an integer value from a FitsChan."},
    {"getfitsS", (PyCFunction)FitsChan_getfitsS, METH_VARARGS, "Get a string keyword value from a FitsChan."},
    {"getfitsCN", (PyCFunction)FitsChan_getfitsCN, METH_VARARGS, "Get a string keyword value from a FitsChan."},
-   {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve any FitsTables currently in a FitsChan"},
+   {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve a KeyMap holding any FitsTables currently in a FitsChan, or None if there are none"},
    {"keys",     (PyCFunction)FitsChan_keys, METH_NOARGS, "Return all keywords in a FitsChan."},
    {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
    {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
@@ -9525,12 +9531,15 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
          val++;
       }
       astSetI( THIS, "Card", val );
-      if( astFindFits( THIS, "%f", card, 0 ) ) {
-         result = Py_BuildValue( "s", card );
-      } else {
-        char buff[ 200 ];
-        snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
-        PyErr_SetString( PyExc_KeyError, buff );
+      int found = astFindFits( THIS, "%f", card, 0 );
+      if( astOK && !PyErr_Occurred() ) {
+         if( found ) {
+            result = Py_BuildValue( "s", card );
+         } else {
+            char buff[ 200 ];
+            snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
+            PyErr_SetString( PyExc_KeyError, buff );
+         }
       }
 
 /* Otherwise, if the index is a string, get the keyword to be searched for. */
@@ -12637,7 +12646,7 @@ static PyObject *FitsChan_gettables( FitsChan *self ) {
    AstObject *new = astGetTables( THIS );
    if( astOK ) {
       result = NewObject( new );
-      new = astAnnul( new );
+      if( new ) new = astAnnul( new );
    }
    TIDY;
    return result;

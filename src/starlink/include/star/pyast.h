@@ -139,7 +139,12 @@ static PyObject *isa_##class( Object *self ){ \
 *     attrib
 *        The AST attribute name (e.g. Nin, NFrame, etc ).
 *     getval
-*        The C expression to be returned by the getter function.
+*        A C expression giving a new reference to the value to be returned
+*        by the getter function.
+
+*  Notes:
+*     - The getter returns NULL, with a Python exception set, if "getval"
+*     causes an AST error or raises a Python exception.
 
 */
 
@@ -149,9 +154,11 @@ static PyObject *get##attrib( class *self, void *closure ); \
 static PyObject *get##attrib( class *self, void *closure ){ \
    char att_buf[ MXATTR_LEN ]; \
    (void)att_buf; \
-   PyObject *result = (getval); \
+   PyObject *result = NULL; \
+   if( PyErr_Occurred() ) return NULL; \
+   result = (getval); \
+   if( !astOK || PyErr_Occurred() ) Py_CLEAR( result ); \
    TIDY; \
-   Py_INCREF( result ); \
    return result; \
 }
 
@@ -290,17 +297,19 @@ MAKE_GET(class,attrib, \
 \
 static PyObject *get##attrib( class *self, void *closure ); \
 static PyObject *get##attrib( class *self, void *closure ){ \
-   PyObject *result; \
+   PyObject *result = NULL; \
    char att_buf[ MXATTR_LEN ]; \
+   if( PyErr_Occurred() ) return NULL; \
    int icol = astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib)); \
-   const char *text = IntToColour( self, icol ); \
-   if( text ) { \
-      result = Py_BuildValue( "s", text ); \
-   } else { \
-      result = Py_BuildValue( "i", icol ); \
+   if( astOK ) { \
+      const char *text = IntToColour( self, icol ); \
+      if( text ) { \
+         result = Py_BuildValue( "s", text ); \
+      } else if( !PyErr_Occurred() ) { \
+         result = Py_BuildValue( "i", icol ); \
+      } \
    } \
    TIDY; \
-   Py_INCREF( result ); \
    return result; \
 }
 
@@ -324,7 +333,7 @@ static PyObject *get##attrib( class *self, void *closure ){ \
 
 #define MAKE_GETL(class,attrib) \
 MAKE_GET(class,attrib, \
-   astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ? Py_True : Py_False);
+   PyBool_FromLong( astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ));
 
 
 /*
@@ -545,7 +554,7 @@ MAKE_GET(class,attrib, \
 
 #define MAKE_GETROL(class,attrib) \
    MAKE_GET(class,attrib, \
-      astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) ? Py_True : Py_False); \
+      PyBool_FromLong( astGetI( ((Object*)self)->ast_object, ATTNORM(#attrib) ) )); \
    MAKE_SETRO(class,attrib)
 
 
