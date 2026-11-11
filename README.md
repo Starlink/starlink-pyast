@@ -31,6 +31,7 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
   Previously a value was returned and the error surfaced later in unrelated code, usually as a `SystemError`.
 * Fixed a reference leak when reading integer, floating point, string and colour attributes.
 * `str()`, `repr()`, `hasattribute()` and integer indexing of a FitsChan now raise any exception raised by its source.
+* `Channel.warnings()` and `FitsChan.gettables()` now return `None` when there are no warnings or tables, rather than raising `SystemError`.
 
 ### 4.2.0
 

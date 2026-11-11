@@ -1225,6 +1225,18 @@ class TestAst(unittest.TestCase):
         self.assertIsNone(pending)
         self.assertIsInstance(raised, ValueError)
 
+    def test_Channel_no_warnings_or_tables(self):
+        self.assertIsNone(starlink.Ast.Channel().warnings())
+        self.assertIsNone(starlink.Ast.FitsChan().warnings())
+        self.assertIsNone(starlink.Ast.FitsChan().gettables())
+
+        channel = starlink.Ast.Channel(["Begin ZoomMap", "Zoom = 2", "Fred = 3", "End ZoomMap"])
+        channel.ReportLevel = 3
+        self.assertIsInstance(channel.read(), starlink.Ast.ZoomMap)
+        warnings = channel.warnings()
+        self.assertIsInstance(warnings, starlink.Ast.KeyMap)
+        self.assertIn("fred", warnings["Warning_1"])
+
     def test_FitsChan_sequence_long_items(self):
         class Image:
             def __init__(self, text):

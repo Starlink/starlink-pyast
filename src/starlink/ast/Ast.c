@@ -8616,7 +8616,7 @@ static void Channel_def( Object *self );
 
 /* Describe the methods of the class */
 static PyMethodDef Channel_methods[] = {
-   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns any warnings issued by the previous read or write operation"},
+   {"warnings", (PyCFunction)Channel_warnings, METH_NOARGS, "Returns a KeyMap holding any warnings issued by the previous read or write operation, or None if there were none"},
    {"read", (PyCFunction)Channel_read, METH_VARARGS, "Read an Object from a Channel."},
    {"write", (PyCFunction)Channel_write, METH_VARARGS, "Write an Object to a Channel."},
    {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -8812,7 +8812,7 @@ static PyObject *Channel_warnings( Channel *self ) {
          result = Py_BuildValue( "O", km_object );
          Py_DECREF( km_object );
       }
-      km = astAnnul( km );
+      if( km ) km = astAnnul( km );
    }
    TIDY;
    return result;
@@ -9166,7 +9166,7 @@ static PyMethodDef FitsChan_methods[] = {
    {"getfitsL", (PyCFunction)FitsChan_getfitsL, METH_VARARGS, "Get an integer value from a FitsChan."},
    {"getfitsS", (PyCFunction)FitsChan_getfitsS, METH_VARARGS, "Get a string keyword value from a FitsChan."},
    {"getfitsCN", (PyCFunction)FitsChan_getfitsCN, METH_VARARGS, "Get a string keyword value from a FitsChan."},
-   {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve any FitsTables currently in a FitsChan"},
+   {"gettables", (PyCFunction)FitsChan_gettables, METH_NOARGS, "Retrieve a KeyMap holding any FitsTables currently in a FitsChan, or None if there are none"},
    {"keys",     (PyCFunction)FitsChan_keys, METH_NOARGS, "Return all keywords in a FitsChan."},
    {"purgewcs", (PyCFunction)FitsChan_purgewcs, METH_NOARGS, "Delete all WCS-related cards in a FitsChan."},
    {"putcards", (PyCFunction)FitsChan_putcards, METH_VARARGS, "Stores a set of FITS header card in a FitsChan."},
@@ -12640,7 +12640,7 @@ static PyObject *FitsChan_gettables( FitsChan *self ) {
    AstObject *new = astGetTables( THIS );
    if( astOK ) {
       result = NewObject( new );
-      new = astAnnul( new );
+      if( new ) new = astAnnul( new );
    }
    TIDY;
    return result;
