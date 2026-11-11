@@ -9023,9 +9023,16 @@ static const char *EndSource( Channel *channel ){
    return NULL;
 }
 
+/* Sink function which is called by the AST Channel C code. It passes a
+   line of text to the "astsink" method of the Python sink object. If the
+   method raises an exception, the AST status is set so that the AST
+   function that invoked the sink function aborts, and the Python method
+   that called it then returns with the exception still set. */
+
 void sink_wrapper( const char *text ){
    Channel *channel = astChannelData;
    PyObject *result = PyObject_CallMethod( channel->sink, "astsink", "s", text );
+   if( !result && astOK ) astSetStatus( AST__WRERR );
    Py_XDECREF(result);
 }
 

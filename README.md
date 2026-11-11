@@ -22,6 +22,7 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
 ### Unreleased
 
 * Exceptions raised while reading from a Channel or FitsChan source are now propagated to the caller.
+* Exceptions raised by a Channel or FitsChan sink are now propagated to the caller, and writing stops at the first failure.
 * Fixed the construction of a FitsChan or Channel from a sequence, which converted each item with `repr()` internally.
   Lines containing backslashes or tabs were corrupted, and items that were not plain strings (such as astropy cards) were read as their `repr()` text.
   Items are now passed to AST as their string value.

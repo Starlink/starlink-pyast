@@ -1174,6 +1174,48 @@ class TestAst(unittest.TestCase):
             sys.unraisablehook = old_hook
         self.assertEqual(unraisable, [ValueError])
 
+    def test_Channel_astsink_errors(self):
+        class RaisingSink:
+            def __init__(self):
+                self.calls = 0
+
+            def astsink(self, text):
+                self.calls += 1
+                raise ValueError("boom")
+
+        # Writing stops at the first failure of the sink.
+        sink = RaisingSink()
+        channel = starlink.Ast.Channel(None, sink)
+        raised, pending = outcome(lambda: channel.write(starlink.Ast.ZoomMap(2, 0.1)))
+        self.assertIsNone(pending)
+        self.assertIsInstance(raised, ValueError)
+        self.assertEqual(sink.calls, 1)
+
+        sink = RaisingSink()
+        fc = starlink.Ast.FitsChan(None, sink)
+        fc["KEY1"] = 1
+        fc["KEY2"] = 2
+        raised, pending = outcome(fc.writefits)
+        self.assertIsNone(pending)
+        self.assertIsInstance(raised, ValueError)
+        self.assertEqual(sink.calls, 1)
+
+        # A FitsChan that still holds cards writes them to its sink when it
+        # is destroyed. The failure must be reported as unraisable.
+        sink = RaisingSink()
+        unraisable = []
+        old_hook = sys.unraisablehook
+        sys.unraisablehook = lambda info: unraisable.append(type(info.exc_value))
+        try:
+            fc = starlink.Ast.FitsChan(None, sink)
+            fc["KEY1"] = 1
+            fc["KEY2"] = 2
+            del fc
+        finally:
+            sys.unraisablehook = old_hook
+        self.assertEqual(unraisable, [ValueError])
+        self.assertEqual(sink.calls, 1)
+
     def test_FitsChan_failing_source_access(self):
         class RaisingSource:
             def astsource(self):
