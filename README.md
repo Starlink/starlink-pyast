@@ -27,6 +27,10 @@ User docs are available at http://starlink.github.io/starlink-pyast/pyast.html
   Items are now passed to AST as their string value.
 * Channel and FitsChan sources can supply lines as ASCII bytes as well as strings.
 * A FitsChan can be created from a sequence of astropy Card objects (e.g. header.cards).
+* Reading an attribute now raises an exception if AST reports an error.
+  Previously a value was returned and the error surfaced later in unrelated code, usually as a `SystemError`.
+* Fixed a reference leak when reading integer, floating point, string and colour attributes.
+* `str()`, `repr()`, `hasattribute()` and integer indexing of a FitsChan now raise any exception raised by its source.
 
 ### 4.2.0
 

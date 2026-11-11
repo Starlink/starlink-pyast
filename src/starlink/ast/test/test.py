@@ -150,6 +150,26 @@ class DummyGrf:
 #  Tester
 
 
+def outcome(func):
+    """Call a function and report how it failed.
+
+    Returns the exception raised by the call and any exception that the
+    call left pending for later code to trip over.
+    """
+    raised = None
+    try:
+        func()
+    except Exception as e:
+        raised = e
+    pending = None
+    try:
+        format(1, "d")
+        sorted([2, 1])
+    except Exception as e:
+        pending = e
+    return raised, pending
+
+
 class TestAst(unittest.TestCase):
     def test_Static(self):
         self.assertEqual(starlink.Ast.tunec("HRDel"), "%-%^50+%s70+h%+")
@@ -1153,6 +1173,57 @@ class TestAst(unittest.TestCase):
         finally:
             sys.unraisablehook = old_hook
         self.assertEqual(unraisable, [ValueError])
+
+    def test_FitsChan_failing_source_access(self):
+        class RaisingSource:
+            def astsource(self):
+                raise ValueError("boom")
+
+        # Each of these is the first use of the FitsChan, so reads the source.
+        accessors = {
+            "Ncard": lambda fc: fc.Ncard,
+            "Encoding": lambda fc: fc.Encoding,
+            "CDMatrix": lambda fc: fc.CDMatrix,
+            "str": str,
+            "repr": repr,
+            "hasattribute": lambda fc: fc.hasattribute("Ncard"),
+            "index": lambda fc: fc[0],
+        }
+        for name, accessor in accessors.items():
+            with self.subTest(accessor=name):
+                fc = starlink.Ast.FitsChan(RaisingSource())
+                raised, pending = outcome(lambda fc=fc, accessor=accessor: accessor(fc))
+                self.assertIsNone(pending)
+                self.assertIsInstance(raised, ValueError)
+
+    def test_attribute_getter_references(self):
+        # The value returned by a getter is owned only by the caller.
+        value = starlink.Ast.ZoomMap(2, 1.5).Zoom
+        expected = float("1.5")
+        self.assertEqual(value, expected)
+        self.assertEqual(sys.getrefcount(value), sys.getrefcount(expected))
+
+        value = starlink.Ast.FitsChan().Encoding
+        expected = "".join(["NAT", "IVE"])
+        self.assertEqual(value, expected)
+        self.assertEqual(sys.getrefcount(value), sys.getrefcount(expected))
+
+        plot = starlink.Ast.Plot(None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0], DummyGrf())
+        plot.Colour_Title = "green"
+        value = plot.Colour_Title
+        expected = "".join(["gre", "en"])
+        self.assertEqual(value, expected)
+        self.assertEqual(sys.getrefcount(value), sys.getrefcount(expected))
+
+    def test_Plot_colour_getter_errors(self):
+        class RaisingGrf(DummyGrf):
+            def IntToCol(self, col):
+                raise ValueError("boom")
+
+        plot = starlink.Ast.Plot(None, [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0], RaisingGrf())
+        raised, pending = outcome(lambda: plot.Colour_Title)
+        self.assertIsNone(pending)
+        self.assertIsInstance(raised, ValueError)
 
     def test_FitsChan_sequence_long_items(self):
         class Image:

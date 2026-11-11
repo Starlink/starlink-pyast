@@ -488,7 +488,7 @@ static PyObject *Object_repr( PyObject *self ) {
       p2 = astAppendString( p2, &nc, "<" );
       p2 = astAppendString( p2, &nc, p1 );
       p2 = astAppendString( p2, &nc, ">" );
-      result = Py_BuildValue( "s", p2 );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "s", p2 );
       p2 = astFree( p2 );
       p1 = astFree( p1 );
    }
@@ -505,7 +505,7 @@ static PyObject *Object_str( PyObject *self ) {
 
    if( THIS ) {
       p1 = DumpToString( THIS, "Comment=1,Full=0" );
-      result = Py_BuildValue( "s", p1 );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "s", p1 );
       p1 = astFree( p1 );
    }
 
@@ -553,7 +553,7 @@ static PyObject *Object_hasattribute( Object *self, PyObject *args ) {
    if( PyErr_Occurred() ) return NULL;
    if( PyArg_ParseTuple( args, "s:" NAME, &attrib ) ) {
       value = astHasAttribute( THIS, attrib);
-      if( astOK ) result = Py_BuildValue( "O", (value ? Py_True : Py_False) );
+      if( astOK && !PyErr_Occurred() ) result = Py_BuildValue( "O", (value ? Py_True : Py_False) );
    }
    TIDY;
    return result;
@@ -3867,7 +3867,7 @@ MAKE_GETSETL(Frame,PreserveAxes)
 
 // Have to write our own GETSET routines for ActiveUnit
 MAKE_GET( Frame, ActiveUnit,
-          astGetActiveUnit( THIS ) ? Py_True : Py_False );
+          PyBool_FromLong( astGetActiveUnit( THIS ) ) );
 MAKE_SET( Frame, ActiveUnit, Bool, boolean, astSetActiveUnit( THIS, ( value == Py_True ) ); if( astOK ) result = 0; );
 
 
@@ -9525,12 +9525,15 @@ static PyObject *FitsChan_getitem( PyObject *self, PyObject *index ){
          val++;
       }
       astSetI( THIS, "Card", val );
-      if( astFindFits( THIS, "%f", card, 0 ) ) {
-         result = Py_BuildValue( "s", card );
-      } else {
-        char buff[ 200 ];
-        snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
-        PyErr_SetString( PyExc_KeyError, buff );
+      int found = astFindFits( THIS, "%f", card, 0 );
+      if( astOK && !PyErr_Occurred() ) {
+         if( found ) {
+            result = Py_BuildValue( "s", card );
+         } else {
+            char buff[ 200 ];
+            snprintf( buff, sizeof(buff), "FITS card at index %d not found in FitsChan.", val - 1 );
+            PyErr_SetString( PyExc_KeyError, buff );
+         }
       }
 
 /* Otherwise, if the index is a string, get the keyword to be searched for. */
